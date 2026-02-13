@@ -17,11 +17,11 @@ export const AKA_5_MAN = 34;
 export const AKA_5_PIN = 35;
 export const AKA_5_SOU = 36;
 
-/** 牌面显示文字（含赤 5） */
+/** 牌面显示文字（红宝牌与普通 5 同文，不写「赤」） */
 export function getTileLabel(tile: number): string {
-  if (tile === AKA_5_MAN) return '赤五万';
-  if (tile === AKA_5_PIN) return '赤五条';
-  if (tile === AKA_5_SOU) return '赤五筒';
+  if (tile === AKA_5_MAN) return '五万';
+  if (tile === AKA_5_PIN) return '五条';
+  if (tile === AKA_5_SOU) return '五筒';
   return TILE_LABELS_RIICHI[tile] ?? '';
 }
 
@@ -280,14 +280,352 @@ export function countYakuhai(
   return triplets.size;
 }
 
-/** 是否有役（最小集合：立直/门前清自摸/断幺九/役牌/七对子 等，仅作占位） */
-export function hasYaku(context: YakuContext): boolean {
-  const all = [...context.hand, ...context.melds.flatMap((m) => m.tiles)];
-  if (all.length !== 14) return false;
-  if (context.isRiichi) return true;
-  if (context.isMenzhen && context.isTsumo) return true;
-  if (checkTanyao(all)) return true;
-  if (countYakuhai(context.hand, context.melds, context.seatWind, context.roundWind) > 0) return true;
-  // 七对子、平和等可在此扩展
+/** 是否有役：任意一门役成立即可和了（可传 YakuContext 或 YakuContextFull） */
+export function hasYaku(context: YakuContext | YakuContextFull): boolean {
+  const yakuList = computeYaku(context as YakuContextFull);
+  return yakuList.length > 0;
+}
+
+// --- 和牌形检测（用于役种计算前校验）---
+
+const YAO_JIU_AND_ZI = [0, 8, 9, 17, 18, 26, 27, 28, 29, 30, 31, 32, 33];
+
+function sameSuitBase(a: number, b: number, c: number): boolean {
+  if (a >= 27 || b >= 27 || c >= 27) return false;
+  const s = (x: number) => Math.floor(x / 9);
+  return s(a) === s(b) && s(b) === s(c);
+}
+
+function isSequenceBase(a: number, b: number, c: number): boolean {
+  return sameSuitBase(a, b, c) && a + 1 === b && b + 1 === c;
+}
+
+/** 12 张基础牌型能否组成 4 组（顺子/刻子） */
+function canFormFourMeldsBase(arr: number[]): boolean {
+  if (arr.length === 0) return true;
+  const sorted = [...arr].sort((a, b) => a - b);
+  for (let i = 0; i < sorted.length; i++) {
+    for (let j = i + 1; j < sorted.length; j++) {
+      for (let k = j + 1; k < sorted.length; k++) {
+        const [a, b, c] = [sorted[i], sorted[j], sorted[k]];
+        const rest = sorted.filter((_, idx) => idx !== i && idx !== j && idx !== k);
+        const isTriple = a === b && b === c;
+        const isSeq = isSequenceBase(a, b, c);
+        if ((isTriple || isSeq) && canFormFourMeldsBase(rest)) return true;
+      }
+    }
+  }
   return false;
+}
+
+/** 七对子：7 种基础牌型各 2 张，不可 4 张同型 */
+export function isChiitoitsuRiichi(tiles: number[]): boolean {
+  if (tiles.length !== 14) return false;
+  const byBase = new Map<number, number>();
+  for (const t of tiles) {
+    const b = getBaseTile(t);
+    byBase.set(b, (byBase.get(b) ?? 0) + 1);
+  }
+  const counts = [...byBase.values()];
+  return counts.length === 7 && counts.every((c) => c === 2);
+}
+
+/** 国士无双：13 种幺九+字各 1 张，其中 1 种 2 张 */
+export function isKokushiRiichi(tiles: number[]): boolean {
+  if (tiles.length !== 14) return false;
+  const byBase = new Map<number, number>();
+  for (const t of tiles) {
+    const b = getBaseTile(t);
+    byBase.set(b, (byBase.get(b) ?? 0) + 1);
+  }
+  let hasPair = false;
+  for (const type of YAO_JIU_AND_ZI) {
+    const c = byBase.get(type) ?? 0;
+    if (c === 0) return false;
+    if (c >= 2) hasPair = true;
+  }
+  return hasPair;
+}
+
+/** 普通和牌形：4 面子 + 1 将（按基础牌型判定） */
+export function isNormalWinShapeRiichi(tiles: number[]): boolean {
+  if (tiles.length !== 14) return false;
+  const base = tiles.map(getBaseTile).sort((a, b) => a - b);
+  const byBase = new Map<number, number>();
+  for (const b of base) byBase.set(b, (byBase.get(b) ?? 0) + 1);
+  for (const [pairBase, count] of byBase) {
+    if (count < 2) continue;
+    const rest: number[] = [];
+    let removed = 0;
+    for (const b of base) {
+      if (b === pairBase && removed < 2) {
+        removed++;
+        continue;
+      }
+      rest.push(b);
+    }
+    if (removed !== 2 || rest.length !== 12) continue;
+    if (canFormFourMeldsBase(rest)) return true;
+  }
+  return false;
+}
+
+/** 是否为和牌形（七对子 / 国士 / 4 面子+1 将） */
+export function isWinShapeRiichi(hand: number[], melds: { tiles: number[] }[]): boolean {
+  const all = [...hand, ...melds.flatMap((m) => m.tiles)];
+  if (all.length !== 14) return false;
+  if (isChiitoitsuRiichi(all)) return true;
+  if (isKokushiRiichi(all)) return true;
+  return isNormalWinShapeRiichi(all);
+}
+
+// --- 役种计算（返回 [{ id, name, han }]）---
+
+/** 扩展的役判定上下文（含特殊和了方式、杠数等） */
+export interface YakuContextFull extends YakuContext {
+  /** 役种判定用：带 type 的副露（chi/peng/mingang/angang）；不传则按碰处理（视为副露） */
+  meldsTyped?: { type: 'chi' | 'peng' | 'mingang' | 'angang'; tiles: number[] }[];
+  /** 岭上开花 */
+  rinshan?: boolean;
+  /** 抢杠（仅加杠） */
+  chankan?: boolean;
+  /** 海底摸月 */
+  haitei?: boolean;
+  /** 河底捞鱼 */
+  hotei?: boolean;
+  /** 本局自己开杠次数（明+暗） */
+  numKan?: number;
+}
+
+export interface YakuResult {
+  id: string;
+  name: string;
+  han: number;
+}
+
+/** 收集手牌+所有面子为 14 张（用于役判定） */
+function allTilesFromContext(ctx: YakuContextFull): number[] {
+  const melds = ctx.meldsTyped ?? ctx.melds.map((m) => ({ type: 'peng' as const, tiles: m.tiles }));
+  return [...ctx.hand, ...melds.flatMap((m) => m.tiles)];
+}
+
+/** 计算当前和牌的役种列表（可叠加），非和牌形返回空数组 */
+export function computeYaku(ctx: YakuContextFull): YakuResult[] {
+  const melds = ctx.meldsTyped ?? ctx.melds.map((m) => ({ type: 'peng' as const, tiles: m.tiles }));
+  const all = allTilesFromContext(ctx);
+  if (all.length !== 14) return [];
+
+  const menzen = isMenzhen(melds);
+  const hasOpen = melds.some((m) => isOpenMeld(m));
+  const results: YakuResult[] = [];
+
+  // 国士无双（役满，优先）
+  if (isKokushiRiichi(all)) {
+    results.push({ id: 'kokushi', name: '国士无双', han: 13 });
+    return results;
+  }
+
+  // 七对子（2 番，仅门前清）
+  if (isChiitoitsuRiichi(all)) {
+    if (menzen) results.push({ id: 'chiitoitsu', name: '七对子', han: 2 });
+    if (ctx.isRiichi) results.push({ id: 'riichi', name: '立直', han: 1 });
+    if (menzen && ctx.isTsumo) results.push({ id: 'menzen_tsumo', name: '门前清自摸和', han: 1 });
+    if (ctx.ippatsuPossible) results.push({ id: 'ippatsu', name: '一发', han: 1 });
+    if (ctx.rinshan) results.push({ id: 'rinshan', name: '岭上开花', han: 1 });
+    if (ctx.chankan) results.push({ id: 'chankan', name: '抢杠', han: 1 });
+    if (ctx.haitei) results.push({ id: 'haitei', name: '海底摸月', han: 1 });
+    if (ctx.hotei) results.push({ id: 'hotei', name: '河底捞鱼', han: 1 });
+    if (checkTanyao(all)) results.push({ id: 'tanyao', name: '断幺九', han: 1 });
+    const yakuHan = countYakuhai(ctx.hand, melds, ctx.seatWind, ctx.roundWind);
+    if (yakuHan > 0) results.push({ id: 'yakuhai', name: '役牌', han: yakuHan });
+    return results;
+  }
+
+  // 非和牌形不继续算役
+  if (!isNormalWinShapeRiichi(all)) return [];
+
+  // --- 1 番役 ---
+  if (ctx.isRiichi) results.push({ id: 'riichi', name: '立直', han: 1 });
+  if (menzen && ctx.isTsumo) results.push({ id: 'menzen_tsumo', name: '门前清自摸和', han: 1 });
+  if (checkTanyao(all)) results.push({ id: 'tanyao', name: '断幺九', han: 1 });
+  const yakuHan = countYakuhai(ctx.hand, melds, ctx.seatWind, ctx.roundWind);
+  if (yakuHan > 0) results.push({ id: 'yakuhai', name: '役牌', han: yakuHan });
+  if (ctx.ippatsuPossible) results.push({ id: 'ippatsu', name: '一发', han: 1 });
+  if (ctx.rinshan) results.push({ id: 'rinshan', name: '岭上开花', han: 1 });
+  if (ctx.chankan) results.push({ id: 'chankan', name: '抢杠', han: 1 });
+  if (ctx.haitei) results.push({ id: 'haitei', name: '海底摸月', han: 1 });
+  if (ctx.hotei) results.push({ id: 'hotei', name: '河底捞鱼', han: 1 });
+
+  // 平和（仅门前清，需型为全顺子+无役牌将+双面听，此处简化：门前清且无役牌将且 4 组均为顺子）
+  if (menzen && checkPinfuRiichi(all)) results.push({ id: 'pinfu', name: '平和', han: 1 });
+
+  // --- 2 番役 ---
+  if (checkToitoiRiichi(all)) results.push({ id: 'toitoi', name: '对对和', han: 2 });
+  const sankantsu = (ctx.numKan ?? 0) >= 3;
+  if (sankantsu) results.push({ id: 'sankantsu', name: '三杠子', han: 2 });
+  if (checkIttsuRiichi(all)) {
+    results.push({ id: 'ittsu', name: '一气通贯', han: hasOpen ? 1 : 2 });
+  }
+  if (checkHonrotoRiichi(all)) results.push({ id: 'honroto', name: '混老头', han: 2 });
+  if (checkShousangenRiichi(all)) results.push({ id: 'shousangen', name: '小三元', han: 2 });
+  if (menzen && checkRyanpeikouRiichi(all)) results.push({ id: 'ryanpeikou', name: '两杯口', han: 2 });
+  const ankoCount = countAnkouRiichi(melds, all);
+  if (ankoCount >= 3) results.push({ id: 'sanankou', name: '三暗刻', han: 2 });
+
+  // --- 3 番 / 6 番（副露降番）---
+  if (checkHonitsuRiichi(all)) results.push({ id: 'honitsu', name: '混一色', han: hasOpen ? 2 : 3 });
+  if (checkChinitsuRiichi(all)) results.push({ id: 'chinitsu', name: '清一色', han: hasOpen ? 5 : 6 });
+
+  // --- 役满（简化：只做部分）---
+  if ((ctx.numKan ?? 0) >= 4) results.push({ id: 'sukantsu', name: '四杠子', han: 13 });
+  if (ankoCount >= 4 && menzen && ctx.isTsumo) results.push({ id: 'suankou', name: '四暗刻', han: 13 });
+  if (checkDaisangenRiichi(all)) results.push({ id: 'daisangen', name: '大三元', han: 13 });
+  if (checkTsuuiisouRiichi(all)) results.push({ id: 'tsuuiisou', name: '字一色', han: 13 });
+  if (checkChinrotoRiichi(all)) results.push({ id: 'chinroto', name: '清老头', han: 13 });
+
+  return results;
+}
+
+/** 役种列表合计番数（役满时通常取该役满的番数，不与其他叠加） */
+export function getTotalHan(results: YakuResult[]): number {
+  if (results.length === 0) return 0;
+  const yakuman = results.find((r) => r.han >= 13);
+  if (yakuman) return yakuman.han;
+  return results.reduce((sum, r) => sum + r.han, 0);
+}
+
+/** 平和型：4 组均为顺子、将牌非役牌（简化：无字牌刻子、无役牌将） */
+function checkPinfuRiichi(tiles: number[]): boolean {
+  const base = tiles.map(getBaseTile);
+  const counts = new Map<number, number>();
+  for (const b of base) counts.set(b, (counts.get(b) ?? 0) + 1);
+  const zi = [27, 28, 29, 30, 31, 32, 33];
+  for (const z of zi) {
+    if ((counts.get(z) ?? 0) >= 3) return false;
+  }
+  return true;
+}
+
+/** 对对和：4 刻子/杠子 + 1 对子（全部为刻子型） */
+function checkToitoiRiichi(all: number[]): boolean {
+  const base = all.map(getBaseTile);
+  const counts = new Map<number, number>();
+  for (const b of base) counts.set(b, (counts.get(b) ?? 0) + 1);
+  let tripleOrQuad = 0;
+  let pair = 0;
+  for (const c of counts.values()) {
+    if (c >= 3) tripleOrQuad++;
+    if (c === 2) pair++;
+    if (c === 1) return false;
+  }
+  return tripleOrQuad === 4 && pair === 1;
+}
+
+/** 一气通贯：同花色 123+456+789 */
+function checkIttsuRiichi(all: number[]): boolean {
+  const base = all.map(getBaseTile);
+  for (const suit of [0, 9, 18]) {
+    const need = [suit, suit + 1, suit + 2, suit + 3, suit + 4, suit + 5, suit + 6, suit + 7, suit + 8];
+    const have = need.filter((n) => base.includes(n));
+    if (have.length < 9) continue;
+    const count = new Map<number, number>();
+    for (const b of base) if (b >= suit && b < suit + 9) count.set(b, (count.get(b) ?? 0) + 1);
+    if ((count.get(suit) ?? 0) >= 1 && (count.get(suit + 3) ?? 0) >= 1 && (count.get(suit + 6) ?? 0) >= 1) return true;
+  }
+  return false;
+}
+
+/** 混老头：仅 1/9+字牌，且全为刻子/杠子 */
+function checkHonrotoRiichi(tiles: number[]): boolean {
+  const base = tiles.map(getBaseTile);
+  const yaoJiuZi = new Set(YAO_JIU_AND_ZI);
+  for (const b of base) {
+    if (!yaoJiuZi.has(b)) return false;
+  }
+  const counts = new Map<number, number>();
+  for (const b of base) counts.set(b, (counts.get(b) ?? 0) + 1);
+  for (const c of counts.values()) {
+    if (c !== 2 && c !== 3 && c !== 4) return false;
+  }
+  return true;
+}
+
+/** 小三元：中发白中两组刻子+一组对子 */
+function checkShousangenRiichi(all: number[]): boolean {
+  const base = all.map(getBaseTile);
+  const d = [31, 32, 33];
+  let triplet = 0;
+  let pair = 0;
+  for (const t of d) {
+    const c = base.filter((b) => b === t).length;
+    if (c >= 3) triplet++;
+    if (c === 2) pair++;
+  }
+  return triplet === 2 && pair === 1;
+}
+
+/** 两杯口：两组同形顺子（门前清），简化不实现 */
+function checkRyanpeikouRiichi(_tiles: number[]): boolean {
+  return false;
+}
+
+/** 暗刻数：手牌中的刻子+暗杠数（非吃、非明碰、非明杠） */
+function countAnkouRiichi(melds: { type: string; tiles: number[] }[], hand: number[]): number {
+  let anko = 0;
+  const handBase = hand.map(getBaseTile);
+  const handCounts = new Map<number, number>();
+  for (const b of handBase) handCounts.set(b, (handCounts.get(b) ?? 0) + 1);
+  for (const c of handCounts.values()) {
+    if (c >= 3) anko++;
+  }
+  for (const m of melds) {
+    if (m.type === 'angang') anko++;
+  }
+  return anko;
+}
+
+/** 混一色：一种数牌花色+字牌（数牌仅一种花色） */
+function checkHonitsuRiichi(tiles: number[]): boolean {
+  const base = tiles.map(getBaseTile);
+  const numTiles = base.filter((b) => b < 27);
+  if (numTiles.length === 0) return false;
+  const suits = new Set(numTiles.map((b) => Math.floor(b / 9)));
+  return suits.size === 1;
+}
+
+/** 清一色：仅一种数牌花色，无字牌 */
+function checkChinitsuRiichi(tiles: number[]): boolean {
+  const base = tiles.map(getBaseTile);
+  if (base.some((b) => b >= 27)) return false;
+  const suits = new Set(base.map((b) => Math.floor(b / 9)));
+  return suits.size === 1;
+}
+
+/** 大三元：中发白均为刻子/杠子（手牌+面子中各有至少 3 张） */
+function checkDaisangenRiichi(all: number[]): boolean {
+  const base = all.map(getBaseTile);
+  for (const t of [31, 32, 33]) {
+    if (base.filter((b) => b === t).length < 3) return false;
+  }
+  return true;
+}
+
+/** 字一色：全字牌 */
+function checkTsuuiisouRiichi(tiles: number[]): boolean {
+  return tiles.every((t) => getBaseTile(t) >= 27);
+}
+
+/** 清老头：全 1/9 牌且全刻子/杠子 */
+function checkChinrotoRiichi(tiles: number[]): boolean {
+  const base = tiles.map(getBaseTile);
+  const yaoJiu = [0, 8, 9, 17, 18, 26];
+  for (const b of base) {
+    if (!yaoJiu.includes(b)) return false;
+  }
+  const counts = new Map<number, number>();
+  for (const b of base) counts.set(b, (counts.get(b) ?? 0) + 1);
+  for (const c of counts.values()) {
+    if (c !== 2 && c !== 3 && c !== 4) return false;
+  }
+  return true;
 }
