@@ -123,6 +123,7 @@ const GameMahjongChinese = () => {
     startGame,
     discard,
     passClaim,
+    runAiClaim,
     doHu,
     doPeng,
     doGang,
@@ -141,11 +142,12 @@ const GameMahjongChinese = () => {
     return () => clearTimeout(t);
   }, [needAiDiscard, runAiTurn]);
 
+  // 轮到 AI 要牌时（claimOption 为 null）由 runAiClaim 决策：胡/杠/碰/吃 或 过
   useEffect(() => {
     if (!needPassClaim) return;
-    const t = setTimeout(passClaim, 400);
+    const t = setTimeout(runAiClaim, 400);
     return () => clearTimeout(t);
-  }, [needPassClaim, passClaim]);
+  }, [needPassClaim, runAiClaim]);
 
   const isMyTurn =
     state?.phase === "discard" &&

@@ -54,3 +54,7 @@ description: Implements and validates Chinese standard mahjong rules (non-region
 ## 详细规则
 
 完整 26 项技能的操作/判定标准（牌具、定庄、掷骰摸牌、行牌、吃碰杠、胡牌牌型、番种、杠牌计分、流局、诈胡、漏碰漏吃漏胡等）见 [reference.md](reference.md)。
+
+## AI 高手策略
+
+实现 AI 出牌/要牌决策时，按「不点炮 > 快速胡牌 > 做大牌」的优先级，采用舍牌顺序（字牌→幺九→中张）、记牌算牌（熟张/生张/绝张）、防守与听牌优化等规则。完整 7 条规则及实现映射见 [strategy-top-player.md](strategy-top-player.md)。

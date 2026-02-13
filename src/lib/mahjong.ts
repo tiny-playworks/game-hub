@@ -211,8 +211,79 @@ export function getJiagangOptions(hand: number[], melds: Meld[]): number[] {
   return indices;
 }
 
+const TILE_TYPES = 34;
+
+/** 牌池统计：每种牌（0–33）已出现的张数（牌池+各家明牌），用于记牌与熟张/生张判定 */
+export function getTileCountsSeen(discardPiles: number[][], melds: Meld[][]): number[] {
+  const counts = new Array<number>(TILE_TYPES).fill(0);
+  for (const pile of discardPiles) {
+    for (const t of pile) counts[t]++;
+  }
+  for (const playerMelds of melds) {
+    for (const m of playerMelds) {
+      for (const t of m.tiles) counts[t]++;
+    }
+  }
+  return counts;
+}
+
+/** 听牌检测：手牌 13 张 + 明牌时，返回能胡的牌型列表（等待张）；非听牌返回空数组 */
+export function getWaitingTiles(hand: number[], melds: Meld[]): number[] {
+  if (hand.length !== 13) return [];
+  const waiting: number[] = [];
+  for (let t = 0; t < TILE_TYPES; t++) {
+    if (checkWin(hand, melds, t)) waiting.push(t);
+  }
+  return waiting;
+}
+
+/** 幺九牌型（1/9 万条筒） */
+const YAO_JIU_TYPES = new Set([0, 8, 9, 17, 18, 26]);
+/** 字牌类型 27–33 */
+function isZiType(t: number): boolean {
+  return t >= 27;
+}
+
+/** 快胡值估算：数值越大越难胡（步数越多）。易胡 ≤4，难胡 >6。用于起手路线与舍牌策略 */
+export function estimateKuaiHuValue(hand: number[], melds: Meld[]): number {
+  const meldCount = melds.length;
+  const counts = new Map<number, number>();
+  for (const t of hand) counts.set(t, (counts.get(t) ?? 0) + 1);
+  let pairCount = 0;
+  let daziCount = 0;
+  for (const [, c] of counts) {
+    if (c >= 2) pairCount++;
+    if (c >= 2) daziCount += Math.floor(c / 2);
+  }
+  for (let i = 0; i < hand.length - 1; i++) {
+    const a = hand[i];
+    const b = hand[i + 1];
+    if (a < 27 && b === a + 1 && Math.floor(a / 9) === Math.floor(b / 9)) daziCount++;
+  }
+  const need = 4 - meldCount;
+  const hasPair = pairCount >= 1;
+  const steps = need + (hasPair ? 0 : 1) - Math.min(2, daziCount) * 0.5;
+  return Math.max(0, Math.min(10, Math.round(steps * 10) / 10));
+}
+
+/** 是否为幺九牌（1/9 万条筒） */
+export function isYaoJiu(tile: number): boolean {
+  return YAO_JIU_TYPES.has(tile);
+}
+
+/** 是否为字牌 */
+export function isZiTile(tile: number): boolean {
+  return isZiType(tile);
+}
+
 /** 游戏状态 */
 export type Phase = 'draw' | 'discard' | 'claim';
+
+/** 要牌轮次：胡/杠/碰 三家按顺序（下家→对家→上家），吃仅下家 */
+export interface ClaimRound {
+  phase: 'hu' | 'gang' | 'peng' | 'chi';
+  index: number; // 0..2 对应 下家、对家、上家；吃阶段仅用 0
+}
 
 export interface LastDiscard {
   tile: number;
@@ -351,6 +422,10 @@ export interface GameState {
   phase: Phase;
   lastDiscard: LastDiscard | null;
   claimOption: ClaimOption | null;
+  /** 当前等待要牌决策的玩家（展示按钮时 = 人类座位） */
+  claimPlayer: number | null;
+  /** 要牌轮次：从谁开始、到哪一阶段 */
+  claimRound: ClaimRound | null;
   winner: number | null;
   humanSeat: number;
   dealer: number;
