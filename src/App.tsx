@@ -12,6 +12,7 @@ import GameTank from '@/pages/GameTank';
 import GameTetris from '@/pages/GameTetris';
 import GameMahjongChinese from '@/pages/GameMahjongChinese';
 import GameMahjongComingSoon from '@/pages/GameMahjongComingSoon';
+import GameMahjongJapanese from '@/pages/GameMahjongJapanese';
 import './App.css';
 
 const App = () => {
@@ -22,7 +23,7 @@ const App = () => {
         <Route path="/category/:categoryId" element={<Category />} />
         <Route path="/game/mahjong-chinese" element={<GameMahjongChinese />} />
         <Route path="/game/mahjong-sichuan" element={<GameMahjongComingSoon />} />
-        <Route path="/game/mahjong-japanese" element={<GameMahjongComingSoon />} />
+        <Route path="/game/mahjong-japanese" element={<GameMahjongJapanese />} />
         <Route path="/game/guess-number" element={<GameGuessNumber />} />
         <Route path="/game/tictactoe" element={<GameTictactoe />} />
         <Route path="/game/memory" element={<GameMemory />} />

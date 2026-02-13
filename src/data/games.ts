@@ -158,12 +158,11 @@ export const games: GameItem[] = [
   {
     id: 'mahjong-japanese',
     categoryId: 'mahjong',
-    name: '日本麻将（开发中）',
-    description: '立直、役种、符与点数计算。',
+    name: '日本麻将',
+    description: '立直、役种、符与点数计算。（规则页已开放，对局开发中）',
     path: '/game/mahjong-japanese',
     difficulty: 4,
     tags: ['日本麻将', '四人'],
-    comingSoon: true,
   },
   // 扑克 - 占位
   {
