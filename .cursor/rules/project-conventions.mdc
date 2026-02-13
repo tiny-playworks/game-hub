@@ -1,0 +1,50 @@
+---
+description: 项目规范与技术栈约定（Rsbuild + React + shadcn/ui）
+alwaysApply: true
+---
+
+# 项目规范准则
+
+## 技术栈
+
+- **构建**: Rsbuild v2，配置在 `rsbuild.config.ts`
+- **前端**: React 19 + TypeScript（strict），样式 Tailwind CSS v4（PostCSS）
+- **UI 组件**: shadcn/ui，组件在 `src/components/ui/`，按需通过 CLI 添加
+- **代码质量**: Biome（lint + format），单引号、organizeImports 开启
+- **测试**: Rstest + Testing Library
+
+## 路径别名
+
+- 使用 `@/` 表示 `src/`，例如 `@/components/ui/button`、`@/lib/utils`
+- **Rsbuild**: 路径别名写在 `resolve.alias`，不要写在 `source` 下（v2 中 `source` 无 `alias`）
+- **TypeScript**: `tsconfig.json` 中已配置 `baseUrl` 与 `paths` 的 `@/*` → `./src/*`
+
+## 常用命令
+
+| 用途     | 命令              |
+|----------|-------------------|
+| 开发     | `pnpm run dev`    |
+| 生产构建 | `pnpm run build`  |
+| 预览构建 | `pnpm run preview`|
+| 测试     | `pnpm run test`   |
+| 测试监听 | `pnpm run test:watch` |
+| 检查/修复 | `pnpm run check`  |
+| 格式化   | `pnpm run format` |
+
+## UI 组件（shadcn/ui）
+
+- 新增组件：`pnpm dlx shadcn@latest add <组件名>`，如 `button`、`card`、`input`
+- 从 `@/components/ui/xxx` 引入；合并 class 使用 `cn()` from `@/lib/utils`
+- 主题变量在 `src/App.css`（`:root` / `.dark`、`@theme inline`），勿删
+
+## 代码风格
+
+- 遵循 Biome 规则；提交前可执行 `pnpm run check` 或 `pnpm run format`
+- React 组件用函数组件；类型用 TypeScript 严格模式
+- 新增依赖用 pnpm：`pnpm add <pkg>` / `pnpm add -D <pkg>`
+
+## 文档与参考
+
+- Rsbuild: https://rsbuild.rs/llms.txt
+- Rspack: https://rspack.rs/llms.txt
+- Rstest: https://rstest.rs/llms.txt

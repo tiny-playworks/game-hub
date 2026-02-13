@@ -1,17 +1,16 @@
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import Home from '@/pages/Home';
+import GameBreakout from '@/pages/GameBreakout';
 import './App.css';
-import { Button } from '@/components/ui/button';
 
 const App = () => {
   return (
-    <div className="content">
-      <h1>Rsbuild with React</h1>
-      <p>Start building amazing things with Rsbuild.</p>
-      <div className="mt-6 flex gap-3 justify-center">
-        <Button>默认按钮</Button>
-        <Button variant="secondary">Secondary</Button>
-        <Button variant="outline">Outline</Button>
-      </div>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/game/breakout" element={<GameBreakout />} />
+      </Routes>
+    </BrowserRouter>
   );
 };
 
