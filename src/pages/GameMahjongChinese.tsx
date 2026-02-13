@@ -1,11 +1,11 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import {
   TILE_LABELS,
   SEAT_NAMES,
   getAngangOptions,
   getJiagangOptions,
+  checkWin,
 } from "@/lib/mahjong";
 import { useMahjongGame } from "@/hooks/useMahjongGame";
 import { cn } from "@/lib/utils";
@@ -13,32 +13,26 @@ import { cn } from "@/lib/utils";
 const WAN_NUM = ["一", "二", "三", "四", "五", "六", "七", "八", "九"];
 const ZI_LABELS = ["东", "南", "西", "北", "中", "发", "白"];
 
-/** 牌面尺寸：移动端 ≥48px，桌面端 ≥60px；统一圆角与字重 */
-const TILE_BOX_BASE =
-  "min-w-[48px] w-12 min-h-[64px] h-16 md:min-w-[60px] md:w-[60px] md:min-h-[80px] md:h-20 flex items-center justify-center shrink-0 rounded-md overflow-hidden text-sm md:text-base font-black transition-all duration-200";
-/** 对手牌略小 */
-const TILE_BOX_SMALL =
-  "min-w-[36px] w-9 min-h-[48px] h-12 md:min-w-[44px] md:w-11 md:min-h-[58px] md:h-[58px] flex items-center justify-center shrink-0 rounded overflow-hidden text-xs font-black";
+/** 手牌 70×96、粗黑体；弃牌区放大以便看清 */
+const TILE_HAND = "w-[70px] h-[96px] rounded-[6px] border-2 bg-[#fff9e6] flex items-center justify-center shrink-0 font-black text-2xl transition-all duration-200";
+const TILE_DISCARD = "w-[50px] h-[68px] rounded-[6px] border-2 bg-[#fff9e6] flex items-center justify-center shrink-0 font-black text-sm transition-all duration-200";
+const TILE_SMALL = "w-[42px] h-[58px] rounded-[4px] border bg-[#fff9e6] flex items-center justify-center shrink-0 font-bold text-xs";
+/** 刚摸的牌：上浮 + 阴影 + 粗边框高亮，一眼能看出 */
+const TILE_ACTIVE = "border-[#ffc107] border-[3px] -translate-y-3 shadow-xl ring-2 ring-[#ffc107]/60";
+const TILE_GAP = "gap-2.5"; /* 10px */
 
-/** 中式风格：暗红/墨绿/金色为主，粗黑体 */
-function getTileStyle(tile: number): string {
+/** 万红 / 条绿 / 筒黄 / 字深，边框与底色区分明显 */
+function getTileColorClass(tile: number): string {
   if (tile >= 27) {
-    if (tile === 31)
-      return "border-2 border-red-700 bg-red-100 text-red-800"; // 红中
-    if (tile === 32)
-      return "border-2 border-emerald-800 bg-emerald-100 text-emerald-900"; // 发财
-    if (tile === 33)
-      return "border-2 border-stone-500 bg-stone-200 text-stone-800"; // 白板
-    return "border-2 border-stone-600 bg-stone-100 text-stone-900"; // 东南西北
+    if (tile === 31) return "text-red-700 bg-red-50 border-red-400";
+    if (tile === 32) return "text-green-800 bg-emerald-50 border-emerald-500";
+    if (tile === 33) return "text-stone-700 bg-stone-200 border-stone-500";
+    return "text-stone-900 bg-stone-100 border-stone-600";
   }
-  if (tile < 9) return "border-2 border-red-700/80 bg-red-50/95 text-red-900"; // 万
-  if (tile < 18) return "border-2 border-emerald-700/80 bg-emerald-50/95 text-emerald-900"; // 条
-  return "border-2 border-amber-700/80 bg-amber-50/95 text-amber-900"; // 筒
+  if (tile < 9) return "text-red-800 bg-red-50 border-red-400";
+  if (tile < 18) return "text-green-800 bg-green-50 border-green-500";
+  return "text-amber-800 bg-amber-50 border-amber-500";
 }
-
-/** 选中/出牌高亮：上浮 + 阴影 + 边框 */
-const TILE_SELECTED =
-  "shadow-lg -translate-y-1.5 ring-2 ring-amber-500 ring-offset-2 ring-offset-amber-50";
 
 /** 筒子 1-9：中式琥珀色圆点 */
 function TileDots({ n }: { n: number }) {
@@ -161,48 +155,43 @@ const GameMahjongChinese = () => {
     state.currentPlayer === 0 &&
     state.winner === null;
   const isClaimPhase = state?.phase === "claim" && state.lastDiscard !== null;
+  /** 自摸按钮：仅当手牌 14 张且真的能胡时才显示（之前只看了张数，没判胡型） */
   const canZiMo =
     state?.phase === "discard" &&
     state?.currentPlayer === 0 &&
     state?.winner === null &&
     state &&
-    state.hands[0].length === 14;
+    state.hands[0].length === 14 &&
+    checkWin(state.hands[0], state.melds[0]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-stone-200 via-stone-100 to-amber-950/5">
-      {/* 信息层级：左上 房间/局数，右上 分数/操作 */}
-      <header className="flex items-center justify-between border-b border-stone-300 bg-stone-200/60 px-4 py-3 md:px-6 md:py-4">
+    <div className="min-h-screen bg-[#1a2e25] text-[#f1faee] bg-gradient-to-b from-[#1a2e25] to-[#152019]">
+      <header className="flex items-center justify-between border-b border-[#2d4a3c] bg-[#1a2e25] px-4 py-3">
         <div className="flex items-center gap-4">
-          <Link
-            to="/category/mahjong"
-            className="text-stone-600 hover:text-stone-900 text-sm"
-          >
+          <Link to="/category/mahjong" className="text-[#f1faee]/80 hover:text-[#f1faee] text-sm">
             ← 返回
           </Link>
-          <span className="text-stone-700 font-medium text-sm">
+          <span className="text-[#f1faee] text-sm">
             {state ? `局 · 庄 ${SEAT_NAMES[state.dealer ?? 0]}` : "中国麻将"}
           </span>
-          <Button
-            variant="outline"
-            size="sm"
+          <button
+            type="button"
             onClick={startGame}
-            className="border-stone-400 text-stone-700"
+            className="rounded-lg border border-[#d4b886] px-3 py-1.5 text-sm text-[#f1faee] hover:bg-[#2d4a3c]"
           >
             重开
-          </Button>
+          </button>
         </div>
-        <div className="flex items-center gap-3 text-sm">
-          {state?.scores && state.scores.length === 4 && (
-            <span className="font-medium text-stone-800">
-              {SEAT_NAMES.map((name, i) => (
-                <span key={i}>
-                  {i > 0 && " · "}
-                  {name} <span className="text-amber-700">{state.scores[i] ?? 0}</span>
-                </span>
-              ))}
-            </span>
-          )}
-        </div>
+        {state?.scores && state.scores.length === 4 && (
+          <span className="text-sm">
+            {SEAT_NAMES.map((name, i) => (
+              <span key={i}>
+                {i > 0 && " · "}
+                {name} <span className="font-bold text-[#ffd700]">{state.scores[i] ?? 0}</span>
+              </span>
+            ))}
+          </span>
+        )}
       </header>
 
       <main className="mx-auto max-w-6xl p-4 md:p-6 min-[400px]:p-4" style={{ paddingLeft: "max(16px, env(safe-area-inset-left))", paddingRight: "max(16px, env(safe-area-inset-right))" }}>
@@ -236,9 +225,13 @@ const GameMahjongChinese = () => {
                 番种：屁胡1、自摸1、杠上开花1、海底捞月1、门清1、对对胡2、混一色2、清一色4等，可叠加。
               </p>
             </div>
-            <Button className="mt-6" onClick={startGame}>
+            <button
+              type="button"
+              onClick={startGame}
+              className="mt-6 h-11 rounded-lg px-6 font-semibold text-white bg-[#2d4a3c] hover:bg-[#3d5a4c] border border-[#d4b886]"
+            >
               开始
-            </Button>
+            </button>
           </div>
         ) : (
           <>
@@ -267,36 +260,27 @@ const GameMahjongChinese = () => {
                 </div>
               )}
 
-            {/* 俯视牌桌：低饱和度、不抢眼；出牌/摸牌有 transition 过渡 */}
-            <div className="rounded-2xl border-2 border-amber-800/30 bg-amber-900/10 p-4 md:p-6 shadow-xl mb-4 min-h-[520px] md:min-h-[560px] transition-shadow duration-300">
-              {/* 状态提示：单行，不挤在牌桌内 */}
-              <p className="text-center text-sm text-stone-600 mb-3">
-                {state.isDraw
-                  ? "流局"
-                  : state.winner !== null
-                    ? `${SEAT_NAMES[state.winner]} 胡牌`
-                    : isClaimPhase
-                      ? (state.claimPlayer === 0 ? "轮到你：吃/碰/杠/胡 或 过" : "等待要牌")
-                      : isMyTurn
-                        ? "轮到你出牌"
-                        : "等待其他玩家"}
+            {/* 牌桌：背景 #2d4a3c，边缘阴影 */}
+            <div className="rounded-2xl bg-[#2d4a3c] p-4 md:p-6 mb-4 min-h-[520px] shadow-[0_12px_32px_rgba(0,0,0,0.4)]">
+              <p className="text-center text-sm text-[#f1faee]/90 mb-3">
+                {state.isDraw ? "流局" : state.winner !== null ? `${SEAT_NAMES[state.winner]} 胡牌` : isClaimPhase ? (state.claimPlayer === 0 ? "轮到你：吃/碰/杠/胡 或 过" : "等待要牌") : isMyTurn ? "轮到你出牌" : "等待其他玩家"}
               </p>
-              <div className="grid grid-cols-[1fr_2fr_1fr] grid-rows-[auto_1fr_auto] gap-3 md:gap-4 flex-1">
-                <div className="flex flex-col items-center justify-end">
-                  <span className="text-[10px] text-stone-500 mb-1">剩余</span>
-                  <span className="text-sm font-bold text-amber-800 tabular-nums">{state.deck.length}</span>
-                </div>
-                {/* 对家 seat 2 - 上 */}
-                <div className="rounded-xl bg-white/70 border border-amber-700/20 px-2 py-2 flex flex-col items-center justify-center min-h-[56px]">
-                  <div className="w-8 h-8 rounded-full bg-amber-200 border border-amber-400 flex items-center justify-center text-xs font-bold text-amber-800">
+              <div className="grid grid-cols-[1fr_2fr_1fr] grid-rows-[auto_1fr_auto] gap-3">
+                <div />
+                {/* 对家 seat 2 - 上；当前玩家用柔和背景+“正在出牌” */}
+                <div className={cn("rounded-lg px-3 py-2 flex flex-col items-center justify-center min-h-[64px] transition-colors", state.currentPlayer === 2 && "bg-[#ffc107]/10 border border-[#ffc107]/40")}>
+                  <div className="w-9 h-9 rounded-full bg-[#2d4a3c] border-2 border-[#d4b886] flex items-center justify-center text-sm font-bold text-[#ffd700]">
                     {SEAT_NAMES[2].slice(0, 1)}
                   </div>
-                  <p className="text-xs font-medium text-stone-700 mt-1">{SEAT_NAMES[2]}</p>
-                  <span className="text-[10px] text-amber-700 font-medium">{state.scores?.[2] ?? 0} 分</span>
+                  <p className="text-xs font-semibold text-[#f1faee] mt-1 flex items-center gap-1">
+                    {SEAT_NAMES[2]}
+                    {state.currentPlayer === 2 && state.winner === null && <span className="text-[10px] text-[#ffc107]">⏳出牌</span>}
+                  </p>
+                  <span className="text-xs font-bold text-[#ffd700]">{state.scores?.[2] ?? 0} 分</span>
                   {state.discardPiles[2].length > 0 && (
-                    <div className="flex flex-wrap justify-center gap-0.5 mt-1">
+                    <div className={cn("flex flex-wrap justify-center mt-1", TILE_GAP)}>
                       {state.discardPiles[2].slice(-4).map((t, i) => (
-                        <span key={i} className={cn(TILE_BOX_SMALL, getTileStyle(t))}>
+                        <span key={i} className={cn(TILE_SMALL, getTileColorClass(t))}>
                           <TileFace tile={t} />
                         </span>
                       ))}
@@ -304,44 +288,56 @@ const GameMahjongChinese = () => {
                   )}
                 </div>
                 <div />
-                {/* 上家 seat 3 - 左 */}
-                <div className="rounded-xl bg-white/70 border border-amber-700/20 px-2 py-2 flex flex-col items-center justify-center">
-                  <div className="w-8 h-8 rounded-full bg-amber-200 border border-amber-400 flex items-center justify-center text-xs font-bold text-amber-800">
+                {/* 上家 seat 3 - 左；去掉刺眼黄框，改用柔和背景 */}
+                <div className={cn("rounded-lg px-3 py-2 flex flex-col items-center justify-center transition-colors", state.currentPlayer === 3 && "bg-[#ffc107]/10 border border-[#ffc107]/40")}>
+                  <div className="w-9 h-9 rounded-full bg-[#2d4a3c] border-2 border-[#d4b886] flex items-center justify-center text-sm font-bold text-[#ffd700]">
                     {SEAT_NAMES[3].slice(0, 1)}
                   </div>
-                  <p className="text-xs font-medium text-stone-700 mt-1">{SEAT_NAMES[3]}</p>
-                  <span className="text-[10px] text-amber-700 font-medium">{state.scores?.[3] ?? 0} 分</span>
+                  <p className="text-xs font-semibold text-[#f1faee] mt-1 flex items-center gap-1">
+                    {SEAT_NAMES[3]}
+                    {state.currentPlayer === 3 && state.winner === null && <span className="text-[10px] text-[#ffc107]">⏳出牌</span>}
+                  </p>
+                  <span className="text-xs font-bold text-[#ffd700]">{state.scores?.[3] ?? 0} 分</span>
                   {state.discardPiles[3].length > 0 && (
-                    <div className="flex flex-col gap-0.5 mt-1">
+                    <div className={cn("flex flex-col mt-1", TILE_GAP)}>
                       {state.discardPiles[3].slice(-3).map((t, i) => (
-                        <span key={i} className={cn(TILE_BOX_SMALL, getTileStyle(t))}>
+                        <span key={i} className={cn(TILE_SMALL, getTileColorClass(t))}>
                           <TileFace tile={t} />
                         </span>
                       ))}
                     </div>
                   )}
                 </div>
-                {/* 中央牌池 */}
-                <div className="rounded-xl bg-amber-800/10 border border-dashed border-amber-700/30 flex flex-wrap content-start gap-1 p-3 overflow-auto">
-                  {[0, 1, 2, 3].map((seat) =>
-                    state.discardPiles[seat].slice(-5).map((t, i) => (
-                      <span key={`${seat}-${i}`} className={cn(TILE_BOX_SMALL, getTileStyle(t))}>
-                        <TileFace tile={t} />
-                      </span>
-                    )),
-                  )}
+                {/* 中间：剩余牌数 + 弃牌区按家分行，不堆在一起 */}
+                <div className="rounded-lg bg-[#1a2e25]/50 flex flex-col p-3 min-h-[120px]">
+                  <p className="text-center text-3xl font-extrabold text-[#ffd700] tabular-nums mb-2">剩余 {state.deck.length}</p>
+                  <div className="flex flex-col gap-2 overflow-auto">
+                    {([0, 1, 2, 3] as const).map((seat) => (
+                      <div key={seat} className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[10px] text-[#f1faee]/70 w-6 shrink-0">{SEAT_NAMES[seat]}</span>
+                        {state.discardPiles[seat].slice(-8).map((t, i) => (
+                          <span key={`${seat}-${i}`} className={cn(TILE_DISCARD, getTileColorClass(t))}>
+                            <TileFace tile={t} />
+                          </span>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 {/* 下家 seat 1 - 右 */}
-                <div className="rounded-xl bg-white/70 border border-amber-700/20 px-2 py-2 flex flex-col items-center justify-center">
-                  <div className="w-8 h-8 rounded-full bg-amber-200 border border-amber-400 flex items-center justify-center text-xs font-bold text-amber-800">
+                <div className={cn("rounded-lg px-3 py-2 flex flex-col items-center justify-center transition-colors", state.currentPlayer === 1 && "bg-[#ffc107]/10 border border-[#ffc107]/40")}>
+                  <div className="w-9 h-9 rounded-full bg-[#2d4a3c] border-2 border-[#d4b886] flex items-center justify-center text-sm font-bold text-[#ffd700]">
                     {SEAT_NAMES[1].slice(0, 1)}
                   </div>
-                  <p className="text-xs font-medium text-stone-700 mt-1">{SEAT_NAMES[1]}</p>
-                  <span className="text-[10px] text-amber-700 font-medium">{state.scores?.[1] ?? 0} 分</span>
+                  <p className="text-xs font-semibold text-[#f1faee] mt-1 flex items-center gap-1">
+                    {SEAT_NAMES[1]}
+                    {state.currentPlayer === 1 && state.winner === null && <span className="text-[10px] text-[#ffc107]">⏳出牌</span>}
+                  </p>
+                  <span className="text-xs font-bold text-[#ffd700]">{state.scores?.[1] ?? 0} 分</span>
                   {state.discardPiles[1].length > 0 && (
-                    <div className="flex flex-col gap-0.5 mt-1">
+                    <div className={cn("flex flex-col mt-1", TILE_GAP)}>
                       {state.discardPiles[1].slice(-3).map((t, i) => (
-                        <span key={i} className={cn(TILE_BOX_SMALL, getTileStyle(t))}>
+                        <span key={i} className={cn(TILE_SMALL, getTileColorClass(t))}>
                           <TileFace tile={t} />
                         </span>
                       ))}
@@ -349,18 +345,17 @@ const GameMahjongChinese = () => {
                   )}
                 </div>
                 <div />
-                {/* 自家 seat 0 - 下：牌大且清晰，选中上浮+阴影+边框 */}
-                <div className="col-span-3 rounded-xl bg-white/95 border-2 border-amber-500/50 p-3 md:p-4 space-y-3">
+                {/* 自家 seat 0 - 下：手牌居中、牌间距 10px，刚摸高亮；出牌阶段提示 */}
+                <div className="col-span-3 rounded-xl bg-[#2d4a3c]/80 p-4 space-y-3">
+                  {isMyTurn && state.winner === null && (
+                    <p className="text-center text-sm text-[#ffc107]/90">点击手牌出牌</p>
+                  )}
                   {state.melds[0].length > 0 && (
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-xs text-stone-500">明牌</span>
+                    <div className={cn("flex flex-wrap justify-center", TILE_GAP)}>
                       {state.melds[0].map((m, i) => (
-                        <span
-                          key={i}
-                          className="flex flex-wrap items-center gap-1 rounded-md border border-amber-600/30 bg-amber-50/80 p-1"
-                        >
+                        <span key={i} className={cn("flex flex-wrap rounded-lg border border-[#d4b886] bg-[#fff9e6]/90 p-1", TILE_GAP)}>
                           {m.tiles.map((t, j) => (
-                            <span key={j} className={cn(TILE_BOX_BASE, getTileStyle(t))}>
+                            <span key={j} className={cn(TILE_HAND, getTileColorClass(t))}>
                               <TileFace tile={t} />
                             </span>
                           ))}
@@ -376,105 +371,90 @@ const GameMahjongChinese = () => {
                     const restIndices = drawnIndex >= 0 ? hand.map((_, i) => i).filter((i) => i !== drawnIndex) : hand.map((_, i) => i);
                     const canDiscard = isMyTurn && state.winner === null;
                     return (
-                      <div className="flex flex-wrap items-center gap-2">
-                        {restHand.length > 0 &&
-                          restHand.map((tile, i) => (
-                            <button
-                              key={`rest-${i}-${tile}`}
-                              type="button"
-                              onClick={() => canDiscard && discard(0, restIndices[i])}
-                              disabled={!canDiscard}
-                              className={cn(
-                                TILE_BOX_BASE,
-                                getTileStyle(tile),
-                                "hover:shadow-md hover:-translate-y-0.5",
-                                canDiscard && "cursor-pointer hover:ring-2 hover:ring-amber-500 hover:ring-offset-2 active:scale-[0.98] transition-all",
-                                !canDiscard && "cursor-default opacity-90",
-                              )}
-                            >
-                              <TileFace tile={tile} />
-                            </button>
-                          ))}
+                      <div className={cn("flex flex-wrap justify-center items-center", TILE_GAP)}>
+                        {restHand.length > 0 && restHand.map((tile, i) => (
+                          <button
+                            key={`rest-${i}-${tile}`}
+                            type="button"
+                            onClick={() => canDiscard && discard(0, restIndices[i])}
+                            disabled={!canDiscard}
+                            className={cn(
+                              TILE_HAND,
+                              getTileColorClass(tile),
+                              canDiscard && "cursor-pointer hover:border-[#ffc107] hover:-translate-y-1 hover:shadow-lg active:scale-[0.98]",
+                              !canDiscard && "cursor-default opacity-90",
+                            )}
+                          >
+                            <TileFace tile={tile} />
+                          </button>
+                        ))}
                         {drawn !== null && (
-                          <>
-                            <span className="text-xs font-medium text-stone-500">刚摸</span>
-                            <button
-                              type="button"
-                              onClick={() => canDiscard && discard(0, drawnIndex)}
-                              disabled={!canDiscard}
-                              className={cn(
-                                TILE_BOX_BASE,
-                                getTileStyle(drawn),
-                                TILE_SELECTED,
-                                canDiscard && "cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all",
-                                !canDiscard && "cursor-default",
-                              )}
-                            >
-                              <TileFace tile={drawn} />
-                            </button>
-                          </>
+                          <button
+                            type="button"
+                            onClick={() => canDiscard && discard(0, drawnIndex)}
+                            disabled={!canDiscard}
+                            className={cn(
+                              TILE_HAND,
+                              getTileColorClass(drawn),
+                              TILE_ACTIVE,
+                              canDiscard && "cursor-pointer hover:scale-[1.02] active:scale-[0.98]",
+                              !canDiscard && "cursor-default",
+                            )}
+                          >
+                            <TileFace tile={drawn} />
+                          </button>
                         )}
                       </div>
                     );
                   })()}
-                  {state.discardPiles[0].length > 0 && (
-                    <div className="flex flex-wrap items-center gap-1">
-                      <span className="text-xs text-stone-500">弃牌</span>
-                      {state.discardPiles[0].slice(-8).map((t, i) => (
-                        <span key={i} className={cn(TILE_BOX_BASE, getTileStyle(t), "opacity-90")}>
-                          <TileFace tile={t} />
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
 
-            {/* 底部中央：操作区（吃/碰/杠/胡/过）— 别人出牌才显示吃碰杠胡，自己摸牌只显示杠/胡/过 */}
-            <div className="flex flex-wrap justify-center items-center gap-2 py-3 px-4 bg-white/80 rounded-xl border border-amber-700/20 shadow-sm">
+            {/* 底部中央操作区：胡红 / 杠碰橙 / 吃蓝 / 过灰；不可用时置灰，避免找不到按钮 */}
+            <div className="flex flex-wrap justify-center items-center gap-2 py-3 px-4">
               {canZiMo && (
-                <Button size="lg" onClick={doZiMo} className="bg-red-600 hover:bg-red-700 text-white font-bold shadow-md min-w-[72px]">
+                <button type="button" onClick={doZiMo} className="h-11 min-w-[72px] rounded-lg px-4 font-semibold text-white bg-[#e63946] hover:bg-[#d62839] active:scale-[0.98] transition-all">
                   自摸
-                </Button>
+                </button>
               )}
               {isMyTurn && state?.winner === null && state.hands[0].length === 14 && getJiagangOptions(state.hands[0], state.melds[0]).length > 0 &&
                 getJiagangOptions(state.hands[0], state.melds[0]).map((meldIdx) => (
-                  <Button key={meldIdx} size="lg" variant="outline" onClick={() => doJiagang(meldIdx)} className="border-amber-500 text-amber-800 bg-amber-50 hover:bg-amber-100 font-bold min-w-[72px]">
+                  <button key={meldIdx} type="button" onClick={() => doJiagang(meldIdx)} className="h-11 min-w-[72px] rounded-lg px-4 font-semibold text-white bg-[#f4a261] hover:bg-[#e76f51] active:scale-[0.98] transition-all">
                     加杠 {TILE_LABELS[state.melds[0][meldIdx].tiles[0]]}
-                  </Button>
+                  </button>
                 ))}
               {isMyTurn && state?.winner === null && state.hands[0].length === 14 && getAngangOptions(state.hands[0]).length > 0 &&
                 getAngangOptions(state.hands[0]).map((t) => (
-                  <Button key={t} size="lg" variant="outline" onClick={() => doAngang(t)} className="border-amber-500 text-amber-800 bg-amber-50 hover:bg-amber-100 font-bold min-w-[72px]">
+                  <button key={t} type="button" onClick={() => doAngang(t)} className="h-11 min-w-[72px] rounded-lg px-4 font-semibold text-white bg-[#f4a261] hover:bg-[#e76f51] active:scale-[0.98] transition-all">
                     暗杠 {TILE_LABELS[t]}
-                  </Button>
+                  </button>
                 ))}
-              {isClaimPhase && state.claimOption && (
+              {isClaimPhase && state.claimPlayer === 0 && (
                 <>
-                  {state.claimOption.hu && (
-                    <Button size="lg" onClick={doHu} className="bg-red-600 hover:bg-red-700 text-white font-bold shadow-md min-w-[72px]">
-                      胡
-                    </Button>
+                  <button type="button" onClick={doHu} disabled={!state.claimOption?.hu} className={cn("h-11 min-w-[72px] rounded-lg px-4 font-semibold text-white transition-all", state.claimOption?.hu ? "bg-[#e63946] hover:bg-[#d62839] active:scale-[0.98]" : "bg-[#6b7280]/50 cursor-not-allowed opacity-60")}>
+                    胡
+                  </button>
+                  <button type="button" onClick={doGang} disabled={!state.claimOption?.gang} className={cn("h-11 min-w-[72px] rounded-lg px-4 font-semibold text-white transition-all", state.claimOption?.gang ? "bg-[#f4a261] hover:bg-[#e76f51] active:scale-[0.98]" : "bg-[#6b7280]/50 cursor-not-allowed opacity-60")}>
+                    杠
+                  </button>
+                  <button type="button" onClick={doPeng} disabled={!state.claimOption?.peng} className={cn("h-11 min-w-[72px] rounded-lg px-4 font-semibold text-white transition-all", state.claimOption?.peng ? "bg-[#f4a261] hover:bg-[#e76f51] active:scale-[0.98]" : "bg-[#6b7280]/50 cursor-not-allowed opacity-60")}>
+                    碰
+                  </button>
+                  {state.claimOption?.chi && state.claimOption.chi.length > 0 ? (
+                    state.claimOption.chi.map((opt, i) => (
+                      <button key={i} type="button" onClick={() => doChi(opt)} className="h-11 min-w-[72px] rounded-lg px-4 font-semibold text-white bg-[#457b9d] hover:bg-[#3d6b8a] active:scale-[0.98] transition-all">
+                        吃 {TILE_LABELS[opt[0]]}{TILE_LABELS[opt[1]]}
+                      </button>
+                    ))
+                  ) : (
+                    <button type="button" disabled className="h-11 min-w-[72px] rounded-lg px-4 font-semibold text-white bg-[#6b7280]/50 cursor-not-allowed opacity-60">
+                      吃
+                    </button>
                   )}
-                  {state.claimOption.gang && (
-                    <Button size="lg" variant="outline" onClick={doGang} className="border-amber-600 bg-amber-100 text-amber-900 hover:bg-amber-200 font-bold min-w-[72px]">
-                      杠
-                    </Button>
-                  )}
-                  {state.claimOption.peng && (
-                    <Button size="lg" variant="outline" onClick={doPeng} className="border-amber-600 bg-amber-100 text-amber-900 hover:bg-amber-200 font-bold min-w-[72px]">
-                      碰
-                    </Button>
-                  )}
-                  {state.claimOption.chi && state.claimOption.chi.map((opt, i) => (
-                    <Button key={i} size="lg" variant="outline" onClick={() => doChi(opt)} className="border-blue-600 bg-blue-50 text-blue-900 hover:bg-blue-100 font-bold min-w-[72px]">
-                      吃 {TILE_LABELS[opt[0]]}{TILE_LABELS[opt[1]]}
-                    </Button>
-                  ))}
-                  <Button size="lg" variant="ghost" onClick={passClaim} className="text-stone-500 hover:text-stone-700 hover:bg-stone-100 min-w-[72px]">
+                  <button type="button" onClick={passClaim} className="h-11 min-w-[72px] rounded-lg px-4 font-semibold text-white bg-[#6b7280] hover:bg-[#5a6070] active:scale-[0.98] transition-all">
                     过
-                  </Button>
+                  </button>
                 </>
               )}
             </div>
