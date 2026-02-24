@@ -11,13 +11,188 @@ const H = ROWS * CELL;
 type ShapeGrid = number[][];
 
 const SHAPES: ShapeGrid[][] = [
-  [[[1,1,1,1],[0,0,0,0],[0,0,0,0],[0,0,0,0]], [[0,0,1,0],[0,0,1,0],[0,0,1,0],[0,0,1,0]], [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], [[0,1,0,0],[0,1,0,0],[0,1,0,0],[0,1,0,0]]],
-  [[[1,1,0,0],[1,1,0,0],[0,0,0,0],[0,0,0,0]], [[1,1,0,0],[1,1,0,0],[0,0,0,0],[0,0,0,0]], [[1,1,0,0],[1,1,0,0],[0,0,0,0],[0,0,0,0]], [[1,1,0,0],[1,1,0,0],[0,0,0,0],[0,0,0,0]]],
-  [[[0,1,0,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]], [[0,1,0,0],[0,1,1,0],[0,1,0,0],[0,0,0,0]], [[0,0,0,0],[1,1,1,0],[0,1,0,0],[0,0,0,0]], [[0,1,0,0],[1,1,0,0],[0,1,0,0],[0,0,0,0]]],
-  [[[0,1,1,0],[1,1,0,0],[0,0,0,0],[0,0,0,0]], [[0,1,0,0],[0,1,1,0],[0,0,1,0],[0,0,0,0]], [[0,0,0,0],[0,1,1,0],[1,1,0,0],[0,0,0,0]], [[1,0,0,0],[1,1,0,0],[0,1,0,0],[0,0,0,0]]],
-  [[[1,1,0,0],[0,1,1,0],[0,0,0,0],[0,0,0,0]], [[0,0,1,0],[0,1,1,0],[0,1,0,0],[0,0,0,0]], [[0,0,0,0],[1,1,0,0],[0,1,1,0],[0,0,0,0]], [[0,1,0,0],[1,1,0,0],[1,0,0,0],[0,0,0,0]]],
-  [[[1,0,0,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]], [[0,1,1,0],[0,1,0,0],[0,1,0,0],[0,0,0,0]], [[0,0,0,0],[1,1,1,0],[0,0,1,0],[0,0,0,0]], [[0,1,0,0],[0,1,0,0],[0,1,1,0],[0,0,0,0]]],
-  [[[0,0,1,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]], [[0,1,0,0],[0,1,0,0],[0,1,1,0],[0,0,0,0]], [[0,0,0,0],[1,1,1,0],[1,0,0,0],[0,0,0,0]], [[0,1,1,0],[0,1,0,0],[0,1,0,0],[0,0,0,0]]],
+  [
+    [
+      [1, 1, 1, 1],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [0, 0, 1, 0],
+      [0, 0, 1, 0],
+      [0, 0, 1, 0],
+      [0, 0, 1, 0],
+    ],
+    [
+      [0, 0, 0, 0],
+      [1, 1, 1, 1],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [0, 1, 0, 0],
+      [0, 1, 0, 0],
+      [0, 1, 0, 0],
+      [0, 1, 0, 0],
+    ],
+  ],
+  [
+    [
+      [1, 1, 0, 0],
+      [1, 1, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [1, 1, 0, 0],
+      [1, 1, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [1, 1, 0, 0],
+      [1, 1, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [1, 1, 0, 0],
+      [1, 1, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ],
+  ],
+  [
+    [
+      [0, 1, 0, 0],
+      [1, 1, 1, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [0, 1, 0, 0],
+      [0, 1, 1, 0],
+      [0, 1, 0, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [0, 0, 0, 0],
+      [1, 1, 1, 0],
+      [0, 1, 0, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [0, 1, 0, 0],
+      [1, 1, 0, 0],
+      [0, 1, 0, 0],
+      [0, 0, 0, 0],
+    ],
+  ],
+  [
+    [
+      [0, 1, 1, 0],
+      [1, 1, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [0, 1, 0, 0],
+      [0, 1, 1, 0],
+      [0, 0, 1, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [0, 0, 0, 0],
+      [0, 1, 1, 0],
+      [1, 1, 0, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [1, 0, 0, 0],
+      [1, 1, 0, 0],
+      [0, 1, 0, 0],
+      [0, 0, 0, 0],
+    ],
+  ],
+  [
+    [
+      [1, 1, 0, 0],
+      [0, 1, 1, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [0, 0, 1, 0],
+      [0, 1, 1, 0],
+      [0, 1, 0, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [0, 0, 0, 0],
+      [1, 1, 0, 0],
+      [0, 1, 1, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [0, 1, 0, 0],
+      [1, 1, 0, 0],
+      [1, 0, 0, 0],
+      [0, 0, 0, 0],
+    ],
+  ],
+  [
+    [
+      [1, 0, 0, 0],
+      [1, 1, 1, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [0, 1, 1, 0],
+      [0, 1, 0, 0],
+      [0, 1, 0, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [0, 0, 0, 0],
+      [1, 1, 1, 0],
+      [0, 0, 1, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [0, 1, 0, 0],
+      [0, 1, 0, 0],
+      [0, 1, 1, 0],
+      [0, 0, 0, 0],
+    ],
+  ],
+  [
+    [
+      [0, 0, 1, 0],
+      [1, 1, 1, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [0, 1, 0, 0],
+      [0, 1, 0, 0],
+      [0, 1, 1, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [0, 0, 0, 0],
+      [1, 1, 1, 0],
+      [1, 0, 0, 0],
+      [0, 0, 0, 0],
+    ],
+    [
+      [0, 1, 1, 0],
+      [0, 1, 0, 0],
+      [0, 1, 0, 0],
+      [0, 0, 0, 0],
+    ],
+  ],
 ];
 
 const COLORS = [
@@ -80,7 +255,13 @@ const GameTetris = () => {
   }, []);
 
   const collide = useCallback(
-    (board: number[][], piece: number, rot: number, px: number, py: number): boolean => {
+    (
+      board: number[][],
+      piece: number,
+      rot: number,
+      px: number,
+      py: number,
+    ): boolean => {
       const shape = SHAPES[piece][rot];
       for (let r = 0; r < 4; r++) {
         for (let c = 0; c < 4; c++) {
@@ -97,7 +278,14 @@ const GameTetris = () => {
   );
 
   const merge = useCallback(
-    (board: number[][], piece: number, rot: number, px: number, py: number, color: number): number[][] => {
+    (
+      board: number[][],
+      piece: number,
+      rot: number,
+      px: number,
+      py: number,
+      color: number,
+    ): number[][] => {
       const next = board.map((row) => [...row]);
       const shape = SHAPES[piece][rot];
       for (let r = 0; r < 4; r++) {
@@ -105,7 +293,8 @@ const GameTetris = () => {
           if (!shape[r][c]) continue;
           const ny = py + r;
           const nx = px + c;
-          if (ny >= 0 && ny < ROWS && nx >= 0 && nx < COLS) next[ny][nx] = color;
+          if (ny >= 0 && ny < ROWS && nx >= 0 && nx < COLS)
+            next[ny][nx] = color;
         }
       }
       return next;
@@ -113,18 +302,25 @@ const GameTetris = () => {
     [],
   );
 
-  const clearLines = useCallback((board: number[][]): { board: number[][]; cleared: number } => {
-    let cleared = 0;
-    let next = board.map((row) => [...row]);
-    for (let r = ROWS - 1; r >= 0; r--) {
-      if (next[r].every((c) => c !== 0)) {
-        cleared++;
-        next = [Array(COLS).fill(0), ...next.slice(0, r), ...next.slice(r + 1)];
-        r++;
+  const clearLines = useCallback(
+    (board: number[][]): { board: number[][]; cleared: number } => {
+      let cleared = 0;
+      let next = board.map((row) => [...row]);
+      for (let r = ROWS - 1; r >= 0; r--) {
+        if (next[r].every((c) => c !== 0)) {
+          cleared++;
+          next = [
+            Array(COLS).fill(0),
+            ...next.slice(0, r),
+            ...next.slice(r + 1),
+          ];
+          r++;
+        }
       }
-    }
-    return { board: next, cleared };
-  }, []);
+      return { board: next, cleared };
+    },
+    [],
+  );
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -178,7 +374,11 @@ const GameTetris = () => {
         ctx.font = '18px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('按 空格 开始', W / 2, H / 2 - 12);
-        ctx.fillText('方向键移动/旋转 · 下键加速 · 空格落地', W / 2, H / 2 + 12);
+        ctx.fillText(
+          '方向键移动/旋转 · 下键加速 · 空格落地',
+          W / 2,
+          H / 2 + 12,
+        );
       }
 
       if (status === 'over') {
@@ -199,7 +399,7 @@ const GameTetris = () => {
             state.py++;
           } else {
             const color = piece + 1;
-            let newBoard = merge(board, piece, rot, px, py, color);
+            const newBoard = merge(board, piece, rot, px, py, color);
             const { board: afterClear, cleared } = clearLines(newBoard);
             state.board = afterClear;
             if (cleared > 0) {
@@ -207,18 +407,26 @@ const GameTetris = () => {
               const lvl = 1 + Math.floor(linesRef.current / 10);
               setScore((s) => s + LINE_SCORES[cleared] * Math.min(10, lvl));
               setLines(linesRef.current);
-              const newLevel = Math.min(10, 1 + Math.floor(linesRef.current / 10));
+              const newLevel = Math.min(
+                10,
+                1 + Math.floor(linesRef.current / 10),
+              );
               setLevel(newLevel);
               state.dropInterval = Math.max(8, 48 - newLevel * 4);
             } else {
-              state.dropInterval = Math.max(8, 48 - (1 + Math.floor(linesRef.current / 10)) * 4);
+              state.dropInterval = Math.max(
+                8,
+                48 - (1 + Math.floor(linesRef.current / 10)) * 4,
+              );
             }
             state.piece = nextPiece;
             state.rot = 0;
             state.px = Math.floor((COLS - 4) / 2);
             state.py = 0;
             state.nextPiece = Math.floor(Math.random() * 7);
-            if (collide(state.board, state.piece, state.rot, state.px, state.py)) {
+            if (
+              collide(state.board, state.piece, state.rot, state.px, state.py)
+            ) {
               setStatus('over');
             }
           }
@@ -230,7 +438,7 @@ const GameTetris = () => {
 
     rafId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafId);
-  }, [status, score, level, lines, collide, merge, clearLines]);
+  }, [status, score, collide, merge, clearLines]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -242,12 +450,21 @@ const GameTetris = () => {
           return;
         }
         if (status === 'over') return;
-        while (!collide(state.board, state.piece, state.rot, state.px, state.py + 1)) {
+        while (
+          !collide(state.board, state.piece, state.rot, state.px, state.py + 1)
+        ) {
           state.py++;
           setScore((s) => s + 2);
         }
         const color = state.piece + 1;
-        let newBoard = merge(state.board, state.piece, state.rot, state.px, state.py, color);
+        const newBoard = merge(
+          state.board,
+          state.piece,
+          state.rot,
+          state.px,
+          state.py,
+          color,
+        );
         const { board: afterClear, cleared } = clearLines(newBoard);
         state.board = afterClear;
         if (cleared > 0) {
@@ -259,7 +476,10 @@ const GameTetris = () => {
           setLevel(newLevel);
           state.dropInterval = Math.max(8, 48 - newLevel * 4);
         } else {
-          state.dropInterval = Math.max(8, 48 - (1 + Math.floor(linesRef.current / 10)) * 4);
+          state.dropInterval = Math.max(
+            8,
+            48 - (1 + Math.floor(linesRef.current / 10)) * 4,
+          );
         }
         state.piece = state.nextPiece;
         state.rot = 0;
@@ -274,19 +494,25 @@ const GameTetris = () => {
       if (status !== 'playing') return;
       if (e.code === 'ArrowLeft') {
         e.preventDefault();
-        if (!collide(state.board, state.piece, state.rot, state.px - 1, state.py)) {
+        if (
+          !collide(state.board, state.piece, state.rot, state.px - 1, state.py)
+        ) {
           state.px--;
         }
       }
       if (e.code === 'ArrowRight') {
         e.preventDefault();
-        if (!collide(state.board, state.piece, state.rot, state.px + 1, state.py)) {
+        if (
+          !collide(state.board, state.piece, state.rot, state.px + 1, state.py)
+        ) {
           state.px++;
         }
       }
       if (e.code === 'ArrowDown') {
         e.preventDefault();
-        if (!collide(state.board, state.piece, state.rot, state.px, state.py + 1)) {
+        if (
+          !collide(state.board, state.piece, state.rot, state.px, state.py + 1)
+        ) {
           state.py++;
           setScore((s) => s + 1);
         }
@@ -308,7 +534,7 @@ const GameTetris = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [status, level, lines, collide, merge, clearLines]);
+  }, [status, collide, merge, clearLines]);
 
   const start = () => {
     if (status === 'idle') setStatus('playing');
@@ -331,12 +557,10 @@ const GameTetris = () => {
       </header>
 
       <main className="flex min-h-[calc(100vh-56px)] flex-col items-center justify-center p-4">
-        <div
-          className="rounded-lg border-2 border-border bg-black"
+        <button
+          type="button"
+          className="rounded-lg border-2 border-border bg-black block"
           onClick={start}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && start()}
         >
           <canvas
             ref={canvasRef}
@@ -345,7 +569,7 @@ const GameTetris = () => {
             className="block cursor-pointer"
             style={{ width: W, height: H }}
           />
-        </div>
+        </button>
         <p className="mt-4 text-center text-sm text-muted-foreground">
           方向键 左右下 · 上/X 顺时针旋转 · Z 逆时针 · 空格 一键落地
         </p>

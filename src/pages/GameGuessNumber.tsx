@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 
 const MIN = 1;
 const MAX = 100;
 
 const GameGuessNumber = () => {
-  const [answer, setAnswer] = useState(() =>
-    Math.floor(Math.random() * (MAX - MIN + 1)) + MIN,
+  const [answer, setAnswer] = useState(
+    () => Math.floor(Math.random() * (MAX - MIN + 1)) + MIN,
   );
   const [guess, setGuess] = useState('');
   const [message, setMessage] = useState('');

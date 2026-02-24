@@ -5,12 +5,13 @@
   "type": "module",
   "scripts": {
     "build": "rsbuild build",
-    "check": "biome check --write",
+    "check": "pnpm run typecheck && biome check --write",
     "dev": "rsbuild dev --open",
     "format": "biome format --write",
     "preview": "rsbuild preview",
     "test": "rstest",
-    "test:watch": "rstest --watch"
+    "test:watch": "rstest --watch",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

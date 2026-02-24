@@ -139,12 +139,11 @@ export const games: GameItem[] = [
   {
     id: 'mahjong-sichuan',
     categoryId: 'mahjong',
-    name: '四川麻将（开发中）',
-    description: '血战到底、缺一门等川麻规则。',
+    name: '四川麻将',
+    description: '血战到底、刮风下雨、定缺规则等特色玩法。',
     path: '/game/mahjong-sichuan',
     difficulty: 4,
     tags: ['四川麻将', '四人'],
-    comingSoon: true,
   },
   {
     id: 'mahjong-chinese',

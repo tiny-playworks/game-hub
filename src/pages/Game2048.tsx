@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -40,8 +40,11 @@ function slideAndMerge(line: number[]): { line: number[]; score: number } {
   return { line: merged, score };
 }
 
-function moveGrid(grid: number[][], dir: Dir): { grid: number[][]; score: number } {
-  let next = emptyGrid();
+function moveGrid(
+  grid: number[][],
+  dir: Dir,
+): { grid: number[][]; score: number } {
+  const next = emptyGrid();
   let totalScore = 0;
   if (dir === 'left') {
     for (let r = 0; r < SIZE; r++) {
@@ -175,7 +178,10 @@ const Game2048 = () => {
           方向键移动，相同数字合并
         </p>
         <div className="rounded-lg bg-muted p-2">
-          <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${SIZE}, 1fr)` }}>
+          <div
+            className="grid gap-2"
+            style={{ gridTemplateColumns: `repeat(${SIZE}, 1fr)` }}
+          >
             {grid.flat().map((val, i) => (
               <div
                 key={i}
@@ -190,7 +196,9 @@ const Game2048 = () => {
           </div>
         </div>
         {gameOver && (
-          <p className="mt-4 text-lg font-medium text-destructive">无法移动，游戏结束</p>
+          <p className="mt-4 text-lg font-medium text-destructive">
+            无法移动，游戏结束
+          </p>
         )}
         <Link to="/" className="mt-6">
           <Button variant="ghost" size="sm">

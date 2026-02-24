@@ -13,7 +13,10 @@ const GameMahjongComingSoon = () => {
   return (
     <div className="min-h-screen bg-background">
       <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
-        <Link to="/category/mahjong" className="text-muted-foreground hover:text-foreground">
+        <Link
+          to="/category/mahjong"
+          className="text-muted-foreground hover:text-foreground"
+        >
           ← 返回麻将分类
         </Link>
       </header>

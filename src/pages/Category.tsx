@@ -80,8 +80,7 @@ const Category = () => {
                           'bg-destructive/20 text-destructive',
                         game.difficulty === 3 &&
                           'bg-amber-500/20 text-amber-700',
-                        game.difficulty === 2 &&
-                          'bg-blue-500/20 text-blue-700',
+                        game.difficulty === 2 && 'bg-blue-500/20 text-blue-700',
                         game.difficulty === 1 &&
                           'bg-green-500/20 text-green-700',
                       )}

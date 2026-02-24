@@ -1,9 +1,39 @@
 /** 34 种牌型：0-8 万 9-17 条 18-26 筒 27-33 字牌(东南西北中发白) */
 export const TILE_LABELS: string[] = [
-  '一万', '二万', '三万', '四万', '五万', '六万', '七万', '八万', '九万',
-  '一条', '二条', '三条', '四条', '五条', '六条', '七条', '八条', '九条',
-  '一筒', '二筒', '三筒', '四筒', '五筒', '六筒', '七筒', '八筒', '九筒',
-  '东', '南', '西', '北', '中', '发', '白',
+  '一万',
+  '二万',
+  '三万',
+  '四万',
+  '五万',
+  '六万',
+  '七万',
+  '八万',
+  '九万',
+  '一条',
+  '二条',
+  '三条',
+  '四条',
+  '五条',
+  '六条',
+  '七条',
+  '八条',
+  '九条',
+  '一筒',
+  '二筒',
+  '三筒',
+  '四筒',
+  '五筒',
+  '六筒',
+  '七筒',
+  '八筒',
+  '九筒',
+  '东',
+  '南',
+  '西',
+  '北',
+  '中',
+  '发',
+  '白',
 ];
 
 export const SEAT_NAMES = ['自家', '下家', '对家', '上家'];
@@ -47,9 +77,13 @@ export function deal(deck: number[], dealer: number): [number[][], number[]] {
   const hands: number[][] = [[], [], [], []];
   const d = [...deck];
   for (let i = 0; i < HAND_INIT * NUM_PLAYERS; i++) {
-    hands[i % NUM_PLAYERS].push(d.shift()!);
+    const t = d.shift();
+    if (t === undefined) throw new Error('Deck empty');
+    hands[i % NUM_PLAYERS].push(t);
   }
-  hands[dealer].push(d.shift()!);
+  const dealerDraw = d.shift();
+  if (dealerDraw === undefined) throw new Error('Deck empty');
+  hands[dealer].push(dealerDraw);
   hands[dealer].sort((a, b) => a - b);
   for (let i = 0; i < NUM_PLAYERS; i++) {
     if (i !== dealer) hands[i].sort((a, b) => a - b);
@@ -66,7 +100,6 @@ function sameSuit(a: number, b: number, c: number): boolean {
   const s = (x: number) => Math.floor(x / 9);
   return s(a) === s(b) && s(b) === s(c);
 }
-
 
 /** 12 张牌能否组成 4 组 */
 /** 手牌 + 明牌组展开为牌列表（用于胡牌判定） */
@@ -113,19 +146,23 @@ export function isThirteenOrphans(tiles: number[]): boolean {
 }
 
 /** 是否胡牌：手牌+明牌共 14 张。先判特殊牌型，再判基础 1 对+4 组 */
-export function checkWin(hand: number[], melds: Meld[], drawnTile?: number): boolean {
+export function checkWin(
+  hand: number[],
+  melds: Meld[],
+  drawnTile?: number,
+): boolean {
   const all = drawnTile !== undefined ? [...hand, drawnTile] : [...hand];
   const fromMelds = melds.flatMap((m) => m.tiles);
   const total = all.length + fromMelds.length;
   if (total !== 14) return false;
-  
+
   const combined = [...all, ...fromMelds];
-  
+
   // 优先检查特殊牌型
   if (isThirteenOrphans(combined)) return true;
   if (isDragonSevenPairs(combined)) return true;
   if (isSevenPairs(combined)) return true;
-  
+
   // 基础牌型：4面子 + 1将牌
   return isValidBasicWin(combined);
 }
@@ -133,12 +170,12 @@ export function checkWin(hand: number[], melds: Meld[], drawnTile?: number): boo
 /** 验证基础胡牌牌型（4面子 + 1将牌） */
 function isValidBasicWin(tiles: number[]): boolean {
   const sorted = [...tiles].sort((a, b) => a - b);
-  
+
   // 尝试每种可能的将牌组合
   for (let i = 0; i < sorted.length - 1; i++) {
     // 跳过重复的将牌尝试
     if (i > 0 && sorted[i] === sorted[i - 1]) continue;
-    
+
     // 找到一对作为将牌
     if (sorted[i] === sorted[i + 1]) {
       const remaining = sorted.filter((_, idx) => idx !== i && idx !== i + 1);
@@ -152,38 +189,47 @@ function isValidBasicWin(tiles: number[]): boolean {
 function canFormFourMeldsOptimized(arr: number[]): boolean {
   if (arr.length === 0) return true;
   if (arr.length !== 12) return false; // 4组应该正好12张牌
-  
+
   const sorted = [...arr].sort((a, b) => a - b);
-  
+
   // 使用递归回溯算法寻找有效的组合
   function backtrack(index: number, meldsFound: number): boolean {
     if (meldsFound === 4) return index === sorted.length;
     if (index >= sorted.length) return false;
-    
+
     // 尝试形成刻子
-    if (index + 2 < sorted.length && 
-        sorted[index] === sorted[index + 1] && 
-        sorted[index] === sorted[index + 2]) {
+    if (
+      index + 2 < sorted.length &&
+      sorted[index] === sorted[index + 1] &&
+      sorted[index] === sorted[index + 2]
+    ) {
       if (backtrack(index + 3, meldsFound + 1)) return true;
     }
-    
+
     // 尝试形成顺子（仅数字牌）
     if (isNumberTile(sorted[index])) {
       const suit = Math.floor(sorted[index] / 9);
       let j = index + 1;
       let k = index + 2;
-      
+
       // 找到第二张牌
-      while (j < sorted.length && (sorted[j] !== sorted[index] + 1 || Math.floor(sorted[j] / 9) !== suit)) {
+      while (
+        j < sorted.length &&
+        (sorted[j] !== sorted[index] + 1 || Math.floor(sorted[j] / 9) !== suit)
+      ) {
         j++;
       }
-      
+
       // 找到第三张牌
       if (j < sorted.length) {
-        while (k < sorted.length && (sorted[k] !== sorted[index] + 2 || Math.floor(sorted[k] / 9) !== suit)) {
+        while (
+          k < sorted.length &&
+          (sorted[k] !== sorted[index] + 2 ||
+            Math.floor(sorted[k] / 9) !== suit)
+        ) {
           k++;
         }
-        
+
         if (k < sorted.length) {
           // 创建新的数组，移除这三张牌
           const newArr = [...sorted];
@@ -194,15 +240,20 @@ function canFormFourMeldsOptimized(arr: number[]): boolean {
         }
       }
     }
-    
+
     return false;
   }
-  
+
   return backtrack(0, 0);
 }
 
 /** 吃：只能吃上家的牌。上家 = (myIndex + 3) % 4。返回可吃的组合 [ [牌1, 牌2], ... ]，与 lastTile 组成顺子 */
-export function getChiOptions(hand: number[], lastTile: number, fromPlayer: number, myIndex: number): [number, number][] {
+export function getChiOptions(
+  hand: number[],
+  lastTile: number,
+  fromPlayer: number,
+  myIndex: number,
+): [number, number][] {
   const 上家 = (myIndex + 3) % 4;
   if (fromPlayer !== 上家) return [];
   if (!isNumberTile(lastTile)) return [];
@@ -240,7 +291,11 @@ export function getAngangOptions(hand: number[]): number[] {
   const types: number[] = [];
   const sorted = [...hand].sort((a, b) => a - b);
   for (let i = 0; i <= sorted.length - 4; i++) {
-    if (sorted[i] === sorted[i + 1] && sorted[i] === sorted[i + 2] && sorted[i] === sorted[i + 3]) {
+    if (
+      sorted[i] === sorted[i + 1] &&
+      sorted[i] === sorted[i + 2] &&
+      sorted[i] === sorted[i + 3]
+    ) {
       if (!types.includes(sorted[i])) types.push(sorted[i]);
     }
   }
@@ -262,7 +317,10 @@ export function getJiagangOptions(hand: number[], melds: Meld[]): number[] {
 const TILE_TYPES = 34;
 
 /** 牌池统计：每种牌（0–33）已出现的张数（牌池+各家明牌），用于记牌与熟张/生张判定 */
-export function getTileCountsSeen(discardPiles: number[][], melds: Meld[][]): number[] {
+export function getTileCountsSeen(
+  discardPiles: number[][],
+  melds: Meld[][],
+): number[] {
   const counts = new Array<number>(TILE_TYPES).fill(0);
   for (const pile of discardPiles) {
     for (const t of pile) counts[t]++;
@@ -306,7 +364,8 @@ export function estimateKuaiHuValue(hand: number[], melds: Meld[]): number {
   for (let i = 0; i < hand.length - 1; i++) {
     const a = hand[i];
     const b = hand[i + 1];
-    if (a < 27 && b === a + 1 && Math.floor(a / 9) === Math.floor(b / 9)) daziCount++;
+    if (a < 27 && b === a + 1 && Math.floor(a / 9) === Math.floor(b / 9))
+      daziCount++;
   }
   const need = 4 - meldCount;
   const hasPair = pairCount >= 1;
@@ -387,7 +446,11 @@ function suitOf(t: number): number {
 }
 
 /** 基础型是否全部为刻子（对对胡）：1 对将 + 4 组刻/杠（每组 3 或 4 张） */
-function isAllTriplets(hand: number[], melds: Meld[], drawnTile?: number): boolean {
+function isAllTriplets(
+  hand: number[],
+  melds: Meld[],
+  drawnTile?: number,
+): boolean {
   const all = drawnTile !== undefined ? [...hand, drawnTile] : [...hand];
   const fromMelds = melds.flatMap((m) => m.tiles);
   const combined = [...all, ...fromMelds];
@@ -448,7 +511,8 @@ export function getWinFans(
     fans.push({ name: '七小对', fan: 4 });
   } else {
     fans.push({ name: '屁胡', fan: 1 });
-    if (isAllTriplets(hand, melds, drawnTile)) fans.push({ name: '对对胡', fan: 2 });
+    if (isAllTriplets(hand, melds, drawnTile))
+      fans.push({ name: '对对胡', fan: 2 });
     if (isPureOneSuit(tiles)) fans.push({ name: '清一色', fan: 4 });
     else if (isMixedOneSuit(tiles)) fans.push({ name: '混一色', fan: 2 });
     if (isMenqing(melds)) fans.push({ name: '门清', fan: 1 });
@@ -512,7 +576,12 @@ export function computeSettlement(s: GameState): SettlementResult {
         }
       }
     } else {
-      payments.push({ from: s.lastHuFromPlayer, to: s.winner, amount: total, reason: 'hu' });
+      payments.push({
+        from: s.lastHuFromPlayer,
+        to: s.winner,
+        amount: total,
+        reason: 'hu',
+      });
       newScores[s.lastHuFromPlayer] -= total;
       newScores[s.winner] += total;
     }
@@ -523,13 +592,23 @@ export function computeSettlement(s: GameState): SettlementResult {
     if (g.type === 'angang') {
       for (let i = 0; i < 4; i++) {
         if (i !== g.player) {
-          payments.push({ from: i, to: g.player, amount: base, reason: 'gang' });
+          payments.push({
+            from: i,
+            to: g.player,
+            amount: base,
+            reason: 'gang',
+          });
           newScores[i] -= base;
           newScores[g.player] += base;
         }
       }
     } else if (g.fromPlayer !== undefined) {
-      payments.push({ from: g.fromPlayer, to: g.player, amount: base, reason: 'gang' });
+      payments.push({
+        from: g.fromPlayer,
+        to: g.player,
+        amount: base,
+        reason: 'gang',
+      });
       newScores[g.fromPlayer] -= base;
       newScores[g.player] += base;
     }

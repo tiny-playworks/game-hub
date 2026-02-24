@@ -123,7 +123,12 @@ const GameTank = () => {
       return map[r][c] >= 1;
     };
 
-    const tankBlocked = (tank: Tank, dx: number, dy: number, map: number[][]): boolean => {
+    const tankBlocked = (
+      tank: Tank,
+      dx: number,
+      dy: number,
+      map: number[][],
+    ): boolean => {
       const nx = tank.x + dx;
       const ny = tank.y + dy;
       const corners = [
@@ -174,7 +179,7 @@ const GameTank = () => {
       }
 
       if (status === 'playing') {
-        const [dx, dy] = DIR_DXY[player.dir];
+        const [_dx, _dy] = DIR_DXY[player.dir];
         if (state.keys.ArrowUp) {
           player.dir = 'up';
           if (!tankBlocked(player, 0, -TANK_SPEED, map))
@@ -232,12 +237,12 @@ const GameTank = () => {
           });
         }
 
-        enemies.forEach((enemy, ei) => {
+        enemies.forEach((enemy, _ei) => {
           enemy.moveCounter++;
           if (enemy.moveCounter >= 30) {
             enemy.moveCounter = 0;
             const dirs: Dir[] = ['up', 'down', 'left', 'right'];
-            const [dx, dy] = DIR_DXY[enemy.dir];
+            const [_dx, _dy] = DIR_DXY[enemy.dir];
             const tryDir = dirs[Math.floor(Math.random() * 4)];
             const [tdx, tdy] = DIR_DXY[tryDir];
             if (!tankBlocked(enemy, tdx * TILE, tdy * TILE, map)) {
@@ -310,7 +315,13 @@ const GameTank = () => {
             }
             const br = Math.floor(b.y / TILE);
             const bc = Math.floor(b.x / TILE);
-            if (br >= 0 && br < ROWS && bc >= 0 && bc < COLS && map[br][bc] === 3) {
+            if (
+              br >= 0 &&
+              br < ROWS &&
+              bc >= 0 &&
+              bc < COLS &&
+              map[br][bc] === 3
+            ) {
               map[br][bc] = 0;
               setStatus('over');
               return false;
@@ -345,10 +356,14 @@ const GameTank = () => {
       };
 
       drawTank(player, '#22c55e');
-      enemies.forEach((e) => drawTank(e, '#ef4444'));
+      enemies.forEach((e) => {
+        drawTank(e, '#ef4444');
+      });
 
       ctx.fillStyle = '#fbbf24';
-      bullets.forEach((b) => ctx.fillRect(b.x, b.y, 4, 4));
+      bullets.forEach((b) => {
+        ctx.fillRect(b.x, b.y, 4, 4);
+      });
 
       if (status === 'over') {
         ctx.fillStyle = 'rgba(0,0,0,0.7)';
@@ -377,7 +392,11 @@ const GameTank = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+      if (
+        ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(
+          e.code,
+        )
+      ) {
         e.preventDefault();
         stateRef.current.keys[e.code] = true;
         if (status === 'idle' && e.code === 'Space') setStatus('playing');
@@ -412,12 +431,10 @@ const GameTank = () => {
       </header>
 
       <main className="flex min-h-[calc(100vh-56px)] flex-col items-center justify-center p-4">
-        <div
-          className="rounded-lg border-2 border-border bg-black"
+        <button
+          type="button"
+          className="rounded-lg border-2 border-border bg-black block"
           onClick={start}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && start()}
         >
           <canvas
             ref={canvasRef}
@@ -426,7 +443,7 @@ const GameTank = () => {
             className="block cursor-pointer"
             style={{ width: W, height: H }}
           />
-        </div>
+        </button>
         <p className="mt-4 text-center text-sm text-muted-foreground">
           方向键移动 · 空格射击 · 保护黄色基地 · 消灭全部敌坦
         </p>

@@ -216,12 +216,10 @@ const GameShooter = () => {
       </header>
 
       <main className="flex min-h-[calc(100vh-56px)] flex-col items-center justify-center p-4">
-        <div
-          className="rounded-lg border-2 border-border bg-black"
+        <button
+          type="button"
+          className="rounded-lg border-2 border-border bg-black block"
           onClick={start}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && start()}
         >
           <canvas
             ref={canvasRef}
@@ -230,7 +228,7 @@ const GameShooter = () => {
             className="block cursor-pointer"
             style={{ width: W, height: H }}
           />
-        </div>
+        </button>
         <p className="mt-4 text-center text-sm text-muted-foreground">
           方向键移动 · 空格射击 · 击落敌机得分
         </p>

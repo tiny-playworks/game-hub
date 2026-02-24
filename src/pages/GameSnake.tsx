@@ -24,9 +24,7 @@ const GameSnake = () => {
   });
 
   const placeFood = useCallback(() => {
-    const body = new Set(
-      stateRef.current.snake.map((s) => `${s.x},${s.y}`),
-    );
+    const body = new Set(stateRef.current.snake.map((s) => `${s.x},${s.y}`));
     let x: number;
     let y: number;
     do {
@@ -72,10 +70,18 @@ const GameSnake = () => {
       state.dir = state.nextDir;
       const head = { ...state.snake[0] };
       switch (state.dir) {
-        case 'up': head.y -= 1; break;
-        case 'down': head.y += 1; break;
-        case 'left': head.x -= 1; break;
-        case 'right': head.x += 1; break;
+        case 'up':
+          head.y -= 1;
+          break;
+        case 'down':
+          head.y += 1;
+          break;
+        case 'left':
+          head.x -= 1;
+          break;
+        case 'right':
+          head.x += 1;
+          break;
       }
       if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) {
         setStatus('over');
@@ -189,7 +195,9 @@ const GameSnake = () => {
               <p className="text-muted-foreground">按方向键开始</p>
             )}
             {status === 'over' && (
-              <p className="font-medium text-destructive">游戏结束，得分: {score}</p>
+              <p className="font-medium text-destructive">
+                游戏结束，得分: {score}
+              </p>
             )}
             <div className="flex gap-2">
               <Button size="sm" onClick={status === 'over' ? reset : start}>

@@ -51,7 +51,11 @@ const GameTictactoe = () => {
           ← 返回游戏列表
         </Link>
         <span className="text-sm text-muted-foreground">
-          {winner ? (winner === 'draw' ? '平局' : `赢家: ${winner}`) : `下一位: ${xNext ? 'X' : 'O'}`}
+          {winner
+            ? winner === 'draw'
+              ? '平局'
+              : `赢家: ${winner}`
+            : `下一位: ${xNext ? 'X' : 'O'}`}
         </span>
       </header>
 

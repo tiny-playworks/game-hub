@@ -129,7 +129,10 @@ const GameBreakout = () => {
 
       if (status === 'playing' && state.launched) {
         state.paddleX = mouseX - PADDLE_W / 2;
-        state.paddleX = Math.max(0, Math.min(CANVAS_W - PADDLE_W, state.paddleX));
+        state.paddleX = Math.max(
+          0,
+          Math.min(CANVAS_W - PADDLE_W, state.paddleX),
+        );
 
         state.ballX += state.ballVx * dt;
         state.ballY += state.ballVy * dt;
@@ -203,12 +206,7 @@ const GameBreakout = () => {
       });
 
       ctx.fillStyle = '#e2e8f0';
-      ctx.fillRect(
-        state.paddleX,
-        CANVAS_H - PADDLE_H - 20,
-        PADDLE_W,
-        PADDLE_H,
-      );
+      ctx.fillRect(state.paddleX, CANVAS_H - PADDLE_H - 20, PADDLE_W, PADDLE_H);
 
       ctx.fillStyle = '#fbbf24';
       ctx.beginPath();
@@ -256,37 +254,37 @@ const GameBreakout = () => {
 
           {(status === 'idle' || status === 'paused') && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 rounded-lg">
-            <p className="mb-4 text-lg text-white">
-              {status === 'idle'
-                ? '点击画布或按空格发射小球'
-                : '已暂停，按空格继续'}
-            </p>
+              <p className="mb-4 text-lg text-white">
+                {status === 'idle'
+                  ? '点击画布或按空格发射小球'
+                  : '已暂停，按空格继续'}
+              </p>
               <Button onClick={launch}>开始 / 继续</Button>
             </div>
           )}
 
           {status === 'win' && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-green-900/80 rounded-lg">
-            <p className="mb-4 text-2xl font-bold text-white">通关！</p>
-            <p className="mb-4 text-white">得分: {score}</p>
-            <div className="flex gap-2">
-              <Button onClick={resetGame}>再玩一次</Button>
-              <Link to="/">
-                <Button variant="outline">返回列表</Button>
-              </Link>
+              <p className="mb-4 text-2xl font-bold text-white">通关！</p>
+              <p className="mb-4 text-white">得分: {score}</p>
+              <div className="flex gap-2">
+                <Button onClick={resetGame}>再玩一次</Button>
+                <Link to="/">
+                  <Button variant="outline">返回列表</Button>
+                </Link>
               </div>
             </div>
           )}
 
           {status === 'lose' && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-900/80 rounded-lg">
-            <p className="mb-4 text-2xl font-bold text-white">游戏结束</p>
-            <p className="mb-4 text-white">得分: {score}</p>
-            <div className="flex gap-2">
-              <Button onClick={resetGame}>再玩一次</Button>
-              <Link to="/">
-                <Button variant="outline">返回列表</Button>
-              </Link>
+              <p className="mb-4 text-2xl font-bold text-white">游戏结束</p>
+              <p className="mb-4 text-white">得分: {score}</p>
+              <div className="flex gap-2">
+                <Button onClick={resetGame}>再玩一次</Button>
+                <Link to="/">
+                  <Button variant="outline">返回列表</Button>
+                </Link>
               </div>
             </div>
           )}

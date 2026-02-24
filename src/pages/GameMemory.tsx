@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -7,7 +7,12 @@ const EMOJIS = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼'];
 const ROWS = 4;
 const COLS = 4;
 
-type CardState = { id: number; emoji: string; flipped: boolean; matched: boolean };
+type CardState = {
+  id: number;
+  emoji: string;
+  flipped: boolean;
+  matched: boolean;
+};
 
 function shuffle<T>(arr: T[]): T[] {
   const out = [...arr];
@@ -60,9 +65,7 @@ const GameMemory = () => {
         setTimeout(() => {
           setCards((prev) =>
             prev.map((c, i) =>
-              i === index || i === lastFlipped
-                ? { ...c, flipped: false }
-                : c,
+              i === index || i === lastFlipped ? { ...c, flipped: false } : c,
             ),
           );
           setLock(false);
@@ -109,7 +112,8 @@ const GameMemory = () => {
               disabled={lock || card.matched}
               className={cn(
                 'flex aspect-square max-w-[72px] items-center justify-center rounded-lg border-2 border-border bg-background text-3xl transition hover:bg-accent disabled:pointer-events-none sm:max-w-[84px]',
-                (card.flipped || card.matched) && 'bg-primary/10 border-primary',
+                (card.flipped || card.matched) &&
+                  'bg-primary/10 border-primary',
               )}
             >
               {card.flipped || card.matched ? card.emoji : '?'}

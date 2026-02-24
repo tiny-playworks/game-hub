@@ -1,18 +1,18 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import Home from '@/pages/Home';
 import Category from '@/pages/Category';
+import Game2048 from '@/pages/Game2048';
 import GameBreakout from '@/pages/GameBreakout';
 import GameGuessNumber from '@/pages/GameGuessNumber';
-import GameTictactoe from '@/pages/GameTictactoe';
+import GameMahjongChinese from '@/pages/GameMahjongChinese';
+import GameMahjongJapanese from '@/pages/GameMahjongJapanese';
+import GameMahjongSichuan from '@/pages/GameMahjongSichuan';
 import GameMemory from '@/pages/GameMemory';
-import Game2048 from '@/pages/Game2048';
-import GameSnake from '@/pages/GameSnake';
 import GameShooter from '@/pages/GameShooter';
+import GameSnake from '@/pages/GameSnake';
 import GameTank from '@/pages/GameTank';
 import GameTetris from '@/pages/GameTetris';
-import GameMahjongChinese from '@/pages/GameMahjongChinese';
-import GameMahjongComingSoon from '@/pages/GameMahjongComingSoon';
-import GameMahjongJapanese from '@/pages/GameMahjongJapanese';
+import GameTictactoe from '@/pages/GameTictactoe';
+import Home from '@/pages/Home';
 import './App.css';
 
 const App = () => {
@@ -22,8 +22,11 @@ const App = () => {
         <Route path="/" element={<Home />} />
         <Route path="/category/:categoryId" element={<Category />} />
         <Route path="/game/mahjong-chinese" element={<GameMahjongChinese />} />
-        <Route path="/game/mahjong-sichuan" element={<GameMahjongComingSoon />} />
-        <Route path="/game/mahjong-japanese" element={<GameMahjongJapanese />} />
+        <Route path="/game/mahjong-sichuan" element={<GameMahjongSichuan />} />
+        <Route
+          path="/game/mahjong-japanese"
+          element={<GameMahjongJapanese />}
+        />
         <Route path="/game/guess-number" element={<GameGuessNumber />} />
         <Route path="/game/tictactoe" element={<GameTictactoe />} />
         <Route path="/game/memory" element={<GameMemory />} />

@@ -1,24 +1,24 @@
 import { useCallback, useState } from 'react';
 import {
+  type ClaimOption,
+  type ClaimRound,
+  canMingang,
+  canPeng,
+  checkWin,
+  computeSettlement,
   createShuffledDeck,
   deal,
-  checkWin,
-  getWinFans,
-  computeSettlement,
+  estimateKuaiHuValue,
+  type GameState,
   getChiOptions,
-  canPeng,
-  canMingang,
   getJiagangOptions,
   getTileCountsSeen,
   getWaitingTiles,
-  estimateKuaiHuValue,
+  getWinFans,
   isYaoJiu,
   isZiTile,
-  type GameState,
-  type Meld,
   type LastDiscard,
-  type ClaimOption,
-  type ClaimRound,
+  type Meld,
 } from '@/lib/mahjong';
 
 const HUMAN_SEAT = 0;
@@ -50,8 +50,10 @@ function scoreChiOption(
   const r2 = s2 % 9;
   // 边张：123 或 789；嵌张：吃中间；其余为两面
   let typeScore = 2;
-  if ((r0 === 0 && r2 === 2) || (r0 === 6 && r2 === 8)) typeScore = 0; // 边张
-  else if (r2 - r0 === 2 && option[0] === s0 && option[1] === s2) typeScore = 1; // 嵌张（吃中间）
+  if ((r0 === 0 && r2 === 2) || (r0 === 6 && r2 === 8))
+    typeScore = 0; // 边张
+  else if (r2 - r0 === 2 && option[0] === s0 && option[1] === s2)
+    typeScore = 1; // 嵌张（吃中间）
   else typeScore = 2; // 两面
   // 剩余手牌（各去掉一张 a、一张 b）中与这支顺子能搭上的牌
   const rest = [...hand];
@@ -86,7 +88,11 @@ function aiWantsPeng(
   let prob = 0.35;
   if (meldCount <= 1) prob = 0.65;
   else if (meldCount === 2) prob = 0.5;
-  if (state && player !== undefined && (state.dealer === player || state.deck.length < 20)) {
+  if (
+    state &&
+    player !== undefined &&
+    (state.dealer === player || state.deck.length < 20)
+  ) {
     prob *= 0.6; // 庄家保守、残局防守
   }
   return Math.random() < prob;
@@ -100,25 +106,30 @@ function evaluateHandSafety(hand: number[], melds: Meld[]): number {
   for (const tile of hand) {
     counts.set(tile, (counts.get(tile) ?? 0) + 1);
   }
-  
+
   // 计算孤张数量（只有1张的牌）
   let isolatedCount = 0;
   let pairCount = 0;
   let tripleCount = 0;
-  
+
   for (const count of counts.values()) {
     if (count === 1) isolatedCount++;
     else if (count === 2) pairCount++;
     else if (count >= 3) tripleCount++;
   }
-  
+
   // 计算面子数
   const meldCount = melds.length;
-  
+
   // 安全性评分：面子多、对子多、孤张少则更安全
   const totalCards = hand.length;
-  const safety = (meldCount * 0.3 + pairCount * 0.2 - isolatedCount * 0.1 + tripleCount * 0.1) / (totalCards * 0.3);
-  
+  const safety =
+    (meldCount * 0.3 +
+      pairCount * 0.2 -
+      isolatedCount * 0.1 +
+      tripleCount * 0.1) /
+    (totalCards * 0.3);
+
   return Math.max(0, Math.min(1, safety));
 }
 
@@ -143,33 +154,40 @@ function aiWantsGang(
   const meldCount = melds.length;
   const waitingTiles = getAITingTiles(hand, melds);
   const isTingPai = waitingTiles.length > 0;
-  
+
   // 基础概率
   let prob = 0.7;
-  
+
   // 已有较多面子时更倾向于杠
   if (meldCount >= 3) prob = 0.9;
   else if (meldCount === 2) prob = 0.8;
-  
+
   // 听牌时杠的风险评估
   if (isTingPai) {
     // 如果杠后仍然听牌，概率较高
     const testHand = [...hand];
-    const testMelds = [...melds, { type: 'mingang' as const, tiles: [hand[0], hand[0], hand[0], hand[0]] }];
+    const testMelds = [
+      ...melds,
+      { type: 'mingang' as const, tiles: [hand[0], hand[0], hand[0], hand[0]] },
+    ];
     const stillTing = getAITingTiles(testHand, testMelds).length > 0;
     if (stillTing) prob *= 0.8;
     else prob *= 0.3; // 杠后不听牌则谨慎
   }
-  
+
   // 庄家或残局时更保守
-  if (state && player !== undefined && (state.dealer === player || state.deck.length < 20)) {
+  if (
+    state &&
+    player !== undefined &&
+    (state.dealer === player || state.deck.length < 20)
+  ) {
     prob *= 0.6;
   }
-  
+
   // 手牌安全性评估
   const safetyScore = evaluateHandSafety(hand, melds);
   if (safetyScore < 0.3) prob *= 0.7; // 手牌危险时不轻易杠
-  
+
   return Math.random() < prob;
 }
 
@@ -199,17 +217,29 @@ function applyPassState(s: GameState): GameState {
   const deck = [...s.deck];
   const hands = s.hands.map((h) => [...h]);
   if (deck.length === 0) {
-    const st: GameState = { ...s, isDraw: true, phase: 'discard', lastDiscard: null, claimOption: null, claimRound: null, claimPlayer: null };
+    const st: GameState = {
+      ...s,
+      isDraw: true,
+      phase: 'discard',
+      lastDiscard: null,
+      claimOption: null,
+      claimRound: null,
+      claimPlayer: null,
+    };
     const settlement = computeSettlement(st);
     return { ...st, scores: settlement.newScores, lastSettlement: settlement };
   }
-  const drawn = deck.pop()!;
+  const drawn = deck.pop();
+  if (drawn === undefined) return s;
   hands[下家].push(drawn);
   hands[下家].sort((a, b) => a - b);
   const win = checkWin(hands[下家], s.melds[下家]);
   const wasLastTile = deck.length === 0;
   const winResult: GameState['lastWinResult'] = win
-    ? getWinFans(hands[下家], s.melds[下家], undefined, { isZiMo: true, isHaidilao: wasLastTile })
+    ? getWinFans(hands[下家], s.melds[下家], undefined, {
+        isZiMo: true,
+        isHaidilao: wasLastTile,
+      })
     : null;
   const lastDrawnTile = !win && 下家 === HUMAN_SEAT ? drawn : null;
   const st: GameState = {
@@ -258,7 +288,11 @@ function aiChooseChi(
   let baseProb = 0.35;
   if (meldCount <= 1) baseProb = 0.6;
   else if (meldCount === 2) baseProb = 0.45;
-  if (state && player !== undefined && (state.dealer === player || state.deck.length < 20)) {
+  if (
+    state &&
+    player !== undefined &&
+    (state.dealer === player || state.deck.length < 20)
+  ) {
     baseProb *= 0.6;
   }
   const prob = Math.min(0.85, baseProb + best.score * 0.12);
@@ -317,12 +351,20 @@ export function useMahjongGame() {
 
   const discard = useCallback((player: number, tileIndex: number) => {
     setState((s) => {
-      if (!s || s.phase !== 'discard' || s.currentPlayer !== player || s.winner !== null) return s;
+      if (
+        !s ||
+        s.phase !== 'discard' ||
+        s.currentPlayer !== player ||
+        s.winner !== null
+      )
+        return s;
       const hands = s.hands.map((h) => [...h]);
       const tile = hands[player][tileIndex];
       hands[player].splice(tileIndex, 1);
       hands[player].sort((a, b) => a - b);
-      const discardPiles = s.discardPiles.map((p, i) => (i === player ? [...p, tile] : p));
+      const discardPiles = s.discardPiles.map((p, i) =>
+        i === player ? [...p, tile] : p,
+      );
       const lastDiscard: LastDiscard = { tile, fromPlayer: player };
       return {
         ...s,
@@ -341,16 +383,33 @@ export function useMahjongGame() {
   /** 人类点「过」：推进要牌轮次；若已到吃阶段且下家过，则下家摸牌 */
   const passClaim = useCallback(() => {
     setState((s) => {
-      if (!s || s.phase !== 'claim' || s.lastDiscard === null || s.claimRound === null) return s;
+      if (
+        !s ||
+        s.phase !== 'claim' ||
+        s.lastDiscard === null ||
+        s.claimRound === null
+      )
+        return s;
       const nextRound = advanceClaimRound(s.claimRound);
       if (nextRound === null) return applyPassState(s);
-      return { ...s, claimRound: nextRound, claimOption: null, claimPlayer: null };
+      return {
+        ...s,
+        claimRound: nextRound,
+        claimOption: null,
+        claimPlayer: null,
+      };
     });
   }, []);
 
   const doHu = useCallback(() => {
     setState((s) => {
-      if (!s || s.phase !== 'claim' || !s.claimOption?.hu || s.lastDiscard === null) return s;
+      if (
+        !s ||
+        s.phase !== 'claim' ||
+        !s.claimOption?.hu ||
+        s.lastDiscard === null
+      )
+        return s;
       const winResult = getWinFans(
         s.hands[HUMAN_SEAT],
         s.melds[HUMAN_SEAT],
@@ -369,13 +428,23 @@ export function useMahjongGame() {
         lastHuFromPlayer: s.lastDiscard.fromPlayer,
       };
       const settlement = computeSettlement(st);
-      return { ...st, scores: settlement.newScores, lastSettlement: settlement };
+      return {
+        ...st,
+        scores: settlement.newScores,
+        lastSettlement: settlement,
+      };
     });
   }, []);
 
   const doPeng = useCallback(() => {
     setState((s) => {
-      if (!s || s.phase !== 'claim' || !s.claimOption?.peng || s.lastDiscard === null) return s;
+      if (
+        !s ||
+        s.phase !== 'claim' ||
+        !s.claimOption?.peng ||
+        s.lastDiscard === null
+      )
+        return s;
       const player = HUMAN_SEAT;
       const tile = s.lastDiscard.tile;
       const hands = s.hands.map((h) => [...h]);
@@ -384,8 +453,14 @@ export function useMahjongGame() {
       hands[player].splice(idx1, 1);
       const idx2 = hands[player].indexOf(tile);
       hands[player].splice(idx2, 1);
-      melds[player].push({ type: 'peng', tiles: [tile, tile, tile], fromPlayer: s.lastDiscard.fromPlayer });
-      const discardPiles = s.discardPiles.map((p, i) => (i === s.lastDiscard!.fromPlayer ? p.slice(0, -1) : p));
+      melds[player].push({
+        type: 'peng',
+        tiles: [tile, tile, tile],
+        fromPlayer: s.lastDiscard.fromPlayer,
+      });
+      const discardPiles = s.discardPiles.map((p, i) =>
+        i === s.lastDiscard?.fromPlayer ? p.slice(0, -1) : p,
+      );
       return {
         ...s,
         hands,
@@ -403,26 +478,48 @@ export function useMahjongGame() {
 
   const doGang = useCallback(() => {
     setState((s) => {
-      if (!s || s.phase !== 'claim' || !s.claimOption?.gang || s.lastDiscard === null) return s;
+      if (
+        !s ||
+        s.phase !== 'claim' ||
+        !s.claimOption?.gang ||
+        s.lastDiscard === null
+      )
+        return s;
       const player = HUMAN_SEAT;
       const tile = s.lastDiscard.tile;
       const hands = s.hands.map((h) => [...h]);
       const melds = s.melds.map((m) => [...m]);
-      const gangRecords = [...(s.gangRecords ?? []), { type: 'mingang' as const, player, fromPlayer: s.lastDiscard.fromPlayer }];
+      const gangRecords = [
+        ...(s.gangRecords ?? []),
+        {
+          type: 'mingang' as const,
+          player,
+          fromPlayer: s.lastDiscard.fromPlayer,
+        },
+      ];
       for (let i = 0; i < 3; i++) {
         const idx = hands[player].indexOf(tile);
         hands[player].splice(idx, 1);
       }
-      melds[player].push({ type: 'mingang', tiles: [tile, tile, tile, tile], fromPlayer: s.lastDiscard.fromPlayer });
-      const discardPiles = s.discardPiles.map((p, i) => (i === s.lastDiscard!.fromPlayer ? p.slice(0, -1) : p));
+      melds[player].push({
+        type: 'mingang',
+        tiles: [tile, tile, tile, tile],
+        fromPlayer: s.lastDiscard.fromPlayer,
+      });
+      const discardPiles = s.discardPiles.map((p, i) =>
+        i === s.lastDiscard?.fromPlayer ? p.slice(0, -1) : p,
+      );
       const deck = [...s.deck];
-      const 补牌 = deck.length > 0 ? deck.pop()! : null;
+      const 补牌 = deck.length > 0 ? (deck.pop() ?? null) : null;
       if (补牌 !== null) {
         hands[player].push(补牌);
         hands[player].sort((a, b) => a - b);
         const win = checkWin(hands[player], melds[player]);
         const winResult: GameState['lastWinResult'] = win
-          ? getWinFans(hands[player], melds[player], undefined, { isZiMo: true, isGangShang: true })
+          ? getWinFans(hands[player], melds[player], undefined, {
+              isZiMo: true,
+              isGangShang: true,
+            })
           : null;
         const st: GameState = {
           ...s,
@@ -440,11 +537,19 @@ export function useMahjongGame() {
           winner: win ? player : null,
           lastWinResult: winResult ?? s.lastWinResult,
           lastHuFromPlayer: win ? null : s.lastHuFromPlayer,
-          lastDrawnTile: win ? null : (player === HUMAN_SEAT ? 补牌 : s.lastDrawnTile),
+          lastDrawnTile: win
+            ? null
+            : player === HUMAN_SEAT
+              ? 补牌
+              : s.lastDrawnTile,
         };
         if (win) {
           const settlement = computeSettlement(st);
-          return { ...st, scores: settlement.newScores, lastSettlement: settlement };
+          return {
+            ...st,
+            scores: settlement.newScores,
+            lastSettlement: settlement,
+          };
         }
         return st;
       }
@@ -467,19 +572,31 @@ export function useMahjongGame() {
 
   const doChi = useCallback((option: [number, number]) => {
     setState((s) => {
-      if (!s || s.phase !== 'claim' || !s.claimOption?.chi || s.lastDiscard === null) return s;
+      if (
+        !s ||
+        s.phase !== 'claim' ||
+        !s.claimOption?.chi ||
+        s.lastDiscard === null
+      )
+        return s;
       const [a, b] = option;
       const player = HUMAN_SEAT;
       const tile = s.lastDiscard.tile;
       const hands = s.hands.map((h) => [...h]);
       const melds = s.melds.map((m) => [...m]);
-      const seq = [a, b, tile].sort((x, y) => x - y);
+      const seq = [a, b, tile].sort((x, y) => (x ?? 0) - (y ?? 0));
       const ia = hands[player].indexOf(a);
       hands[player].splice(ia, 1);
       const ib = hands[player].indexOf(b);
       hands[player].splice(ib, 1);
-      melds[player].push({ type: 'chi', tiles: seq, fromPlayer: s.lastDiscard.fromPlayer });
-      const discardPiles = s.discardPiles.map((p, i) => (i === s.lastDiscard!.fromPlayer ? p.slice(0, -1) : p));
+      melds[player].push({
+        type: 'chi',
+        tiles: seq,
+        fromPlayer: s.lastDiscard.fromPlayer,
+      });
+      const discardPiles = s.discardPiles.map((p, i) =>
+        i === s.lastDiscard?.fromPlayer ? p.slice(0, -1) : p,
+      );
       return {
         ...s,
         hands,
@@ -497,8 +614,17 @@ export function useMahjongGame() {
 
   const doJiagang = useCallback((meldIndex: number) => {
     setState((s) => {
-      if (!s || s.phase !== 'discard' || s.currentPlayer !== HUMAN_SEAT || s.winner !== null) return s;
-      const indices = getJiagangOptions(s.hands[HUMAN_SEAT], s.melds[HUMAN_SEAT]);
+      if (
+        !s ||
+        s.phase !== 'discard' ||
+        s.currentPlayer !== HUMAN_SEAT ||
+        s.winner !== null
+      )
+        return s;
+      const indices = getJiagangOptions(
+        s.hands[HUMAN_SEAT],
+        s.melds[HUMAN_SEAT],
+      );
       if (!indices.includes(meldIndex)) return s;
       const player = HUMAN_SEAT;
       const melds = s.melds.map((m) => [...m]);
@@ -506,22 +632,32 @@ export function useMahjongGame() {
       if (m.type !== 'peng' || m.tiles.length !== 3) return s;
       const t = m.tiles[0];
       const fromPlayer = m.fromPlayer ?? player;
-      const gangRecords = [...(s.gangRecords ?? []), { type: 'jiagang' as const, player, fromPlayer }];
+      const gangRecords = [
+        ...(s.gangRecords ?? []),
+        { type: 'jiagang' as const, player, fromPlayer },
+      ];
       const hands = s.hands.map((h) => [...h]);
       const idx = hands[player].indexOf(t);
       if (idx === -1) return s;
       hands[player].splice(idx, 1);
       const newPlayerMelds = [...melds[player]];
-      newPlayerMelds[meldIndex] = { type: 'jiagang' as const, tiles: [t, t, t, t], fromPlayer: m.fromPlayer };
+      newPlayerMelds[meldIndex] = {
+        type: 'jiagang' as const,
+        tiles: [t, t, t, t],
+        fromPlayer: m.fromPlayer,
+      };
       melds[player] = newPlayerMelds;
       const deck = [...s.deck];
-      const 补牌 = deck.length > 0 ? deck.pop()! : null;
+      const 补牌 = deck.length > 0 ? (deck.pop() ?? null) : null;
       if (补牌 !== null) {
         hands[player].push(补牌);
         hands[player].sort((a, b) => a - b);
         const win = checkWin(hands[player], melds[player]);
         const winResult: GameState['lastWinResult'] = win
-          ? getWinFans(hands[player], melds[player], undefined, { isZiMo: true, isGangShang: true })
+          ? getWinFans(hands[player], melds[player], undefined, {
+              isZiMo: true,
+              isGangShang: true,
+            })
           : null;
         const st: GameState = {
           ...s,
@@ -533,11 +669,19 @@ export function useMahjongGame() {
           winner: win ? player : null,
           lastWinResult: winResult ?? s.lastWinResult,
           lastHuFromPlayer: win ? null : s.lastHuFromPlayer,
-          lastDrawnTile: win ? null : (player === HUMAN_SEAT ? 补牌 : s.lastDrawnTile),
+          lastDrawnTile: win
+            ? null
+            : player === HUMAN_SEAT
+              ? 补牌
+              : s.lastDrawnTile,
         };
         if (win) {
           const settlement = computeSettlement(st);
-          return { ...st, scores: settlement.newScores, lastSettlement: settlement };
+          return {
+            ...st,
+            scores: settlement.newScores,
+            lastSettlement: settlement,
+          };
         }
         return st;
       }
@@ -547,24 +691,39 @@ export function useMahjongGame() {
 
   const doAngang = useCallback((tileType: number) => {
     setState((s) => {
-      if (!s || s.phase !== 'discard' || s.currentPlayer !== HUMAN_SEAT || s.winner !== null) return s;
+      if (
+        !s ||
+        s.phase !== 'discard' ||
+        s.currentPlayer !== HUMAN_SEAT ||
+        s.winner !== null
+      )
+        return s;
       const player = HUMAN_SEAT;
       const hands = s.hands.map((h) => [...h]);
       const melds = s.melds.map((m) => [...m]);
-      const gangRecords = [...(s.gangRecords ?? []), { type: 'angang' as const, player }];
+      const gangRecords = [
+        ...(s.gangRecords ?? []),
+        { type: 'angang' as const, player },
+      ];
       for (let i = 0; i < 4; i++) {
         const idx = hands[player].indexOf(tileType);
         hands[player].splice(idx, 1);
       }
-      melds[player].push({ type: 'angang', tiles: [tileType, tileType, tileType, tileType] });
+      melds[player].push({
+        type: 'angang',
+        tiles: [tileType, tileType, tileType, tileType],
+      });
       const deck = [...s.deck];
-      const 补牌 = deck.length > 0 ? deck.pop()! : null;
+      const 补牌 = deck.length > 0 ? (deck.pop() ?? null) : null;
       if (补牌 !== null) {
         hands[player].push(补牌);
         hands[player].sort((a, b) => a - b);
         const win = checkWin(hands[player], melds[player]);
         const winResult: GameState['lastWinResult'] = win
-          ? getWinFans(hands[player], melds[player], undefined, { isZiMo: true, isGangShang: true })
+          ? getWinFans(hands[player], melds[player], undefined, {
+              isZiMo: true,
+              isGangShang: true,
+            })
           : null;
         const st: GameState = {
           ...s,
@@ -576,11 +735,19 @@ export function useMahjongGame() {
           winner: win ? player : null,
           lastWinResult: winResult ?? s.lastWinResult,
           lastHuFromPlayer: win ? null : s.lastHuFromPlayer,
-          lastDrawnTile: win ? null : (player === HUMAN_SEAT ? 补牌 : s.lastDrawnTile),
+          lastDrawnTile: win
+            ? null
+            : player === HUMAN_SEAT
+              ? 补牌
+              : s.lastDrawnTile,
         };
         if (win) {
           const settlement = computeSettlement(st);
-          return { ...st, scores: settlement.newScores, lastSettlement: settlement };
+          return {
+            ...st,
+            scores: settlement.newScores,
+            lastSettlement: settlement,
+          };
         }
         return st;
       }
@@ -590,7 +757,13 @@ export function useMahjongGame() {
 
   const doZiMo = useCallback(() => {
     setState((s) => {
-      if (!s || s.phase !== 'discard' || s.currentPlayer !== HUMAN_SEAT || s.winner !== null) return s;
+      if (
+        !s ||
+        s.phase !== 'discard' ||
+        s.currentPlayer !== HUMAN_SEAT ||
+        s.winner !== null
+      )
+        return s;
       const hand = s.hands[HUMAN_SEAT];
       const melds = s.melds[HUMAN_SEAT];
       if (checkWin(hand, melds)) {
@@ -605,7 +778,11 @@ export function useMahjongGame() {
           lastHuFromPlayer: null,
         };
         const settlement = computeSettlement(st);
-        return { ...st, scores: settlement.newScores, lastSettlement: settlement };
+        return {
+          ...st,
+          scores: settlement.newScores,
+          lastSettlement: settlement,
+        };
       }
       return s;
     });
@@ -618,12 +795,19 @@ export function useMahjongGame() {
   function processClaimRound(s: GameState): GameState {
     if (s.phase !== 'claim' || s.lastDiscard === null) return s;
     const from = s.lastDiscard.fromPlayer;
-    const order: [number, number, number] = [(from + 1) % 4, (from + 2) % 4, (from + 3) % 4];
+    const order: [number, number, number] = [
+      (from + 1) % 4,
+      (from + 2) % 4,
+      (from + 3) % 4,
+    ];
     const 下家 = order[0];
     let round: ClaimRound | null = s.claimRound ?? { phase: 'hu', index: 0 };
 
-    const clearClaim = (st: GameState): GameState =>
-      ({ ...st, claimRound: null, claimPlayer: null });
+    const clearClaim = (st: GameState): GameState => ({
+      ...st,
+      claimRound: null,
+      claimPlayer: null,
+    });
 
     const applyPass = (): GameState => applyPassState(s);
 
@@ -631,7 +815,7 @@ export function useMahjongGame() {
       const winResult = getWinFans(
         s.hands[player],
         s.melds[player],
-        s.lastDiscard!.tile,
+        s.lastDiscard?.tile,
         { isZiMo: false },
       );
       const st: GameState = {
@@ -643,18 +827,23 @@ export function useMahjongGame() {
         claimRound: null,
         claimPlayer: null,
         lastWinResult: winResult ?? null,
-        lastHuFromPlayer: s.lastDiscard!.fromPlayer,
+        lastHuFromPlayer: s.lastDiscard?.fromPlayer ?? null,
       };
       const settlement = computeSettlement(st);
-      return { ...st, scores: settlement.newScores, lastSettlement: settlement };
+      return {
+        ...st,
+        scores: settlement.newScores,
+        lastSettlement: settlement,
+      };
     };
 
     const applyGang = (player: number): GameState => {
-      const tile = s.lastDiscard!.tile;
+      if (!s.lastDiscard) return s;
+      const tile = s.lastDiscard.tile;
       const hands = s.hands.map((h) => [...h]);
       const melds = s.melds.map((m) => [...m]);
       const deck = [...s.deck];
-      
+
       // 从手牌中移除3张相同的牌
       let count = 0;
       const indicesToRemove: number[] = [];
@@ -664,44 +853,53 @@ export function useMahjongGame() {
           count++;
         }
       }
-      
+
       if (count < 3) return s; // 不够3张无法杠
-      
+
       // 移除手牌（从后往前删除避免索引变化）
       indicesToRemove.sort((a, b) => b - a);
-      indicesToRemove.forEach(i => hands[player].splice(i, 1));
-      
+      indicesToRemove.forEach((i) => {
+        hands[player].splice(i, 1);
+      });
+
       // 添加杠面子
       const gangTiles = [tile, tile, tile, tile];
-      melds[player].push({ 
-        type: 'mingang', 
-        tiles: gangTiles, 
-        fromPlayer: s.lastDiscard!.fromPlayer 
+      melds[player].push({
+        type: 'mingang',
+        tiles: gangTiles,
+        fromPlayer: s.lastDiscard?.fromPlayer,
       });
-      
+
       // 更新杠牌记录（用于计分）
-      const gangRecords = [...(s.gangRecords ?? []), {
-        type: 'mingang' as const,
-        player,
-        fromPlayer: s.lastDiscard!.fromPlayer
-      }];
-      
+      const gangRecords = [
+        ...(s.gangRecords ?? []),
+        {
+          type: 'mingang' as const,
+          player,
+          fromPlayer: s.lastDiscard?.fromPlayer,
+        },
+      ];
+
       // 移除被杠的弃牌
-      const discardPiles = s.discardPiles.map((pile, i) => 
-        i === s.lastDiscard!.fromPlayer ? pile.slice(0, -1) : pile
+      const discardPiles = s.discardPiles.map((pile, i) =>
+        i === s.lastDiscard?.fromPlayer ? pile.slice(0, -1) : pile,
       );
-      
+
       // 从牌墙末尾补牌（岭上牌）
-      const rinshanTile = deck.pop()!;
+      const rinshanTile = deck.pop();
+      if (rinshanTile === undefined) return s;
       hands[player].push(rinshanTile);
       hands[player].sort((a, b) => a - b);
-      
+
       // 检查杠上开花（补牌后立即胡牌）
       const win = checkWin(hands[player], melds[player]);
       const winResult: GameState['lastWinResult'] = win
-        ? getWinFans(hands[player], melds[player], undefined, { isZiMo: true, isGangShang: true })
+        ? getWinFans(hands[player], melds[player], undefined, {
+            isZiMo: true,
+            isGangShang: true,
+          })
         : null;
-      
+
       const st: GameState = {
         ...s,
         hands,
@@ -718,26 +916,42 @@ export function useMahjongGame() {
         winner: win ? player : null,
         lastWinResult: winResult ?? s.lastWinResult,
         lastHuFromPlayer: win ? null : s.lastHuFromPlayer,
-        lastDrawnTile: win ? null : (player === HUMAN_SEAT ? rinshanTile : s.lastDrawnTile),
+        lastDrawnTile: win
+          ? null
+          : player === HUMAN_SEAT
+            ? rinshanTile
+            : s.lastDrawnTile,
       };
-      
+
       if (win) {
         const settlement = computeSettlement(st);
-        return { ...st, scores: settlement.newScores, lastSettlement: settlement };
+        return {
+          ...st,
+          scores: settlement.newScores,
+          lastSettlement: settlement,
+        };
       }
       return clearClaim(st);
     };
 
     const applyPeng = (player: number): GameState => {
-      const tile = s.lastDiscard!.tile;
+      if (!s.lastDiscard) return s;
+      const tile = s.lastDiscard.tile;
+      const fromPlayer = s.lastDiscard.fromPlayer;
       const hands = s.hands.map((h) => [...h]);
       const melds = s.melds.map((m) => [...m]);
       const idx1 = hands[player].indexOf(tile);
       hands[player].splice(idx1, 1);
       const idx2 = hands[player].indexOf(tile);
       hands[player].splice(idx2, 1);
-      melds[player].push({ type: 'peng', tiles: [tile, tile, tile], fromPlayer: s.lastDiscard!.fromPlayer });
-      const discardPiles = s.discardPiles.map((p, i) => (i === s.lastDiscard!.fromPlayer ? p.slice(0, -1) : p));
+      melds[player].push({
+        type: 'peng',
+        tiles: [tile, tile, tile],
+        fromPlayer,
+      });
+      const discardPiles = s.discardPiles.map((p, i) =>
+        i === fromPlayer ? p.slice(0, -1) : p,
+      );
       return clearClaim({
         ...s,
         hands,
@@ -751,17 +965,25 @@ export function useMahjongGame() {
     };
 
     const applyChi = (player: number, option: [number, number]): GameState => {
+      if (!s.lastDiscard) return s;
+      const tile = s.lastDiscard.tile;
+      const fromPlayer = s.lastDiscard.fromPlayer;
       const [a, b] = option;
-      const tile = s.lastDiscard!.tile;
       const hands = s.hands.map((h) => [...h]);
       const melds = s.melds.map((m) => [...m]);
-      const seq = [a, b, tile].sort((x, y) => x - y);
+      const seq = [a, b, tile].sort((x, y) => (x ?? 0) - (y ?? 0));
       const ia = hands[player].indexOf(a);
       hands[player].splice(ia, 1);
       const ib = hands[player].indexOf(b);
       hands[player].splice(ib, 1);
-      melds[player].push({ type: 'chi', tiles: seq, fromPlayer: s.lastDiscard!.fromPlayer });
-      const discardPiles = s.discardPiles.map((p, i) => (i === s.lastDiscard!.fromPlayer ? p.slice(0, -1) : p));
+      melds[player].push({
+        type: 'chi',
+        tiles: seq,
+        fromPlayer,
+      });
+      const discardPiles = s.discardPiles.map((p, i) =>
+        i === fromPlayer ? p.slice(0, -1) : p,
+      );
       return clearClaim({
         ...s,
         hands,
@@ -780,7 +1002,12 @@ export function useMahjongGame() {
       if (round.phase === 'hu') {
         if (checkWin(s.hands[player], s.melds[player], s.lastDiscard.tile)) {
           if (player === HUMAN_SEAT) {
-            return { ...s, claimRound: round, claimPlayer: player, claimOption: { hu: true } };
+            return {
+              ...s,
+              claimRound: round,
+              claimPlayer: player,
+              claimOption: { hu: true },
+            };
           }
           return applyHu(player);
         }
@@ -791,9 +1018,15 @@ export function useMahjongGame() {
       if (round.phase === 'gang') {
         if (canMingang(s.hands[player], s.lastDiscard.tile)) {
           if (player === HUMAN_SEAT) {
-            return { ...s, claimRound: round, claimPlayer: player, claimOption: { gang: true } };
+            return {
+              ...s,
+              claimRound: round,
+              claimPlayer: player,
+              claimOption: { gang: true },
+            };
           }
-          if (aiWantsGang(s.hands[player], s.melds[player], s, player)) return applyGang(player);
+          if (aiWantsGang(s.hands[player], s.melds[player], s, player))
+            return applyGang(player);
         }
         round = advanceClaimRound(round);
         continue;
@@ -802,9 +1035,23 @@ export function useMahjongGame() {
       if (round.phase === 'peng') {
         if (canPeng(s.hands[player], s.lastDiscard.tile)) {
           if (player === HUMAN_SEAT) {
-            return { ...s, claimRound: round, claimPlayer: player, claimOption: { peng: true } };
+            return {
+              ...s,
+              claimRound: round,
+              claimPlayer: player,
+              claimOption: { peng: true },
+            };
           }
-          if (aiWantsPeng(s.hands[player], s.melds[player], s.lastDiscard.tile, s, player)) return applyPeng(player);
+          if (
+            aiWantsPeng(
+              s.hands[player],
+              s.melds[player],
+              s.lastDiscard.tile,
+              s,
+              player,
+            )
+          )
+            return applyPeng(player);
         }
         round = advanceClaimRound(round);
         continue;
@@ -812,13 +1059,31 @@ export function useMahjongGame() {
 
       // 吃：仅下家
       if (round.phase === 'chi' && round.index === 0) {
-        const opt = buildClaimOption(s.hands[下家], s.melds[下家], s.lastDiscard, 下家);
+        const opt = buildClaimOption(
+          s.hands[下家],
+          s.melds[下家],
+          s.lastDiscard,
+          下家,
+        );
         if (opt?.chi && opt.chi.length > 0) {
           if (下家 === HUMAN_SEAT) {
-            return { ...s, claimRound: round, claimPlayer: 下家, claimOption: { chi: opt.chi } };
+            return {
+              ...s,
+              claimRound: round,
+              claimPlayer: 下家,
+              claimOption: { chi: opt.chi },
+            };
           }
-          const decision = aiChooseChi(s.hands[下家], s.melds[下家], opt.chi, s.lastDiscard.tile, s, 下家);
-          if (decision.doChi && decision.option) return applyChi(下家, decision.option);
+          const decision = aiChooseChi(
+            s.hands[下家],
+            s.melds[下家],
+            opt.chi,
+            s.lastDiscard.tile,
+            s,
+            下家,
+          );
+          if (decision.doChi && decision.option)
+            return applyChi(下家, decision.option);
         }
         return applyPass();
       }
@@ -834,7 +1099,8 @@ export function useMahjongGame() {
       if (!s || s.phase !== 'claim' || s.lastDiscard === null) return s;
       return processClaimRound(s);
     });
-  }, []);
+    // biome-ignore lint/correctness/useExhaustiveDependencies: processClaimRound is stable and uses setState for latest state
+  }, [processClaimRound]);
 
   /** 评估打某张牌后手牌的“搭子价值”：同牌数 + 同花色相邻牌数，越大越不想打 */
   function discardScore(hand: number[], excludeIndex: number): number {
@@ -885,7 +1151,13 @@ export function useMahjongGame() {
   /** AI 出牌：顶级策略（记牌、舍牌顺序、防守、听牌只打熟张） */
   const runAiTurn = useCallback(() => {
     setState((s) => {
-      if (!s || s.phase !== 'discard' || s.currentPlayer === HUMAN_SEAT || s.winner !== null) return s;
+      if (
+        !s ||
+        s.phase !== 'discard' ||
+        s.currentPlayer === HUMAN_SEAT ||
+        s.winner !== null
+      )
+        return s;
       const player = s.currentPlayer;
       const hand = s.hands[player];
       if (hand.length !== 14) return s;
@@ -902,9 +1174,21 @@ export function useMahjongGame() {
         }
       }
       let idx = 0;
-      let minKeep = strategyKeepValue(hand, countsSeen, defenseMode, isTingPai, 0);
+      let minKeep = strategyKeepValue(
+        hand,
+        countsSeen,
+        defenseMode,
+        isTingPai,
+        0,
+      );
       for (let i = 1; i < hand.length; i++) {
-        const k = strategyKeepValue(hand, countsSeen, defenseMode, isTingPai, i);
+        const k = strategyKeepValue(
+          hand,
+          countsSeen,
+          defenseMode,
+          isTingPai,
+          i,
+        );
         if (k < minKeep) {
           minKeep = k;
           idx = i;
@@ -915,7 +1199,9 @@ export function useMahjongGame() {
       const tile = hand[idx];
       const hands = s.hands.map((h) => [...h]);
       hands[player] = hand.filter((_, i) => i !== idx).sort((a, b) => a - b);
-      const discardPiles = s.discardPiles.map((p, i) => (i === player ? [...p, tile] : p));
+      const discardPiles = s.discardPiles.map((p, i) =>
+        i === player ? [...p, tile] : p,
+      );
       const lastDiscard: LastDiscard = { tile, fromPlayer: player };
       return {
         ...s,
@@ -928,7 +1214,8 @@ export function useMahjongGame() {
         claimRound: { phase: 'hu', index: 0 },
       };
     });
-  }, []);
+    // biome-ignore lint/correctness/useExhaustiveDependencies: strategyKeepValue is used for AI discard strategy
+  }, [strategyKeepValue]);
 
   const needAiDiscard =
     state !== null &&
