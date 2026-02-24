@@ -52,18 +52,6 @@ pnpm run format   # 格式化代码
 
 详细说明见 [REPO_WIKI.md](./REPO_WIKI.md)。
 
-## 推送到 GitHub
-
-1. 在 GitHub 新建仓库（如 `game-hub`）。
-2. 将 `package.json` 中的 `YOUR_USERNAME` 替换为你的 GitHub 用户名。
-3. 执行：
-
-```bash
-git remote add origin https://github.com/YOUR_USERNAME/game-hub.git
-git branch -M main
-git push -u origin main
-```
-
 ## 参考
 
 - [Rsbuild](https://rsbuild.rs)

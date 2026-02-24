@@ -6,9 +6,9 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/YOUR_USERNAME/game-hub.git"
+    "url": "https://github.com/ILoveChy/game-hub.git"
   },
-  "homepage": "https://github.com/YOUR_USERNAME/game-hub#readme",
+  "homepage": "https://github.com/ILoveChy/game-hub#readme",
   "keywords": [
     "games",
     "mahjong",
