@@ -461,14 +461,17 @@ export function computeYaku(ctx: YakuContextFull): YakuResult[] {
 
   // --- 2 番役 ---
   if (checkToitoiRiichi(all)) results.push({ id: 'toitoi', name: '对对和', han: 2 });
-  const sankantsu = (ctx.numKan ?? 0) >= 3;
-  if (sankantsu) results.push({ id: 'sankantsu', name: '三杠子', han: 2 });
+  if (checkSankantsuRiichi(melds)) results.push({ id: 'sankantsu', name: '三杠子', han: 2 });
   if (checkIttsuRiichi(all)) {
     results.push({ id: 'ittsu', name: '一气通贯', han: hasOpen ? 1 : 2 });
   }
   if (checkHonrotoRiichi(all)) results.push({ id: 'honroto', name: '混老头', han: 2 });
   if (checkShousangenRiichi(all)) results.push({ id: 'shousangen', name: '小三元', han: 2 });
   if (menzen && checkRyanpeikouRiichi(all)) results.push({ id: 'ryanpeikou', name: '两杯口', han: 2 });
+  if (checkSanshokuRiichi(all)) {
+    results.push({ id: 'sanshoku', name: '三色同顺', han: hasOpen ? 1 : 2 });
+  }
+  if (checkSanshokudoukouRiichi(all)) results.push({ id: 'sanshokudoukou', name: '三色同刻', han: 2 });
   const ankoCount = countAnkouRiichi(melds, all);
   if (ankoCount >= 3) results.push({ id: 'sanankou', name: '三暗刻', han: 2 });
 
@@ -478,7 +481,7 @@ export function computeYaku(ctx: YakuContextFull): YakuResult[] {
 
   // --- 役满（简化：只做部分）---
   if ((ctx.numKan ?? 0) >= 4) results.push({ id: 'sukantsu', name: '四杠子', han: 13 });
-  if (ankoCount >= 4 && menzen && ctx.isTsumo) results.push({ id: 'suankou', name: '四暗刻', han: 13 });
+  if (checkSuankouRiichi(melds, ctx.hand, ctx.isTsumo)) results.push({ id: 'suankou', name: '四暗刻', han: 13 });
   if (checkDaisangenRiichi(all)) results.push({ id: 'daisangen', name: '大三元', han: 13 });
   if (checkTsuuiisouRiichi(all)) results.push({ id: 'tsuuiisou', name: '字一色', han: 13 });
   if (checkChinrotoRiichi(all)) results.push({ id: 'chinroto', name: '清老头', han: 13 });
@@ -564,9 +567,38 @@ function checkShousangenRiichi(all: number[]): boolean {
   return triplet === 2 && pair === 1;
 }
 
-/** 两杯口：两组同形顺子（门前清），简化不实现 */
-function checkRyanpeikouRiichi(_tiles: number[]): boolean {
-  return false;
+/** 两杯口：两组同形顺子（门前清） */
+function checkRyanpeikouRiichi(tiles: number[]): boolean {
+  const base = tiles.map(getBaseTile);
+  const sequences = getAllSequences(base);
+  
+  // 统计每种顺子的数量
+  const seqCount = new Map<string, number>();
+  for (const seq of sequences) {
+    const key = seq.sort().join(',');
+    seqCount.set(key, (seqCount.get(key) ?? 0) + 1);
+  }
+  
+  // 至少有两组相同的顺子
+  return [...seqCount.values()].some(count => count >= 2);
+}
+
+/** 获取所有可能的顺子组合 */
+function getAllSequences(tiles: number[]): number[][] {
+  const sequences: number[][] = [];
+  const sorted = [...tiles].sort((a, b) => a - b);
+  
+  for (let i = 0; i < sorted.length - 2; i++) {
+    for (let j = i + 1; j < sorted.length - 1; j++) {
+      for (let k = j + 1; k < sorted.length; k++) {
+        const [a, b, c] = [sorted[i], sorted[j], sorted[k]];
+        if (isSequenceBase(a, b, c)) {
+          sequences.push([a, b, c]);
+        }
+      }
+    }
+  }
+  return sequences;
 }
 
 /** 暗刻数：手牌中的刻子+暗杠数（非吃、非明碰、非明杠） */
@@ -626,6 +658,108 @@ function checkChinrotoRiichi(tiles: number[]): boolean {
   for (const b of base) counts.set(b, (counts.get(b) ?? 0) + 1);
   for (const c of counts.values()) {
     if (c !== 2 && c !== 3 && c !== 4) return false;
+  }
+  return true;
+}
+
+/** 三色同顺：三种花色都有相同数字的顺子 */
+function checkSanshokuRiichi(all: number[]): boolean {
+  const base = all.map(getBaseTile);
+  const sequencesBySuit: number[][][] = [[], [], []]; // 万、条、筒
+  
+  // 收集每种花色的顺子
+  for (let suit = 0; suit < 3; suit++) {
+    const suitTiles = base.filter(b => Math.floor(b / 9) === suit);
+    for (let i = 0; i <= suitTiles.length - 3; i++) {
+      for (let j = i + 1; j <= suitTiles.length - 2; j++) {
+        for (let k = j + 1; k <= suitTiles.length - 1; k++) {
+          const [a, b, c] = [suitTiles[i], suitTiles[j], suitTiles[k]];
+          if (isSequenceBase(a, b, c)) {
+            sequencesBySuit[suit].push([a % 9, b % 9, c % 9]); // 存储相对数字
+          }
+        }
+      }
+    }
+  }
+  
+  // 检查是否存在三种花色都有相同数字序列的顺子
+  for (const seq1 of sequencesBySuit[0]) {
+    for (const seq2 of sequencesBySuit[1]) {
+      for (const seq3 of sequencesBySuit[2]) {
+        if (arraysEqual(seq1, seq2) && arraysEqual(seq2, seq3)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+/** 三色同刻：三种花色都有相同数字的刻子 */
+function checkSanshokudoukouRiichi(all: number[]): boolean {
+  const base = all.map(getBaseTile);
+  const countsBySuit: Map<number, number>[] = [
+    new Map(), // 万
+    new Map(), // 条
+    new Map(), // 筒
+  ];
+  
+  // 统计每种花色中各数字的数量
+  for (const b of base) {
+    if (b < 27) { // 数牌
+      const suit = Math.floor(b / 9);
+      const num = b % 9;
+      countsBySuit[suit].set(num, (countsBySuit[suit].get(num) ?? 0) + 1);
+    }
+  }
+  
+  // 检查是否存在三种花色都有相同数字且都至少3张的情况
+  for (let num = 0; num < 9; num++) {
+    const count0 = countsBySuit[0].get(num) ?? 0;
+    const count1 = countsBySuit[1].get(num) ?? 0;
+    const count2 = countsBySuit[2].get(num) ?? 0;
+    if (count0 >= 3 && count1 >= 3 && count2 >= 3) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** 三杠子：三个杠子 */
+function checkSankantsuRiichi(melds: { type: string; tiles: number[] }[]): boolean {
+  const kanCount = melds.filter(m => m.type === 'mingang' || m.type === 'angang').length;
+  return kanCount >= 3;
+}
+
+/** 四暗刻：四个暗刻/暗杠（门前清自摸） */
+function checkSuankouRiichi(melds: { type: string; tiles: number[] }[], hand: number[], isTsumo: boolean): boolean {
+  if (!isTsumo) return false; // 必须自摸
+  
+  let ankoCount = 0;
+  const handBase = hand.map(getBaseTile);
+  const handCounts = new Map<number, number>();
+  
+  // 统计手牌中的刻子数
+  for (const b of handBase) {
+    handCounts.set(b, (handCounts.get(b) ?? 0) + 1);
+  }
+  for (const count of handCounts.values()) {
+    if (count >= 3) ankoCount++;
+  }
+  
+  // 加上暗杠数
+  for (const m of melds) {
+    if (m.type === 'angang') ankoCount++;
+  }
+  
+  return ankoCount >= 4;
+}
+
+/** 辅助函数：比较两个数组是否相等 */
+function arraysEqual(a: number[], b: number[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
   }
   return true;
 }

@@ -93,26 +93,103 @@ function aiWantsPeng(
 }
 
 /** AI 是否选择明杠：庄家/残局时更保守（策略 rule_id 7） */
+/** 评估手牌安全性：0-1之间，越高越安全 */
+function evaluateHandSafety(hand: number[], melds: Meld[]): number {
+  // 统计牌型分布
+  const counts = new Map<number, number>();
+  for (const tile of hand) {
+    counts.set(tile, (counts.get(tile) ?? 0) + 1);
+  }
+  
+  // 计算孤张数量（只有1张的牌）
+  let isolatedCount = 0;
+  let pairCount = 0;
+  let tripleCount = 0;
+  
+  for (const count of counts.values()) {
+    if (count === 1) isolatedCount++;
+    else if (count === 2) pairCount++;
+    else if (count >= 3) tripleCount++;
+  }
+  
+  // 计算面子数
+  const meldCount = melds.length;
+  
+  // 安全性评分：面子多、对子多、孤张少则更安全
+  const totalCards = hand.length;
+  const safety = (meldCount * 0.3 + pairCount * 0.2 - isolatedCount * 0.1 + tripleCount * 0.1) / (totalCards * 0.3);
+  
+  return Math.max(0, Math.min(1, safety));
+}
+
+/** 获取听牌信息（内部使用） */
+function getAITingTiles(hand: number[], melds: Meld[]): number[] {
+  if (hand.length !== 13) return [];
+  const waiting: number[] = [];
+  for (let tile = 0; tile < 34; tile++) {
+    if (checkWin(hand, melds, tile)) {
+      waiting.push(tile);
+    }
+  }
+  return waiting;
+}
+
 function aiWantsGang(
-  _hand: number[],
+  hand: number[],
   melds: Meld[],
   state?: GameState | null,
   player?: number,
 ): boolean {
-  let prob = melds.length >= 3 ? 0.9 : 0.75;
-  if (state && player !== undefined && (state.dealer === player || state.deck.length < 20)) {
-    prob *= 0.55;
+  const meldCount = melds.length;
+  const waitingTiles = getAITingTiles(hand, melds);
+  const isTingPai = waitingTiles.length > 0;
+  
+  // 基础概率
+  let prob = 0.7;
+  
+  // 已有较多面子时更倾向于杠
+  if (meldCount >= 3) prob = 0.9;
+  else if (meldCount === 2) prob = 0.8;
+  
+  // 听牌时杠的风险评估
+  if (isTingPai) {
+    // 如果杠后仍然听牌，概率较高
+    const testHand = [...hand];
+    const testMelds = [...melds, { type: 'mingang' as const, tiles: [hand[0], hand[0], hand[0], hand[0]] }];
+    const stillTing = getAITingTiles(testHand, testMelds).length > 0;
+    if (stillTing) prob *= 0.8;
+    else prob *= 0.3; // 杠后不听牌则谨慎
   }
+  
+  // 庄家或残局时更保守
+  if (state && player !== undefined && (state.dealer === player || state.deck.length < 20)) {
+    prob *= 0.6;
+  }
+  
+  // 手牌安全性评估
+  const safetyScore = evaluateHandSafety(hand, melds);
+  if (safetyScore < 0.3) prob *= 0.7; // 手牌危险时不轻易杠
+  
   return Math.random() < prob;
 }
 
 /** 推进要牌轮次：下一家或下一阶段；返回 null 表示进入吃后无人吃则摸牌 */
 function advanceClaimRound(r: ClaimRound): ClaimRound | null {
-  if (r.index + 1 < 3) return { phase: r.phase, index: r.index + 1 };
-  if (r.phase === 'hu') return { phase: 'gang', index: 0 };
-  if (r.phase === 'gang') return { phase: 'peng', index: 0 };
-  if (r.phase === 'peng') return { phase: 'chi', index: 0 };
-  return null; // 吃阶段只有下家，无人吃则摸牌
+  // 正确的优先级顺序：胡 > 杠 > 碰 > 吃
+  if (r.phase === 'hu') {
+    if (r.index + 1 < 3) return { phase: 'hu', index: r.index + 1 };
+    return { phase: 'gang', index: 0 };
+  }
+  if (r.phase === 'gang') {
+    if (r.index + 1 < 3) return { phase: 'gang', index: r.index + 1 };
+    return { phase: 'peng', index: 0 };
+  }
+  if (r.phase === 'peng') {
+    if (r.index + 1 < 3) return { phase: 'peng', index: r.index + 1 };
+    return { phase: 'chi', index: 0 }; // 吃仅限下家
+  }
+  // 吃阶段只有下家(index=0)，无人吃则摸牌
+  return null;
 }
 
 /** 下家摸牌（要牌轮无人要时）：流局/自摸判定，并清空 claim 相关状态 */
@@ -576,47 +653,56 @@ export function useMahjongGame() {
       const tile = s.lastDiscard!.tile;
       const hands = s.hands.map((h) => [...h]);
       const melds = s.melds.map((m) => [...m]);
-      const gangRecords = [...(s.gangRecords ?? []), { type: 'mingang' as const, player, fromPlayer: s.lastDiscard!.fromPlayer }];
-      for (let i = 0; i < 3; i++) {
-        const idx = hands[player].indexOf(tile);
-        hands[player].splice(idx, 1);
-      }
-      melds[player].push({ type: 'mingang', tiles: [tile, tile, tile, tile], fromPlayer: s.lastDiscard!.fromPlayer });
-      const discardPiles = s.discardPiles.map((p, i) => (i === s.lastDiscard!.fromPlayer ? p.slice(0, -1) : p));
       const deck = [...s.deck];
-      const 补牌 = deck.length > 0 ? deck.pop()! : null;
-      if (补牌 !== null) {
-        hands[player].push(补牌);
-        hands[player].sort((a, b) => a - b);
-        const win = checkWin(hands[player], melds[player]);
-        const winResult: GameState['lastWinResult'] = win
-          ? getWinFans(hands[player], melds[player], undefined, { isZiMo: true, isGangShang: true })
-          : null;
-        const st: GameState = {
-          ...s,
-          hands,
-          melds,
-          discardPiles,
-          deck,
-          gangRecords,
-          currentPlayer: player,
-          phase: 'discard',
-          lastDiscard: null,
-          claimOption: null,
-          claimRound: null,
-          claimPlayer: null,
-          winner: win ? player : null,
-          lastWinResult: winResult ?? s.lastWinResult,
-          lastHuFromPlayer: win ? null : s.lastHuFromPlayer,
-          lastDrawnTile: win ? null : (player === HUMAN_SEAT ? 补牌 : s.lastDrawnTile),
-        };
-        if (win) {
-          const settlement = computeSettlement(st);
-          return { ...st, scores: settlement.newScores, lastSettlement: settlement };
+      
+      // 从手牌中移除3张相同的牌
+      let count = 0;
+      const indicesToRemove: number[] = [];
+      for (let i = 0; i < hands[player].length && count < 3; i++) {
+        if (hands[player][i] === tile) {
+          indicesToRemove.push(i);
+          count++;
         }
-        return clearClaim(st);
       }
-      return clearClaim({
+      
+      if (count < 3) return s; // 不够3张无法杠
+      
+      // 移除手牌（从后往前删除避免索引变化）
+      indicesToRemove.sort((a, b) => b - a);
+      indicesToRemove.forEach(i => hands[player].splice(i, 1));
+      
+      // 添加杠面子
+      const gangTiles = [tile, tile, tile, tile];
+      melds[player].push({ 
+        type: 'mingang', 
+        tiles: gangTiles, 
+        fromPlayer: s.lastDiscard!.fromPlayer 
+      });
+      
+      // 更新杠牌记录（用于计分）
+      const gangRecords = [...(s.gangRecords ?? []), {
+        type: 'mingang' as const,
+        player,
+        fromPlayer: s.lastDiscard!.fromPlayer
+      }];
+      
+      // 移除被杠的弃牌
+      const discardPiles = s.discardPiles.map((pile, i) => 
+        i === s.lastDiscard!.fromPlayer ? pile.slice(0, -1) : pile
+      );
+      
+      // 从牌墙末尾补牌（岭上牌）
+      const rinshanTile = deck.pop()!;
+      hands[player].push(rinshanTile);
+      hands[player].sort((a, b) => a - b);
+      
+      // 检查杠上开花（补牌后立即胡牌）
+      const win = checkWin(hands[player], melds[player]);
+      const winResult: GameState['lastWinResult'] = win
+        ? getWinFans(hands[player], melds[player], undefined, { isZiMo: true, isGangShang: true })
+        : null;
+      
+      const st: GameState = {
         ...s,
         hands,
         melds,
@@ -627,7 +713,19 @@ export function useMahjongGame() {
         phase: 'discard',
         lastDiscard: null,
         claimOption: null,
-      });
+        claimRound: null,
+        claimPlayer: null,
+        winner: win ? player : null,
+        lastWinResult: winResult ?? s.lastWinResult,
+        lastHuFromPlayer: win ? null : s.lastHuFromPlayer,
+        lastDrawnTile: win ? null : (player === HUMAN_SEAT ? rinshanTile : s.lastDrawnTile),
+      };
+      
+      if (win) {
+        const settlement = computeSettlement(st);
+        return { ...st, scores: settlement.newScores, lastSettlement: settlement };
+      }
+      return clearClaim(st);
     };
 
     const applyPeng = (player: number): GameState => {

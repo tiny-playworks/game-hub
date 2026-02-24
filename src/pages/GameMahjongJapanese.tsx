@@ -106,6 +106,12 @@ interface RiichiGameState {
   honba: number;
   /** 庄家座位 0-3；胡牌/流局后按结果换庄 */
   dealer: number;
+  /** 立直状态：每个玩家是否已立直 */
+  riichiDeclared: boolean[];
+  /** 立直宣言牌：记录每个玩家立直时打出的牌（用于一发判定） */
+  riichiDiscard: (number | null)[];
+  /** 里宝牌指示牌 */
+  uraDoraIndicators: number[];
 }
 
 function initRiichiGame(dealer = 0, roundWind = 0, roundNumber = 1, honba = 0): RiichiGameState {
@@ -130,6 +136,9 @@ function initRiichiGame(dealer = 0, roundWind = 0, roundNumber = 1, honba = 0): 
     roundNumber,
     honba,
     dealer,
+    riichiDeclared: [false, false, false, false],
+    riichiDiscard: [null, null, null, null],
+    uraDoraIndicators: [],
   };
 }
 
@@ -171,6 +180,7 @@ const GameMahjongJapanese = () => {
     isTsumo: boolean;
     yaku: YakuResult[];
   } | null>(null);
+  const [showGuide, setShowGuide] = useState(true); // 新手引导状态
   const prevGameRef = useRef<RiichiGameState | null>(null);
   const undoingRef = useRef(false);
   const addLogRef = useRef<(msg: string) => void>(() => {});
@@ -352,6 +362,53 @@ const GameMahjongJapanese = () => {
     });
   }, [game, addLog]);
 
+  /** 立直宣告：门前清听牌时可宣告，扣除1000点棒 */
+  const doRiichi = useCallback(() => {
+    if (!game || game.phase !== 'discard' || game.currentPlayer !== 0 || game.riichiDeclared[0]) return;
+    
+    // 检查是否门前清
+    const melds = game.melds[0];
+    const isMenzen = melds.every(m => m.type === 'angang');
+    if (!isMenzen) return;
+    
+    // 检查是否听牌
+    const waitingTiles = getWaitingTilesRiichi(game.hands[0], melds);
+    if (waitingTiles.length === 0) return;
+    
+    addLog('自家 立直宣言！');
+    
+    setGame({
+      ...game,
+      riichiDeclared: game.riichiDeclared.map((declared, i) => i === 0 ? true : declared),
+      lastClaimMsg: '立直宣言！听牌固定，不能换牌',
+    });
+  }, [game, addLog]);
+  
+  /** 获取听牌信息 */
+  const getWaitingTilesRiichi = (hand: number[], melds: RiichiMeld[]): number[] => {
+    if (hand.length !== 13) return [];
+    const waiting: number[] = [];
+    for (let t = 0; t < 34; t++) {
+      const testHand = [...hand, t];
+      if (isWinShapeRiichi(testHand, melds)) {
+        const ctx = {
+          hand: testHand,
+          melds: melds.map(m => ({ tiles: m.tiles })),
+          isMenzhen: melds.every(m => m.type === 'angang'),
+          isTsumo: true,
+          isRiichi: true,
+          ippatsuPossible: false,
+          seatWind: getSeatWind(game?.roundWind ?? 0, 0, game?.dealer ?? 0),
+          roundWind: game?.roundWind ?? 0,
+        };
+        if (hasYaku(ctx)) {
+          waiting.push(t);
+        }
+      }
+    }
+    return waiting;
+  };
+  
   const doMingang = useCallback(() => {
     if (!game || game.phase !== 'claim' || game.lastDiscard === null || game.wall.length === 0) return;
     const base = getBaseTile(game.lastDiscard);
@@ -997,20 +1054,100 @@ const GameMahjongJapanese = () => {
 
       <main className="mx-auto max-w-6xl p-4 md:p-6">
         <div className="rounded-2xl bg-[#2d4a3c] p-4 md:p-6 mb-4 min-h-[480px] shadow-[0_12px_32px_rgba(0,0,0,0.4)]">
-          <p className="text-center text-sm text-[#f1faee]/90 mb-3">
-            {game.lastClaimMsg && (
-              <span className="block text-amber-300/95 mb-1">{game.lastClaimMsg}</span>
+          {/* 新手引导面板 */}
+          {showGuide && (
+            <div className="mb-4 p-4 bg-[#1d3557]/80 rounded-xl border border-[#457b9d]/50">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-lg font-bold text-[#a8dadc]">新人玩家指南</h3>
+                <button 
+                  onClick={() => setShowGuide(false)}
+                  className="text-[#f1faee]/70 hover:text-[#f1faee] text-sm"
+                >
+                  ✕ 关闭
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                <div className="bg-[#2d4a3c]/50 p-3 rounded-lg">
+                  <h4 className="font-semibold text-[#f1faee] mb-2">🎯 基本目标</h4>
+                  <ul className="text-[#f1faee]/80 space-y-1 text-xs">
+                    <li>• 组成 4 面子 + 1 对子</li>
+                    <li>• 必须有至少 1 个役种</li>
+                    <li>• 立直后听牌固定</li>
+                  </ul>
+                </div>
+                <div className="bg-[#2d4a3c]/50 p-3 rounded-lg">
+                  <h4 className="font-semibold text-[#f1faee] mb-2">🎮 操作说明</h4>
+                  <ul className="text-[#f1faee]/80 space-y-1 text-xs">
+                    <li>• 点击手牌出牌</li>
+                    <li>• 可吃/碰/杠时会提示</li>
+                    <li>• 听牌时可宣告立直</li>
+                  </ul>
+                </div>
+                <div className="bg-[#2d4a3c]/50 p-3 rounded-lg">
+                  <h4 className="font-semibold text-[#f1faee] mb-2">💡 小贴士</h4>
+                  <ul className="text-[#f1faee]/80 space-y-1 text-xs">
+                    <li>• 绿色=条子 红色=万子</li>
+                    <li>• 黄色=筒子 黑色=字牌</li>
+                    <li>• 红色数字=赤宝牌</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="mt-3 pt-3 border-t border-[#457b9d]/30">
+                <p className="text-xs text-[#a8dadc]/90">
+                  💡 提示：游戏上方会显示当前状态和可选操作，仔细阅读后再做决定哦！
+                </p>
+              </div>
+            </div>
+          )}
+          <div className="text-center mb-3">
+            {/* 主要状态提示 */}
+            <div className="mb-2">
+              <p className="text-sm text-[#f1faee] font-medium">
+                {isClaimPhase
+                  ? isMyClaim
+                    ? hasAnyClaimOption
+                      ? `⚠️ ${game.lastDiscardFrom != null ? SEAT_NAMES[game.lastDiscardFrom] : ''} 打出了 ${game.lastDiscard != null ? getTileLabel(game.lastDiscard) : ''}`
+                      : '⏳ 等待其他玩家行动...'
+                    : `⏳ ${game.lastDiscardFrom != null ? SEAT_NAMES[game.lastDiscardFrom] : ''} 打出了 ${game.lastDiscard != null ? getTileLabel(game.lastDiscard) : ''}，当前轮到 ${SEAT_NAMES[claimPlayer ?? 0]}`
+                  : isMyTurn
+                    ? '🎮 轮到你出牌了'
+                    : `⏳ 等待 ${SEAT_NAMES[game.currentPlayer]} 行动`}
+              </p>
+            </div>
+            
+            {/* 操作建议 */}
+            {isMyClaim && hasAnyClaimOption && (
+              <div className="mb-2">
+                <p className="text-xs text-[#a8dadc] bg-[#1d3557]/50 rounded-lg py-1 px-3 inline-block">
+                  💡 可选操作：{canRon && '胡牌 '} {chiOptions.length > 0 && `吃(${chiOptions.length}种) `} {canPeng && '碰 '} {canMingang && '杠 '} {'过'}
+                </p>
+              </div>
             )}
-            {isClaimPhase
-              ? isMyClaim
-                ? hasAnyClaimOption
-                  ? `${game.lastDiscardFrom != null ? SEAT_NAMES[game.lastDiscardFrom] : ''} 打了 ${game.lastDiscard != null ? getTileLabel(game.lastDiscard) : ''}，轮到你：可吃/碰/杠 或 过`
-                  : null
-                : `${game.lastDiscardFrom != null ? SEAT_NAMES[game.lastDiscardFrom] : ''} 打了 ${game.lastDiscard != null ? getTileLabel(game.lastDiscard) : ''}，按顺序要牌，当前轮到 ${SEAT_NAMES[claimPlayer ?? 0]}`
-              : isMyTurn
-                ? '轮到你出牌'
-                : `等待 ${SEAT_NAMES[game.currentPlayer]}`}
-          </p>
+            
+            {/* 特殊状态提示 */}
+            {game.lastClaimMsg && (
+              <div className="mb-2">
+                <span className="inline-block text-xs text-amber-300/95 bg-amber-900/30 rounded-lg py-1 px-3">
+                  📢 {game.lastClaimMsg}
+                </span>
+              </div>
+            )}
+            
+            {/* 立直状态提示 */}
+            {game.riichiDeclared.some(d => d) && (
+              <div className="mb-2">
+                <div className="flex flex-wrap justify-center gap-2">
+                  {game.riichiDeclared.map((declared, i) => (
+                    declared && (
+                      <span key={i} className="text-xs text-red-300 bg-red-900/30 rounded-lg py-1 px-2">
+                        🎯 {SEAT_NAMES[i]} 已立直
+                      </span>
+                    )
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="grid grid-cols-[1fr_2fr_1fr] grid-rows-[auto_1fr_auto] gap-3">
             <div />
@@ -1151,79 +1288,131 @@ const GameMahjongJapanese = () => {
             <div />
             <div className="col-span-3 rounded-xl bg-[#2d4a3c]/80 p-4 space-y-3">
               {canTsumo && (
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  <Button
-                    size="sm"
-                    className="bg-red-600 hover:bg-red-700 text-white font-bold"
-                    onClick={doTsumo}
-                  >
-                    自摸
-                  </Button>
+                <div className="space-y-2">
+                  <div className="text-center">
+                    <p className="text-sm text-[#f1faee]/90 bg-[#1d3557]/50 rounded-lg py-2 px-4 inline-block">
+                      🎉 恭喜！你可以自摸胡牌了！
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <Button
+                      size="sm"
+                      className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-4 text-lg"
+                      onClick={doTsumo}
+                    >
+                      🏆 自摸胡牌
+                    </Button>
+                  </div>
                 </div>
               )}
               {isMyClaim && hasAnyClaimOption && (
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  {canRon && (
+                <div className="space-y-3">
+                  <div className="text-center">
+                    <p className="text-sm text-[#f1faee]/90 bg-[#1d3557]/50 rounded-lg py-2 px-4 inline-block">
+                      ⚠️ 请选择你要的操作：
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    {canRon && (
+                      <Button
+                        size="sm"
+                        className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3"
+                        onClick={doRon}
+                      >
+                        🎉 胡牌（荣和）
+                      </Button>
+                    )}
+                    {chiOptions.map((opt, i) => (
+                      <Button
+                        key={i}
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3"
+                        onClick={() => doChi(opt)}
+                      >
+                        🍣 吃({getTileLabel(opt[0])}{getTileLabel(opt[1])})
+                      </Button>
+                    ))}
+                    {canPeng && (
+                      <Button
+                        size="sm"
+                        className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-3"
+                        onClick={doPeng}
+                      >
+                        🔨 碰
+                      </Button>
+                    )}
+                    {canMingang && (
+                      <Button
+                        size="sm"
+                        className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-3"
+                        onClick={doMingang}
+                      >
+                        ⚡ 杠
+                      </Button>
+                    )}
                     <Button
-                      size="sm"
-                      className="bg-red-600 hover:bg-red-700 text-white font-bold"
-                      onClick={doRon}
-                    >
-                      胡（荣和）
-                    </Button>
-                  )}
-                  {chiOptions.map((opt, i) => (
-                    <Button
-                      key={i}
-                      size="sm"
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                      onClick={() => doChi(opt)}
-                    >
-                      吃({getTileLabel(opt[0])}{getTileLabel(opt[1])})
-                    </Button>
-                  ))}
-                  {canPeng && (
-                    <Button
-                      size="sm"
-                      className="bg-amber-600 hover:bg-amber-700 text-white"
-                      onClick={doPeng}
-                    >
-                      碰
-                    </Button>
-                  )}
-                  {canMingang && (
-                    <Button
-                      size="sm"
-                      className="bg-orange-600 hover:bg-orange-700 text-white"
-                      onClick={doMingang}
-                    >
-                      杠
-                    </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-[#d4b886] bg-[#3d5a4a] text-[#f1faee] hover:bg-[#4a6b58] hover:text-white"
-                    onClick={passClaim}
-                  >
-                    过
-                  </Button>
-                </div>
-              )}
-              {isMyTurn && angangOptions.length > 0 && (
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  <span className="text-xs text-[#f1faee]/80 mr-1">暗杠（不算副露）：</span>
-                  {angangOptions.map((opt, i) => (
-                    <Button
-                      key={i}
                       size="sm"
                       variant="outline"
-                      className="border-slate-400 text-[#f1faee] hover:bg-slate-600/50"
-                      onClick={() => doAngang(opt)}
+                      className="border-[#d4b886] bg-[#3d5a4a] text-[#f1faee] hover:bg-[#4a6b58] hover:text-white px-4 py-3"
+                      onClick={passClaim}
                     >
-                      暗杠({getTileLabel(opt[0])})
+                      ❌ 过
                     </Button>
-                  ))}
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-[#a8dadc]/80">
+                      💡 提示：胡牌 {'>'} 杠 {'>'} 碰 {'>'} 吃 {'>'} 过（按优先级排序）
+                    </p>
+                  </div>
+                </div>
+              )}
+              {isMyTurn && (
+                <div className="space-y-3">
+                  {/* 立直提示区域 */}
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    {!game.riichiDeclared[0] && (
+                      <>
+                        <div className="flex items-center gap-2 bg-[#1d3557]/50 rounded-lg px-3 py-2">
+                          <span className="text-xs text-[#f1faee]/80">门前清听牌可立直：</span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-red-400 text-[#f1faee] hover:bg-red-600/50"
+                            onClick={doRiichi}
+                            disabled={game.riichiDeclared[0] || !game.melds[0].every(m => m.type === 'angang') || getWaitingTilesRiichi(game.hands[0], game.melds[0]).length === 0}
+                          >
+                            🎯 立直宣言
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                    
+                    {/* 暗杠提示区域 */}
+                    {angangOptions.length > 0 && (
+                      <div className="flex items-center gap-2 bg-[#2d4a3c]/50 rounded-lg px-3 py-2">
+                        <span className="text-xs text-[#f1faee]/80">暗杠（不算副露）：</span>
+                        {angangOptions.map((opt, i) => (
+                          <Button
+                            key={i}
+                            size="sm"
+                            variant="outline"
+                            className="border-slate-400 text-[#f1faee] hover:bg-slate-600/50"
+                            onClick={() => doAngang(opt)}
+                          >
+                            ⚡ 暗杠({getTileLabel(opt[0])})
+                          </Button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* 出牌提示 */}
+                  <div className="text-center">
+                    <p className="text-sm text-[#ffc107]/90 flex items-center justify-center gap-2">
+                      🎮 点击下方手牌出牌
+                      <span className="text-xs text-[#f1faee]/70">(刚摸的牌会有金色高亮)</span>
+                    </p>
+                  </div>
                 </div>
               )}
               {game.melds[0].length > 0 && (

@@ -67,28 +67,8 @@ function sameSuit(a: number, b: number, c: number): boolean {
   return s(a) === s(b) && s(b) === s(c);
 }
 
-function isSequence(a: number, b: number, c: number): boolean {
-  return sameSuit(a, b, c) && a + 1 === b && b + 1 === c;
-}
 
 /** 12 张牌能否组成 4 组 */
-function canFormFourMelds(arr: number[]): boolean {
-  if (arr.length === 0) return true;
-  const sorted = [...arr].sort((a, b) => a - b);
-  for (let i = 0; i < sorted.length; i++) {
-    for (let j = i + 1; j < sorted.length; j++) {
-      for (let k = j + 1; k < sorted.length; k++) {
-        const [a, b, c] = [sorted[i], sorted[j], sorted[k]];
-        const rest = sorted.filter((_, idx) => idx !== i && idx !== j && idx !== k);
-        const isTriple = a === b && b === c;
-        const isSeq = isSequence(a, b, c);
-        if ((isTriple || isSeq) && canFormFourMelds(rest)) return true;
-      }
-    }
-  }
-  return false;
-}
-
 /** 手牌 + 明牌组展开为牌列表（用于胡牌判定） */
 export function handAndMeldsToTiles(hand: number[], melds: Meld[]): number[] {
   const list = [...hand];
@@ -138,19 +118,87 @@ export function checkWin(hand: number[], melds: Meld[], drawnTile?: number): boo
   const fromMelds = melds.flatMap((m) => m.tiles);
   const total = all.length + fromMelds.length;
   if (total !== 14) return false;
+  
   const combined = [...all, ...fromMelds];
+  
+  // 优先检查特殊牌型
   if (isThirteenOrphans(combined)) return true;
   if (isDragonSevenPairs(combined)) return true;
   if (isSevenPairs(combined)) return true;
-  const sorted = combined.sort((a, b) => a - b);
-  for (let i = 0; i < sorted.length; i++) {
+  
+  // 基础牌型：4面子 + 1将牌
+  return isValidBasicWin(combined);
+}
+
+/** 验证基础胡牌牌型（4面子 + 1将牌） */
+function isValidBasicWin(tiles: number[]): boolean {
+  const sorted = [...tiles].sort((a, b) => a - b);
+  
+  // 尝试每种可能的将牌组合
+  for (let i = 0; i < sorted.length - 1; i++) {
+    // 跳过重复的将牌尝试
     if (i > 0 && sorted[i] === sorted[i - 1]) continue;
-    if (i + 1 < sorted.length && sorted[i] === sorted[i + 1]) {
-      const rest = sorted.filter((_, idx) => idx !== i && idx !== i + 1);
-      if (canFormFourMelds(rest)) return true;
+    
+    // 找到一对作为将牌
+    if (sorted[i] === sorted[i + 1]) {
+      const remaining = sorted.filter((_, idx) => idx !== i && idx !== i + 1);
+      if (canFormFourMeldsOptimized(remaining)) return true;
     }
   }
   return false;
+}
+
+/** 优化的4组牌判定算法 */
+function canFormFourMeldsOptimized(arr: number[]): boolean {
+  if (arr.length === 0) return true;
+  if (arr.length !== 12) return false; // 4组应该正好12张牌
+  
+  const sorted = [...arr].sort((a, b) => a - b);
+  
+  // 使用递归回溯算法寻找有效的组合
+  function backtrack(index: number, meldsFound: number): boolean {
+    if (meldsFound === 4) return index === sorted.length;
+    if (index >= sorted.length) return false;
+    
+    // 尝试形成刻子
+    if (index + 2 < sorted.length && 
+        sorted[index] === sorted[index + 1] && 
+        sorted[index] === sorted[index + 2]) {
+      if (backtrack(index + 3, meldsFound + 1)) return true;
+    }
+    
+    // 尝试形成顺子（仅数字牌）
+    if (isNumberTile(sorted[index])) {
+      const suit = Math.floor(sorted[index] / 9);
+      let j = index + 1;
+      let k = index + 2;
+      
+      // 找到第二张牌
+      while (j < sorted.length && (sorted[j] !== sorted[index] + 1 || Math.floor(sorted[j] / 9) !== suit)) {
+        j++;
+      }
+      
+      // 找到第三张牌
+      if (j < sorted.length) {
+        while (k < sorted.length && (sorted[k] !== sorted[index] + 2 || Math.floor(sorted[k] / 9) !== suit)) {
+          k++;
+        }
+        
+        if (k < sorted.length) {
+          // 创建新的数组，移除这三张牌
+          const newArr = [...sorted];
+          newArr.splice(k, 1);
+          newArr.splice(j, 1);
+          newArr.splice(index, 1);
+          if (backtrack(0, meldsFound + 1)) return true;
+        }
+      }
+    }
+    
+    return false;
+  }
+  
+  return backtrack(0, 0);
 }
 
 /** 吃：只能吃上家的牌。上家 = (myIndex + 3) % 4。返回可吃的组合 [ [牌1, 牌2], ... ]，与 lastTile 组成顺子 */
