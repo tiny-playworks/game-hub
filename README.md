@@ -1,5 +1,9 @@
 # Rsbuild project
 
+## 📚 项目文档
+
+详细的项目文档请查看 [REPO_WIKI.md](./REPO_WIKI.md)
+
 ## Setup
 
 Install the dependencies:
