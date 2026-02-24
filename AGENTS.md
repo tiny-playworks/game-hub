@@ -1,12 +1,14 @@
 # AGENTS.md
 
-You are an expert in JavaScript, Rsbuild, and web application development. You write maintainable, performant, and accessible code.
+Game Hub（游戏合集）项目：基于 Rsbuild + React 的小游戏与麻将 Web 应用。
 
 ## Commands
 
-- `npm run dev` - Start the dev server
-- `npm run build` - Build the app for production
-- `npm run preview` - Preview the production build locally
+- `pnpm run dev` - 启动开发服务器
+- `pnpm run build` - 生产构建
+- `pnpm run preview` - 本地预览构建结果
+- `pnpm run check` - 类型检查 (tsc) + Biome 检查
+- `pnpm run test` - 运行测试
 
 ## Docs
 

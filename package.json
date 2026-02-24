@@ -1,8 +1,21 @@
 {
-  "name": "rsbuild2",
+  "name": "game-hub",
   "version": "1.0.0",
+  "description": "小游戏与麻将合集：国标麻将、日麻、四川麻将、2048、贪吃蛇、俄罗斯方块等",
   "private": true,
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR_USERNAME/game-hub.git"
+  },
+  "homepage": "https://github.com/YOUR_USERNAME/game-hub#readme",
+  "keywords": [
+    "games",
+    "mahjong",
+    "react",
+    "rsbuild",
+    "mini-games"
+  ],
   "scripts": {
     "build": "rsbuild build",
     "check": "pnpm run typecheck && biome check --write",
