@@ -8,7 +8,7 @@ import {
 
 test('creates proper Sichuan deck', () => {
   const deck = createSichuanDeck();
-  expect(deck).toHaveLength(136);
+  expect(deck).toHaveLength(108); // 川麻 108 张，仅万/条/筒
 });
 
 test('deals Sichuan cards correctly', () => {
@@ -28,17 +28,17 @@ test('validates que men requirement', () => {
 });
 
 test('calculates fan correctly', () => {
-  const hand = [0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4];
-  const melds = [{ type: 'peng' as const, tiles: [0, 0, 0] }];
+  // 手牌 11 张 + 1 组碰 3 张 = 14，对对胡（4 刻子+1 将）
+  const hand = [1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4];
+  const melds = [{ type: 'peng' as const, tiles: [0, 0, 0], fromPlayer: 1 }];
 
-  const result1 = calculateFanSichuan(hand, melds, false, null); // 点炮
-  const result2 = calculateFanSichuan(hand, melds, true, null); // 自摸
+  const result1 = calculateFanSichuan(hand, melds, false, 'wan'); // 点炮，定缺万
+  const result2 = calculateFanSichuan(hand, melds, true, 'wan'); // 自摸
 
-  expect(result1.fan).toBe(2); // 基础1番 + 带根1番
-  expect(result2.fan).toBe(3); // 基础1番 + 自摸1番 + 带根1番
+  expect(result1.fan).toBe(2); // 对对胡 2 番
+  expect(result2.fan).toBe(4); // 对对胡 2 × 自摸 2
 
-  // 验证番型数组
-  expect(result1.fanTypes).toContain('基础番');
-  expect(result1.fanTypes).toContain('带根');
-  expect(result2.fanTypes).toContain('自摸');
+  expect(result1.fanTypes).toContain('对对胡');
+  expect(result2.fanTypes).toContain('对对胡');
+  expect(result2.fanTypes).toContain('自摸×2');
 });

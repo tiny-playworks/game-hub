@@ -286,18 +286,34 @@ export interface YakuContext {
   roundWind: number;
 }
 
-/** 符计算：底符 20 + 自摸 2 / 荣和 10 + 听牌形等（简化） */
-export function calcFu(_context: {
+/**
+ * 符数计算（天凤/雀魂标准，Skill 11）
+ * 基础：门前清荣和 10 符（平和）、门前清自摸 11 符、副露 10 符；七对子固定 25 符。
+ * 非平和门清：底符 20 + 自摸 2 / 荣和 10。向上取整至 10 的倍数。
+ */
+export function calcFu(context: {
   isTsumo: boolean;
   isMenzhen: boolean;
   hasPinfu: boolean;
+  isChiitoitsu: boolean;
 }): number {
-  const fu = 20;
-  // 自摸+2（非门前清自摸时）、荣和+10 等在此按 context 细化
+  if (context.isChiitoitsu) return 25;
+  let fu: number;
+  if (context.isMenzhen && context.hasPinfu) {
+    fu = context.isTsumo ? 22 : 10; // 平和：门清自摸 22→20，荣和 10
+  } else if (context.isMenzhen) {
+    fu = context.isTsumo ? 22 : 30; // 非平和门清
+  } else {
+    fu = 10; // 副露
+  }
   return Math.min(110, Math.ceil(fu / 10) * 10);
 }
 
-/** 点数公式：符 × 2^(番+2) × 倍率（子家 1，亲家 1.5），满贯以上按档位 */
+/**
+ * 点数计算（天凤/雀魂标准，Skill 12/13）
+ * 1-2 番：符×2^(番+2)×倍率；3-4 番满贯；5-6 番跳满；7-10 番倍满；11-12 番三倍满；≥13 役满。
+ * 亲家 1.5 倍，子家 1 倍，向上取整至 100。
+ */
 export function calcScore(
   fu: number,
   han: number,
@@ -306,8 +322,9 @@ export function calcScore(
 ): number {
   if (han >= 13) return isDealer ? 48000 : 32000;
   if (han >= 11) return isDealer ? 36000 : 24000;
-  if (han >= 8) return isDealer ? 24000 : 16000;
-  if (han >= 6) return isDealer ? 18000 : 12000;
+  if (han >= 7) return isDealer ? 24000 : 16000;
+  if (han >= 5) return isDealer ? 18000 : 12000;
+  if (han >= 3) return isDealer ? 12000 : 8000;
   const base = fu * 2 ** (han + 2);
   const rate = isDealer ? 1.5 : 1;
   return Math.ceil((base * rate) / 100) * 100;

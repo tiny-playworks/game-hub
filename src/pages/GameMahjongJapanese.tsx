@@ -746,9 +746,12 @@ const GameMahjongJapanese = () => {
       ? (game.lastDiscardFrom + 1 + game.claimIndex) % 4
       : null;
   const isMyClaim = isClaimPhase && claimPlayer === 0;
+  /** 立直后禁止吃/碰/明杠（技能：立直约束） */
+  const riichiNoClaim = game?.riichiDeclared[0] ?? false;
   const chiOptions =
     game &&
     isMyClaim &&
+    !riichiNoClaim &&
     game.lastDiscard !== null &&
     game.lastDiscardFrom !== null
       ? getChiOptionsRiichi(
@@ -761,15 +764,17 @@ const GameMahjongJapanese = () => {
   const canPeng =
     game &&
     isMyClaim &&
+    !riichiNoClaim &&
     game.lastDiscard !== null &&
     canPengRiichi(game.hands[0], game.lastDiscard);
   const canMingang =
     game &&
     isMyClaim &&
+    !riichiNoClaim &&
     game.lastDiscard !== null &&
     canMingangRiichi(game.hands[0], game.lastDiscard);
 
-  /** 构建役判定上下文（自家） */
+  /** 构建役判定上下文（自家）；立直/一发按当前局状态传入 */
   const buildYakuCtx = useCallback(
     (hand: number[], isTsumo: boolean) => {
       if (!game) return null;
@@ -781,8 +786,8 @@ const GameMahjongJapanese = () => {
         meldsTyped: melds,
         isMenzhen: menzen,
         isTsumo,
-        isRiichi: false,
-        ippatsuPossible: false,
+        isRiichi: game.riichiDeclared[0],
+        ippatsuPossible: false, // 一发需立直后一巡内和了，可后续按巡数细化
         seatWind: getSeatWind(game.roundWind, 0, game.dealer),
         roundWind: game.roundWind,
       };
@@ -1146,7 +1151,7 @@ const GameMahjongJapanese = () => {
         <main className="mx-auto max-w-2xl px-4 py-6">
           <h1 className="text-xl font-bold text-foreground">日本立直麻将</h1>
           <p className="mt-2 text-muted-foreground">
-            规则与策略以 skill「mahjong-japanese-riichi」为准
+            天凤/雀魂标准，规则以 skill「mahjong-japanese-riichi」为准
           </p>
 
           <section className="mt-6 rounded-lg border border-border bg-card p-4">
@@ -1155,10 +1160,16 @@ const GameMahjongJapanese = () => {
             </h2>
             <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-muted-foreground">
               <li>4 人 · 136 张 + 红宝牌 3 枚（赤 5 万/筒/索）</li>
-              <li>无役不能胡；振听只能自摸，不能荣和</li>
-              <li>立直：门前清听牌宣告，放 1000 点棒，听牌后不能换牌</li>
+              <li>无役不能和了；振听只能自摸，不能荣和</li>
+              <li>
+                立直：门前清听牌宣告，放 1000
+                点棒；立直后禁止换牌、禁止吃/碰/明杠/补杠，仅可暗杠与和了
+              </li>
               <li>宝牌只加番不算役；里宝牌在立直和了时翻开</li>
-              <li>计分：符 × 2^(番+2) × 倍率（亲家 1.5 倍）</li>
+              <li>
+                符数最小 10 符，七对子固定 25 符；1–2 番按 符×2^(番+2)，3
+                番满贯、5–6 番跳满、7–10 番倍满、≥13 役满
+              </li>
             </ul>
           </section>
 
@@ -1168,7 +1179,7 @@ const GameMahjongJapanese = () => {
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               立直(1)、门前清自摸(1)、断幺九(1)、役牌(1)、平和(1)、一发(1)、七对子(2)、混一色(3)、清一色(6)
-              等
+              等；满贯 12000/8000、跳满 18000/12000、役满 48000/32000（亲/子）
             </p>
           </section>
 

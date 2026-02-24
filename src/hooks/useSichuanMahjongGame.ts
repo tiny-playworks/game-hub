@@ -4,7 +4,6 @@ import {
   canMingangSichuan,
   canPengSichuan,
   checkWinSichuan,
-  getChiOptionsSichuan,
   getJiagangOptionsSichuan,
   getPlayerQueMenOptions,
   initSichuanGame,
@@ -19,9 +18,9 @@ type ClaimOption = {
   hu?: boolean;
   gang?: boolean;
   peng?: boolean;
-  chi?: [number, number][];
 };
 
+/** 川麻无吃牌，仅胡/杠/碰 */
 function buildClaimOption(
   s: SichuanGameState,
   player: number,
@@ -35,11 +34,8 @@ function buildClaimOption(
   const hand = s.hands[player];
   const melds = s.melds[player];
   const tile = s.lastDiscard;
-  const fromPlayer = s.lastDiscardFrom;
   const queMen = s.queMen[player];
   const opt: ClaimOption = {};
-  const chiOpts = getChiOptionsSichuan(hand, tile, fromPlayer, player);
-  if (chiOpts.length > 0) opt.chi = chiOpts;
   if (canPengSichuan(hand, tile)) opt.peng = true;
   if (canMingangSichuan(hand, tile)) opt.gang = true;
   const hu = checkWinSichuan(hand, melds, queMen, tile);
@@ -48,10 +44,11 @@ function buildClaimOption(
   return opt;
 }
 
+/** 川麻要牌轮次：胡 > 杠 > 碰，无吃 */
 function advanceClaimRound(
-  round: { phase: 'hu' | 'gang' | 'peng' | 'chi'; index: number },
+  round: { phase: 'hu' | 'gang' | 'peng'; index: number },
   _fromPlayer: number,
-): { phase: 'hu' | 'gang' | 'peng' | 'chi'; index: number } | null {
+): { phase: 'hu' | 'gang' | 'peng'; index: number } | null {
   if (round.phase === 'hu') {
     if (round.index + 1 < 3) return { phase: 'hu', index: round.index + 1 };
     return { phase: 'gang', index: 0 };
@@ -62,11 +59,12 @@ function advanceClaimRound(
   }
   if (round.phase === 'peng') {
     if (round.index + 1 < 3) return { phase: 'peng', index: round.index + 1 };
-    return { phase: 'chi', index: 0 };
+    return null; // 无人碰则下家摸牌
   }
-  return null; // 吃只有下家，无人吃则摸牌
+  return null;
 }
 
+/** 计分：单局得分 = 基础分 × 最终番数（番数为乘算结果） */
 function computeSettlement(
   s: SichuanGameState,
   winner: number,
@@ -78,7 +76,7 @@ function computeSettlement(
   const queMen = s.queMen[winner];
   const { fan } = calculateFanSichuan(hand, melds, isZimo, queMen);
   const baseScore = 1;
-  const amount = baseScore * (1 << (fan - 1)); // 番数翻倍：1番=1, 2番=2, 3番=4...
+  const amount = baseScore * fan; // 最终番数已为乘算结果
   const newScores = [...s.scores];
   if (isZimo) {
     for (let i = 0; i < 4; i++) {
@@ -567,50 +565,6 @@ export function useSichuanMahjongGame() {
     });
   }, []);
 
-  const doChi = useCallback((option: [number, number]) => {
-    setState((s) => {
-      if (
-        !s ||
-        s.phase !== 'claim' ||
-        !s.claimOption?.chi ||
-        s.lastDiscard === null ||
-        s.lastDiscardFrom === null ||
-        s.claimPlayer !== HUMAN_SEAT
-      )
-        return s;
-      const [a, b] = option;
-      const tile = s.lastDiscard;
-      const hands = s.hands.map((h) => [...h]);
-      const melds = s.melds.map((m) => [...m]);
-      const seq = [a, b, tile].sort((x, y) => x - y);
-      const ia = hands[HUMAN_SEAT].indexOf(a);
-      hands[HUMAN_SEAT].splice(ia, 1);
-      const ib = hands[HUMAN_SEAT].indexOf(b);
-      hands[HUMAN_SEAT].splice(ib, 1);
-      melds[HUMAN_SEAT].push({
-        type: 'chi',
-        tiles: seq,
-        fromPlayer: s.lastDiscardFrom,
-      });
-      const discardPiles = s.discardPiles.map((p, i) =>
-        i === s.lastDiscardFrom ? p.slice(0, -1) : p,
-      );
-      return {
-        ...s,
-        hands,
-        melds,
-        discardPiles,
-        currentPlayer: HUMAN_SEAT,
-        phase: 'discard',
-        claimOption: null,
-        claimPlayer: null,
-        claimRound: null,
-        lastDiscard: null,
-        lastDiscardFrom: null,
-      };
-    });
-  }, []);
-
   const doJiagang = useCallback((meldIndex: number) => {
     setState((s) => {
       if (
@@ -841,7 +795,6 @@ export function useSichuanMahjongGame() {
     doHu,
     doPeng,
     doGang,
-    doChi,
     doJiagang,
     doAngang,
     doZiMo,

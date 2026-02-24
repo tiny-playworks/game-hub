@@ -127,7 +127,6 @@ const GameMahjongSichuan = () => {
     doHu,
     doPeng,
     doGang,
-    doChi,
     doJiagang,
     doAngang,
     doZiMo,
@@ -216,19 +215,17 @@ const GameMahjongSichuan = () => {
             <h2 className="text-lg font-semibold">四川麻将</h2>
             <div className="mt-4 space-y-2 text-left text-sm text-muted-foreground">
               <p>
-                · 血战到底、刮风下雨、定缺规则。四人局，庄家 14 张先出，其余 13
-                张。
+                · 血战到底：四人局，108 张（仅万/条/筒，无字牌），庄家 14
+                张先出，其余 13 张。
               </p>
+              <p>· 定缺：开局选定缺门花色，胡牌前须打完定缺且手牌花色数≤2。</p>
               <p>
-                · 开局前每人选择「定缺」花色，本局手牌中不能有该花色才能胡牌。
-              </p>
-              <p>
-                · 吃（仅上家）、碰、杠、胡；胡优先于杠/碰/吃。自摸 3 家付，点炮
-                1 家付。
+                · 仅碰、杠、胡（无吃牌）；胡优先于杠/碰。自摸 3 家付，点炮 1
+                家付；番数乘算（基础番×自摸×杠上花等）。
               </p>
               <p>
                 ·
-                番型：基础番、自摸、杠上开花、带根、清一色、七对/龙七对/豪华七对等。
+                番型：平胡、对对胡、清一色、七对、龙七对、清对、清七对、全幺九等；加分项自摸×2、杠上花×2、金钩钓×2。
               </p>
             </div>
             <button
@@ -279,7 +276,7 @@ const GameMahjongSichuan = () => {
                 {state.isGameOver
                   ? '局终'
                   : isClaimPhase
-                    ? '轮到你：吃/碰/杠/胡 或 过'
+                    ? '轮到你：碰/杠/胡 或 过'
                     : isMyTurn
                       ? '轮到你出牌'
                       : '等待其他玩家'}
@@ -605,28 +602,6 @@ const GameMahjongSichuan = () => {
                   >
                     碰
                   </button>
-                  {state.claimOption?.chi &&
-                  state.claimOption.chi.length > 0 ? (
-                    state.claimOption.chi.map((opt, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => doChi(opt)}
-                        className="h-11 min-w-[72px] rounded-lg px-4 font-semibold text-white bg-[#457b9d] hover:bg-[#3d6b8a] active:scale-[0.98] transition-all"
-                      >
-                        吃 {TILE_LABELS_SICHUAN[opt[0]]}
-                        {TILE_LABELS_SICHUAN[opt[1]]}
-                      </button>
-                    ))
-                  ) : (
-                    <button
-                      type="button"
-                      disabled
-                      className="h-11 min-w-[72px] rounded-lg px-4 font-semibold text-white bg-[#6b7280]/50 cursor-not-allowed opacity-60"
-                    >
-                      吃
-                    </button>
-                  )}
                   <button
                     type="button"
                     onClick={passClaim}

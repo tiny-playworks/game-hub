@@ -1,13 +1,12 @@
 /**
- * 四川麻将规则库
- * 特色规则：
- * 1. 血战到底 - 一家胡牌后其他人继续打
- * 2. 刮风下雨 - 带根、杠上开花等番型
- * 3. 缺门 - 必须缺一门花色才能胡牌
- * 4. 定缺 - 游戏开始前选定缺少的花色
+ * 四川麻将规则库（血战到底/血流成河通用）
+ * 1. 牌具：108 张，仅万/条/筒，无字牌、无花牌
+ * 2. 铁律：缺门才能胡、禁止吃牌、一炮多响有效
+ * 3. 定缺：开局选定缺门花色，胡牌前须打完定缺
+ * 4. 番型：平胡/对对胡/清一色/七对/龙七对等，加分项乘算
  */
 
-/** 34 种牌型：0-8 万 9-17 条 18-26 筒 27-33 字牌 */
+/** 27 种牌：0-8 万 9-17 条 18-26 筒（川麻无字牌） */
 export const TILE_LABELS_SICHUAN: string[] = [
   '一万',
   '二万',
@@ -36,34 +35,33 @@ export const TILE_LABELS_SICHUAN: string[] = [
   '七筒',
   '八筒',
   '九筒',
-  '东',
-  '南',
-  '西',
-  '北',
-  '中',
-  '发',
-  '白',
 ];
 
-/** 四川麻将番型定义 */
-export const SICHUAN_FAN_TYPES = {
-  BASE: 1, // 基础番
-  ZIMO: 1, // 自摸番
-  GANG_FLOWER: 1, // 杠上开花番
-  WITH_ROOT: 1, // 带根番
-  QING_YI_SE: 2, // 清一色番
-  QI_DUI: 2, // 七对番
-  LONG_QI_DUI: 3, // 龙七对番
-  HAO_HUA_QI_DUI: 4, // 豪华七对番
-};
+/** 番型为乘算：最终番数 = 基础番 × 自摸×2 × 杠上花×2 × … */
+export const SICHUAN_FAN_MULTIPLIERS = {
+  /** 基础番：平胡1、对对胡2、清一色4、七对4、龙七对8、清对8、清七对16、全幺九8 */
+  PING_HU: 1,
+  DUI_DUI_HU: 2,
+  QING_YI_SE: 4,
+  QI_DUI: 4,
+  LONG_QI_DUI: 8,
+  QING_DUI: 8,
+  QING_QI_DUI: 16,
+  QUAN_YAO_JIU: 8,
+  /** 加分项（倍数）：自摸×2、杠上花×2、杠上炮×2、抢杠胡×2、金钩钓×2 */
+  ZIMO: 2,
+  GANG_SHANG_HUA: 2,
+  GANG_SHANG_PAO: 2,
+  QIANG_GANG_HU: 2,
+  JIN_GOU_DIAO: 2,
+} as const;
 
-export type SuitType = 'wan' | 'tiao' | 'tong' | 'zi'; // 万、条、筒、字
+export type SuitType = 'wan' | 'tiao' | 'tong'; // 川麻仅万、条、筒
 
 export const SUIT_NAMES: Record<SuitType, string> = {
   wan: '万子',
   tiao: '条子',
   tong: '筒子',
-  zi: '字牌',
 };
 
 export interface SichuanGameState {
@@ -78,17 +76,16 @@ export interface SichuanGameState {
   lastDiscardFrom: number | null;
   claimIndex: number;
   lastClaimMsg: string | null;
-  /** 要牌阶段：当前可选项（供 UI 显示） */
+  /** 要牌阶段：当前可选项（供 UI 显示）。川麻无吃牌 */
   claimOption: {
     hu?: boolean;
     gang?: boolean;
     peng?: boolean;
-    chi?: [number, number][];
   } | null;
   /** 要牌阶段：当前轮到决策的玩家 */
   claimPlayer: number | null;
-  /** 要牌轮次：hu/gang/peng/chi + index */
-  claimRound: { phase: 'hu' | 'gang' | 'peng' | 'chi'; index: number } | null;
+  /** 要牌轮次：hu/gang/peng + index（川麻无 chi） */
+  claimRound: { phase: 'hu' | 'gang' | 'peng'; index: number } | null;
   dealer: number;
   // 四川麻将特有属性
   queMen: (SuitType | null)[];
@@ -111,17 +108,16 @@ export interface GangRecord {
 }
 
 export interface Meld {
-  type: 'chi' | 'peng' | 'minggang' | 'angang' | 'jiagang';
+  type: 'peng' | 'minggang' | 'angang' | 'jiagang'; // 川麻无吃，无 chi
   tiles: number[];
   fromPlayer?: number;
 }
 
-/** 判断牌的花色 */
+/** 判断牌的花色（川麻仅 0-26 万/条/筒） */
 export function getSuit(tile: number): SuitType {
   if (tile < 9) return 'wan';
   if (tile < 18) return 'tiao';
-  if (tile < 27) return 'tong';
-  return 'zi';
+  return 'tong';
 }
 
 /** 判断手牌是否符合定缺要求 */
@@ -133,13 +129,13 @@ export function isValidQueMenHand(
   return !hand.some((tile) => getSuit(tile) === queMenSuit);
 }
 
-/** 创建四川麻将牌堆 */
+/** 创建四川麻将牌堆：108 张，仅万/条/筒（0-26 各 4 张） */
 export function createSichuanDeck(): number[] {
   const deck: number[] = [];
-  const TILE_COUNT = 34;
+  const TILE_TYPES = 27; // 0-8 万 9-17 条 18-26 筒
   const COPIES = 4;
 
-  for (let t = 0; t < TILE_COUNT; t++) {
+  for (let t = 0; t < TILE_TYPES; t++) {
     for (let c = 0; c < COPIES; c++) {
       deck.push(t);
     }
@@ -210,41 +206,7 @@ export function initSichuanGame(dealer = 0): SichuanGameState {
   };
 }
 
-/** 吃：只能吃上家的牌。返回可吃的组合 [ [牌1, 牌2], ... ]，与 lastTile 组成顺子 */
-export function getChiOptionsSichuan(
-  hand: number[],
-  lastTile: number,
-  fromPlayer: number,
-  myIndex: number,
-): [number, number][] {
-  const 上家 = (myIndex + 3) % 4;
-  if (fromPlayer !== 上家) return [];
-  if (lastTile >= 27) return []; // 字牌不可吃
-  const options: [number, number][] = [];
-  const need = [
-    [lastTile - 2, lastTile - 1],
-    [lastTile - 1, lastTile + 1],
-    [lastTile + 1, lastTile + 2],
-  ].filter(
-    ([a, b]) =>
-      a >= 0 &&
-      b < 27 &&
-      Math.floor(a / 9) === Math.floor(b / 9) &&
-      Math.floor(b / 9) === Math.floor(lastTile / 9),
-  );
-  for (const [a, b] of need) {
-    const handCopy = [...hand];
-    const ia = handCopy.indexOf(a);
-    if (ia === -1) continue;
-    handCopy.splice(ia, 1);
-    const ib = handCopy.indexOf(b);
-    if (ib === -1) continue;
-    options.push([a, b]);
-  }
-  return options;
-}
-
-/** 加杠选项：碰的刻子可加杠，返回 meld 索引列表 */
+/** 加杠选项：碰的刻子可加杠（补杠/巴杠），返回 meld 索引列表 */
 export function getJiagangOptionsSichuan(
   hand: number[],
   melds: Meld[],
@@ -299,16 +261,17 @@ export function checkWinSichuan(
   return checkBasicWinPattern(combined);
 }
 
-/** 基础胡牌模式检查 */
+/** 基础胡牌模式检查（4 面子+1 将，川麻仅万条筒 0-26） */
 function checkBasicWinPattern(tiles: number[]): boolean {
   if (tiles.length !== 14) return false;
 
-  const counts = new Array(34).fill(0);
+  const counts = new Array(27).fill(0);
   for (const tile of tiles) {
+    if (tile < 0 || tile >= 27) return false;
     counts[tile]++;
   }
 
-  for (let jiang = 0; jiang < 34; jiang++) {
+  for (let jiang = 0; jiang < 27; jiang++) {
     if (counts[jiang] >= 2) {
       const tempCounts = [...counts];
       tempCounts[jiang] -= 2;
@@ -322,10 +285,10 @@ function checkBasicWinPattern(tiles: number[]): boolean {
   return false;
 }
 
-/** 检查能否组成四个面子 */
+/** 检查能否组成四个面子（顺子或刻子，仅 0-26） */
 function canFormFourMelds(counts: number[]): boolean {
   let firstNonZero = -1;
-  for (let i = 0; i < 34; i++) {
+  for (let i = 0; i < 27; i++) {
     if (counts[i] > 0) {
       firstNonZero = i;
       break;
@@ -342,7 +305,7 @@ function canFormFourMelds(counts: number[]): boolean {
     counts[firstNonZero] += 3;
   }
 
-  if (firstNonZero < 27 && firstNonZero % 9 < 7) {
+  if (firstNonZero % 9 < 7) {
     if (counts[firstNonZero + 1] > 0 && counts[firstNonZero + 2] > 0) {
       counts[firstNonZero]--;
       counts[firstNonZero + 1]--;
@@ -359,58 +322,72 @@ function canFormFourMelds(counts: number[]): boolean {
   return false;
 }
 
-/** 计算番数 */
+/** 计算番数（乘算）：最终番数 = 基础番 × 自摸×2 × 杠上花×2 × … */
 export function calculateFanSichuan(
   hand: number[],
   melds: Meld[],
   isZimo: boolean,
   queMenSuit: SuitType | null,
 ): FanResult {
-  let fan = SICHUAN_FAN_TYPES.BASE;
-  const fanTypes: string[] = ['基础番'];
+  const mult = SICHUAN_FAN_MULTIPLIERS;
+  let baseFan: number = mult.PING_HU;
+  const fanTypes: string[] = [];
 
-  // 自摸番
-  if (isZimo) {
-    fan += SICHUAN_FAN_TYPES.ZIMO;
-    fanTypes.push('自摸');
-  }
-
-  // 杠上开花番
-  if (melds.some((m) => m.type === 'jiagang')) {
-    fan += SICHUAN_FAN_TYPES.GANG_FLOWER;
-    fanTypes.push('杠上开花');
-  }
-
-  // 带根番
-  const hasKezi = melds.some(
-    (m) => m.type === 'peng' || m.type === 'minggang' || m.type === 'angang',
-  );
-  if (hasKezi) {
-    fan += SICHUAN_FAN_TYPES.WITH_ROOT;
-    fanTypes.push('带根');
-  }
-
-  // 清一色番
-  if (isQingYiSe(hand, melds, queMenSuit)) {
-    fan += SICHUAN_FAN_TYPES.QING_YI_SE;
-    fanTypes.push('清一色');
-  }
-
-  // 七对系列番型
+  // 七对/龙七对（特殊牌型，无顺子）
   if (isQiDui(hand)) {
-    if (isHaoHuaQiDui(hand)) {
-      fan += SICHUAN_FAN_TYPES.HAO_HUA_QI_DUI;
-      fanTypes.push('豪华七对');
-    } else if (isLongQiDui(hand)) {
-      fan += SICHUAN_FAN_TYPES.LONG_QI_DUI;
+    if (isLongQiDui(hand)) {
+      baseFan = mult.LONG_QI_DUI;
       fanTypes.push('龙七对');
     } else {
-      fan += SICHUAN_FAN_TYPES.QI_DUI;
+      baseFan = mult.QI_DUI;
       fanTypes.push('七对');
+    }
+    const qing = isQingYiSe(hand, melds, queMenSuit);
+    if (qing) {
+      baseFan = mult.QING_QI_DUI;
+      fanTypes.length = 0;
+      fanTypes.push('清七对');
+    }
+  } else {
+    // 普通型：平胡 / 对对胡 / 清一色 / 清对 / 全幺九
+    const duidui = isDuiDuiHu(hand, melds);
+    const qing = isQingYiSe(hand, melds, queMenSuit);
+    const yaojiu = isQuanYaoJiu(hand, melds);
+    if (qing && duidui) {
+      baseFan = mult.QING_DUI;
+      fanTypes.push('清对');
+    } else if (yaojiu && duidui) {
+      baseFan = mult.QUAN_YAO_JIU;
+      fanTypes.push('全幺九');
+    } else if (qing) {
+      baseFan = mult.QING_YI_SE;
+      fanTypes.push('清一色');
+    } else if (duidui) {
+      baseFan = mult.DUI_DUI_HU;
+      fanTypes.push('对对胡');
+    } else {
+      fanTypes.push('平胡');
     }
   }
 
-  return { fan, fanTypes };
+  let totalFan = baseFan;
+
+  // 加分项（乘算）
+  if (isZimo) {
+    totalFan *= mult.ZIMO;
+    fanTypes.push('自摸×2');
+  }
+  const justGangDraw = melds.some((m) => m.type === 'jiagang');
+  if (justGangDraw) {
+    totalFan *= mult.GANG_SHANG_HUA;
+    fanTypes.push('杠上花×2');
+  }
+  if (isJinGouDiao(hand, melds)) {
+    totalFan *= mult.JIN_GOU_DIAO;
+    fanTypes.push('金钩钓×2');
+  }
+
+  return { fan: totalFan, fanTypes };
 }
 
 interface FanResult {
@@ -463,33 +440,66 @@ function isQiDui(hand: number[]): boolean {
   return pairCount === 7;
 }
 
-/** 判断是否龙七对 */
+/** 判断是否龙七对（七对且含 1 组 4 张相同） */
 function isLongQiDui(hand: number[]): boolean {
   if (!isQiDui(hand)) return false;
-
   const counts = new Map<number, number>();
-  for (const tile of hand) {
-    counts.set(tile, (counts.get(tile) || 0) + 1);
-  }
-
-  // 龙七对需要至少有一个四张相同的牌
-  return Array.from(counts.values()).some((count) => count === 4);
+  for (const tile of hand) counts.set(tile, (counts.get(tile) || 0) + 1);
+  return Array.from(counts.values()).some((c) => c === 4);
 }
 
-/** 判断是否豪华七对 */
-function isHaoHuaQiDui(hand: number[]): boolean {
-  if (!isQiDui(hand)) return false;
-
-  const counts = new Map<number, number>();
-  for (const tile of hand) {
-    counts.set(tile, (counts.get(tile) || 0) + 1);
+/** 判断是否对对胡（全为刻子/杠子+将，无顺子） */
+function isDuiDuiHu(hand: number[], melds: Meld[]): boolean {
+  const all = [...hand, ...melds.flatMap((m) => m.tiles)];
+  if (all.length !== 14) return false;
+  const counts = new Array(27).fill(0);
+  for (const t of all) {
+    if (t < 0 || t >= 27) return false;
+    counts[t]++;
   }
+  for (let i = 0; i < 27; i++) {
+    if (counts[i] === 0) continue;
+    if (counts[i] >= 2) {
+      counts[i] -= 2;
+      if (canFormFourKezi(counts)) return true;
+      counts[i] += 2;
+    }
+  }
+  return false;
+}
 
-  // 豪华七对需要至少有两个四张相同的牌
-  const fourCount = Array.from(counts.values()).filter(
-    (count) => count === 4,
-  ).length;
-  return fourCount >= 2;
+/** 能否组成 4 个刻子（无顺子） */
+function canFormFourKezi(counts: number[]): boolean {
+  let first = -1;
+  for (let i = 0; i < 27; i++) {
+    if (counts[i] > 0) {
+      first = i;
+      break;
+    }
+  }
+  if (first === -1) return true;
+  if (counts[first] >= 3) {
+    counts[first] -= 3;
+    if (canFormFourKezi(counts)) return true;
+    counts[first] += 3;
+  }
+  return false;
+}
+
+/** 判断是否全幺九（仅 1、9 序数牌组成的对对胡） */
+function isQuanYaoJiu(hand: number[], melds: Meld[]): boolean {
+  const all = [...hand, ...melds.flatMap((m) => m.tiles)];
+  for (const t of all) {
+    if (t < 0 || t >= 27) return false;
+    const rank = t % 9;
+    if (rank !== 0 && rank !== 8) return false; // 仅 1、9
+  }
+  return isDuiDuiHu(hand, melds);
+}
+
+/** 判断是否金钩钓（胡牌时手牌仅剩 1 张，单吊；即 4 组全为碰/杠） */
+function isJinGouDiao(hand: number[], melds: Meld[]): boolean {
+  return melds.length === 4 && hand.length === 2 && hand[0] === hand[1];
 }
 
 /** 获取牌的显示标签 */
