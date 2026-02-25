@@ -48,7 +48,15 @@ const Home = () => {
               {t('home.subtitle')}
             </p>
           </div>
-          <LocaleSwitcher />
+          <div className="flex items-center gap-4">
+            <Link
+              to="/achievements"
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              {t('achievements.title')}
+            </Link>
+            <LocaleSwitcher />
+          </div>
         </div>
       </header>
 

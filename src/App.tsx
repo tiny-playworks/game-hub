@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { LocaleProvider } from '@/contexts/LocaleContext';
+import Achievements from '@/pages/Achievements';
 import Category from '@/pages/Category';
 import Game2048 from '@/pages/Game2048';
 import GameBreakout from '@/pages/GameBreakout';
@@ -23,6 +24,7 @@ const App = () => {
       <LocaleProvider>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/achievements" element={<Achievements />} />
           <Route path="/category/:categoryId" element={<Category />} />
           <Route
             path="/game/mahjong-chinese"

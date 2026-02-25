@@ -1,6 +1,8 @@
 import { expect, test } from '@rstest/core';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { LocaleProvider } from '../src/contexts/LocaleContext';
+import Achievements from '../src/pages/Achievements';
 import Game2048 from '../src/pages/Game2048';
 import GameBreakout from '../src/pages/GameBreakout';
 import GameGomoku from '../src/pages/GameGomoku';
@@ -18,6 +20,18 @@ import GameTictactoe from '../src/pages/GameTictactoe';
 const withRouter = (children: React.ReactElement) => (
   <MemoryRouter>{children}</MemoryRouter>
 );
+
+test('成就页：渲染标题与成就列表', () => {
+  render(
+    <MemoryRouter>
+      <LocaleProvider>
+        <Achievements />
+      </LocaleProvider>
+    </MemoryRouter>,
+  );
+  expect(screen.getByText(/成就|Achievements/)).toBeInTheDocument();
+  expect(screen.getAllByRole('link', { name: /返回首页|Back to Home/ }).length).toBeGreaterThanOrEqual(1);
+});
 
 test('猜数字：渲染标题与猜按钮', () => {
   render(withRouter(<GameGuessNumber />));

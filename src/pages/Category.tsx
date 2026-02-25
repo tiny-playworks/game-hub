@@ -112,7 +112,9 @@ const Category = () => {
                 )}
               >
                 <div className="mb-2 flex items-center justify-between">
-                  <h2 className="font-semibold text-foreground">{game.name}</h2>
+                  <h2 className="font-semibold text-foreground">
+                    {t(`game.${game.id}.name`) || game.name}
+                  </h2>
                   {!game.comingSoon && (
                     <span
                       className={cn(
@@ -131,7 +133,7 @@ const Category = () => {
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {game.description}
+                  {t(`game.${game.id}.description`) || game.description}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-1">
                   {game.tags.map((tag) => (

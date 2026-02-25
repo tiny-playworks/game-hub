@@ -30,7 +30,7 @@ src/
 ├── data/               # 游戏与分类配置（games.ts、categories.ts）
 ├── hooks/              # 麻将对局状态（useMahjongGame、useSichuanMahjongGame）
 ├── contexts/           # React 上下文（LocaleContext：i18n）
-├── lib/                # 核心逻辑（mahjong、mahjongRiichi、mahjongSichuan、gomoku、i18n、utils）
+├── lib/                # 核心逻辑（achievements、mahjong、mahjongRiichi、mahjongSichuan、gomoku、i18n、utils）
 ├── pages/              # 页面与 12 个游戏页 + Home、Category
 ├── App.tsx             # 路由入口
 └── App.css             # 主题变量与 Tailwind @theme
@@ -137,7 +137,7 @@ function canFormFourMeldsOptimized(arr: number[]): boolean {
 
 ## 🧪 测试覆盖
 
-- **规模**：7 个测试文件，共 54 个用例，全部通过。
+- **规模**：7 个测试文件，共 55 个用例，全部通过。
 - **类型**  
   - **数据与工具**：`games` 列表与 `getGamesByCategory` / `getGameByPath`；`cn()` 合并与 tailwind-merge 行为。  
   - **入口与导航**：首页渲染「游戏合集」与分类链接（小游戏、麻将等）。  
@@ -156,7 +156,7 @@ function canFormFourMeldsOptimized(arr: number[]): boolean {
 | 前端 | ✅ | React 19 + TypeScript strict，44+ 文件类型检查通过 |
 | 样式 | ✅ | Tailwind v4 + PostCSS，shadcn/ui，主题在 App.css |
 | 质量 | ✅ | Biome（lint + format，单引号、organizeImports） |
-| 测试 | ✅ | Rstest + Testing Library，54 用例覆盖数据/工具/首页/13 游戏页/麻将规则/五子棋规则 |
+| 测试 | ✅ | Rstest + Testing Library，55 用例覆盖数据/工具/首页/成就页/13 游戏页/麻将规则/五子棋规则 |
 | CI | ✅ | GitHub Actions：Node 20、pnpm、typecheck、biome、test、build |
 
 ### 构建与体积
@@ -214,14 +214,14 @@ pnpm run test:watch   # 监听模式测试
 ### 功能扩展
 - [ ] 添加更多麻将变种规则
 - [ ] 实现在线多人对战功能
-- [ ] 增加游戏统计数据和成就系统
+- [x] **游戏统计与成就**：2048/贪吃蛇本地最高分；成就页（/achievements）展示 6 项成就（2048 达 256/512/2048、贪吃蛇达 25/50/100），根据 localStorage 最高分自动解锁
 - [ ] 添加语音和动画效果
 
 ### 技术优化
 - [x] **PWA**：已集成 `manifest.json`（名称、start_url、display: standalone）与 Service Worker（离线回退到缓存首页）
 - [ ] 性能监控和优化
 - [ ] 服务端渲染支持
-- [x] **国际化（i18n）**：中/英切换，Locale 存 localStorage；首页与分类页文案已抽离（`src/lib/i18n.ts`、`LocaleContext`），头部提供「中 | En」切换
+- [x] **国际化（i18n）**：中/英切换，Locale 存 localStorage；首页、分类页、成就页及全部游戏名称/描述已抽离（`src/lib/i18n.ts`），分类列表随语言切换显示中/英游戏名与描述
 
 ## 📚 参考资源
 
