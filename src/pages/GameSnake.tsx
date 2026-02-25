@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useLocale } from '@/contexts/LocaleContext';
 
 const W = 400;
 const H = 400;
@@ -13,6 +14,7 @@ type Dir = 'up' | 'down' | 'left' | 'right';
 const STORAGE_KEY = 'game-snake-best';
 
 const GameSnake = () => {
+  const { t } = useLocale();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [score, setScore] = useState(0);
   const [best, setBest] = useState(() =>
@@ -181,13 +183,13 @@ const GameSnake = () => {
     <div className="min-h-screen bg-background">
       <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
         <Link to="/" className="text-muted-foreground hover:text-foreground">
-          ← 返回游戏列表
+          ← {t('common.backToList')}
         </Link>
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">分数: {score}</span>
           <span className="text-sm text-muted-foreground">最高: {best}</span>
           <Button variant="outline" size="sm" onClick={reset}>
-            重开
+            {t('common.restart')}
           </Button>
         </div>
       </header>
@@ -205,7 +207,9 @@ const GameSnake = () => {
         {(status === 'idle' || status === 'over') && (
           <div className="mt-4 flex flex-col items-center gap-2">
             {status === 'idle' && (
-              <p className="text-muted-foreground">按方向键开始</p>
+              <p className="text-muted-foreground">
+                {t('common.pressArrowToStart')}
+              </p>
             )}
             {status === 'over' && (
               <p className="font-medium text-destructive">
@@ -214,11 +218,11 @@ const GameSnake = () => {
             )}
             <div className="flex gap-2">
               <Button size="sm" onClick={status === 'over' ? reset : start}>
-                {status === 'over' ? '再玩一次' : '开始'}
+                {status === 'over' ? t('common.playAgain') : t('common.start')}
               </Button>
               <Link to="/">
                 <Button variant="ghost" size="sm">
-                  返回列表
+                  {t('common.backList')}
                 </Button>
               </Link>
             </div>

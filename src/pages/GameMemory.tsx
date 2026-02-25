@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useLocale } from '@/contexts/LocaleContext';
 import { cn } from '@/lib/utils';
 
 const EMOJIS = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼'];
@@ -24,6 +25,7 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 const GameMemory = () => {
+  const { t } = useLocale();
   const [cards, setCards] = useState<CardState[]>(() => {
     const pairs = EMOJIS.slice(0, (ROWS * COLS) / 2);
     const list = [...pairs, ...pairs].map((emoji, i) => ({
@@ -94,7 +96,7 @@ const GameMemory = () => {
     <div className="min-h-screen bg-background">
       <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
         <Link to="/" className="text-muted-foreground hover:text-foreground">
-          ← 返回游戏列表
+          ← {t('common.backToList')}
         </Link>
         <span className="text-sm text-muted-foreground">步数: {moves}</span>
       </header>
@@ -127,11 +129,11 @@ const GameMemory = () => {
         )}
         <div className="mt-6 flex gap-2">
           <Button variant="outline" size="sm" onClick={restart}>
-            重开
+            {t('common.restart')}
           </Button>
           <Link to="/">
             <Button variant="ghost" size="sm">
-              返回列表
+              {t('common.backList')}
             </Button>
           </Link>
         </div>

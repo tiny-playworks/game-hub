@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Game Hub（游戏合集）项目：基于 Rsbuild + React 的纯前端 SPA，小游戏与麻将合集（14 款已上线 + 6 款占位）。
+Game Hub（游戏合集）：基于 Rsbuild + React 的纯前端 SPA，**16 款已上线游戏** + **2 款占位**（围棋、斗地主、升级、日本麻将对局完善中）。
 
 ## Commands
 
@@ -8,31 +8,26 @@ Game Hub（游戏合集）项目：基于 Rsbuild + React 的纯前端 SPA，小
 - `pnpm run build` - 生产构建
 - `pnpm run preview` - 本地预览构建结果
 - `pnpm run check` - 类型检查 (tsc) + Biome 检查（无单独 lint 脚本）
-- `pnpm run test` - 运行测试（7 文件、56 用例：数据/工具/首页/成就页/14 游戏页/麻将与五子棋规则）
+- `pnpm run test` - 运行测试（7 文件、58 用例）
 
 ## Docs
 
 - Rsbuild: https://rsbuild.rs/llms.txt
 - Rspack: https://rspack.rs/llms.txt
-
 - Rstest: https://rstest.rs/llms.txt
 
 ## Tools
 
-### Rstest
+- **Rstest**: `pnpm run test` / `pnpm run test:watch`
+- **Biome**: 使用 `pnpm run check`（含 tsc + biome）；`pnpm run format` 仅格式化
 
-- Run `pnpm run test` to run tests
-- Run `pnpm run test:watch` to run tests in watch mode
+## Cursor Cloud
 
-### Biome
+- 纯前端 SPA，无后端、无数据库。
+- 开发：`pnpm run dev --no-open`，端口 3000，HMR。
+- `pnpm run check` 会依次执行 tsc 与 biome check。
+- Node ≥ 18；`pnpm install` 中 core-js 构建告警可忽略。
 
-- Lint/check: use `pnpm run check` (runs tsc + biome check). There is no separate `lint` script.
-- Format: `pnpm run format` to format your code
+## 计划与优先级
 
-## Cursor Cloud specific instructions
-
-- This is a pure frontend SPA — no backend, no database, no external services needed.
-- Dev server: `pnpm run dev --no-open` starts on port 3000 with HMR. Use `--no-open` in headless/cloud environments.
-- `pnpm run check` runs both `tsc --noEmit` and `biome check --write` in sequence.
-- The `pnpm install` warning about `core-js` build scripts can be safely ignored (use `pnpm approve-builds` only interactively; the lockfile works fine without it).
-- Node.js ≥ 18 required; project has no `.nvmrc` — system default Node works.
+完整开发计划与优先级见 [REPO_WIKI.md#开发计划与优先级](./REPO_WIKI.md#5-开发计划与优先级)。当前下一优先级：P4 更多成就/统计。包体分析：`pnpm run build:analyze`（Rsdoctor）。

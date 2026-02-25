@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useLocale } from '@/contexts/LocaleContext';
 
 const PATH_TITLE: Record<string, string> = {
   '/game/mahjong-sichuan': '四川麻将',
@@ -7,6 +8,7 @@ const PATH_TITLE: Record<string, string> = {
 };
 
 const GameMahjongComingSoon = () => {
+  const { t } = useLocale();
   const { pathname } = useLocation();
   const title = PATH_TITLE[pathname] ?? '麻将';
 
@@ -17,14 +19,14 @@ const GameMahjongComingSoon = () => {
           to="/category/mahjong"
           className="text-muted-foreground hover:text-foreground"
         >
-          ← 返回麻将分类
+          ← {t('common.backToCategory')}
         </Link>
       </header>
       <main className="flex min-h-[calc(100vh-56px)] flex-col items-center justify-center px-4">
         <h1 className="text-xl font-bold text-foreground">{title}</h1>
         <p className="mt-2 text-muted-foreground">开发中，敬请期待</p>
         <Link to="/category/mahjong" className="mt-6">
-          <Button variant="outline">返回麻将分类</Button>
+          <Button variant="outline">{t('common.backToCategory')}</Button>
         </Link>
       </main>
     </div>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useLocale } from '@/contexts/LocaleContext';
 import {
   canMingangRiichi,
   canPengRiichi,
@@ -121,6 +122,8 @@ interface RiichiGameState {
   riichiDiscard: (number | null)[];
   /** 里宝牌指示牌 */
   uraDoraIndicators: number[];
+  /** 荒牌流局：牌墙摸完无人和 */
+  ryuukyoku?: boolean;
 }
 
 function initRiichiGame(
@@ -195,6 +198,7 @@ const MAX_HISTORY = 40;
 const MAX_LOG = 150;
 
 const GameMahjongJapanese = () => {
+  const { t } = useLocale();
   const [view, setView] = useState<'rules' | 'game'>('rules');
   const [game, setGame] = useState<RiichiGameState | null>(null);
   const [history, setHistory] = useState<RiichiGameState[]>([]);
@@ -290,6 +294,7 @@ const GameMahjongJapanese = () => {
     if (nextIndex >= 3) {
       const nextPlayer = (game.lastDiscardFrom + 1) % 4;
       if (game.wall.length === 0) {
+        addLog('流局（荒牌）');
         setGame({
           ...game,
           phase: 'discard',
@@ -298,6 +303,7 @@ const GameMahjongJapanese = () => {
           claimIndex: 0,
           currentPlayer: nextPlayer,
           lastClaimMsg: null,
+          ryuukyoku: true,
         });
         return;
       }
@@ -566,6 +572,31 @@ const GameMahjongJapanese = () => {
     game.hands[0].length === 14
       ? getAngangOptionsRiichi(game.hands[0])
       : [];
+
+  // 荒牌流局：自家待摸牌但牌墙已空
+  useEffect(() => {
+    if (
+      !game ||
+      game.ryuukyoku ||
+      game.phase !== 'discard' ||
+      game.currentPlayer !== 0 ||
+      game.drawnTile !== null ||
+      game.wall.length !== 0 ||
+      game.hands[0].length !== 13
+    )
+      return;
+    addLog('流局（荒牌）');
+    setGame((g) => (!g ? g : { ...g, ryuukyoku: true }));
+  }, [
+    game?.phase,
+    game?.currentPlayer,
+    game?.drawnTile,
+    game?.wall?.length,
+    game?.hands?.[0]?.length,
+    game?.ryuukyoku,
+    game,
+    addLog,
+  ]);
 
   // 自家回合且手牌 13 张时先摸牌（庄家第一巡除外）；仅在出牌阶段
   // biome-ignore lint/correctness/useExhaustiveDependencies: granular deps to avoid redundant effect runs
@@ -866,6 +897,22 @@ const GameMahjongJapanese = () => {
     addLog(dealerWon ? '庄家胡，连庄' : '子家胡，换庄');
   }, [game, winResult, addLog]);
 
+  /** 流局后进入下一局（庄家连庄，本场+1） */
+  const proceedAfterRyuukyoku = useCallback(() => {
+    if (!game || !game.ryuukyoku) return;
+    const next = getNextRound(
+      game.dealer,
+      game.roundWind,
+      game.roundNumber,
+      game.honba,
+      true,
+    );
+    setGame(
+      initRiichiGame(next.dealer, next.roundWind, next.roundNumber, next.honba),
+    );
+    addLog('流局，连庄');
+  }, [game, addLog]);
+
   // 要牌阶段：轮到自家且没有任何吃/碰/杠可选时，自动过，不暂停
   useEffect(() => {
     if (
@@ -897,6 +944,7 @@ const GameMahjongJapanese = () => {
       if (nextIndex >= 3) {
         const nextPlayer = (g.lastDiscardFrom + 1) % 4;
         if (g.wall.length === 0) {
+          addLogRef.current('流局（荒牌）');
           return {
             ...g,
             phase: 'discard',
@@ -905,6 +953,7 @@ const GameMahjongJapanese = () => {
             claimIndex: 0,
             currentPlayer: nextPlayer,
             lastClaimMsg: null,
+            ryuukyoku: true,
           };
         }
         const draw = g.wall[0];
@@ -1145,7 +1194,7 @@ const GameMahjongJapanese = () => {
             to="/category/mahjong"
             className="text-muted-foreground hover:text-foreground"
           >
-            ← 返回麻将分类
+            ← {t('common.backToCategory')}
           </Link>
         </header>
         <main className="mx-auto max-w-2xl px-4 py-6">
@@ -1188,7 +1237,7 @@ const GameMahjongJapanese = () => {
               onClick={startGame}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
-              开始游戏
+              {t('common.startGame')}
             </Button>
           </div>
         </main>
@@ -1207,7 +1256,7 @@ const GameMahjongJapanese = () => {
             onClick={() => setView('rules')}
             className="text-[#f1faee]/80 hover:text-[#f1faee] text-sm"
           >
-            ← 返回规则
+            ← {t('common.returnRules')}
           </button>
           <span className="text-sm text-[#f1faee]">
             {game
@@ -1795,6 +1844,25 @@ const GameMahjongJapanese = () => {
               <Button
                 className="w-full bg-[#d4b886] text-[#1a2e25] hover:bg-[#e5c997] font-semibold"
                 onClick={proceedToNextRound}
+              >
+                下一局
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {game.ryuukyoku && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+            <div className="rounded-2xl bg-[#2d4a3c] border-2 border-[#d4b886] p-6 max-w-sm w-full mx-4 shadow-xl">
+              <h3 className="text-xl font-bold text-amber-200 text-center mb-3">
+                流局（荒牌）
+              </h3>
+              <p className="text-sm text-[#f1faee]/90 mb-4 text-center">
+                牌墙摸完无人和，本场+1，庄家连庄
+              </p>
+              <Button
+                className="w-full bg-[#d4b886] text-[#1a2e25] hover:bg-[#e5c997] font-semibold"
+                onClick={proceedAfterRyuukyoku}
               >
                 下一局
               </Button>

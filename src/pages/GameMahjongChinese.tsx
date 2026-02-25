@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useLocale } from '@/contexts/LocaleContext';
 import { useMahjongGame } from '@/hooks/useMahjongGame';
 import {
   checkWin,
@@ -123,6 +124,7 @@ function TileFace({ tile, className }: { tile: number; className?: string }) {
 }
 
 const GameMahjongChinese = () => {
+  const { t } = useLocale();
   const {
     state,
     startGame,
@@ -143,15 +145,15 @@ const GameMahjongChinese = () => {
 
   useEffect(() => {
     if (!needAiDiscard) return;
-    const t = setTimeout(runAiTurn, 600);
-    return () => clearTimeout(t);
+    const tid = setTimeout(runAiTurn, 600);
+    return () => clearTimeout(tid);
   }, [needAiDiscard, runAiTurn]);
 
   // 轮到 AI 要牌时（claimOption 为 null）由 runAiClaim 决策：胡/杠/碰/吃 或 过
   useEffect(() => {
     if (!needPassClaim) return;
-    const t = setTimeout(runAiClaim, 400);
-    return () => clearTimeout(t);
+    const tid = setTimeout(runAiClaim, 400);
+    return () => clearTimeout(tid);
   }, [needPassClaim, runAiClaim]);
 
   const isMyTurn =
@@ -176,7 +178,7 @@ const GameMahjongChinese = () => {
             to="/category/mahjong"
             className="text-[#f1faee]/80 hover:text-[#f1faee] text-sm"
           >
-            ← 返回
+            ← {t('common.backToCategory')}
           </Link>
           <span className="text-[#f1faee] text-sm">
             {state ? `局 · 庄 ${SEAT_NAMES[state.dealer ?? 0]}` : '中国麻将'}
@@ -186,7 +188,7 @@ const GameMahjongChinese = () => {
             onClick={startGame}
             className="rounded-lg border border-[#d4b886] px-3 py-1.5 text-sm text-[#f1faee] hover:bg-[#2d4a3c]"
           >
-            重开
+            {t('common.restart')}
           </button>
         </div>
         {state?.scores && state.scores.length === 4 && (
@@ -246,7 +248,7 @@ const GameMahjongChinese = () => {
               onClick={startGame}
               className="mt-6 h-11 rounded-lg px-6 font-semibold text-white bg-[#2d4a3c] hover:bg-[#3d5a4c] border border-[#d4b886]"
             >
-              开始
+              {t('common.start')}
             </button>
           </div>
         ) : (

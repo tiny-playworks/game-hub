@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useLocale } from '@/contexts/LocaleContext';
 
 const TILE = 32;
 const COLS = 13;
@@ -57,6 +58,7 @@ function mapClone(): number[][] {
 }
 
 const GameTank = () => {
+  const { t } = useLocale();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [status, setStatus] = useState<'idle' | 'playing' | 'win' | 'over'>(
     'idle',
@@ -423,10 +425,10 @@ const GameTank = () => {
     <div className="min-h-screen bg-background">
       <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
         <Link to="/" className="text-muted-foreground hover:text-foreground">
-          ← 返回游戏列表
+          ← {t('common.backToList')}
         </Link>
         <Button variant="outline" size="sm" onClick={reset}>
-          重开
+          {t('common.restart')}
         </Button>
       </header>
 

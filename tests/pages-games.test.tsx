@@ -5,6 +5,8 @@ import { LocaleProvider } from '../src/contexts/LocaleContext';
 import Achievements from '../src/pages/Achievements';
 import Game2048 from '../src/pages/Game2048';
 import GameBreakout from '../src/pages/GameBreakout';
+import GameChess from '../src/pages/GameChess';
+import GameGo from '../src/pages/GameGo';
 import GameGomoku from '../src/pages/GameGomoku';
 import GameGuessNumber from '../src/pages/GameGuessNumber';
 import GameMahjongChinese from '../src/pages/GameMahjongChinese';
@@ -19,7 +21,9 @@ import GameTictactoe from '../src/pages/GameTictactoe';
 import GameXiangqi from '../src/pages/GameXiangqi';
 
 const withRouter = (children: React.ReactElement) => (
-  <MemoryRouter>{children}</MemoryRouter>
+  <MemoryRouter>
+    <LocaleProvider>{children}</LocaleProvider>
+  </MemoryRouter>
 );
 
 test('成就页：渲染标题与成就列表', () => {
@@ -59,6 +63,22 @@ test('五子棋：渲染五子连珠说明与重开按钮', () => {
 test('中国象棋：渲染说明与重开按钮', () => {
   render(withRouter(<GameXiangqi />));
   expect(screen.getByText(/中国象棋：红先黑后/)).toBeInTheDocument();
+  expect(
+    screen.getAllByRole('button', { name: '重开' }).length,
+  ).toBeGreaterThanOrEqual(1);
+});
+
+test('国际象棋：渲染说明与重开按钮', () => {
+  render(withRouter(<GameChess />));
+  expect(screen.getByText(/国际象棋：白先黑后/)).toBeInTheDocument();
+  expect(
+    screen.getAllByRole('button', { name: '重开' }).length,
+  ).toBeGreaterThanOrEqual(1);
+});
+
+test('围棋：渲染说明与重开按钮', () => {
+  render(withRouter(<GameGo />));
+  expect(screen.getByText(/围棋 9×9/)).toBeInTheDocument();
   expect(
     screen.getAllByRole('button', { name: '重开' }).length,
   ).toBeGreaterThanOrEqual(1);

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useLocale } from '@/contexts/LocaleContext';
 import { cn } from '@/lib/utils';
 
 type Cell = 'X' | 'O' | null;
@@ -27,6 +28,7 @@ function getWinner(cells: Cell[]): Winner {
 }
 
 const GameTictactoe = () => {
+  const { t } = useLocale();
   const [cells, setCells] = useState<Cell[]>(Array(9).fill(null));
   const [xNext, setXNext] = useState(true);
   const winner = getWinner(cells);
@@ -48,7 +50,7 @@ const GameTictactoe = () => {
     <div className="min-h-screen bg-background">
       <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
         <Link to="/" className="text-muted-foreground hover:text-foreground">
-          ← 返回游戏列表
+          ← {t('common.backToList')}
         </Link>
         <span className="text-sm text-muted-foreground">
           {winner
@@ -79,11 +81,11 @@ const GameTictactoe = () => {
         </div>
         <div className="mt-6 flex gap-2">
           <Button variant="outline" size="sm" onClick={restart}>
-            重开
+            {t('common.restart')}
           </Button>
           <Link to="/">
             <Button variant="ghost" size="sm">
-              返回列表
+              {t('common.backList')}
             </Button>
           </Link>
         </div>

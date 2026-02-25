@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useLocale } from '@/contexts/LocaleContext';
 
 const W = 400;
 const H = 560;
@@ -13,6 +14,7 @@ const ENEMY_H = 24;
 const SPAWN_INTERVAL = 90;
 
 const GameShooter = () => {
+  const { t } = useLocale();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [score, setScore] = useState(0);
   const [status, setStatus] = useState<'idle' | 'playing' | 'over'>('idle');
@@ -205,12 +207,12 @@ const GameShooter = () => {
     <div className="min-h-screen bg-background">
       <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
         <Link to="/" className="text-muted-foreground hover:text-foreground">
-          ← 返回游戏列表
+          ← {t('common.backToList')}
         </Link>
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">得分: {score}</span>
           <Button variant="outline" size="sm" onClick={reset}>
-            重开
+            {t('common.restart')}
           </Button>
         </div>
       </header>

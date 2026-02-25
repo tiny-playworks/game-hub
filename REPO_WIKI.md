@@ -1,236 +1,143 @@
-# 项目仓库 Wiki 文档
+# Game Hub 项目 Wiki
 
-## 📋 项目概述
+## 1. 项目概述
 
-**Game Hub（游戏合集）** 是一个纯前端 SPA，基于 React + Rsbuild 的小游戏与麻将合集，无后端、无数据库、无外部服务依赖。
+**Game Hub（游戏合集）** 是纯前端 SPA：基于 React + Rsbuild 的小游戏与麻将合集，无后端、无数据库。
 
-### 🎯 核心功能
-- **首页与分类**：4 个分类（小游戏、棋类、扑克、麻将），按分类进入游戏列表，支持难度与标签展示。
-- **已上线游戏（14 款）**  
-  - **小游戏（9 款）**：猜数字、井字棋、记忆翻牌、2048、贪吃蛇、打砖块、飞机大战、坦克大战、俄罗斯方块  
-  - **棋类（2 款）**：五子棋（五子连珠即胜）、中国象棋（将帅士象马车炮兵卒，红先黑后）  
-  - **麻将（3 款）**：四川麻将（血战到底、定缺）、中国通用麻将（国标番种）、日本立直麻将（役种、符点）
-- **占位/开发中（6 款）**：围棋、国际象棋、斗地主、升级等，在列表中展示「开发中」。
-- 响应式布局，支持多设备。
+### 1.1 功能概览
 
-## 🔧 技术架构
+| 模块 | 说明 |
+|------|------|
+| 首页与分类 | 4 类入口：小游戏、棋类、扑克、麻将；支持中/英切换（i18n） |
+| 已上线游戏 | **16 款**：9 小游戏 + 4 棋类（五子棋、中国象棋、国际象棋、围棋）+ 3 麻将 |
+| 占位游戏 | **2 款**：斗地主、升级 |
+| 成就 | 14 项（2048/贪吃蛇/俄罗斯方块/打砖块、棋类首胜等），本地解锁 |
+| PWA | manifest + Service Worker，可安装、离线回退首页 |
 
-### 核心技术栈
-- **构建工具**: Rsbuild v2
-- **前端框架**: React 19 + TypeScript (strict mode)
-- **样式方案**: Tailwind CSS v4 + PostCSS
-- **UI组件库**: shadcn/ui
-- **代码质量**: Biome (lint + format)
-- **测试框架**: Rstest + Testing Library
+### 1.2 游戏清单
 
-### 项目结构
-```
-src/
-├── components/ui/      # shadcn/ui 组件（button、card、input）
-├── data/               # 游戏与分类配置（games.ts、categories.ts）
-├── hooks/              # 麻将对局状态（useMahjongGame、useSichuanMahjongGame）
-├── contexts/           # React 上下文（LocaleContext：i18n）
-├── lib/                # 核心逻辑（achievements、mahjong、mahjongRiichi、mahjongSichuan、gomoku、xiangqi、i18n、utils）
-├── pages/              # 页面与 12 个游戏页 + Home、Category
-├── App.tsx             # 路由入口
-└── App.css             # 主题变量与 Tailwind @theme
-
-tests/
-├── index.test.tsx          # 首页渲染与分类链接
-├── data-games.test.ts     # games 数据与 getGamesByCategory / getGameByPath
-├── lib-utils.test.ts      # cn() 工具
-├── pages-games.test.tsx   # 13 个游戏页冒烟（每游戏至少 1 用例）
-├── mahjong-rules.test.ts  # 国标番种、川麻七对/龙七对/定缺/杠牌、日麻赤宝牌/符/平和
-├── sichuan-mahjong.test.ts # 川麻牌堆、发牌、定缺、番数
-└── gomoku.test.ts         # 五子棋胜负判定（横/竖/斜五连、四连无胜）
-```
-
-## 🎮 游戏模块
-
-### 麻将游戏系统
-
-#### 中文麻将 (GameMahjongChinese)
-- 实现标准国标麻将规则
-- 支持吃、碰、杠、胡等基本操作
-- 完整的计分系统
-
-#### 四川麻将 (GameMahjongSichuan)
-- 血战到底、刮风下雨
-- 定缺、108 张（万/条/筒），无字牌
-- 七对、龙七对、番型计分
-
-#### 日式立直麻将 (GameMahjongJapanese)
-- 实现日本立直麻将规则
-- 支持立直宣告机制
-- 完整的役种判定系统
-- 宝牌和里宝牌机制
-
-### 核心算法库
-
-#### mahjong.ts - 中文麻将核心逻辑
-- 胡牌判定算法
-- 牌型组合验证
-- 计分规则实现
-
-#### mahjongRiichi.ts - 日式麻将核心逻辑
-- 立直规则实现
-- 役种判定系统
-- 宝牌计算逻辑
-
-#### mahjongSichuan.ts - 四川麻将核心逻辑
-- 108 张牌堆、定缺、七对/龙七对胡牌判定
-- 番型与杠牌计分
-
-## 🚀 最近改进记录
-
-### 2024年最新改进 (February 2024)
-
-#### 1. 核心算法优化
-- ✅ **优先级处理修复**: 修正了杠>碰>吃的操作优先级顺序
-- ✅ **胡牌判定增强**: 改进了基础牌型验证算法，增加了过轮检测
-- ✅ **杠牌机制完善**: 实现了完整的补牌逻辑和计分规则
-
-#### 2. 日式麻将功能增强
-- ✅ **役种系统扩展**: 添加了多个重要役种
-  - 三色同顺 (三色同顺)
-  - 三色同刻 (三色同刻) 
-  - 三杠子 (三杠子)
-  - 四暗刻 (四暗刻)
-  - 四连刻 (四连刻)
-  - 一气通贯 (一气通贯)
-- ✅ **立直机制实现**: 完整的立直宣告和相关逻辑
-- ✅ **AI决策优化**: 增强了AI的策略性和智能程度
-
-#### 3. 用户体验改进
-- ✅ **界面现代化**: 全新的视觉设计和交互体验
-- ✅ **新手引导系统**: 添加了详细的游戏教程和指引
-- ✅ **状态提示优化**: 更直观的操作反馈和状态显示
-- ✅ **响应式设计**: 适配不同屏幕尺寸的显示效果
-
-#### 4. 代码质量提升
-- ✅ **代码清理**: 删除了废弃的 `canFormFourMelds` 和 `isSequence` 函数
-- ✅ **性能优化**: 替换了效率更高的算法实现
-- ✅ **类型安全**: 完善了TypeScript类型定义
-- ✅ **可维护性**: 改善了代码结构和注释
-
-### 技术细节更新
-
-#### 算法改进
-```typescript
-// 旧的递归算法（已删除）
-function canFormFourMelds(arr: number[]): boolean {
-  // 效率较低的暴力递归实现
-}
-
-// 新的优化算法
-function canFormFourMeldsOptimized(arr: number[]): boolean {
-  // 基于回溯的高效实现
-  return backtrack(0, 0);
-}
-```
-
-#### 功能增强
-- 添加了振听状态检测
-- 实现了更精确的手牌安全性评估
-- 完善了听牌状态分析
-- 增强了AI的风险管理能力
-
-## 🧪 测试覆盖
-
-- **规模**：7 个测试文件，共 56 个用例，全部通过。
-- **类型**  
-  - **数据与工具**：`games` 列表与 `getGamesByCategory` / `getGameByPath`；`cn()` 合并与 tailwind-merge 行为。  
-  - **入口与导航**：首页渲染「游戏合集」与分类链接（小游戏、麻将等）。  
-  - **游戏页冒烟**：14 个已上线游戏各至少 1 个用例（渲染标题/按钮/关键文案）。  
-  - **五子棋规则**：`tests/gomoku.test.ts` 覆盖空盘、横/竖/斜五连胜、四连无胜。  
-  - **麻将规则**：国标番种（屁胡/对对胡/清一色等）、川麻七对/龙七对/定缺/杠牌计分、日麻赤宝牌/符数/平和判定。
-- **运行**：`pnpm run test`；监听模式 `pnpm run test:watch`。  
-- **CI**：每次 push/PR 自动执行 typecheck → biome check → test → build。
-
-## 📐 项目现状与评估
-
-### 技术栈与工程化
-| 方面 | 状态 | 说明 |
-|------|------|------|
-| 构建 | ✅ | Rsbuild v2（beta），路径别名 `@/` → `src/`，historyFallback |
-| 前端 | ✅ | React 19 + TypeScript strict，44+ 文件类型检查通过 |
-| 样式 | ✅ | Tailwind v4 + PostCSS，shadcn/ui，主题在 App.css |
-| 质量 | ✅ | Biome（lint + format，单引号、organizeImports） |
-| 测试 | ✅ | Rstest + Testing Library，56 用例覆盖数据/工具/首页/成就页/14 游戏页/麻将规则/五子棋规则 |
-| CI | ✅ | GitHub Actions：Node 20、pnpm、typecheck、biome、test、build |
-
-### 构建与体积
-- 生产构建通过，产物约 460 KB（gzip 约 137 KB），含 React、React Router、业务与游戏页。
-
-### 架构与可维护性
-- 路由、数据、页面、hooks、lib 分层清晰；三种麻将规则对应独立 lib 与技能文档（`.cursor/skills`），便于扩展与 AI 辅助。
-- 无单独 `lint` 脚本，日常质量检查统一用 `pnpm run check`（tsc + biome）。
-
-### 已知限制与注意
-- Rsbuild 当前为 2.0.0-beta.x，大版本升级时需关注破坏性变更。
-- 棋类/扑克等占位游戏尚未实现，仅列表展示「开发中」。
-
-## 📊 开发工作流
-
-### 常用命令
-```bash
-# 开发环境
-pnpm run dev          # 启动开发服务器
-pnpm run build        # 生产构建
-pnpm run preview      # 本地预览生产版本
-
-# 代码质量（提交前建议执行）
-pnpm run check        # 类型检查 (tsc) + Biome 检查，一键跑完
-pnpm run format       # 仅格式化代码（check 已含 --write 时可略过）
-
-# 测试
-pnpm run test         # 运行测试
-pnpm run test:watch   # 监听模式测试
-```
-
-### 开发规范
-- 遵循Biome代码规范
-- 使用TypeScript严格模式
-- 组件采用函数式编程
-- 路径别名使用 `@/` 前缀
-
-## 🔧 配置说明
-
-### 构建配置
-- **Rsbuild配置**: `rsbuild.config.ts`（含 `html.tags` 注入 manifest 链接）
-- **TypeScript配置**: `tsconfig.json`
-- **样式配置**: `postcss.config.mjs`
-- **代码检查**: `biome.json`
-- **PWA**: `public/manifest.json`、`public/sw.js`，构建时复制到 dist；入口注册 SW
-
-### 路径别名
-```
-@/ -> src/
-@example: import { Button } from '@/components/ui/button'
-```
-
-## 🎯 未来规划
-
-### 功能扩展
-- [ ] 添加更多麻将变种规则
-- [ ] 实现在线多人对战功能
-- [x] **游戏统计与成就**：2048/贪吃蛇本地最高分；成就页（/achievements）展示 6 项成就（2048 达 256/512/2048、贪吃蛇达 25/50/100），根据 localStorage 最高分自动解锁
-- [ ] 添加语音和动画效果
-
-### 技术优化
-- [x] **PWA**：已集成 `manifest.json`（名称、start_url、display: standalone）与 Service Worker（离线回退到缓存首页）
-- [ ] 性能监控和优化
-- [ ] 服务端渲染支持
-- [x] **国际化（i18n）**：中/英切换，Locale 存 localStorage；首页、分类页、成就页及全部游戏名称/描述已抽离（`src/lib/i18n.ts`），分类列表随语言切换显示中/英游戏名与描述
-
-## 📚 参考资源
-
-- [Rsbuild官方文档](https://rsbuild.rs)
-- [React 19文档](https://react.dev)
-- [TypeScript手册](https://www.typescriptlang.org)
-- [Tailwind CSS文档](https://tailwindcss.com)
-- [shadcn/ui组件库](https://ui.shadcn.com)
+- **小游戏（9）**：猜数字、井字棋、记忆翻牌、2048、贪吃蛇、打砖块、飞机大战、坦克大战、俄罗斯方块  
+- **棋类（4）**：五子棋、中国象棋、国际象棋、围棋（9×9 入门）  
+- **麻将（3）**：四川麻将、中国通用麻将、日本麻将  
+- **占位（2）**：斗地主、升级  
 
 ---
-*最后更新: 2026年2月*
-*版本: v1.0.0*
+
+## 2. 技术架构
+
+### 2.1 技术栈
+
+| 层级 | 选型 |
+|------|------|
+| 构建 | Rsbuild v2 |
+| 前端 | React 19 + TypeScript (strict) |
+| 样式 | Tailwind CSS v4 + PostCSS，shadcn/ui |
+| 质量 | Biome（lint + format），tsc |
+| 测试 | Rstest + Testing Library |
+
+### 2.2 项目结构
+
+```
+src/
+├── components/ui/   # shadcn 组件
+├── contexts/        # LocaleContext（i18n）
+├── data/            # games.ts, categories
+├── hooks/           # useMahjongGame, useSichuanMahjongGame
+├── lib/             # 规则与工具：achievements, gomoku, xiangqi, chess, mahjong*, i18n, utils
+├── pages/           # Home, Category, Achievements, Game*（15 个游戏页）
+├── App.tsx          # 路由 + LocaleProvider + Suspense 懒加载
+└── App.css          # 主题与 Tailwind @theme
+
+tests/               # 7 文件，58 用例
+```
+
+### 2.3 配置与命令
+
+- **路径别名**：`@/` → `src/`
+- **常用命令**：`pnpm run dev` / `build` / `preview`；`pnpm run check`（tsc + biome）；`pnpm run test`
+- **包体分析**：`pnpm run build:analyze`（依赖 `@rsdoctor/rspack-plugin`，构建后打开 Rsdoctor 分析页；Windows 可用 `cross-env RSDOCTOR=true rsbuild build`）
+- **PWA**：`public/manifest.json`、`public/sw.js`；入口注册 SW；Rsbuild `html.tags` 注入
+
+---
+
+## 3. 测试与质量
+
+- **规模**：7 个测试文件，**58 个用例**，全部通过。  
+- **覆盖**：数据与工具、首页与分类、成就页、15 个游戏页冒烟、五子棋胜负、麻将规则（国标/川麻/日麻）。  
+- **运行**：`pnpm run test`；`pnpm run test:watch` 监听。  
+- **CI**：typecheck → biome → test → build。
+
+---
+
+## 4. 项目评估
+
+### 4.1 完成度
+
+| 维度 | 状态 | 说明 |
+|------|------|------|
+| 核心玩法 | ✅ 高 | 15 款可玩，规则闭环（含三种麻将、三棋） |
+| 国际化 | ✅ 完成 | 中/英；首页、分类、成就、游戏内通用文案 |
+| 成就与统计 | ✅ 完成 | 14 项成就，2048/贪吃蛇/俄罗斯方块/打砖块、棋类首胜等 |
+| 性能与体验 | ✅ 良好 | 路由懒加载、PWA、响应式 |
+| 占位补齐 | ⏳ 进行中 | 4 款占位，可择一迭代 |
+
+### 4.2 技术债务与限制
+
+- Rsbuild 2.x beta，大版本升级需关注破坏性变更。  
+- 无后端：成就与最高分仅存 localStorage，换设备不同步。  
+- 日本麻将对局与规则页并存，对局体验可继续打磨。  
+
+### 4.3 可维护性
+
+- 路由、数据、页面、hooks、lib 分层清晰。  
+- 麻将/棋类规则有独立 lib 与 `.cursor/skills`，便于扩展与 AI 辅助。  
+- 无单独 `lint` 脚本，统一用 `pnpm run check`。
+
+---
+
+## 5. 开发计划与优先级
+
+### 5.1 已完成（归档）
+
+| 项 | 说明 |
+|----|------|
+| 游戏内 i18n | 各游戏页返回/重开/开始等随语言切换 |
+| 国际象棋 | `/game/chess`，规则与将杀/和棋 |
+| 更多成就 | 2048-1024，五子棋/中国象棋/国际象棋首胜 |
+| 路由懒加载 | React.lazy + Suspense，首屏仅加载 Home |
+| 日本麻将对局完善 | 流局（荒牌）判定与弹窗、本场+1 连庄；描述更新为对局已可玩 |
+| 围棋入门 | 9×9 棋盘，落子/提子/打劫/pass，双方 pass 终局，子空合计数目 |
+| 包体分析 | `build:analyze` 脚本（Rsdoctor），按需分析 chunk 与首屏体积 |
+| 更多成就 | 俄罗斯方块消行 10/50/100、打砖块首次通关 |
+
+### 5.2 新优先级（未做项重排）
+
+| 优先级 | 项 | 说明 | 预估 |
+|--------|----|------|------|
+| **P1** | 再上 1 款占位游戏 | 围棋 9×9 入门已上线（落子/提子/打劫/pass/数目） | ✅ |
+| **P2** | 日本麻将对局完善 | 流局（荒牌）判定与弹窗、描述更新为对局已可玩 | ✅ |
+| **P3** | 包体与首屏分析 | `pnpm run build:analyze` 使用 Rsdoctor 分析包体 | ✅ |
+| **P4** | 更多成就 / 统计 | 俄罗斯方块消行 10/50/100、打砖块首次通关 | ✅ |
+| **P5** | 麻将变种 / 语音与动画 | 按需在具体游戏上加 | 按需 |
+| **P6** | 在线多人 / SSR | 需后端与架构，单独排期 | 大 |
+
+### 5.3 功能扩展清单（勾选状态）
+
+- [x] 游戏统计与成就（14 项，本地解锁）
+- [x] PWA（manifest + SW）
+- [x] 国际化（中/英，游戏内通用文案）
+- [x] 路由懒加载
+- [ ] 更多麻将变种规则
+- [ ] 语音和动画效果
+- [ ] 性能监控与优化
+- [ ] 服务端渲染
+- [ ] 实现在线多人对战
+
+---
+
+## 6. 参考资源
+
+- [Rsbuild](https://rsbuild.rs) · [React](https://react.dev) · [Tailwind CSS](https://tailwindcss.com) · [shadcn/ui](https://ui.shadcn.com)
+
+---
+*最后更新：2026 年 2 月*

@@ -94,16 +94,15 @@ export const games: GameItem[] = [
     difficulty: 4,
     tags: ['经典', '益智', '动作'],
   },
-  // 棋类 - 占位
+  // 棋类
   {
     id: 'go',
     categoryId: 'board',
-    name: '围棋（开发中）',
-    description: '黑白对弈，围地吃子，千古名局。',
+    name: '围棋',
+    description: '9×9 入门，黑白对弈，围地吃子。',
     path: '/game/go',
     difficulty: 4,
     tags: ['围棋', '双人'],
-    comingSoon: true,
   },
   {
     id: 'xiangqi',
@@ -117,12 +116,11 @@ export const games: GameItem[] = [
   {
     id: 'chess',
     categoryId: 'board',
-    name: '国际象棋（开发中）',
+    name: '国际象棋',
     description: '王后车马象兵，经典西洋棋。',
     path: '/game/chess',
     difficulty: 3,
     tags: ['国际象棋', '双人'],
-    comingSoon: true,
   },
   {
     id: 'gomoku',
@@ -156,7 +154,7 @@ export const games: GameItem[] = [
     id: 'mahjong-japanese',
     categoryId: 'mahjong',
     name: '日本麻将',
-    description: '立直、役种、符与点数计算。（规则页已开放，对局开发中）',
+    description: '立直、役种、符与点数计算。支持完整对局与流局。',
     path: '/game/mahjong-japanese',
     difficulty: 4,
     tags: ['日本麻将', '四人'],

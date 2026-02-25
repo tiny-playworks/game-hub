@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useLocale } from '@/contexts/LocaleContext';
+import { unlock } from '@/lib/achievements';
 import { GOMOKU_SIZE, type GomokuStone, getGomokuWinner } from '@/lib/gomoku';
 import { cn } from '@/lib/utils';
 
 const GameGomoku = () => {
+  const { t } = useLocale();
   const [board, setBoard] = useState<GomokuStone[]>(
     Array(GOMOKU_SIZE * GOMOKU_SIZE).fill(null),
   );
@@ -17,6 +20,7 @@ const GameGomoku = () => {
     next[i] = blackNext ? 'B' : 'W';
     setBoard(next);
     setBlackNext(!blackNext);
+    if (getGomokuWinner(next)) unlock('gomoku-first-win');
   };
 
   const restart = () => {
@@ -28,7 +32,7 @@ const GameGomoku = () => {
     <div className="min-h-screen bg-background">
       <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
         <Link to="/" className="text-muted-foreground hover:text-foreground">
-          ← 返回游戏列表
+          ← {t('common.backToList')}
         </Link>
         <span className="text-sm text-muted-foreground">
           {winner
@@ -63,11 +67,11 @@ const GameGomoku = () => {
         </div>
         <div className="mt-6 flex gap-2">
           <Button variant="outline" size="sm" onClick={restart}>
-            重开
+            {t('common.restart')}
           </Button>
           <Link to="/">
             <Button variant="ghost" size="sm">
-              返回列表
+              {t('common.backList')}
             </Button>
           </Link>
         </div>

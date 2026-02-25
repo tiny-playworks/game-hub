@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useLocale } from '@/contexts/LocaleContext';
+import { unlock } from '@/lib/achievements';
 
 const CANVAS_W = 800;
 const CANVAS_H = 600;
@@ -51,6 +53,7 @@ function createBricks(): Brick[] {
 }
 
 const GameBreakout = () => {
+  const { t } = useLocale();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
@@ -227,17 +230,21 @@ const GameBreakout = () => {
     };
   }, [status, launch]);
 
+  useEffect(() => {
+    if (status === 'win') unlock('breakout-first-win');
+  }, [status]);
+
   return (
     <div className="min-h-screen bg-background">
       <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
         <Link to="/" className="text-muted-foreground hover:text-foreground">
-          ← 返回游戏列表
+          ← {t('common.backToList')}
         </Link>
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">分数: {score}</span>
           <span className="text-sm text-muted-foreground">生命: {lives}</span>
           <Button variant="outline" size="sm" onClick={resetGame}>
-            重开
+            {t('common.restart')}
           </Button>
         </div>
       </header>
@@ -259,7 +266,7 @@ const GameBreakout = () => {
                   ? '点击画布或按空格发射小球'
                   : '已暂停，按空格继续'}
               </p>
-              <Button onClick={launch}>开始 / 继续</Button>
+              <Button onClick={launch}>{t('common.startOrContinue')}</Button>
             </div>
           )}
 
@@ -268,9 +275,9 @@ const GameBreakout = () => {
               <p className="mb-4 text-2xl font-bold text-white">通关！</p>
               <p className="mb-4 text-white">得分: {score}</p>
               <div className="flex gap-2">
-                <Button onClick={resetGame}>再玩一次</Button>
+                <Button onClick={resetGame}>{t('common.playAgain')}</Button>
                 <Link to="/">
-                  <Button variant="outline">返回列表</Button>
+                  <Button variant="outline">{t('common.backList')}</Button>
                 </Link>
               </div>
             </div>
@@ -281,9 +288,9 @@ const GameBreakout = () => {
               <p className="mb-4 text-2xl font-bold text-white">游戏结束</p>
               <p className="mb-4 text-white">得分: {score}</p>
               <div className="flex gap-2">
-                <Button onClick={resetGame}>再玩一次</Button>
+                <Button onClick={resetGame}>{t('common.playAgain')}</Button>
                 <Link to="/">
-                  <Button variant="outline">返回列表</Button>
+                  <Button variant="outline">{t('common.backList')}</Button>
                 </Link>
               </div>
             </div>
