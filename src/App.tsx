@@ -9,7 +9,9 @@ const Category = lazy(() => import('@/pages/Category'));
 const Game2048 = lazy(() => import('@/pages/Game2048'));
 const GameBreakout = lazy(() => import('@/pages/GameBreakout'));
 const GameChess = lazy(() => import('@/pages/GameChess'));
+const GameDoudizhu = lazy(() => import('@/pages/GameDoudizhu'));
 const GameGo = lazy(() => import('@/pages/GameGo'));
+const GameShengji = lazy(() => import('@/pages/GameShengji'));
 const GameGomoku = lazy(() => import('@/pages/GameGomoku'));
 const GameGuessNumber = lazy(() => import('@/pages/GameGuessNumber'));
 const GameMahjongChinese = lazy(() => import('@/pages/GameMahjongChinese'));
@@ -65,6 +67,8 @@ const App = () => {
             <Route path="/game/gomoku" element={<GameGomoku />} />
             <Route path="/game/xiangqi" element={<GameXiangqi />} />
             <Route path="/game/chess" element={<GameChess />} />
+            <Route path="/game/doudizhu" element={<GameDoudizhu />} />
+            <Route path="/game/shengji" element={<GameShengji />} />
           </Routes>
         </Suspense>
       </LocaleProvider>

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Game Hub（游戏合集）：基于 Rsbuild + React 的纯前端 SPA，**16 款已上线游戏** + **2 款占位**（围棋、斗地主、升级、日本麻将对局完善中）。
+Game Hub（游戏合集）：基于 Rsbuild + React 的纯前端 SPA，**16 款已上线游戏** + **2 款占位**（斗地主、升级）。
 
 ## Commands
 
@@ -30,4 +30,4 @@ Game Hub（游戏合集）：基于 Rsbuild + React 的纯前端 SPA，**16 款�
 
 ## 计划与优先级
 
-完整开发计划与优先级见 [REPO_WIKI.md#开发计划与优先级](./REPO_WIKI.md#5-开发计划与优先级)。当前下一优先级：P4 更多成就/统计。包体分析：`pnpm run build:analyze`（Rsdoctor）。
+完整开发计划与优先级见 [REPO_WIKI.md#开发计划与优先级](./REPO_WIKI.md#5-开发计划与优先级)。当前下一优先级：P1 再上 1 款占位游戏（斗地主或升级）。包体分析：`pnpm run build:analyze`（Rsdoctor）。

@@ -6,6 +6,7 @@ import Achievements from '../src/pages/Achievements';
 import Game2048 from '../src/pages/Game2048';
 import GameBreakout from '../src/pages/GameBreakout';
 import GameChess from '../src/pages/GameChess';
+import GameDoudizhu from '../src/pages/GameDoudizhu';
 import GameGo from '../src/pages/GameGo';
 import GameGomoku from '../src/pages/GameGomoku';
 import GameGuessNumber from '../src/pages/GameGuessNumber';
@@ -13,6 +14,7 @@ import GameMahjongChinese from '../src/pages/GameMahjongChinese';
 import GameMahjongJapanese from '../src/pages/GameMahjongJapanese';
 import GameMahjongSichuan from '../src/pages/GameMahjongSichuan';
 import GameMemory from '../src/pages/GameMemory';
+import GameShengji from '../src/pages/GameShengji';
 import GameShooter from '../src/pages/GameShooter';
 import GameSnake from '../src/pages/GameSnake';
 import GameTank from '../src/pages/GameTank';
@@ -142,4 +144,20 @@ test('日本立直麻将：渲染标题与开始游戏', () => {
   render(withRouter(<GameMahjongJapanese />));
   expect(screen.getByText('日本立直麻将')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '开始游戏' })).toBeInTheDocument();
+});
+
+test('斗地主：渲染说明与重开按钮', () => {
+  render(withRouter(<GameDoudizhu />));
+  expect(screen.getByText(/三人斗地主简化版/)).toBeInTheDocument();
+  expect(
+    screen.getAllByRole('button', { name: '重开' }).length,
+  ).toBeGreaterThanOrEqual(1);
+});
+
+test('升级：渲染说明与重开按钮', () => {
+  render(withRouter(<GameShengji />));
+  expect(screen.getByText(/升级入门/)).toBeInTheDocument();
+  expect(
+    screen.getAllByRole('button', { name: '重开' }).length,
+  ).toBeGreaterThanOrEqual(1);
 });

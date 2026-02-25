@@ -163,22 +163,22 @@ export const games: GameItem[] = [
   {
     id: 'doudizhu',
     categoryId: 'poker',
-    name: '斗地主（开发中）',
-    description: '三人斗地主，抢地主、出牌、春天。',
+    name: '斗地主',
+    description: '三人斗地主简化版，单牌对子三带一炸弹火箭，先出完为胜。',
     path: '/game/doudizhu',
     difficulty: 3,
     tags: ['扑克', '三人'],
-    comingSoon: true,
+    comingSoon: false,
   },
   {
     id: 'shengji',
     categoryId: 'poker',
-    name: '升级（开发中）',
-    description: '四人升级，组队打级。',
+    name: '升级',
+    description: '四人两对升级入门，单副牌单张跟牌，闲家 40 分升级。',
     path: '/game/shengji',
     difficulty: 3,
     tags: ['扑克', '四人'],
-    comingSoon: true,
+    comingSoon: false,
   },
 ];
 

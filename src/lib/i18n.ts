@@ -103,10 +103,12 @@ const messages: Record<Locale, Record<string, string>> = {
     'game.mahjong-japanese.name': '日本麻将',
     'game.mahjong-japanese.description':
       '立直、役种、符与点数计算。支持完整对局与流局。',
-    'game.doudizhu.name': '斗地主（开发中）',
-    'game.doudizhu.description': '三人斗地主，抢地主、出牌、春天。',
-    'game.shengji.name': '升级（开发中）',
-    'game.shengji.description': '四人升级，组队打级。',
+    'game.doudizhu.name': '斗地主',
+    'game.doudizhu.description':
+      '三人斗地主简化版，单牌对子三带一炸弹火箭，先出完为胜。',
+    'game.shengji.name': '升级',
+    'game.shengji.description':
+      '四人两对升级入门，单副牌单张跟牌，闲家 40 分升级。',
   },
   en: {
     'home.title': 'Game Hub',
@@ -205,10 +207,12 @@ const messages: Record<Locale, Record<string, string>> = {
     'game.mahjong-japanese.name': 'Japanese Mahjong',
     'game.mahjong-japanese.description':
       'Riichi, yaku, fu and points. Full game and exhaustive draw.',
-    'game.doudizhu.name': 'Doudizhu (Coming soon)',
-    'game.doudizhu.description': 'Three-player card game.',
-    'game.shengji.name': 'Shengji (Coming soon)',
-    'game.shengji.description': 'Four-player team card game.',
+    'game.doudizhu.name': 'Doudizhu',
+    'game.doudizhu.description':
+      'Three-player simplified doudizhu. Single, pair, triple, bomb, rocket. First to empty hand wins.',
+    'game.shengji.name': 'Shengji',
+    'game.shengji.description':
+      'Four-player partnership game. Single deck, follow suit, 40 points to upgrade.',
   },
 };
 
