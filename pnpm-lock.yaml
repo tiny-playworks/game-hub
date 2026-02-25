@@ -29,6 +29,9 @@ importers:
       react-router-dom:
         specifier: ^7.13.1
         version: 7.13.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      riichi-rs-bundlers:
+        specifier: ^2.1.0
+        version: 2.1.0
       tailwind-merge:
         specifier: ^3.5.0
         version: 3.5.0
@@ -1737,6 +1740,9 @@ packages:
   redent@3.0.0:
     resolution: {integrity: sha512-6tDA8g98We0zd0GvVeMT9arEOnTw9qM03L9cJXaCjrip1OO764RDBLBfrB4cwzNGDj5OA5ioymC9GkizgWJDUg==}
     engines: {node: '>=8'}
+
+  riichi-rs-bundlers@2.1.0:
+    resolution: {integrity: sha512-Y1xiUZBzSyzz900Qu7BdVIT6dDJ1qfyIk/SE4FoHTu31Vv7c58MZtdYWsI2gxnJvvMCpbTLdKE8O6Lm7Gsf7EQ==}
 
   rslog@1.3.2:
     resolution: {integrity: sha512-1YyYXBvN0a2b1MSIDLwDTqqgjDzRKxUg/S/+KO6EAgbtZW1B3fdLHAMhEEtvk1patJYMqcRvlp3HQwnxj7AdGQ==}
@@ -3609,6 +3615,8 @@ snapshots:
     dependencies:
       indent-string: 4.0.0
       strip-indent: 3.0.0
+
+  riichi-rs-bundlers@2.1.0: {}
 
   rslog@1.3.2: {}
 

@@ -8,6 +8,7 @@
 - **占位**：0 款
 - **成就**：14 项，本地解锁
 - **测试**：7 文件、60 用例
+- **日麻算分**：和了时的符・番・点数由 **riichi-rs-bundlers**（Rust/WASM）计算，规则更贴近天凤/雀魂；适配层见 `src/lib/riichiRsAdapter.ts`，失败时回退到自研 `computeYaku`。
 
 ## 后续优先级（重排后）
 

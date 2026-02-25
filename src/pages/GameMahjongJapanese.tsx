@@ -18,6 +18,11 @@ import {
   TILE_LABELS_RIICHI,
   type YakuResult,
 } from '@/lib/mahjongRiichi';
+import {
+  buildRiichiInput,
+  calcWithRiichiRs,
+  type GameStateForRs,
+} from '@/lib/riichiRsAdapter';
 import { cn } from '@/lib/utils';
 
 const SEAT_NAMES = ['自家', '下家', '对家', '上家'];
@@ -208,6 +213,9 @@ const GameMahjongJapanese = () => {
     winner: number;
     isTsumo: boolean;
     yaku: YakuResult[];
+    fu?: number;
+    han?: number;
+    ten?: number;
   } | null>(null);
   const [showGuide, setShowGuide] = useState(true); // 新手引导状态
   const prevGameRef = useRef<RiichiGameState | null>(null);
@@ -854,10 +862,35 @@ const GameMahjongJapanese = () => {
   const hasAnyClaimOption =
     chiOptions.length > 0 || canPeng || canMingang || canRon;
 
-  /** 自摸：当前手牌 14 张且和牌形+有役 */
+  /** 自摸：当前手牌 14 张且和牌形+有役；优先用 riichi-rs 算分 */
   const doTsumo = useCallback(() => {
     if (!game || !canTsumo) return;
-    const ctx = buildYakuCtx(game.hands[0], true);
+    const hand = game.hands[0];
+    const stateForRs: GameStateForRs = {
+      hand,
+      melds: game.melds[0],
+      doraIndicator: game.doraIndicator,
+      roundWind: game.roundWind,
+      dealer: game.dealer,
+      riichiDeclared: game.riichiDeclared,
+      wallLength: game.wall.length,
+      lastDiscard: game.lastDiscard,
+    };
+    const input = buildRiichiInput(stateForRs, true);
+    const rs = calcWithRiichiRs(input);
+    if (rs && rs.yaku.length > 0) {
+      addLog(`自家 自摸！${rs.fu}符 ${rs.han}番 ${rs.ten}点`);
+      setWinResult({
+        winner: 0,
+        isTsumo: true,
+        yaku: rs.yaku,
+        fu: rs.fu,
+        han: rs.han,
+        ten: rs.ten,
+      });
+      return;
+    }
+    const ctx = buildYakuCtx(hand, true);
     if (!ctx) return;
     const yaku = computeYaku(ctx);
     if (yaku.length === 0) return;
@@ -865,10 +898,36 @@ const GameMahjongJapanese = () => {
     setWinResult({ winner: 0, isTsumo: true, yaku });
   }, [game, canTsumo, buildYakuCtx, addLog]);
 
-  /** 荣和：要牌阶段别人打的牌能胡 */
+  /** 荣和：要牌阶段别人打的牌能胡；优先用 riichi-rs 算分 */
   const doRon = useCallback(() => {
     if (!game || !canRon || game.lastDiscard === null) return;
     const handWithClaim = [...game.hands[0], game.lastDiscard];
+    const stateForRs: GameStateForRs = {
+      hand: handWithClaim,
+      melds: game.melds[0],
+      doraIndicator: game.doraIndicator,
+      roundWind: game.roundWind,
+      dealer: game.dealer,
+      riichiDeclared: game.riichiDeclared,
+      wallLength: game.wall.length,
+      lastDiscard: game.lastDiscard,
+    };
+    const input = buildRiichiInput(stateForRs, false, game.lastDiscard);
+    const rs = calcWithRiichiRs(input);
+    if (rs && rs.yaku.length > 0) {
+      addLog(
+        `自家 荣和 ${getTileLabel(game.lastDiscard)}！${rs.fu}符 ${rs.han}番 ${rs.ten}点`,
+      );
+      setWinResult({
+        winner: 0,
+        isTsumo: false,
+        yaku: rs.yaku,
+        fu: rs.fu,
+        han: rs.han,
+        ten: rs.ten,
+      });
+      return;
+    }
     const ctx = buildYakuCtx(handWithClaim, false);
     if (!ctx) return;
     const yaku = computeYaku(ctx);
@@ -1833,6 +1892,14 @@ const GameMahjongJapanese = () => {
               <h3 className="text-xl font-bold text-[#ffc107] text-center mb-3">
                 {winResult.isTsumo ? '自摸！' : '荣和！'}
               </h3>
+              {winResult.ten != null && (
+                <p className="text-center text-[#ffc107] font-semibold mb-2">
+                  {winResult.fu != null && winResult.han != null
+                    ? `${winResult.fu} 符 ${winResult.han} 番 · `
+                    : ''}
+                  {winResult.ten} 点
+                </p>
+              )}
               <p className="text-sm text-[#f1faee]/90 mb-2">役种：</p>
               <ul className="list-disc list-inside text-sm text-[#f1faee] space-y-1 mb-4">
                 {winResult.yaku.map((y, i) => (

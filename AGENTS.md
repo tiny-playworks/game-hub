@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Game Hub（游戏合集）：基于 Rsbuild + React 的纯前端 SPA，**16 款已上线游戏** + **2 款占位**（斗地主、升级）。
+Game Hub（游戏合集）：基于 Rsbuild + React 的纯前端 SPA，**18 款已上线游戏**（含斗地主、升级），无占位。日本麻将和了算分由 **riichi-rs-bundlers**（Rust/WASM）提供，适配层 `src/lib/riichiRsAdapter.ts`。
 
 ## Commands
 
@@ -8,7 +8,7 @@ Game Hub（游戏合集）：基于 Rsbuild + React 的纯前端 SPA，**16 款�
 - `pnpm run build` - 生产构建
 - `pnpm run preview` - 本地预览构建结果
 - `pnpm run check` - 类型检查 (tsc) + Biome 检查（无单独 lint 脚本）
-- `pnpm run test` - 运行测试（7 文件、58 用例）
+- `pnpm run test` - 运行测试（7 文件、60 用例）
 
 ## Docs
 
@@ -30,4 +30,4 @@ Game Hub（游戏合集）：基于 Rsbuild + React 的纯前端 SPA，**16 款�
 
 ## 计划与优先级
 
-完整开发计划与优先级见 [REPO_WIKI.md#开发计划与优先级](./REPO_WIKI.md#5-开发计划与优先级)。当前下一优先级：P1 再上 1 款占位游戏（斗地主或升级）。包体分析：`pnpm run build:analyze`（Rsdoctor）。
+完整开发计划与优先级见 [REPO_WIKI.md#开发计划与优先级](./REPO_WIKI.md#5-开发计划与优先级)。P1 已完成（斗地主、升级）；下一优先级：P2 麻将变种/语音与动画（按需）。包体分析：`pnpm run build:analyze`（Rsdoctor）。
