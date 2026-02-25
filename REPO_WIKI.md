@@ -121,10 +121,9 @@ pnpm run dev          # 启动开发服务器
 pnpm run build        # 生产构建
 pnpm run preview      # 本地预览生产版本
 
-# 代码质量
-pnpm run lint         # 代码检查
-pnpm run format       # 代码格式化
-pnpm run check        # 综合检查
+# 代码质量（提交前建议执行）
+pnpm run check        # 类型检查 (tsc) + Biome 检查，一键跑完
+pnpm run format       # 仅格式化代码（check 已含 --write 时可略过）
 
 # 测试
 pnpm run test         # 运行测试

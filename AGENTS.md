@@ -21,13 +21,13 @@ Game Hub（游戏合集）项目：基于 Rsbuild + React 的小游戏与麻将 
 
 ### Rstest
 
-- Run `npm run test` to run tests
-- Run `npm run test:watch` to run tests in watch mode
+- Run `pnpm run test` to run tests
+- Run `pnpm run test:watch` to run tests in watch mode
 
 ### Biome
 
-- Run `npm run lint` to lint your code
-- Run `npm run format` to format your code
+- Lint/check: use `pnpm run check` (runs tsc + biome check). There is no separate `lint` script.
+- Format: `pnpm run format` to format your code
 
 ## Cursor Cloud specific instructions
 
