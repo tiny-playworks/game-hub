@@ -30,4 +30,4 @@ Game Hub（游戏合集）：基于 Rsbuild + React 的纯前端 SPA，**18 款�
 
 ## 计划与优先级
 
-完整开发计划与优先级见 [REPO_WIKI.md#开发计划与优先级](./REPO_WIKI.md#5-开发计划与优先级)。P1 已完成（斗地主、升级）；下一优先级：P2 麻将变种/语音与动画（按需）。包体分析：`pnpm run build:analyze`（Rsdoctor）。
+**需求排序**见 [PLAN.md](PLAN.md)。当前：占位游戏已补齐；日麻已接算分（riichi-rs-bundlers）、音效（wav + TTS）与动画；下一优先级 P2（更多麻将/游戏音效与动画，按需）。包体分析：`pnpm run build:analyze`（Rsdoctor）。

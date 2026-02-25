@@ -35,8 +35,9 @@ pnpm run format   # 格式化
 
 ## 文档与计划
 
-- **详细说明与评估**：[REPO_WIKI.md](./REPO_WIKI.md)（项目结构、测试覆盖、现状评估）
-- **开发计划与优先级**：见 [REPO_WIKI.md#开发计划与优先级](./REPO_WIKI.md#5-开发计划与优先级)
+- **需求排序与开发计划**：[PLAN.md](./PLAN.md)（权威）
+- **详细说明与评估**：[REPO_WIKI.md](./REPO_WIKI.md)（项目结构、测试、计划详表）
+- **音效与动画说明**：[docs/sound-assets.md](./docs/sound-assets.md)
 
 ## 参考
 

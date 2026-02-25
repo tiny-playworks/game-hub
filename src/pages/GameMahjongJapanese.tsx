@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useRiichiSounds } from '@/hooks/useRiichiSounds';
 import {
   canMingangRiichi,
   canPengRiichi,
@@ -33,7 +34,7 @@ const TILE_HAND =
 const TILE_DISCARD =
   'w-[50px] h-[68px] rounded-[6px] border-2 bg-[#fff9e6] flex items-center justify-center shrink-0 font-black text-sm transition-all duration-200';
 const TILE_ACTIVE =
-  'border-[#ffc107] border-[3px] -translate-y-3 shadow-xl ring-2 ring-[#ffc107]/60';
+  'border-[#ffc107] border-[3px] -translate-y-3 shadow-xl ring-2 ring-[#ffc107]/60 animate-riichi-active-pulse';
 
 function getTileColorClass(tile: number): string {
   const t = getBaseTile(tile);
@@ -204,6 +205,7 @@ const MAX_LOG = 150;
 
 const GameMahjongJapanese = () => {
   const { t } = useLocale();
+  const sounds = useRiichiSounds();
   const [view, setView] = useState<'rules' | 'game'>('rules');
   const [game, setGame] = useState<RiichiGameState | null>(null);
   const [history, setHistory] = useState<RiichiGameState[]>([]);
@@ -280,6 +282,7 @@ const GameMahjongJapanese = () => {
       hands[player].splice(idx, 1);
       piles[player].push(tile);
       addLog(`自家 打出 ${getTileLabel(tile)}`);
+      if (player === 0) sounds.playDiscard();
       setGame({
         ...game,
         hands,
@@ -292,7 +295,7 @@ const GameMahjongJapanese = () => {
         lastClaimMsg: null,
       });
     },
-    [game, addLog],
+    [game, addLog, sounds],
   );
 
   const passClaim = useCallback(() => {
@@ -372,6 +375,7 @@ const GameMahjongJapanese = () => {
       if (piles[game.lastDiscardFrom].length > 0)
         piles[game.lastDiscardFrom].pop();
       addLog(`自家 吃 ${getTileLabel(a)}${getTileLabel(b)}`);
+      sounds.playChi();
       setGame({
         ...game,
         hands,
@@ -385,7 +389,7 @@ const GameMahjongJapanese = () => {
         lastClaimMsg: null,
       });
     },
-    [game, addLog],
+    [game, addLog, sounds],
   );
 
   const doPeng = useCallback(() => {
@@ -411,6 +415,7 @@ const GameMahjongJapanese = () => {
     const from = game.lastDiscardFrom ?? 0;
     if (piles[from].length > 0) piles[from].pop();
     addLog('自家 碰');
+    sounds.playPon();
     setGame({
       ...game,
       hands,
@@ -423,7 +428,7 @@ const GameMahjongJapanese = () => {
       currentPlayer: 0,
       lastClaimMsg: null,
     });
-  }, [game, addLog]);
+  }, [game, addLog, sounds]);
 
   /** 获取听牌信息（需传入 game 以取 roundWind/dealer） */
   const getWaitingTilesRiichi = useCallback(
@@ -481,6 +486,7 @@ const GameMahjongJapanese = () => {
     if (waitingTiles.length === 0) return;
 
     addLog('自家 立直宣言！');
+    sounds.playRiichi();
 
     setGame({
       ...game,
@@ -489,7 +495,7 @@ const GameMahjongJapanese = () => {
       ),
       lastClaimMsg: '立直宣言！听牌固定，不能换牌',
     });
-  }, [game, addLog, getWaitingTilesRiichi]);
+  }, [game, addLog, getWaitingTilesRiichi, sounds]);
 
   const doMingang = useCallback(() => {
     if (
@@ -524,6 +530,7 @@ const GameMahjongJapanese = () => {
     const from = game.lastDiscardFrom ?? 0;
     if (piles[from].length > 0) piles[from].pop();
     addLog(`自家 明杠 ${getTileLabel(game.lastDiscard)}`);
+    sounds.playKan();
     setGame({
       ...game,
       hands,
@@ -538,7 +545,7 @@ const GameMahjongJapanese = () => {
       drawnTile: rinshan,
       lastClaimMsg: null,
     });
-  }, [game, addLog]);
+  }, [game, addLog, sounds]);
 
   /** 暗杠：从手牌移除 4 张，加暗杠面子，摸岭上 1 张（暗杠不算副露） */
   const doAngang = useCallback(
@@ -564,6 +571,7 @@ const GameMahjongJapanese = () => {
       const melds = game.melds.map((m, i) =>
         i === 0 ? [...m, { type: 'angang' as const, tiles: fourTiles }] : m,
       );
+      sounds.playKan();
       setGame({
         ...game,
         hands: game.hands.map((h, i) => (i === 0 ? h0 : h)),
@@ -571,7 +579,7 @@ const GameMahjongJapanese = () => {
         wall: newWall,
       });
     },
-    [game],
+    [game, sounds],
   );
 
   const angangOptions =
@@ -594,6 +602,7 @@ const GameMahjongJapanese = () => {
     )
       return;
     addLog('流局（荒牌）');
+    sounds.playRyuukyoku();
     setGame((g) => (!g ? g : { ...g, ryuukyoku: true }));
   }, [
     game?.phase,
@@ -604,6 +613,7 @@ const GameMahjongJapanese = () => {
     game?.ryuukyoku,
     game,
     addLog,
+    sounds,
   ]);
 
   // 自家回合且手牌 13 张时先摸牌（庄家第一巡除外）；仅在出牌阶段
@@ -618,6 +628,7 @@ const GameMahjongJapanese = () => {
       game.hands[0].length !== 13
     )
       return;
+    sounds.playDraw();
     const draw = game.wall[0];
     const newWall = game.wall.slice(1);
     const newHands = game.hands.map((h) => [...h]);
@@ -632,6 +643,7 @@ const GameMahjongJapanese = () => {
     game?.wall.length,
     game?.hands[0]?.length,
     game,
+    sounds,
   ]);
 
   // AI 回合 1：未摸牌时先摸牌（与出牌拆开）；仅出牌阶段；碰/吃/杠后手牌已 11 张不再摸
@@ -880,6 +892,7 @@ const GameMahjongJapanese = () => {
     const rs = calcWithRiichiRs(input);
     if (rs && rs.yaku.length > 0) {
       addLog(`自家 自摸！${rs.fu}符 ${rs.han}番 ${rs.ten}点`);
+      sounds.playTsumo();
       setWinResult({
         winner: 0,
         isTsumo: true,
@@ -895,8 +908,9 @@ const GameMahjongJapanese = () => {
     const yaku = computeYaku(ctx);
     if (yaku.length === 0) return;
     addLog(`自家 自摸！役: ${yaku.map((y) => y.name).join(' ')}`);
+    sounds.playTsumo();
     setWinResult({ winner: 0, isTsumo: true, yaku });
-  }, [game, canTsumo, buildYakuCtx, addLog]);
+  }, [game, canTsumo, buildYakuCtx, addLog, sounds]);
 
   /** 荣和：要牌阶段别人打的牌能胡；优先用 riichi-rs 算分 */
   const doRon = useCallback(() => {
@@ -918,6 +932,7 @@ const GameMahjongJapanese = () => {
       addLog(
         `自家 荣和 ${getTileLabel(game.lastDiscard)}！${rs.fu}符 ${rs.han}番 ${rs.ten}点`,
       );
+      sounds.playRon();
       setWinResult({
         winner: 0,
         isTsumo: false,
@@ -935,8 +950,9 @@ const GameMahjongJapanese = () => {
     addLog(
       `自家 荣和 ${getTileLabel(game.lastDiscard)}！役: ${yaku.map((y) => y.name).join(' ')}`,
     );
+    sounds.playRon();
     setWinResult({ winner: 0, isTsumo: false, yaku });
-  }, [game, canRon, buildYakuCtx, addLog]);
+  }, [game, canRon, buildYakuCtx, addLog, sounds]);
 
   /** 胡牌后进入下一局 */
   const proceedToNextRound = useCallback(() => {
@@ -1850,6 +1866,7 @@ const GameMahjongJapanese = () => {
                             TILE_HAND,
                             getTileColorClass(tile),
                             isDrawn && TILE_ACTIVE,
+                            isDrawn && 'animate-riichi-tile-drawn',
                             canDiscard &&
                               'cursor-pointer hover:ring-2 hover:ring-[#ffc107]/60',
                           )}
@@ -1887,8 +1904,8 @@ const GameMahjongJapanese = () => {
         )}
 
         {winResult && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-            <div className="rounded-2xl bg-[#2d4a3c] border-2 border-[#d4b886] p-6 max-w-sm w-full mx-4 shadow-xl">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-riichi-overlay-in">
+            <div className="rounded-2xl bg-[#2d4a3c] border-2 border-[#d4b886] p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in">
               <h3 className="text-xl font-bold text-[#ffc107] text-center mb-3">
                 {winResult.isTsumo ? '自摸！' : '荣和！'}
               </h3>
@@ -1919,8 +1936,8 @@ const GameMahjongJapanese = () => {
         )}
 
         {game.ryuukyoku && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-            <div className="rounded-2xl bg-[#2d4a3c] border-2 border-[#d4b886] p-6 max-w-sm w-full mx-4 shadow-xl">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-riichi-overlay-in">
+            <div className="rounded-2xl bg-[#2d4a3c] border-2 border-[#d4b886] p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in">
               <h3 className="text-xl font-bold text-amber-200 text-center mb-3">
                 流局（荒牌）
               </h3>

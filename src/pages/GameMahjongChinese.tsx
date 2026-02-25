@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useMahjongGame } from '@/hooks/useMahjongGame';
+import { useMahjongSounds } from '@/hooks/useMahjongSounds';
 import {
   checkWin,
   getAngangOptions,
@@ -21,9 +22,9 @@ const TILE_DISCARD =
   'w-[50px] h-[68px] rounded-[6px] border-2 bg-[#fff9e6] flex items-center justify-center shrink-0 font-black text-sm transition-all duration-200';
 const TILE_SMALL =
   'w-[42px] h-[58px] rounded-[4px] border bg-[#fff9e6] flex items-center justify-center shrink-0 font-bold text-xs';
-/** 刚摸的牌：上浮 + 阴影 + 粗边框高亮，一眼能看出 */
+/** 刚摸的牌：上浮 + 阴影 + 粗边框高亮 + 脉动动画 */
 const TILE_ACTIVE =
-  'border-[#ffc107] border-[3px] -translate-y-3 shadow-xl ring-2 ring-[#ffc107]/60';
+  'border-[#ffc107] border-[3px] -translate-y-3 shadow-xl ring-2 ring-[#ffc107]/60 animate-riichi-active-pulse';
 const TILE_GAP = 'gap-2.5'; /* 10px */
 
 /** 万红 / 条绿 / 筒黄 / 字深，边框与底色区分明显 */
@@ -125,6 +126,7 @@ function TileFace({ tile, className }: { tile: number; className?: string }) {
 
 const GameMahjongChinese = () => {
   const { t } = useLocale();
+  const sounds = useMahjongSounds();
   const {
     state,
     startGame,
@@ -142,6 +144,8 @@ const GameMahjongChinese = () => {
     needAiDiscard,
     needPassClaim,
   } = useMahjongGame();
+  const prevHandLenRef = useRef<number>(0);
+  const didPlayRyuukyokuRef = useRef(false);
 
   useEffect(() => {
     if (!needAiDiscard) return;
@@ -155,6 +159,33 @@ const GameMahjongChinese = () => {
     const tid = setTimeout(runAiClaim, 400);
     return () => clearTimeout(tid);
   }, [needPassClaim, runAiClaim]);
+
+  // 自家摸牌时播放音效
+  useEffect(() => {
+    if (!state || state.phase !== 'discard' || state.currentPlayer !== 0)
+      return;
+    const len = state.hands[0].length;
+    if (prevHandLenRef.current === 13 && len === 14) sounds.playDraw();
+    prevHandLenRef.current = len;
+  }, [
+    state?.hands[0].length,
+    state?.phase,
+    state?.currentPlayer,
+    state,
+    sounds,
+  ]);
+
+  // 流局时播报（仅一次）
+  useEffect(() => {
+    if (!state) return;
+    if (!state.isDraw) {
+      didPlayRyuukyokuRef.current = false;
+      return;
+    }
+    if (didPlayRyuukyokuRef.current) return;
+    didPlayRyuukyokuRef.current = true;
+    sounds.playRyuukyoku();
+  }, [state?.isDraw, state, sounds]);
 
   const isMyTurn =
     state?.phase === 'discard' &&
@@ -277,6 +308,31 @@ const GameMahjongChinese = () => {
                   </p>
                 </div>
               )}
+
+            {/* 胡牌弹窗 */}
+            {state.winner !== null && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-riichi-overlay-in">
+                <div className="rounded-2xl bg-[#2d4a3c] border-2 border-[#d4b886] p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in">
+                  <p className="mb-2 text-sm font-medium text-foreground">
+                    {SEAT_NAMES[state.winner]} 胡牌
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    当前分数:{' '}
+                    {SEAT_NAMES.map(
+                      (name, i) => `${name} ${state.scores[i] ?? 0}`,
+                    ).join(' · ')}
+                  </p>
+                </div>
+              </div>
+            )}
+            {/* 流局弹窗 */}
+            {state.isDraw && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-riichi-overlay-in">
+                <div className="rounded-2xl bg-[#2d4a3c] border-2 border-[#d4b886] p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in">
+                  <p className="text-sm font-medium text-foreground">流局</p>
+                </div>
+              </div>
+            )}
 
             {/* 牌桌：背景 #2d4a3c，边缘阴影 */}
             <div className="rounded-2xl bg-[#2d4a3c] p-4 md:p-6 mb-4 min-h-[520px] shadow-[0_12px_32px_rgba(0,0,0,0.4)]">
@@ -484,9 +540,12 @@ const GameMahjongChinese = () => {
                             <button
                               key={`rest-${i}-${tile}`}
                               type="button"
-                              onClick={() =>
-                                canDiscard && discard(0, restIndices[i])
-                              }
+                              onClick={() => {
+                                if (canDiscard) {
+                                  sounds.playDiscard();
+                                  discard(0, restIndices[i]);
+                                }
+                              }}
                               disabled={!canDiscard}
                               className={cn(
                                 TILE_HAND,
@@ -502,12 +561,18 @@ const GameMahjongChinese = () => {
                         {drawn !== null && (
                           <button
                             type="button"
-                            onClick={() => canDiscard && discard(0, drawnIndex)}
+                            onClick={() => {
+                              if (canDiscard) {
+                                sounds.playDiscard();
+                                discard(0, drawnIndex);
+                              }
+                            }}
                             disabled={!canDiscard}
                             className={cn(
                               TILE_HAND,
                               getTileColorClass(drawn),
                               TILE_ACTIVE,
+                              'animate-riichi-tile-drawn',
                               canDiscard &&
                                 'cursor-pointer hover:scale-[1.02] active:scale-[0.98]',
                               !canDiscard && 'cursor-default',
@@ -528,7 +593,10 @@ const GameMahjongChinese = () => {
               {canZiMo && (
                 <button
                   type="button"
-                  onClick={doZiMo}
+                  onClick={() => {
+                    sounds.playTsumo();
+                    doZiMo();
+                  }}
                   className="h-11 min-w-[72px] rounded-lg px-4 font-semibold text-white bg-[#e63946] hover:bg-[#d62839] active:scale-[0.98] transition-all"
                 >
                   自摸
@@ -543,7 +611,10 @@ const GameMahjongChinese = () => {
                     <button
                       key={meldIdx}
                       type="button"
-                      onClick={() => doJiagang(meldIdx)}
+                      onClick={() => {
+                        sounds.playKan();
+                        doJiagang(meldIdx);
+                      }}
                       className="h-11 min-w-[72px] rounded-lg px-4 font-semibold text-white bg-[#f4a261] hover:bg-[#e76f51] active:scale-[0.98] transition-all"
                     >
                       加杠 {TILE_LABELS[state.melds[0][meldIdx].tiles[0]]}
@@ -558,7 +629,10 @@ const GameMahjongChinese = () => {
                   <button
                     key={t}
                     type="button"
-                    onClick={() => doAngang(t)}
+                    onClick={() => {
+                      sounds.playKan();
+                      doAngang(t);
+                    }}
                     className="h-11 min-w-[72px] rounded-lg px-4 font-semibold text-white bg-[#f4a261] hover:bg-[#e76f51] active:scale-[0.98] transition-all"
                   >
                     暗杠 {TILE_LABELS[t]}
@@ -568,7 +642,12 @@ const GameMahjongChinese = () => {
                 <>
                   <button
                     type="button"
-                    onClick={doHu}
+                    onClick={() => {
+                      if (state.claimOption?.hu) {
+                        sounds.playRon();
+                        doHu();
+                      }
+                    }}
                     disabled={!state.claimOption?.hu}
                     className={cn(
                       'h-11 min-w-[72px] rounded-lg px-4 font-semibold text-white transition-all',
@@ -581,7 +660,12 @@ const GameMahjongChinese = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={doGang}
+                    onClick={() => {
+                      if (state.claimOption?.gang) {
+                        sounds.playKan();
+                        doGang();
+                      }
+                    }}
                     disabled={!state.claimOption?.gang}
                     className={cn(
                       'h-11 min-w-[72px] rounded-lg px-4 font-semibold text-white transition-all',
@@ -594,7 +678,12 @@ const GameMahjongChinese = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={doPeng}
+                    onClick={() => {
+                      if (state.claimOption?.peng) {
+                        sounds.playPon();
+                        doPeng();
+                      }
+                    }}
                     disabled={!state.claimOption?.peng}
                     className={cn(
                       'h-11 min-w-[72px] rounded-lg px-4 font-semibold text-white transition-all',
@@ -611,7 +700,10 @@ const GameMahjongChinese = () => {
                       <button
                         key={i}
                         type="button"
-                        onClick={() => doChi(opt)}
+                        onClick={() => {
+                          sounds.playChi();
+                          doChi(opt);
+                        }}
                         className="h-11 min-w-[72px] rounded-lg px-4 font-semibold text-white bg-[#457b9d] hover:bg-[#3d6b8a] active:scale-[0.98] transition-all"
                       >
                         吃 {TILE_LABELS[opt[0]]}

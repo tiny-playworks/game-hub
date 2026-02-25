@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useMahjongSounds } from '@/hooks/useMahjongSounds';
 import { useSichuanMahjongGame } from '@/hooks/useSichuanMahjongGame';
 import {
   checkWinSichuan,
@@ -23,7 +24,7 @@ const TILE_DISCARD =
 const TILE_SMALL =
   'w-[42px] h-[58px] rounded-[4px] border bg-[#fff9e6] flex items-center justify-center shrink-0 font-bold text-xs';
 const TILE_ACTIVE =
-  'border-[#ffc107] border-[3px] -translate-y-3 shadow-xl ring-2 ring-[#ffc107]/60';
+  'border-[#ffc107] border-[3px] -translate-y-3 shadow-xl ring-2 ring-[#ffc107]/60 animate-riichi-active-pulse';
 const TILE_GAP = 'gap-2.5';
 
 function getTileColorClass(tile: number): string {
@@ -120,6 +121,7 @@ function TileFace({ tile, className }: { tile: number; className?: string }) {
 
 const GameMahjongSichuan = () => {
   const { t } = useLocale();
+  const sounds = useMahjongSounds();
   const {
     state,
     startGame,
@@ -134,6 +136,7 @@ const GameMahjongSichuan = () => {
     doZiMo,
     SEAT_NAMES,
   } = useSichuanMahjongGame();
+  const prevHandLenRef = useRef<number>(0);
 
   const isQueMenPhase = state?.phase === 'queMen';
   const needHumanQueMen = isQueMenPhase && !state?.isQueMenDeclared[0];
@@ -150,6 +153,21 @@ const GameMahjongSichuan = () => {
     }, 300);
     return () => clearTimeout(t);
   }, [needAiQueMen, state, declareQueMen]);
+
+  // 自家摸牌时播放音效
+  useEffect(() => {
+    if (!state || state.phase !== 'discard' || state.currentPlayer !== 0)
+      return;
+    const len = state.hands[0].length;
+    if (prevHandLenRef.current === 13 && len === 14) sounds.playDraw();
+    prevHandLenRef.current = len;
+  }, [
+    state?.hands[0].length,
+    state?.phase,
+    state?.currentPlayer,
+    state,
+    sounds,
+  ]);
 
   const isMyTurn =
     state?.phase === 'discard' &&
@@ -260,16 +278,18 @@ const GameMahjongSichuan = () => {
         ) : (
           <>
             {state.isGameOver && state.huPlayers.length > 0 && (
-              <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-3">
-                <p className="mb-2 text-sm font-medium text-foreground">
-                  {SEAT_NAMES[state.huPlayers[0]]} 胡牌
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  当前分数:{' '}
-                  {SEAT_NAMES.map(
-                    (name, i) => `${name} ${state.scores[i]}`,
-                  ).join(' · ')}
-                </p>
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-riichi-overlay-in">
+                <div className="rounded-2xl bg-[#2d4a3c] border-2 border-[#d4b886] p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in">
+                  <p className="mb-2 text-sm font-medium text-foreground">
+                    {SEAT_NAMES[state.huPlayers[0]]} 胡牌
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    当前分数:{' '}
+                    {SEAT_NAMES.map(
+                      (name, i) => `${name} ${state.scores[i]}`,
+                    ).join(' · ')}
+                  </p>
+                </div>
               </div>
             )}
 
@@ -482,9 +502,12 @@ const GameMahjongSichuan = () => {
                           <button
                             key={`rest-${i}-${tile}`}
                             type="button"
-                            onClick={() =>
-                              canDiscard && discard(0, restIndices[i])
-                            }
+                            onClick={() => {
+                              if (canDiscard) {
+                                sounds.playDiscard();
+                                discard(0, restIndices[i]);
+                              }
+                            }}
                             disabled={!canDiscard}
                             className={cn(
                               TILE_HAND,
@@ -500,12 +523,18 @@ const GameMahjongSichuan = () => {
                         {drawn !== null && (
                           <button
                             type="button"
-                            onClick={() => canDiscard && discard(0, drawnIndex)}
+                            onClick={() => {
+                              if (canDiscard) {
+                                sounds.playDiscard();
+                                discard(0, drawnIndex);
+                              }
+                            }}
                             disabled={!canDiscard}
                             className={cn(
                               TILE_HAND,
                               getTileColorClass(drawn),
                               TILE_ACTIVE,
+                              'animate-riichi-tile-drawn',
                               canDiscard &&
                                 'cursor-pointer hover:scale-[1.02] active:scale-[0.98]',
                               !canDiscard && 'cursor-default',
@@ -525,7 +554,10 @@ const GameMahjongSichuan = () => {
               {canZiMo && (
                 <button
                   type="button"
-                  onClick={doZiMo}
+                  onClick={() => {
+                    sounds.playTsumo();
+                    doZiMo();
+                  }}
                   className="h-11 min-w-[72px] rounded-lg px-4 font-semibold text-white bg-[#e63946] hover:bg-[#d62839] active:scale-[0.98] transition-all"
                 >
                   自摸
@@ -541,7 +573,10 @@ const GameMahjongSichuan = () => {
                     <button
                       key={meldIdx}
                       type="button"
-                      onClick={() => doJiagang(meldIdx)}
+                      onClick={() => {
+                        sounds.playKan();
+                        doJiagang(meldIdx);
+                      }}
                       className="h-11 min-w-[72px] rounded-lg px-4 font-semibold text-white bg-[#f4a261] hover:bg-[#e76f51] active:scale-[0.98] transition-all"
                     >
                       加杠{' '}
@@ -557,7 +592,10 @@ const GameMahjongSichuan = () => {
                   <button
                     key={t}
                     type="button"
-                    onClick={() => doAngang(t)}
+                    onClick={() => {
+                      sounds.playKan();
+                      doAngang(t);
+                    }}
                     className="h-11 min-w-[72px] rounded-lg px-4 font-semibold text-white bg-[#f4a261] hover:bg-[#e76f51] active:scale-[0.98] transition-all"
                   >
                     暗杠 {TILE_LABELS_SICHUAN[t]}
@@ -567,7 +605,12 @@ const GameMahjongSichuan = () => {
                 <>
                   <button
                     type="button"
-                    onClick={doHu}
+                    onClick={() => {
+                      if (state.claimOption?.hu) {
+                        sounds.playRon();
+                        doHu();
+                      }
+                    }}
                     disabled={!state.claimOption?.hu}
                     className={cn(
                       'h-11 min-w-[72px] rounded-lg px-4 font-semibold text-white transition-all',
@@ -580,7 +623,12 @@ const GameMahjongSichuan = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={doGang}
+                    onClick={() => {
+                      if (state.claimOption?.gang) {
+                        sounds.playKan();
+                        doGang();
+                      }
+                    }}
                     disabled={!state.claimOption?.gang}
                     className={cn(
                       'h-11 min-w-[72px] rounded-lg px-4 font-semibold text-white transition-all',
@@ -593,7 +641,12 @@ const GameMahjongSichuan = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={doPeng}
+                    onClick={() => {
+                      if (state.claimOption?.peng) {
+                        sounds.playPon();
+                        doPeng();
+                      }
+                    }}
                     disabled={!state.claimOption?.peng}
                     className={cn(
                       'h-11 min-w-[72px] rounded-lg px-4 font-semibold text-white transition-all',

@@ -199,9 +199,7 @@ export function rsResultToYakuList(
 }
 
 /** 使用 riichi-rs 计算和了结果；失败时返回 null，调用方回退到自研 computeYaku。 */
-export function calcWithRiichiRs(
-  input: RiichiInput,
-): {
+export function calcWithRiichiRs(input: RiichiInput): {
   fu: number;
   han: number;
   ten: number;
