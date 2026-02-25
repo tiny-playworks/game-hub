@@ -50,8 +50,8 @@ export const AKA_5_SOU = 36;
 /** 牌面显示文字（红宝牌与普通 5 同文，不写「赤」） */
 export function getTileLabel(tile: number): string {
   if (tile === AKA_5_MAN) return '五万';
-  if (tile === AKA_5_PIN) return '五条';
-  if (tile === AKA_5_SOU) return '五筒';
+  if (tile === AKA_5_PIN) return '五筒';
+  if (tile === AKA_5_SOU) return '五条';
   return TILE_LABELS_RIICHI[tile] ?? '';
 }
 
@@ -65,9 +65,9 @@ const HAND_INIT = 13;
 /** 将牌型规范为基础 0-33（赤 5 视为 5） */
 export function getBaseTile(tile: number): number {
   if (tile < BASE_TILE_TYPES) return tile;
-  if (tile === AKA_5_MAN) return 4;
-  if (tile === AKA_5_PIN) return 13;
-  if (tile === AKA_5_SOU) return 22;
+  if (tile === AKA_5_MAN) return 4; // 赤五万 → 五万(4)
+  if (tile === AKA_5_PIN) return 22; // 赤五筒 → 五筒(22)
+  if (tile === AKA_5_SOU) return 13; // 赤五条 → 五条(13)
   return tile;
 }
 
@@ -85,8 +85,8 @@ export function sameTileType(a: number, b: number): boolean {
 export function createRiichiDeck(): number[] {
   const deck: number[] = [];
   const fiveMan = 4,
-    fivePin = 13,
-    fiveSou = 22;
+    fiveSou = 13,
+    fivePin = 22;
   for (let t = 0; t < BASE_TILE_TYPES; t++) {
     const copies =
       t === fiveMan || t === fivePin || t === fiveSou ? 3 : NORMAL_COPIES;
@@ -289,7 +289,7 @@ export interface YakuContext {
 /**
  * 符数计算（天凤/雀魂标准，Skill 11）
  * 基础：门前清荣和 10 符（平和）、门前清自摸 11 符、副露 10 符；七对子固定 25 符。
- * 非平和门清：底符 20 + 自摸 2 / 荣和 10。向上取整至 10 的倍数。
+ * 向上取整至 10 的倍数。
  */
 export function calcFu(context: {
   isTsumo: boolean;
@@ -300,11 +300,11 @@ export function calcFu(context: {
   if (context.isChiitoitsu) return 25;
   let fu: number;
   if (context.isMenzhen && context.hasPinfu) {
-    fu = context.isTsumo ? 22 : 10; // 平和：门清自摸 22→20，荣和 10
+    fu = context.isTsumo ? 20 : 30; // 平和：自摸固定 20 符，荣和固定 30 符
   } else if (context.isMenzhen) {
-    fu = context.isTsumo ? 22 : 30; // 非平和门清
+    fu = context.isTsumo ? 22 : 30; // 非平和门清：自摸底符 20+2，荣和底符 30
   } else {
-    fu = 10; // 副露
+    fu = context.isTsumo ? 22 : 30; // 副露：自摸底符 20+2，荣和底符 30 (含门前加符10→简化为30)
   }
   return Math.min(110, Math.ceil(fu / 10) * 10);
 }
@@ -611,16 +611,52 @@ export function getTotalHan(results: YakuResult[]): number {
   return results.reduce((sum, r) => sum + r.han, 0);
 }
 
-/** 平和型：4 组均为顺子、将牌非役牌（简化：无字牌刻子、无役牌将） */
+/**
+ * 平和型：存在一种分解使得 4 组均为顺子、将牌非役牌。
+ * 通过实际分解 14 张牌来判定，避免计数启发式的误判。
+ */
 function checkPinfuRiichi(tiles: number[]): boolean {
+  if (tiles.length !== 14) return false;
   const base = tiles.map(getBaseTile);
-  const counts = new Map<number, number>();
-  for (const b of base) counts.set(b, (counts.get(b) ?? 0) + 1);
-  const zi = [27, 28, 29, 30, 31, 32, 33];
-  for (const z of zi) {
-    if ((counts.get(z) ?? 0) >= 3) return false;
+  const yakuhaiTypes = new Set([27, 28, 29, 30, 31, 32, 33]);
+
+  const counts = new Array(34).fill(0);
+  for (const b of base) counts[b]++;
+
+  function allSequences(remaining: number): boolean {
+    if (remaining === 0) return true;
+    let first = -1;
+    for (let i = 0; i < 34; i++) {
+      if (counts[i] > 0) {
+        first = i;
+        break;
+      }
+    }
+    if (first === -1) return false;
+    if (first >= 27) return false;
+    if (first % 9 > 6) return false;
+    if (counts[first + 1] <= 0 || counts[first + 2] <= 0) return false;
+    counts[first]--;
+    counts[first + 1]--;
+    counts[first + 2]--;
+    const ok = allSequences(remaining - 3);
+    counts[first]++;
+    counts[first + 1]++;
+    counts[first + 2]++;
+    return ok;
   }
-  return true;
+
+  for (let pair = 0; pair < 34; pair++) {
+    if (counts[pair] < 2) continue;
+    if (yakuhaiTypes.has(pair)) continue;
+    counts[pair] -= 2;
+    if (allSequences(12)) {
+      counts[pair] += 2;
+      return true;
+    }
+    counts[pair] += 2;
+  }
+  return false;
 }
 
 /** 对对和：4 刻子/杠子 + 1 对子（全部为刻子型） */

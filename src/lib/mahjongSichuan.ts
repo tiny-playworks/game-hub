@@ -105,6 +105,8 @@ export interface GangRecord {
   type: 'mingGang' | 'anGang' | 'jiaGang';
   tile: number;
   round: number;
+  /** 补杠时原碰牌的点炮者，用于计分 */
+  fromPlayer?: number;
 }
 
 export interface Meld {
@@ -258,6 +260,7 @@ export function checkWinSichuan(
   const combined = [...all, ...fromMelds];
   if (combined.length !== 14) return false;
   if (!isValidQueMenHand(combined, queMenSuit)) return false;
+  if (isQiDui(all)) return true;
   return checkBasicWinPattern(combined);
 }
 
@@ -513,46 +516,53 @@ export function getPlayerQueMenOptions(hand: number[]): SuitType[] {
   return Array.from(suitsInHand);
 }
 
-/** 计算刮风下雨积分 */
-export function calculateRainPoints(
+/**
+ * 计算杠牌积分（刮风下雨）。
+ * 明杠（点杠）：其他 3 家各付 1 倍基础分
+ * 补杠（巴杠）：原碰牌时的点炮者付 2 倍基础分
+ * 暗杠：其他 3 家各付 2 倍基础分
+ *
+ * 返回四家各自的杠分收支数组 [p0, p1, p2, p3]。
+ */
+export function calculateGangSettlement(
   gangRecords: GangRecord[],
-  currentPlayer: number,
-): number {
-  let points = 0;
+  _baseScore = 1,
+): number[] {
+  const scores = [0, 0, 0, 0];
 
-  gangRecords.forEach((record) => {
-    if (record.player === currentPlayer) {
-      // 自己的杠
-      switch (record.type) {
-        case 'anGang':
-          points += 2; // 暗杠得2分
-          break;
-        case 'mingGang':
-          points += 1; // 明杠得1分
-          break;
-        case 'jiaGang':
-          points += 1; // 加杠得1分
-          break;
-      }
-    } else {
-      // 别人的杠
-      switch (record.type) {
-        case 'anGang':
-          points -= 2; // 别人暗杠输2分
-          break;
-        case 'mingGang':
-          if (record.player === (currentPlayer + 2) % 4) {
-            points -= 1; // 对家明杠输1分
+  for (const record of gangRecords) {
+    const ganger = record.player;
+    switch (record.type) {
+      case 'mingGang': {
+        for (let i = 0; i < 4; i++) {
+          if (i !== ganger) {
+            scores[i] -= _baseScore;
+            scores[ganger] += _baseScore;
           }
-          break;
-        case 'jiaGang':
-          points -= 1; // 别人加杠输1分
-          break;
+        }
+        break;
+      }
+      case 'jiaGang': {
+        const from = record.fromPlayer;
+        if (from !== undefined && from !== ganger) {
+          scores[from] -= 2 * _baseScore;
+          scores[ganger] += 2 * _baseScore;
+        }
+        break;
+      }
+      case 'anGang': {
+        for (let i = 0; i < 4; i++) {
+          if (i !== ganger) {
+            scores[i] -= 2 * _baseScore;
+            scores[ganger] += 2 * _baseScore;
+          }
+        }
+        break;
       }
     }
-  });
+  }
 
-  return points;
+  return scores;
 }
 
 /** 获取定缺状态描述 */
