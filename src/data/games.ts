@@ -128,12 +128,11 @@ export const games: GameItem[] = [
   {
     id: 'gomoku',
     categoryId: 'board',
-    name: '五子棋（开发中）',
+    name: '五子棋',
     description: '五子连珠即胜，简单易上手。',
     path: '/game/gomoku',
     difficulty: 2,
     tags: ['五子棋', '双人'],
-    comingSoon: true,
   },
   // 麻将 - 三种
   {

@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import Category from '@/pages/Category';
 import Game2048 from '@/pages/Game2048';
 import GameBreakout from '@/pages/GameBreakout';
+import GameGomoku from '@/pages/GameGomoku';
 import GameGuessNumber from '@/pages/GameGuessNumber';
 import GameMahjongChinese from '@/pages/GameMahjongChinese';
 import GameMahjongJapanese from '@/pages/GameMahjongJapanese';
@@ -36,6 +37,7 @@ const App = () => {
         <Route path="/game/shooter" element={<GameShooter />} />
         <Route path="/game/tank" element={<GameTank />} />
         <Route path="/game/tetris" element={<GameTetris />} />
+        <Route path="/game/gomoku" element={<GameGomoku />} />
       </Routes>
     </BrowserRouter>
   );

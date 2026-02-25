@@ -6,10 +6,11 @@
 
 ### 🎯 核心功能
 - **首页与分类**：4 个分类（小游戏、棋类、扑克、麻将），按分类进入游戏列表，支持难度与标签展示。
-- **已上线游戏（12 款）**  
+- **已上线游戏（13 款）**  
   - **小游戏（9 款）**：猜数字、井字棋、记忆翻牌、2048、贪吃蛇、打砖块、飞机大战、坦克大战、俄罗斯方块  
+  - **棋类（1 款）**：五子棋（双人轮流、五子连珠即胜）  
   - **麻将（3 款）**：四川麻将（血战到底、定缺）、中国通用麻将（国标番种）、日本立直麻将（役种、符点）
-- **占位/开发中（8 款）**：围棋、中国象棋、国际象棋、五子棋、斗地主、升级等，在列表中展示「开发中」。
+- **占位/开发中（7 款）**：围棋、中国象棋、国际象棋、斗地主、升级等，在列表中展示「开发中」。
 - 响应式布局，支持多设备。
 
 ## 🔧 技术架构
@@ -134,11 +135,11 @@ function canFormFourMeldsOptimized(arr: number[]): boolean {
 
 ## 🧪 测试覆盖
 
-- **规模**：6 个测试文件，共 47 个用例，全部通过。
+- **规模**：6 个测试文件，共 48 个用例，全部通过。
 - **类型**  
   - **数据与工具**：`games` 列表与 `getGamesByCategory` / `getGameByPath`；`cn()` 合并与 tailwind-merge 行为。  
   - **入口与导航**：首页渲染「游戏合集」与分类链接（小游戏、麻将等）。  
-  - **游戏页冒烟**：12 个已上线游戏各至少 1 个用例（渲染标题/按钮/关键文案）。  
+  - **游戏页冒烟**：13 个已上线游戏各至少 1 个用例（渲染标题/按钮/关键文案）。  
   - **麻将规则**：国标番种（屁胡/对对胡/清一色等）、川麻七对/龙七对/定缺/杠牌计分、日麻赤宝牌/符数/平和判定。
 - **运行**：`pnpm run test`；监听模式 `pnpm run test:watch`。  
 - **CI**：每次 push/PR 自动执行 typecheck → biome check → test → build。
@@ -152,7 +153,7 @@ function canFormFourMeldsOptimized(arr: number[]): boolean {
 | 前端 | ✅ | React 19 + TypeScript strict，44+ 文件类型检查通过 |
 | 样式 | ✅ | Tailwind v4 + PostCSS，shadcn/ui，主题在 App.css |
 | 质量 | ✅ | Biome（lint + format，单引号、organizeImports） |
-| 测试 | ✅ | Rstest + Testing Library，47 用例覆盖数据/工具/首页/12 游戏页/麻将规则 |
+| 测试 | ✅ | Rstest + Testing Library，48 用例覆盖数据/工具/首页/13 游戏页/麻将规则 |
 | CI | ✅ | GitHub Actions：Node 20、pnpm、typecheck、biome、test、build |
 
 ### 构建与体积

@@ -1,5 +1,5 @@
 import { expect, test } from '@rstest/core';
-import { games, getGamesByCategory, getGameByPath } from '../src/data/games';
+import { games, getGameByPath, getGamesByCategory } from '../src/data/games';
 
 test('games 中每项均有 id、categoryId、name、path、difficulty、tags', () => {
   const categoryIds = new Set(['mini', 'board', 'mahjong', 'poker']);
