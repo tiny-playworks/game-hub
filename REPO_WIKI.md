@@ -2,13 +2,15 @@
 
 ## 📋 项目概述
 
-**Game Hub（游戏合集）** 是一个基于现代前端技术栈的小游戏与麻将合集项目，包含多种经典游戏的实现。
+**Game Hub（游戏合集）** 是一个纯前端 SPA，基于 React + Rsbuild 的小游戏与麻将合集，无后端、无数据库、无外部服务依赖。
 
 ### 🎯 核心功能
-- 多种棋牌游戏（麻将、象棋等）
-- 经典小游戏（2048、贪吃蛇、俄罗斯方块等）
-- 响应式设计，支持多设备
-- 完整的用户交互体验
+- **首页与分类**：4 个分类（小游戏、棋类、扑克、麻将），按分类进入游戏列表，支持难度与标签展示。
+- **已上线游戏（12 款）**  
+  - **小游戏（9 款）**：猜数字、井字棋、记忆翻牌、2048、贪吃蛇、打砖块、飞机大战、坦克大战、俄罗斯方块  
+  - **麻将（3 款）**：四川麻将（血战到底、定缺）、中国通用麻将（国标番种）、日本立直麻将（役种、符点）
+- **占位/开发中（8 款）**：围棋、中国象棋、国际象棋、五子棋、斗地主、升级等，在列表中展示「开发中」。
+- 响应式布局，支持多设备。
 
 ## 🔧 技术架构
 
@@ -23,12 +25,21 @@
 ### 项目结构
 ```
 src/
-├── components/ui/      # UI组件库
-├── data/              # 游戏数据配置
-├── hooks/             # 自定义Hooks
-├── lib/               # 核心业务逻辑
-├── pages/             # 页面组件
-└── App.tsx           # 应用入口
+├── components/ui/      # shadcn/ui 组件（button、card、input）
+├── data/               # 游戏与分类配置（games.ts、categories.ts）
+├── hooks/              # 麻将对局状态（useMahjongGame、useSichuanMahjongGame）
+├── lib/                # 核心逻辑（mahjong、mahjongRiichi、mahjongSichuan、utils）
+├── pages/              # 页面与 12 个游戏页 + Home、Category
+├── App.tsx             # 路由入口
+└── App.css             # 主题变量与 Tailwind @theme
+
+tests/
+├── index.test.tsx          # 首页渲染与分类链接
+├── data-games.test.ts     # games 数据与 getGamesByCategory / getGameByPath
+├── lib-utils.test.ts      # cn() 工具
+├── pages-games.test.tsx   # 12 个游戏页冒烟（每游戏至少 1 用例）
+├── mahjong-rules.test.ts  # 国标番种、川麻七对/龙七对/定缺/杠牌、日麻赤宝牌/符/平和
+└── sichuan-mahjong.test.ts # 川麻牌堆、发牌、定缺、番数
 ```
 
 ## 🎮 游戏模块
@@ -39,6 +50,11 @@ src/
 - 实现标准国标麻将规则
 - 支持吃、碰、杠、胡等基本操作
 - 完整的计分系统
+
+#### 四川麻将 (GameMahjongSichuan)
+- 血战到底、刮风下雨
+- 定缺、108 张（万/条/筒），无字牌
+- 七对、龙七对、番型计分
 
 #### 日式立直麻将 (GameMahjongJapanese)
 - 实现日本立直麻将规则
@@ -57,6 +73,10 @@ src/
 - 立直规则实现
 - 役种判定系统
 - 宝牌计算逻辑
+
+#### mahjongSichuan.ts - 四川麻将核心逻辑
+- 108 张牌堆、定缺、七对/龙七对胡牌判定
+- 番型与杠牌计分
 
 ## 🚀 最近改进记录
 
@@ -111,6 +131,40 @@ function canFormFourMeldsOptimized(arr: number[]): boolean {
 - 实现了更精确的手牌安全性评估
 - 完善了听牌状态分析
 - 增强了AI的风险管理能力
+
+## 🧪 测试覆盖
+
+- **规模**：6 个测试文件，共 47 个用例，全部通过。
+- **类型**  
+  - **数据与工具**：`games` 列表与 `getGamesByCategory` / `getGameByPath`；`cn()` 合并与 tailwind-merge 行为。  
+  - **入口与导航**：首页渲染「游戏合集」与分类链接（小游戏、麻将等）。  
+  - **游戏页冒烟**：12 个已上线游戏各至少 1 个用例（渲染标题/按钮/关键文案）。  
+  - **麻将规则**：国标番种（屁胡/对对胡/清一色等）、川麻七对/龙七对/定缺/杠牌计分、日麻赤宝牌/符数/平和判定。
+- **运行**：`pnpm run test`；监听模式 `pnpm run test:watch`。  
+- **CI**：每次 push/PR 自动执行 typecheck → biome check → test → build。
+
+## 📐 项目现状与评估
+
+### 技术栈与工程化
+| 方面 | 状态 | 说明 |
+|------|------|------|
+| 构建 | ✅ | Rsbuild v2（beta），路径别名 `@/` → `src/`，historyFallback |
+| 前端 | ✅ | React 19 + TypeScript strict，44+ 文件类型检查通过 |
+| 样式 | ✅ | Tailwind v4 + PostCSS，shadcn/ui，主题在 App.css |
+| 质量 | ✅ | Biome（lint + format，单引号、organizeImports） |
+| 测试 | ✅ | Rstest + Testing Library，47 用例覆盖数据/工具/首页/12 游戏页/麻将规则 |
+| CI | ✅ | GitHub Actions：Node 20、pnpm、typecheck、biome、test、build |
+
+### 构建与体积
+- 生产构建通过，产物约 460 KB（gzip 约 137 KB），含 React、React Router、业务与游戏页。
+
+### 架构与可维护性
+- 路由、数据、页面、hooks、lib 分层清晰；三种麻将规则对应独立 lib 与技能文档（`.cursor/skills`），便于扩展与 AI 辅助。
+- 无单独 `lint` 脚本，日常质量检查统一用 `pnpm run check`（tsc + biome）。
+
+### 已知限制与注意
+- Rsbuild 当前为 2.0.0-beta.x，大版本升级时需关注破坏性变更。
+- 棋类/扑克等占位游戏尚未实现，仅列表展示「开发中」。
 
 ## 📊 开发工作流
 
@@ -173,5 +227,5 @@ pnpm run test:watch   # 监听模式测试
 - [shadcn/ui组件库](https://ui.shadcn.com)
 
 ---
-*最后更新: 2024年2月*
+*最后更新: 2026年2月*
 *版本: v1.0.0*
