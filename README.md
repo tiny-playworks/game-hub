@@ -1,60 +1,44 @@
 # Game Hub · 游戏合集
 
-基于 React + Rsbuild 的小游戏与麻将合集 Web 应用。
+基于 React + Rsbuild 的小游戏与麻将合集 Web 应用（纯前端 SPA）。
 
 ## 功能
 
-- **麻将**：中国通用麻将、日本立直麻将、四川麻将（血战到底、定缺）
-- **小游戏**：2048、贪吃蛇、俄罗斯方块、打砖块、井字棋、记忆翻牌、坦克大战、飞机大战等
-- 响应式布局，支持多设备
+- **小游戏**：猜数字、井字棋、记忆翻牌、2048、贪吃蛇、打砖块、飞机大战、坦克大战、俄罗斯方块
+- **棋类**：五子棋、中国象棋、国际象棋、围棋（9×9）
+- **麻将**：四川麻将、中国通用麻将、日本立直麻将（和了算分由 riichi-rs-bundlers 提供）
+- **扑克**：斗地主（简化版）、升级（入门）
+- **其他**：中/英切换、成就页（14 项）、PWA、响应式布局
 
 ## 技术栈
 
-- **构建**: Rsbuild v2
+- **构建**: Rsbuild v2（支持 WASM：asyncWebAssembly）
 - **前端**: React 19 + TypeScript (strict)
 - **样式**: Tailwind CSS v4
 - **UI**: shadcn/ui
-- **代码质量**: Biome (lint + format)、TypeScript (tsc)
+- **质量**: Biome、TypeScript
 - **测试**: Rstest + Testing Library
+- **日麻算分**: riichi-rs-bundlers（Rust → WASM）
 
 ## 快速开始
 
-### 安装依赖
-
 ```bash
 pnpm install
-```
-
-### 开发
-
-```bash
-pnpm run dev
-```
-
-浏览器打开 [http://localhost:3000](http://localhost:3000)。
-
-### 构建与预览
-
-```bash
+pnpm run dev      # 开发，默认 http://localhost:3000
 pnpm run build    # 生产构建
-pnpm run preview  # 本地预览构建结果
+pnpm run build:analyze  # 构建并打开包体分析（Rsdoctor）
+pnpm run preview  # 预览构建结果
+pnpm run check    # 类型检查 + Biome（提交前建议执行）
+pnpm run test     # 测试（7 文件、60 用例）
+pnpm run format   # 格式化
 ```
 
-### 代码质量与测试
+## 文档与计划
 
-```bash
-pnpm run check    # 类型检查 + Biome 检查（提交前建议执行）
-pnpm run test     # 运行测试（47 用例：数据/工具/首页/12 游戏页冒烟/麻将规则）
-pnpm run format   # 格式化代码
-```
-
-## 项目文档
-
-- 详细说明、项目结构、测试覆盖与现状评估见 [REPO_WIKI.md](./REPO_WIKI.md)。
+- **需求排序与开发计划**：[PLAN.md](./PLAN.md)（权威）
+- **详细说明与评估**：[REPO_WIKI.md](./REPO_WIKI.md)（项目结构、测试、计划详表）
+- **音效与动画说明**：[docs/sound-assets.md](./docs/sound-assets.md)
 
 ## 参考
 
-- [Rsbuild](https://rsbuild.rs)
-- [React](https://react.dev)
-- [Tailwind CSS](https://tailwindcss.com)
-- [shadcn/ui](https://ui.shadcn.com)
+- [Rsbuild](https://rsbuild.rs) · [React](https://react.dev) · [Tailwind CSS](https://tailwindcss.com) · [shadcn/ui](https://ui.shadcn.com)

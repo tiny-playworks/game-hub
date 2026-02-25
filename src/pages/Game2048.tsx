@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useLocale } from '@/contexts/LocaleContext';
 import { cn } from '@/lib/utils';
 
 const SIZE = 4;
@@ -94,12 +95,25 @@ function canMove(grid: number[][]): boolean {
   return false;
 }
 
+const STORAGE_KEY = 'game-2048-best';
+
 const Game2048 = () => {
+  const { t } = useLocale();
   const [grid, setGrid] = useState<number[][]>(() =>
     addRandom(addRandom(emptyGrid())),
   );
   const [score, setScore] = useState(0);
+  const [best, setBest] = useState(() =>
+    Number.parseInt(localStorage.getItem(STORAGE_KEY) ?? '0', 10),
+  );
   const [gameOver, setGameOver] = useState(false);
+
+  useEffect(() => {
+    if (score > best) {
+      setBest(score);
+      localStorage.setItem(STORAGE_KEY, String(score));
+    }
+  }, [score, best]);
 
   const tryMove = useCallback((dir: Dir) => {
     setGrid((prev) => {
@@ -163,12 +177,13 @@ const Game2048 = () => {
     <div className="min-h-screen bg-background">
       <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
         <Link to="/" className="text-muted-foreground hover:text-foreground">
-          ← 返回游戏列表
+          ← {t('common.backToList')}
         </Link>
         <div className="flex items-center gap-4">
           <span className="text-sm font-medium">分数: {score}</span>
+          <span className="text-sm text-muted-foreground">最高: {best}</span>
           <Button variant="outline" size="sm" onClick={restart}>
-            重开
+            {t('common.restart')}
           </Button>
         </div>
       </header>
@@ -202,7 +217,7 @@ const Game2048 = () => {
         )}
         <Link to="/" className="mt-6">
           <Button variant="ghost" size="sm">
-            返回列表
+            {t('common.backList')}
           </Button>
         </Link>
       </main>

@@ -18,6 +18,7 @@
   ],
   "scripts": {
     "build": "rsbuild build",
+    "build:analyze": "RSDOCTOR=true rsbuild build",
     "check": "pnpm run typecheck && biome check --write",
     "dev": "rsbuild dev --open",
     "format": "biome format --write",
@@ -33,23 +34,26 @@
     "radix-ui": "^1.4.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-router-dom": "^7.13.0",
-    "tailwind-merge": "^3.4.0"
+    "react-router-dom": "^7.13.1",
+    "riichi-rs-bundlers": "^2.1.0",
+    "tailwind-merge": "^3.5.0",
+    "use-sound": "^5.0.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.8",
-    "@rsbuild/core": "^2.0.0-beta.3",
+    "@rsbuild/core": "^2.0.0-beta.5",
     "@rsbuild/plugin-react": "^1.4.5",
+    "@rsdoctor/rspack-plugin": "^1.5.2",
     "@rstest/adapter-rsbuild": "^0.2.0",
-    "@rstest/core": "^0.8.3",
-    "@tailwindcss/postcss": "^4.1.18",
+    "@rstest/core": "^0.8.5",
+    "@tailwindcss/postcss": "^4.2.1",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
-    "@types/react": "^19.2.13",
+    "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "happy-dom": "^20.5.3",
-    "tailwindcss": "^4.1.18",
+    "happy-dom": "^20.7.0",
+    "tailwindcss": "^4.2.1",
     "tw-animate-css": "^1.4.0",
     "typescript": "^5.9.3"
   }

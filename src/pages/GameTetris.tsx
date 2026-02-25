@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useLocale } from '@/contexts/LocaleContext';
+import { unlock } from '@/lib/achievements';
 
 const COLS = 10;
 const ROWS = 20;
@@ -209,6 +211,7 @@ const COLORS = [
 const LINE_SCORES = [0, 100, 300, 500, 800];
 
 const GameTetris = () => {
+  const { t } = useLocale();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(1);
@@ -235,6 +238,21 @@ const GameTetris = () => {
     dropCounter: 0,
     dropInterval: 48,
   });
+
+  const TETRIS_BEST_LINES_KEY = 'game-tetris-best-lines';
+
+  useEffect(() => {
+    if (lines <= 0) return;
+    const best = Number.parseInt(
+      localStorage?.getItem(TETRIS_BEST_LINES_KEY) ?? '0',
+      10,
+    );
+    if (lines > best)
+      localStorage?.setItem(TETRIS_BEST_LINES_KEY, String(lines));
+    if (lines >= 10) unlock('tetris-10');
+    if (lines >= 50) unlock('tetris-50');
+    if (lines >= 100) unlock('tetris-100');
+  }, [lines]);
 
   const reset = useCallback(() => {
     linesRef.current = 0;
@@ -544,14 +562,14 @@ const GameTetris = () => {
     <div className="min-h-screen bg-background">
       <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
         <Link to="/" className="text-muted-foreground hover:text-foreground">
-          ← 返回游戏列表
+          ← {t('common.backToList')}
         </Link>
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">得分: {score}</span>
           <span className="text-sm text-muted-foreground">等级: {level}</span>
           <span className="text-sm text-muted-foreground">消行: {lines}</span>
           <Button variant="outline" size="sm" onClick={reset}>
-            重开
+            {t('common.restart')}
           </Button>
         </div>
       </header>
