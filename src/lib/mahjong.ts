@@ -185,58 +185,46 @@ function isValidBasicWin(tiles: number[]): boolean {
   return false;
 }
 
-/** 优化的4组牌判定算法 */
+/** 使用计数数组的4组牌判定算法 */
 function canFormFourMeldsOptimized(arr: number[]): boolean {
   if (arr.length === 0) return true;
-  if (arr.length !== 12) return false; // 4组应该正好12张牌
+  if (arr.length !== 12) return false;
 
-  const sorted = [...arr].sort((a, b) => a - b);
+  const counts = new Array(34).fill(0);
+  for (const t of arr) counts[t]++;
 
-  // 使用递归回溯算法寻找有效的组合
-  function backtrack(index: number, meldsFound: number): boolean {
-    if (meldsFound === 4) return index === sorted.length;
-    if (index >= sorted.length) return false;
+  function solve(remaining: number): boolean {
+    if (remaining === 0) return true;
 
-    // 尝试形成刻子
-    if (
-      index + 2 < sorted.length &&
-      sorted[index] === sorted[index + 1] &&
-      sorted[index] === sorted[index + 2]
-    ) {
-      if (backtrack(index + 3, meldsFound + 1)) return true;
+    let first = -1;
+    for (let i = 0; i < 34; i++) {
+      if (counts[i] > 0) {
+        first = i;
+        break;
+      }
+    }
+    if (first === -1) return remaining === 0;
+
+    if (counts[first] >= 3) {
+      counts[first] -= 3;
+      if (solve(remaining - 3)) return true;
+      counts[first] += 3;
     }
 
-    // 尝试形成顺子（仅数字牌）
-    if (isNumberTile(sorted[index])) {
-      const suit = Math.floor(sorted[index] / 9);
-      let j = index + 1;
-      let k = index + 2;
-
-      // 找到第二张牌
-      while (
-        j < sorted.length &&
-        (sorted[j] !== sorted[index] + 1 || Math.floor(sorted[j] / 9) !== suit)
-      ) {
-        j++;
-      }
-
-      // 找到第三张牌
-      if (j < sorted.length) {
-        while (
-          k < sorted.length &&
-          (sorted[k] !== sorted[index] + 2 ||
-            Math.floor(sorted[k] / 9) !== suit)
+    if (isNumberTile(first) && first % 9 <= 6) {
+      if (counts[first + 1] > 0 && counts[first + 2] > 0) {
+        const suit = Math.floor(first / 9);
+        if (
+          Math.floor((first + 1) / 9) === suit &&
+          Math.floor((first + 2) / 9) === suit
         ) {
-          k++;
-        }
-
-        if (k < sorted.length) {
-          // 创建新的数组，移除这三张牌
-          const newArr = [...sorted];
-          newArr.splice(k, 1);
-          newArr.splice(j, 1);
-          newArr.splice(index, 1);
-          if (backtrack(0, meldsFound + 1)) return true;
+          counts[first]--;
+          counts[first + 1]--;
+          counts[first + 2]--;
+          if (solve(remaining - 3)) return true;
+          counts[first]++;
+          counts[first + 1]++;
+          counts[first + 2]++;
         }
       }
     }
@@ -244,7 +232,7 @@ function canFormFourMeldsOptimized(arr: number[]): boolean {
     return false;
   }
 
-  return backtrack(0, 0);
+  return solve(arr.length);
 }
 
 /** 吃：只能吃上家的牌。上家 = (myIndex + 3) % 4。返回可吃的组合 [ [牌1, 牌2], ... ]，与 lastTile 组成顺子 */
@@ -510,12 +498,20 @@ export function getWinFans(
   } else if (isSevenPairs(tiles)) {
     fans.push({ name: '七小对', fan: 4 });
   } else {
-    fans.push({ name: '屁胡', fan: 1 });
-    if (isAllTriplets(hand, melds, drawnTile))
+    let hasPatternFan = false;
+    if (isAllTriplets(hand, melds, drawnTile)) {
       fans.push({ name: '对对胡', fan: 2 });
-    if (isPureOneSuit(tiles)) fans.push({ name: '清一色', fan: 4 });
-    else if (isMixedOneSuit(tiles)) fans.push({ name: '混一色', fan: 2 });
+      hasPatternFan = true;
+    }
+    if (isPureOneSuit(tiles)) {
+      fans.push({ name: '清一色', fan: 4 });
+      hasPatternFan = true;
+    } else if (isMixedOneSuit(tiles)) {
+      fans.push({ name: '混一色', fan: 2 });
+      hasPatternFan = true;
+    }
     if (isMenqing(melds)) fans.push({ name: '门清', fan: 1 });
+    if (!hasPatternFan) fans.push({ name: '屁胡', fan: 1 });
   }
   if (options.isZiMo) fans.push({ name: '自摸', fan: 1 });
   if (options.isGangShang) fans.push({ name: '杠上开花', fan: 1 });

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   calculateFanSichuan,
+  calculateGangSettlement,
   canMingangSichuan,
   canPengSichuan,
   checkWinSichuan,
@@ -64,7 +65,7 @@ function advanceClaimRound(
   return null;
 }
 
-/** 计分：单局得分 = 基础分 × 最终番数（番数为乘算结果） */
+/** 计分：单局得分 = 基础分 × 最终番数（番数为乘算结果），加上杠分 */
 function computeSettlement(
   s: SichuanGameState,
   winner: number,
@@ -76,7 +77,7 @@ function computeSettlement(
   const queMen = s.queMen[winner];
   const { fan } = calculateFanSichuan(hand, melds, isZimo, queMen);
   const baseScore = 1;
-  const amount = baseScore * fan; // 最终番数已为乘算结果
+  const amount = baseScore * fan;
   const newScores = [...s.scores];
   if (isZimo) {
     for (let i = 0; i < 4; i++) {
@@ -88,6 +89,10 @@ function computeSettlement(
   } else if (fromPlayer !== undefined) {
     newScores[fromPlayer] -= amount;
     newScores[winner] += amount;
+  }
+  const gangScores = calculateGangSettlement(s.gangRecords, baseScore);
+  for (let i = 0; i < 4; i++) {
+    newScores[i] += gangScores[i];
   }
   return { newScores };
 }
@@ -486,6 +491,15 @@ export function useSichuanMahjongGame() {
       const tile = s.lastDiscard;
       const hands = s.hands.map((h) => [...h]);
       const melds = s.melds.map((m) => [...m]);
+      const gangRecords = [
+        ...s.gangRecords,
+        {
+          player: HUMAN_SEAT,
+          type: 'mingGang' as const,
+          tile,
+          round: s.roundNumber,
+        },
+      ];
       for (let i = 0; i < 3; i++) {
         const idx = hands[HUMAN_SEAT].indexOf(tile);
         hands[HUMAN_SEAT].splice(idx, 1);
@@ -511,7 +525,7 @@ export function useSichuanMahjongGame() {
         );
         if (win) {
           const { newScores } = computeSettlement(
-            { ...s, hands, melds } as SichuanGameState,
+            { ...s, hands, melds, gangRecords } as SichuanGameState,
             HUMAN_SEAT,
             true,
           );
@@ -521,6 +535,7 @@ export function useSichuanMahjongGame() {
             melds,
             wall: deck,
             discardPiles,
+            gangRecords,
             phase: 'gameOver',
             isGameOver: true,
             huPlayers: [...s.huPlayers, HUMAN_SEAT],
@@ -538,6 +553,7 @@ export function useSichuanMahjongGame() {
           melds,
           wall: deck,
           discardPiles,
+          gangRecords,
           currentPlayer: HUMAN_SEAT,
           phase: 'discard',
           drawnTile: 补牌,
@@ -554,6 +570,7 @@ export function useSichuanMahjongGame() {
         melds,
         wall: deck,
         discardPiles,
+        gangRecords,
         currentPlayer: HUMAN_SEAT,
         phase: 'discard',
         claimOption: null,
@@ -583,6 +600,16 @@ export function useSichuanMahjongGame() {
       const m = melds[HUMAN_SEAT][meldIndex];
       if (m.type !== 'peng' || m.tiles.length !== 3) return s;
       const t = m.tiles[0];
+      const gangRecords = [
+        ...s.gangRecords,
+        {
+          player: HUMAN_SEAT,
+          type: 'jiaGang' as const,
+          tile: t,
+          round: s.roundNumber,
+          fromPlayer: m.fromPlayer,
+        },
+      ];
       const hands = s.hands.map((h) => [...h]);
       const idx = hands[HUMAN_SEAT].indexOf(t);
       if (idx === -1) return s;
@@ -607,7 +634,7 @@ export function useSichuanMahjongGame() {
         );
         if (win) {
           const { newScores } = computeSettlement(
-            { ...s, hands, melds } as SichuanGameState,
+            { ...s, hands, melds, gangRecords } as SichuanGameState,
             HUMAN_SEAT,
             true,
           );
@@ -616,6 +643,7 @@ export function useSichuanMahjongGame() {
             hands,
             melds,
             wall: deck,
+            gangRecords,
             phase: 'gameOver',
             isGameOver: true,
             huPlayers: [...s.huPlayers, HUMAN_SEAT],
@@ -629,6 +657,7 @@ export function useSichuanMahjongGame() {
           hands,
           melds,
           wall: deck,
+          gangRecords,
           currentPlayer: HUMAN_SEAT,
           phase: 'discard',
           drawnTile: 补牌,
@@ -641,6 +670,7 @@ export function useSichuanMahjongGame() {
         hands,
         melds,
         wall: deck,
+        gangRecords,
         currentPlayer: HUMAN_SEAT,
         phase: 'discard',
         lastDiscard: null,
@@ -660,6 +690,15 @@ export function useSichuanMahjongGame() {
         return s;
       const hands = s.hands.map((h) => [...h]);
       const melds = s.melds.map((m) => [...m]);
+      const gangRecords = [
+        ...s.gangRecords,
+        {
+          player: HUMAN_SEAT,
+          type: 'anGang' as const,
+          tile: tileType,
+          round: s.roundNumber,
+        },
+      ];
       for (let i = 0; i < 4; i++) {
         const idx = hands[HUMAN_SEAT].indexOf(tileType);
         hands[HUMAN_SEAT].splice(idx, 1);
@@ -681,7 +720,7 @@ export function useSichuanMahjongGame() {
         );
         if (win) {
           const { newScores } = computeSettlement(
-            { ...s, hands, melds } as SichuanGameState,
+            { ...s, hands, melds, gangRecords } as SichuanGameState,
             HUMAN_SEAT,
             true,
           );
@@ -690,6 +729,7 @@ export function useSichuanMahjongGame() {
             hands,
             melds,
             wall: deck,
+            gangRecords,
             phase: 'gameOver',
             isGameOver: true,
             huPlayers: [...s.huPlayers, HUMAN_SEAT],
@@ -703,6 +743,7 @@ export function useSichuanMahjongGame() {
           hands,
           melds,
           wall: deck,
+          gangRecords,
           currentPlayer: HUMAN_SEAT,
           phase: 'discard',
           drawnTile: 补牌,
@@ -715,6 +756,7 @@ export function useSichuanMahjongGame() {
         hands,
         melds,
         wall: deck,
+        gangRecords,
         currentPlayer: HUMAN_SEAT,
         phase: 'discard',
         lastDiscard: null,
