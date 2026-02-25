@@ -44,7 +44,7 @@ pnpm run preview  # 本地预览构建结果
 
 ```bash
 pnpm run check    # 类型检查 + Biome 检查（提交前建议执行）
-pnpm run test     # 运行测试（55 用例：数据/工具/首页/成就页/13 游戏页/麻将与五子棋规则）
+pnpm run test     # 运行测试（56 用例：数据/工具/首页/成就页/14 游戏页/麻将与五子棋规则）
 pnpm run format   # 格式化代码
 ```
 

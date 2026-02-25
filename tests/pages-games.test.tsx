@@ -16,6 +16,7 @@ import GameSnake from '../src/pages/GameSnake';
 import GameTank from '../src/pages/GameTank';
 import GameTetris from '../src/pages/GameTetris';
 import GameTictactoe from '../src/pages/GameTictactoe';
+import GameXiangqi from '../src/pages/GameXiangqi';
 
 const withRouter = (children: React.ReactElement) => (
   <MemoryRouter>{children}</MemoryRouter>
@@ -30,7 +31,9 @@ test('成就页：渲染标题与成就列表', () => {
     </MemoryRouter>,
   );
   expect(screen.getByText(/成就|Achievements/)).toBeInTheDocument();
-  expect(screen.getAllByRole('link', { name: /返回首页|Back to Home/ }).length).toBeGreaterThanOrEqual(1);
+  expect(
+    screen.getAllByRole('link', { name: /返回首页|Back to Home/ }).length,
+  ).toBeGreaterThanOrEqual(1);
 });
 
 test('猜数字：渲染标题与猜按钮', () => {
@@ -48,6 +51,14 @@ test('井字棋：渲染棋盘与重开按钮', () => {
 test('五子棋：渲染五子连珠说明与重开按钮', () => {
   render(withRouter(<GameGomoku />));
   expect(screen.getByText(/五子连珠即胜/)).toBeInTheDocument();
+  expect(
+    screen.getAllByRole('button', { name: '重开' }).length,
+  ).toBeGreaterThanOrEqual(1);
+});
+
+test('中国象棋：渲染说明与重开按钮', () => {
+  render(withRouter(<GameXiangqi />));
+  expect(screen.getByText(/中国象棋：红先黑后/)).toBeInTheDocument();
   expect(
     screen.getAllByRole('button', { name: '重开' }).length,
   ).toBeGreaterThanOrEqual(1);

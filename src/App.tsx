@@ -15,6 +15,7 @@ import GameSnake from '@/pages/GameSnake';
 import GameTank from '@/pages/GameTank';
 import GameTetris from '@/pages/GameTetris';
 import GameTictactoe from '@/pages/GameTictactoe';
+import GameXiangqi from '@/pages/GameXiangqi';
 import Home from '@/pages/Home';
 import './App.css';
 
@@ -48,6 +49,7 @@ const App = () => {
           <Route path="/game/tank" element={<GameTank />} />
           <Route path="/game/tetris" element={<GameTetris />} />
           <Route path="/game/gomoku" element={<GameGomoku />} />
+          <Route path="/game/xiangqi" element={<GameXiangqi />} />
         </Routes>
       </LocaleProvider>
     </BrowserRouter>

@@ -108,12 +108,11 @@ export const games: GameItem[] = [
   {
     id: 'xiangqi',
     categoryId: 'board',
-    name: '中国象棋（开发中）',
+    name: '中国象棋',
     description: '楚河汉界，将帅对弈。',
     path: '/game/xiangqi',
     difficulty: 3,
     tags: ['象棋', '双人'],
-    comingSoon: true,
   },
   {
     id: 'chess',
