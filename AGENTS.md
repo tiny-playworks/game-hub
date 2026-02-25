@@ -28,3 +28,11 @@ Game Hub（游戏合集）项目：基于 Rsbuild + React 的小游戏与麻将 
 
 - Run `npm run lint` to lint your code
 - Run `npm run format` to format your code
+
+## Cursor Cloud specific instructions
+
+- This is a pure frontend SPA — no backend, no database, no external services needed.
+- Dev server: `pnpm run dev --no-open` starts on port 3000 with HMR. Use `--no-open` in headless/cloud environments.
+- `pnpm run check` runs both `tsc --noEmit` and `biome check --write` in sequence.
+- The `pnpm install` warning about `core-js` build scripts can be safely ignored (use `pnpm approve-builds` only interactively; the lockfile works fine without it).
+- Node.js ≥ 18 required; project has no `.nvmrc` — system default Node works.
