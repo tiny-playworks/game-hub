@@ -1,14 +1,14 @@
 # AGENTS.md
 
-Game Hub（游戏合集）项目：基于 Rsbuild + React 的小游戏与麻将 Web 应用。
+Game Hub（游戏合集）项目：基于 Rsbuild + React 的纯前端 SPA，小游戏与麻将合集（12 款已上线 + 8 款占位）。
 
 ## Commands
 
 - `pnpm run dev` - 启动开发服务器
 - `pnpm run build` - 生产构建
 - `pnpm run preview` - 本地预览构建结果
-- `pnpm run check` - 类型检查 (tsc) + Biome 检查
-- `pnpm run test` - 运行测试
+- `pnpm run check` - 类型检查 (tsc) + Biome 检查（无单独 lint 脚本）
+- `pnpm run test` - 运行测试（6 文件、47 用例：数据/工具/首页/12 游戏页冒烟/麻将规则）
 
 ## Docs
 
@@ -21,13 +21,13 @@ Game Hub（游戏合集）项目：基于 Rsbuild + React 的小游戏与麻将 
 
 ### Rstest
 
-- Run `npm run test` to run tests
-- Run `npm run test:watch` to run tests in watch mode
+- Run `pnpm run test` to run tests
+- Run `pnpm run test:watch` to run tests in watch mode
 
 ### Biome
 
-- Run `npm run lint` to lint your code
-- Run `npm run format` to format your code
+- Lint/check: use `pnpm run check` (runs tsc + biome check). There is no separate `lint` script.
+- Format: `pnpm run format` to format your code
 
 ## Cursor Cloud specific instructions
 

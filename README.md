@@ -43,14 +43,14 @@ pnpm run preview  # 本地预览构建结果
 ### 代码质量与测试
 
 ```bash
-pnpm run check    # 类型检查 + Biome 检查
-pnpm run test     # 运行测试
+pnpm run check    # 类型检查 + Biome 检查（提交前建议执行）
+pnpm run test     # 运行测试（47 用例：数据/工具/首页/12 游戏页冒烟/麻将规则）
 pnpm run format   # 格式化代码
 ```
 
 ## 项目文档
 
-详细说明见 [REPO_WIKI.md](./REPO_WIKI.md)。
+- 详细说明、项目结构、测试覆盖与现状评估见 [REPO_WIKI.md](./REPO_WIKI.md)。
 
 ## 参考
 
