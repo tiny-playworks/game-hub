@@ -5,6 +5,7 @@ import {
   AKA_5_PIN,
   AKA_5_SOU,
   calcFu,
+  computeYaku,
   createRiichiDeck,
   getBaseTile,
   getTileLabel,
@@ -168,5 +169,55 @@ describe('日麻 - 符数计算修复', () => {
       isChiitoitsu: true,
     });
     expect(fu).toBe(25);
+  });
+});
+
+describe('日麻 - 平和判定修复', () => {
+  test('同牌 3 张跨顺子的平和手牌应被识别', () => {
+    // 0,0,0,1,1,1,2,2,2,3,4,5,6,6 → pair 66 + 012×3 + 345
+    const hand = [0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 4, 5, 6, 6];
+    const yaku = computeYaku({
+      hand,
+      melds: [],
+      isMenzhen: true,
+      isTsumo: false,
+      isRiichi: false,
+      ippatsuPossible: false,
+      seatWind: 27,
+      roundWind: 27,
+    });
+    expect(yaku.some((y) => y.id === 'pinfu')).toBe(true);
+  });
+
+  test('含刻子的手牌不是平和', () => {
+    // 0,0,0,9,10,11,18,19,20,1,2,3,4,4 → pair 44 + 000(刻) + 9-10-11 + 18-19-20 + 123
+    const hand = [0, 0, 0, 1, 2, 3, 4, 4, 9, 10, 11, 18, 19, 20];
+    const yaku = computeYaku({
+      hand,
+      melds: [],
+      isMenzhen: true,
+      isTsumo: false,
+      isRiichi: false,
+      ippatsuPossible: false,
+      seatWind: 27,
+      roundWind: 27,
+    });
+    expect(yaku.some((y) => y.id === 'pinfu')).toBe(false);
+  });
+
+  test('役牌将的手牌不是平和', () => {
+    // pair = 白白(33,33), melds all sequences
+    const hand = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 33, 33];
+    const yaku = computeYaku({
+      hand,
+      melds: [],
+      isMenzhen: true,
+      isTsumo: false,
+      isRiichi: false,
+      ippatsuPossible: false,
+      seatWind: 27,
+      roundWind: 27,
+    });
+    expect(yaku.some((y) => y.id === 'pinfu')).toBe(false);
   });
 });

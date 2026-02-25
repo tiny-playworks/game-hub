@@ -611,35 +611,52 @@ export function getTotalHan(results: YakuResult[]): number {
   return results.reduce((sum, r) => sum + r.han, 0);
 }
 
-/** 平和型：4 组均为顺子（无刻子）、将牌非役牌（非中发白、非风牌） */
+/**
+ * 平和型：存在一种分解使得 4 组均为顺子、将牌非役牌。
+ * 通过实际分解 14 张牌来判定，避免计数启发式的误判。
+ */
 function checkPinfuRiichi(tiles: number[]): boolean {
+  if (tiles.length !== 14) return false;
   const base = tiles.map(getBaseTile);
-  const counts = new Map<number, number>();
-  for (const b of base) counts.set(b, (counts.get(b) ?? 0) + 1);
-
-  // 字牌不可组顺子，若有 3 张以上字牌（刻子）则非平和
-  for (let z = 27; z <= 33; z++) {
-    if ((counts.get(z) ?? 0) >= 3) return false;
-  }
-
-  // 数牌刻子检查：任意数牌出现 3+ 张则非平和
-  for (let t = 0; t < 27; t++) {
-    if ((counts.get(t) ?? 0) >= 3) return false;
-  }
-
-  // 将牌不能是役牌（中31/发32/白33 以及所有风牌27-30）
-  // 枚举所有可能的将牌（出现 2+ 张），若都是役牌则非平和
   const yakuhaiTypes = new Set([27, 28, 29, 30, 31, 32, 33]);
-  let hasNonYakuhaiPair = false;
-  for (const [tile, count] of counts) {
-    if (count >= 2 && !yakuhaiTypes.has(tile)) {
-      hasNonYakuhaiPair = true;
-      break;
-    }
-  }
-  if (!hasNonYakuhaiPair) return false;
 
-  return true;
+  const counts = new Array(34).fill(0);
+  for (const b of base) counts[b]++;
+
+  function allSequences(remaining: number): boolean {
+    if (remaining === 0) return true;
+    let first = -1;
+    for (let i = 0; i < 34; i++) {
+      if (counts[i] > 0) {
+        first = i;
+        break;
+      }
+    }
+    if (first === -1) return false;
+    if (first >= 27) return false;
+    if (first % 9 > 6) return false;
+    if (counts[first + 1] <= 0 || counts[first + 2] <= 0) return false;
+    counts[first]--;
+    counts[first + 1]--;
+    counts[first + 2]--;
+    const ok = allSequences(remaining - 3);
+    counts[first]++;
+    counts[first + 1]++;
+    counts[first + 2]++;
+    return ok;
+  }
+
+  for (let pair = 0; pair < 34; pair++) {
+    if (counts[pair] < 2) continue;
+    if (yakuhaiTypes.has(pair)) continue;
+    counts[pair] -= 2;
+    if (allSequences(12)) {
+      counts[pair] += 2;
+      return true;
+    }
+    counts[pair] += 2;
+  }
+  return false;
 }
 
 /** 对对和：4 刻子/杠子 + 1 对子（全部为刻子型） */
