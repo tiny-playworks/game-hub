@@ -1,50 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { GOMOKU_SIZE, type GomokuStone, getGomokuWinner } from '@/lib/gomoku';
 import { cn } from '@/lib/utils';
 
-const SIZE = 15;
-type Stone = 'B' | 'W' | null;
-type Winner = 'B' | 'W' | null;
-
-function getWinner(board: Stone[]): Winner {
-  const at = (r: number, c: number) => board[r * SIZE + c];
-  const dirs: [number, number][] = [
-    [0, 1],
-    [1, 0],
-    [1, 1],
-    [1, -1],
-  ];
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
-      const stone = at(r, c);
-      if (!stone) continue;
-      for (const [dr, dc] of dirs) {
-        let count = 1;
-        let nr = r + dr;
-        let nc = c + dc;
-        while (
-          nr >= 0 &&
-          nr < SIZE &&
-          nc >= 0 &&
-          nc < SIZE &&
-          at(nr, nc) === stone
-        ) {
-          count++;
-          nr += dr;
-          nc += dc;
-        }
-        if (count >= 5) return stone;
-      }
-    }
-  }
-  return null;
-}
-
 const GameGomoku = () => {
-  const [board, setBoard] = useState<Stone[]>(Array(SIZE * SIZE).fill(null));
+  const [board, setBoard] = useState<GomokuStone[]>(
+    Array(GOMOKU_SIZE * GOMOKU_SIZE).fill(null),
+  );
   const [blackNext, setBlackNext] = useState(true);
-  const winner = getWinner(board);
+  const winner = getGomokuWinner(board);
 
   const handleClick = (i: number) => {
     if (board[i] || winner) return;
@@ -55,7 +20,7 @@ const GameGomoku = () => {
   };
 
   const restart = () => {
-    setBoard(Array(SIZE * SIZE).fill(null));
+    setBoard(Array(GOMOKU_SIZE * GOMOKU_SIZE).fill(null));
     setBlackNext(true);
   };
 
@@ -78,7 +43,7 @@ const GameGomoku = () => {
         </p>
         <div
           className="grid gap-0.5 rounded-lg bg-muted p-2"
-          style={{ gridTemplateColumns: `repeat(${SIZE}, 1fr)` }}
+          style={{ gridTemplateColumns: `repeat(${GOMOKU_SIZE}, 1fr)` }}
         >
           {board.map((stone, i) => (
             <button

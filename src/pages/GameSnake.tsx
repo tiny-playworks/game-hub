@@ -10,9 +10,14 @@ const ROWS = H / CELL;
 
 type Dir = 'up' | 'down' | 'left' | 'right';
 
+const STORAGE_KEY = 'game-snake-best';
+
 const GameSnake = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [score, setScore] = useState(0);
+  const [best, setBest] = useState(() =>
+    Number.parseInt(localStorage.getItem(STORAGE_KEY) ?? '0', 10),
+  );
   const [status, setStatus] = useState<'idle' | 'playing' | 'over'>('idle');
 
   const stateRef = useRef({
@@ -50,6 +55,13 @@ const GameSnake = () => {
   useEffect(() => {
     placeFood();
   }, [placeFood]);
+
+  useEffect(() => {
+    if (score > best) {
+      setBest(score);
+      localStorage.setItem(STORAGE_KEY, String(score));
+    }
+  }, [score, best]);
 
   const start = useCallback(() => {
     if (stateRef.current.snake.length === 1) placeFood();
@@ -173,6 +185,7 @@ const GameSnake = () => {
         </Link>
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">分数: {score}</span>
+          <span className="text-sm text-muted-foreground">最高: {best}</span>
           <Button variant="outline" size="sm" onClick={reset}>
             重开
           </Button>

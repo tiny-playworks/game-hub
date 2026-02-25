@@ -29,7 +29,8 @@ src/
 ├── components/ui/      # shadcn/ui 组件（button、card、input）
 ├── data/               # 游戏与分类配置（games.ts、categories.ts）
 ├── hooks/              # 麻将对局状态（useMahjongGame、useSichuanMahjongGame）
-├── lib/                # 核心逻辑（mahjong、mahjongRiichi、mahjongSichuan、utils）
+├── contexts/           # React 上下文（LocaleContext：i18n）
+├── lib/                # 核心逻辑（mahjong、mahjongRiichi、mahjongSichuan、gomoku、i18n、utils）
 ├── pages/              # 页面与 12 个游戏页 + Home、Category
 ├── App.tsx             # 路由入口
 └── App.css             # 主题变量与 Tailwind @theme
@@ -38,9 +39,10 @@ tests/
 ├── index.test.tsx          # 首页渲染与分类链接
 ├── data-games.test.ts     # games 数据与 getGamesByCategory / getGameByPath
 ├── lib-utils.test.ts      # cn() 工具
-├── pages-games.test.tsx   # 12 个游戏页冒烟（每游戏至少 1 用例）
+├── pages-games.test.tsx   # 13 个游戏页冒烟（每游戏至少 1 用例）
 ├── mahjong-rules.test.ts  # 国标番种、川麻七对/龙七对/定缺/杠牌、日麻赤宝牌/符/平和
-└── sichuan-mahjong.test.ts # 川麻牌堆、发牌、定缺、番数
+├── sichuan-mahjong.test.ts # 川麻牌堆、发牌、定缺、番数
+└── gomoku.test.ts         # 五子棋胜负判定（横/竖/斜五连、四连无胜）
 ```
 
 ## 🎮 游戏模块
@@ -135,11 +137,12 @@ function canFormFourMeldsOptimized(arr: number[]): boolean {
 
 ## 🧪 测试覆盖
 
-- **规模**：6 个测试文件，共 48 个用例，全部通过。
+- **规模**：7 个测试文件，共 54 个用例，全部通过。
 - **类型**  
   - **数据与工具**：`games` 列表与 `getGamesByCategory` / `getGameByPath`；`cn()` 合并与 tailwind-merge 行为。  
   - **入口与导航**：首页渲染「游戏合集」与分类链接（小游戏、麻将等）。  
   - **游戏页冒烟**：13 个已上线游戏各至少 1 个用例（渲染标题/按钮/关键文案）。  
+  - **五子棋规则**：`tests/gomoku.test.ts` 覆盖空盘、横/竖/斜五连胜、四连无胜。  
   - **麻将规则**：国标番种（屁胡/对对胡/清一色等）、川麻七对/龙七对/定缺/杠牌计分、日麻赤宝牌/符数/平和判定。
 - **运行**：`pnpm run test`；监听模式 `pnpm run test:watch`。  
 - **CI**：每次 push/PR 自动执行 typecheck → biome check → test → build。
@@ -153,7 +156,7 @@ function canFormFourMeldsOptimized(arr: number[]): boolean {
 | 前端 | ✅ | React 19 + TypeScript strict，44+ 文件类型检查通过 |
 | 样式 | ✅ | Tailwind v4 + PostCSS，shadcn/ui，主题在 App.css |
 | 质量 | ✅ | Biome（lint + format，单引号、organizeImports） |
-| 测试 | ✅ | Rstest + Testing Library，48 用例覆盖数据/工具/首页/13 游戏页/麻将规则 |
+| 测试 | ✅ | Rstest + Testing Library，54 用例覆盖数据/工具/首页/13 游戏页/麻将规则/五子棋规则 |
 | CI | ✅ | GitHub Actions：Node 20、pnpm、typecheck、biome、test、build |
 
 ### 构建与体积
@@ -194,10 +197,11 @@ pnpm run test:watch   # 监听模式测试
 ## 🔧 配置说明
 
 ### 构建配置
-- **Rsbuild配置**: `rsbuild.config.ts`
+- **Rsbuild配置**: `rsbuild.config.ts`（含 `html.tags` 注入 manifest 链接）
 - **TypeScript配置**: `tsconfig.json`
 - **样式配置**: `postcss.config.mjs`
 - **代码检查**: `biome.json`
+- **PWA**: `public/manifest.json`、`public/sw.js`，构建时复制到 dist；入口注册 SW
 
 ### 路径别名
 ```
@@ -214,10 +218,10 @@ pnpm run test:watch   # 监听模式测试
 - [ ] 添加语音和动画效果
 
 ### 技术优化
+- [x] **PWA**：已集成 `manifest.json`（名称、start_url、display: standalone）与 Service Worker（离线回退到缓存首页）
 - [ ] 性能监控和优化
 - [ ] 服务端渲染支持
-- [ ] PWA功能集成
-- [ ] 国际化支持
+- [x] **国际化（i18n）**：中/英切换，Locale 存 localStorage；首页与分类页文案已抽离（`src/lib/i18n.ts`、`LocaleContext`），头部提供「中 | En」切换
 
 ## 📚 参考资源
 

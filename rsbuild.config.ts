@@ -6,6 +6,13 @@ export default defineConfig({
   plugins: [pluginReact()],
   html: {
     title: 'Game Hub · 游戏合集',
+    tags: [
+      {
+        tag: 'link',
+        attrs: { rel: 'manifest', href: '/manifest.json' },
+        publicPath: false,
+      },
+    ],
   },
   resolve: {
     alias: {

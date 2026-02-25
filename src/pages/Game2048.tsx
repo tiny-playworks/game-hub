@@ -94,12 +94,24 @@ function canMove(grid: number[][]): boolean {
   return false;
 }
 
+const STORAGE_KEY = 'game-2048-best';
+
 const Game2048 = () => {
   const [grid, setGrid] = useState<number[][]>(() =>
     addRandom(addRandom(emptyGrid())),
   );
   const [score, setScore] = useState(0);
+  const [best, setBest] = useState(() =>
+    Number.parseInt(localStorage.getItem(STORAGE_KEY) ?? '0', 10),
+  );
   const [gameOver, setGameOver] = useState(false);
+
+  useEffect(() => {
+    if (score > best) {
+      setBest(score);
+      localStorage.setItem(STORAGE_KEY, String(score));
+    }
+  }, [score, best]);
 
   const tryMove = useCallback((dir: Dir) => {
     setGrid((prev) => {
@@ -167,6 +179,7 @@ const Game2048 = () => {
         </Link>
         <div className="flex items-center gap-4">
           <span className="text-sm font-medium">分数: {score}</span>
+          <span className="text-sm text-muted-foreground">最高: {best}</span>
           <Button variant="outline" size="sm" onClick={restart}>
             重开
           </Button>

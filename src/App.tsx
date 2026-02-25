@@ -1,4 +1,5 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { LocaleProvider } from '@/contexts/LocaleContext';
 import Category from '@/pages/Category';
 import Game2048 from '@/pages/Game2048';
 import GameBreakout from '@/pages/GameBreakout';
@@ -19,26 +20,34 @@ import './App.css';
 const App = () => {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/category/:categoryId" element={<Category />} />
-        <Route path="/game/mahjong-chinese" element={<GameMahjongChinese />} />
-        <Route path="/game/mahjong-sichuan" element={<GameMahjongSichuan />} />
-        <Route
-          path="/game/mahjong-japanese"
-          element={<GameMahjongJapanese />}
-        />
-        <Route path="/game/guess-number" element={<GameGuessNumber />} />
-        <Route path="/game/tictactoe" element={<GameTictactoe />} />
-        <Route path="/game/memory" element={<GameMemory />} />
-        <Route path="/game/2048" element={<Game2048 />} />
-        <Route path="/game/snake" element={<GameSnake />} />
-        <Route path="/game/breakout" element={<GameBreakout />} />
-        <Route path="/game/shooter" element={<GameShooter />} />
-        <Route path="/game/tank" element={<GameTank />} />
-        <Route path="/game/tetris" element={<GameTetris />} />
-        <Route path="/game/gomoku" element={<GameGomoku />} />
-      </Routes>
+      <LocaleProvider>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/category/:categoryId" element={<Category />} />
+          <Route
+            path="/game/mahjong-chinese"
+            element={<GameMahjongChinese />}
+          />
+          <Route
+            path="/game/mahjong-sichuan"
+            element={<GameMahjongSichuan />}
+          />
+          <Route
+            path="/game/mahjong-japanese"
+            element={<GameMahjongJapanese />}
+          />
+          <Route path="/game/guess-number" element={<GameGuessNumber />} />
+          <Route path="/game/tictactoe" element={<GameTictactoe />} />
+          <Route path="/game/memory" element={<GameMemory />} />
+          <Route path="/game/2048" element={<Game2048 />} />
+          <Route path="/game/snake" element={<GameSnake />} />
+          <Route path="/game/breakout" element={<GameBreakout />} />
+          <Route path="/game/shooter" element={<GameShooter />} />
+          <Route path="/game/tank" element={<GameTank />} />
+          <Route path="/game/tetris" element={<GameTetris />} />
+          <Route path="/game/gomoku" element={<GameGomoku />} />
+        </Routes>
+      </LocaleProvider>
     </BrowserRouter>
   );
 };

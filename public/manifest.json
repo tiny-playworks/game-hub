@@ -1,0 +1,10 @@
+{
+  "name": "Game Hub · 游戏合集",
+  "short_name": "Game Hub",
+  "description": "小游戏与麻将合集：国标麻将、日麻、四川麻将、2048、贪吃蛇、俄罗斯方块等",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#18181b",
+  "icons": []
+}
