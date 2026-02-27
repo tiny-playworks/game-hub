@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useRiichiSounds } from '@/hooks/useRiichiSounds';
 import {
+  calcFu,
+  calcScore,
   canMingangRiichi,
   canPengRiichi,
   computeYaku,
@@ -12,7 +14,9 @@ import {
   getAngangOptionsRiichi,
   getBaseTile,
   getChiOptionsRiichi,
+  getDoraFromIndicator,
   getTileLabel,
+  getTotalHan,
   hasYaku,
   isAkaFive,
   isWinShapeRiichi,
@@ -20,10 +24,35 @@ import {
   type YakuResult,
 } from '@/lib/mahjongRiichi';
 import {
+  applyAiRiichiState,
+  canAiRonOnClaim,
+  chooseAiDefensiveDiscardWithMeta,
+  shouldAiDeclareRiichi,
+} from '@/lib/riichiAi';
+import { canOfferRon, resolveClaimPass } from '@/lib/riichiClaimFlow';
+import {
+  consumeTimeBankSeconds,
+  getTurnTotalSeconds,
+  isTurnTimeout,
+  RIICHI_TIME_BANK_INITIAL_SECONDS,
+} from '@/lib/riichiClock';
+import {
+  applyRonDeclinedFuriten,
+  clearDoujunFuriten,
+  createInitialFuritenState,
+  isRonForbiddenByFuriten,
+} from '@/lib/riichiFuriten';
+import {
   buildRiichiInput,
   calcWithRiichiRs,
   type GameStateForRs,
 } from '@/lib/riichiRsAdapter';
+import {
+  type PaymentDetail,
+  RIICHI_INITIAL_POINTS,
+  settleRyuukyoku,
+  settleWin,
+} from '@/lib/riichiSettlement';
 import { cn } from '@/lib/utils';
 
 const SEAT_NAMES = ['自家', '下家', '对家', '上家'];
@@ -122,14 +151,32 @@ interface RiichiGameState {
   honba: number;
   /** 庄家座位 0-3；胡牌/流局后按结果换庄 */
   dealer: number;
+  /** 四家总分（默认 25000 起） */
+  scores: number[];
+  /** 四家时间库（秒），每巡额外+5秒读秒 */
+  timeBanks: number[];
+  /** 立直棒池（点数，1000 的倍数） */
+  riichiPot: number;
   /** 立直状态：每个玩家是否已立直 */
   riichiDeclared: boolean[];
+  /** 振听状态（sutehai 为展示位，实时根据手牌与河计算） */
+  furitenStates: { sutehai: boolean; doujun: boolean; riichi: boolean }[];
   /** 立直宣言牌：记录每个玩家立直时打出的牌（用于一发判定） */
   riichiDiscard: (number | null)[];
   /** 里宝牌指示牌 */
   uraDoraIndicators: number[];
   /** 荒牌流局：牌墙摸完无人和 */
   ryuukyoku?: boolean;
+  /** 本局结算流水（用于弹窗/日志） */
+  lastSettlement?: {
+    payments: PaymentDetail[];
+    deltas: number[];
+    newScores: number[];
+    tenpaiSeats?: number[];
+    timeoutEvents?: string[];
+  };
+  /** 本局超时自动出牌记录 */
+  timeoutEvents: string[];
 }
 
 function initRiichiGame(
@@ -137,11 +184,26 @@ function initRiichiGame(
   roundWind = 0,
   roundNumber = 1,
   honba = 0,
+  scores: number[] = [
+    RIICHI_INITIAL_POINTS,
+    RIICHI_INITIAL_POINTS,
+    RIICHI_INITIAL_POINTS,
+    RIICHI_INITIAL_POINTS,
+  ],
+  timeBanks: number[] = [
+    RIICHI_TIME_BANK_INITIAL_SECONDS,
+    RIICHI_TIME_BANK_INITIAL_SECONDS,
+    RIICHI_TIME_BANK_INITIAL_SECONDS,
+    RIICHI_TIME_BANK_INITIAL_SECONDS,
+  ],
+  riichiPot = 0,
+  lastSettlement?: RiichiGameState['lastSettlement'],
 ): RiichiGameState {
   const deck = createRiichiDeck();
   const [hands, rest] = dealRiichi(deck, dealer);
   const doraIndicator = rest[0];
-  const wall = rest.slice(1);
+  const uraDoraIndicator = rest[1];
+  const wall = rest.slice(2);
   return {
     hands,
     wall,
@@ -159,9 +221,20 @@ function initRiichiGame(
     roundNumber,
     honba,
     dealer,
+    scores: [...scores],
+    timeBanks: [...timeBanks],
+    riichiPot,
     riichiDeclared: [false, false, false, false],
+    furitenStates: [
+      createInitialFuritenState(),
+      createInitialFuritenState(),
+      createInitialFuritenState(),
+      createInitialFuritenState(),
+    ],
     riichiDiscard: [null, null, null, null],
-    uraDoraIndicators: [],
+    uraDoraIndicators: uraDoraIndicator === undefined ? [] : [uraDoraIndicator],
+    timeoutEvents: [],
+    lastSettlement,
   };
 }
 
@@ -200,8 +273,150 @@ function getSeatWind(roundWind: number, seat: number, dealer: number): number {
   return (roundWind + ((seat - dealer + 4) % 4)) % 4;
 }
 
+function getRonWaitingTilesForSeatInState(
+  state: RiichiGameState,
+  seat: number,
+): number[] {
+  const hand = state.hands[seat];
+  const melds = state.melds[seat];
+  if (hand.length !== 13) return [];
+  const waiting: number[] = [];
+  for (let t = 0; t < 34; t++) {
+    const testHand = [...hand, t];
+    if (!isWinShapeRiichi(testHand, melds)) continue;
+    const ctx = {
+      hand: testHand,
+      melds: melds.map((m) => ({ tiles: m.tiles })),
+      meldsTyped: melds,
+      isMenzhen: melds.every((m) => m.type === 'angang'),
+      isTsumo: false,
+      isRiichi: state.riichiDeclared[seat],
+      ippatsuPossible: false,
+      seatWind: getSeatWind(state.roundWind, seat, state.dealer),
+      roundWind: state.roundWind,
+    };
+    if (hasYaku(ctx)) waiting.push(t);
+  }
+  return waiting;
+}
+
+function canSeatRonByRules(state: RiichiGameState, seat: number): boolean {
+  if (
+    state.phase !== 'claim' ||
+    state.lastDiscard === null ||
+    state.lastDiscardFrom === null ||
+    state.lastDiscardFrom === seat
+  )
+    return false;
+  const handWithClaim = [...state.hands[seat], state.lastDiscard];
+  if (!isWinShapeRiichi(handWithClaim, state.melds[seat])) return false;
+  const melds = state.melds[seat];
+  const yakuOk = hasYaku({
+    hand: handWithClaim,
+    melds: melds.map((m) => ({ tiles: m.tiles })),
+    meldsTyped: melds,
+    isMenzhen: melds.every((m) => m.type === 'angang'),
+    isTsumo: false,
+    isRiichi: state.riichiDeclared[seat],
+    ippatsuPossible: false,
+    seatWind: getSeatWind(state.roundWind, seat, state.dealer),
+    roundWind: state.roundWind,
+  });
+  if (!yakuOk) return false;
+  return !isRonForbiddenByFuriten({
+    waitingTiles: getRonWaitingTilesForSeatInState(state, seat),
+    ownDiscards: state.discardPiles[seat],
+    state: state.furitenStates[seat] ?? createInitialFuritenState(),
+  });
+}
+
 const MAX_HISTORY = 40;
 const MAX_LOG = 150;
+
+function formatPoints(points: number): string {
+  return `${points.toLocaleString()} 点`;
+}
+
+function countUraDoraHan(allTiles: number[], indicators: number[]): number {
+  if (indicators.length === 0) return 0;
+  const doraTypes = indicators.map((i) => getDoraFromIndicator(i));
+  return allTiles.filter((t) => doraTypes.includes(getBaseTile(t))).length;
+}
+
+function appendUraDoraYaku(yaku: YakuResult[], uraHan: number): YakuResult[] {
+  if (uraHan <= 0) return yaku;
+  const alreadyHasUra = yaku.some((y) => y.id === '54' || y.id === 'ura_dora');
+  if (alreadyHasUra) return yaku;
+  return [...yaku, { id: 'ura_dora', name: '里宝牌', han: uraHan }];
+}
+
+function summarizeWinnerPayments(
+  payments: PaymentDetail[],
+  winner: number,
+): { base: number; honba: number; riichi: number } {
+  let base = 0;
+  let honba = 0;
+  let riichi = 0;
+  for (const p of payments) {
+    if (p.to !== winner) continue;
+    if (p.reason === 'riichi') riichi += p.amount;
+    else if (p.reason === 'honba') honba += p.amount;
+    else base += p.amount;
+  }
+  return { base, honba, riichi };
+}
+
+function clearSeatDoujunStates(
+  states: RiichiGameState['furitenStates'],
+  seat: number,
+): RiichiGameState['furitenStates'] {
+  return states.map((s, i) =>
+    i === seat ? clearDoujunFuriten(s ?? createInitialFuritenState()) : s,
+  );
+}
+
+function needsDiscardDecision(state: RiichiGameState): boolean {
+  if (state.phase !== 'discard') return false;
+  const p = state.currentPlayer;
+  return state.drawnTile !== null || state.hands[p].length === 11;
+}
+
+function getClaimPlayerFromState(state: RiichiGameState): number | null {
+  if (state.phase !== 'claim' || state.lastDiscardFrom === null) return null;
+  return (state.lastDiscardFrom + 1 + state.claimIndex) % 4;
+}
+
+function needsTimedDecision(state: RiichiGameState): boolean {
+  if (needsDiscardDecision(state)) return true;
+  return (
+    state.phase === 'claim' &&
+    state.lastDiscard !== null &&
+    state.lastDiscardFrom !== null &&
+    getClaimPlayerFromState(state) !== null
+  );
+}
+
+function getDecisionSeat(state: RiichiGameState): number {
+  if (state.phase === 'discard') return state.currentPlayer;
+  return getClaimPlayerFromState(state) ?? state.currentPlayer;
+}
+
+function getTenpaiSeatsForDraw(
+  game: RiichiGameState,
+  getWaitingTiles: (
+    hand: number[],
+    melds: RiichiMeld[],
+    g?: RiichiGameState,
+  ) => number[],
+): number[] {
+  const tenpai: number[] = [];
+  for (let seat = 0; seat < 4; seat++) {
+    if (getWaitingTiles(game.hands[seat], game.melds[seat], game).length > 0) {
+      tenpai.push(seat);
+    }
+  }
+  return tenpai;
+}
 
 const GameMahjongJapanese = () => {
   const { t } = useLocale();
@@ -218,17 +433,105 @@ const GameMahjongJapanese = () => {
     fu?: number;
     han?: number;
     ten?: number;
+    uraHan?: number;
+    uraDoraIndicators?: number[];
   } | null>(null);
   const [showGuide, setShowGuide] = useState(true); // 新手引导状态
+  const [declinedRonToken, setDeclinedRonToken] = useState<string | null>(null);
+  const [clockNowMs, setClockNowMs] = useState(() => Date.now());
   const prevGameRef = useRef<RiichiGameState | null>(null);
   const undoingRef = useRef(false);
   const addLogRef = useRef<(msg: string) => void>(() => {});
+  const turnClockRef = useRef<{ player: number; startedAt: number } | null>(
+    null,
+  );
+  const lowTimeWarnedTurnRef = useRef<string | null>(null);
 
   const addLog = useCallback((msg: string) => {
     const line = `[${new Date().toISOString().slice(11, 23)}] ${msg}`;
     setGameLog((l) => [...l, line].slice(-MAX_LOG));
   }, []);
   addLogRef.current = addLog;
+
+  const enrichWinResultWithUra = useCallback(
+    (params: {
+      state: RiichiGameState;
+      winner: number;
+      isTsumo: boolean;
+      handWithWin: number[];
+      yaku: YakuResult[];
+      fu?: number;
+      han?: number;
+      ten?: number;
+    }): {
+      winner: number;
+      isTsumo: boolean;
+      handWithWin: number[];
+      yaku: YakuResult[];
+      fu?: number;
+      han?: number;
+      ten?: number;
+      uraHan?: number;
+      uraDoraIndicators?: number[];
+    } => {
+      if (!params.state.riichiDeclared[params.winner]) {
+        return {
+          winner: params.winner,
+          isTsumo: params.isTsumo,
+          handWithWin: params.handWithWin,
+          yaku: params.yaku,
+          fu: params.fu,
+          han: params.han,
+          ten: params.ten,
+          uraHan: 0,
+          uraDoraIndicators: [],
+        };
+      }
+      const allTiles = [
+        ...params.handWithWin,
+        ...params.state.melds[params.winner].flatMap((m) => m.tiles),
+      ];
+      const uraHan = countUraDoraHan(allTiles, params.state.uraDoraIndicators);
+      const yakuWithUra = appendUraDoraYaku(params.yaku, uraHan);
+      const uraAdded = yakuWithUra.length !== params.yaku.length;
+      if (!uraAdded) {
+        return {
+          winner: params.winner,
+          isTsumo: params.isTsumo,
+          handWithWin: params.handWithWin,
+          yaku: yakuWithUra,
+          fu: params.fu,
+          han: params.han,
+          ten: params.ten,
+          uraHan,
+          uraDoraIndicators: params.state.uraDoraIndicators,
+        };
+      }
+      const baseHan = params.han ?? getTotalHan(params.yaku);
+      const nextHan = baseHan + uraHan;
+      const nextTen =
+        params.fu != null
+          ? calcScore(
+              params.fu,
+              nextHan,
+              params.state.dealer === params.winner,
+              params.isTsumo,
+            )
+          : params.ten;
+      return {
+        winner: params.winner,
+        isTsumo: params.isTsumo,
+        handWithWin: params.handWithWin,
+        yaku: yakuWithUra,
+        fu: params.fu,
+        han: nextHan,
+        ten: nextTen,
+        uraHan,
+        uraDoraIndicators: params.state.uraDoraIndicators,
+      };
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!game) {
@@ -254,6 +557,158 @@ const GameMahjongJapanese = () => {
     prevGameRef.current = game;
   }, [game]);
 
+  useEffect(() => {
+    const id = window.setInterval(() => setClockNowMs(Date.now()), 250);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const getElapsedSecondsForSeat = useCallback((seat: number): number => {
+    const c = turnClockRef.current;
+    if (!c || c.player !== seat) return 0;
+    return Math.max(0, (Date.now() - c.startedAt) / 1000);
+  }, []);
+
+  const consumeSeatTimeBank = useCallback(
+    (state: RiichiGameState, seat: number): number[] => {
+      const elapsed = getElapsedSecondsForSeat(seat);
+      if (elapsed <= 0) return state.timeBanks;
+      return state.timeBanks.map((tb, i) =>
+        i === seat ? consumeTimeBankSeconds(tb, elapsed) : tb,
+      );
+    },
+    [getElapsedSecondsForSeat],
+  );
+
+  useEffect(() => {
+    if (!game || !needsTimedDecision(game)) {
+      turnClockRef.current = null;
+      return;
+    }
+    const decisionSeat = getDecisionSeat(game);
+    const current = turnClockRef.current;
+    if (!current || current.player !== decisionSeat) {
+      turnClockRef.current = { player: decisionSeat, startedAt: Date.now() };
+    }
+  }, [
+    game?.phase,
+    game?.currentPlayer,
+    game?.claimIndex,
+    game?.lastDiscard,
+    game?.lastDiscardFrom,
+    game?.drawnTile,
+    game?.hands?.[game?.currentPlayer ?? 0]?.length,
+    game,
+  ]);
+
+  useEffect(() => {
+    if (!game || !needsTimedDecision(game)) return;
+    const player = getDecisionSeat(game);
+    const c = turnClockRef.current;
+    if (!c || c.player !== player) return;
+    const elapsed = Math.max(0, (clockNowMs - c.startedAt) / 1000);
+    if (!isTurnTimeout(game.timeBanks[player], elapsed)) return;
+    setGame((g) => {
+      if (!g || !needsTimedDecision(g) || getDecisionSeat(g) !== player)
+        return g;
+      const nextBanks = g.timeBanks.map((tb, i) =>
+        i === player ? consumeTimeBankSeconds(tb, elapsed) : tb,
+      );
+      if (g.phase === 'claim' && g.lastDiscardFrom !== null) {
+        const ronDeclined = canSeatRonByRules(g, player);
+        const nextFuritenStates = ronDeclined
+          ? g.furitenStates.map((s, i) =>
+              i === player
+                ? applyRonDeclinedFuriten(
+                    s ?? createInitialFuritenState(),
+                    g.riichiDeclared[player],
+                  )
+                : s,
+            )
+          : g.furitenStates;
+        const passResult = resolveClaimPass(g.claimIndex, g.wall.length);
+        if (passResult.type === 'next') {
+          addLogRef.current(`${SEAT_NAMES[player]} 要牌超时，自动过`);
+          turnClockRef.current = null;
+          return {
+            ...g,
+            timeBanks: nextBanks,
+            furitenStates: nextFuritenStates,
+            claimIndex: passResult.nextClaimIndex,
+            lastClaimMsg: `${SEAT_NAMES[player]} 超时自动过`,
+          };
+        }
+        const nextPlayer = (g.lastDiscardFrom + 1) % 4;
+        if (passResult.type === 'ryuukyoku') {
+          addLogRef.current(`${SEAT_NAMES[player]} 要牌超时，自动过（流局）`);
+          turnClockRef.current = null;
+          return {
+            ...g,
+            timeBanks: nextBanks,
+            furitenStates: nextFuritenStates,
+            phase: 'discard',
+            lastDiscard: null,
+            lastDiscardFrom: null,
+            claimIndex: 0,
+            currentPlayer: nextPlayer,
+            lastClaimMsg: `${SEAT_NAMES[player]} 超时自动过`,
+            ryuukyoku: true,
+          };
+        }
+        const draw = g.wall[0];
+        const newWall = g.wall.slice(1);
+        const newHands = g.hands.map((h) => [...h]);
+        newHands[nextPlayer].push(draw);
+        newHands[nextPlayer].sort(
+          (a, b) => getBaseTile(a) - getBaseTile(b) || a - b,
+        );
+        addLogRef.current(`${SEAT_NAMES[player]} 要牌超时，自动过`);
+        turnClockRef.current = null;
+        return {
+          ...g,
+          timeBanks: nextBanks,
+          furitenStates: clearSeatDoujunStates(nextFuritenStates, nextPlayer),
+          hands: newHands,
+          wall: newWall,
+          phase: 'discard',
+          lastDiscard: null,
+          lastDiscardFrom: null,
+          claimIndex: 0,
+          currentPlayer: nextPlayer,
+          drawnTile: draw,
+          lastClaimMsg: `${SEAT_NAMES[player]} 超时自动过`,
+        };
+      }
+      const toDiscard = g.drawnTile ?? g.hands[player][0];
+      if (toDiscard === undefined) return g;
+      const hand = [...g.hands[player]];
+      const idx = hand.indexOf(toDiscard);
+      if (idx < 0) return g;
+      hand.splice(idx, 1);
+      const piles = g.discardPiles.map((q) => [...q]);
+      piles[player].push(toDiscard);
+      const nextPlayer = (player + 1) % 4;
+      addLogRef.current(
+        `${SEAT_NAMES[player]} 超时，自动打出 ${getTileLabel(toDiscard)}`,
+      );
+      const timeoutEvent = `${SEAT_NAMES[player]} 超时自动打出 ${getTileLabel(toDiscard)}`;
+      turnClockRef.current = null;
+      return {
+        ...g,
+        timeoutEvents: [...g.timeoutEvents, timeoutEvent].slice(-20),
+        timeBanks: nextBanks,
+        hands: g.hands.map((h, i) => (i === player ? hand : h)),
+        discardPiles: piles,
+        currentPlayer: nextPlayer,
+        drawnTile: null,
+        phase: 'claim',
+        lastDiscard: toDiscard,
+        lastDiscardFrom: player,
+        claimIndex: 0,
+        lastClaimMsg: `${SEAT_NAMES[player]} 超时自动出牌`,
+      };
+    });
+  }, [clockNowMs, game]);
+
   const undo = useCallback(() => {
     if (history.length === 0) return;
     const prev = history[history.length - 1];
@@ -267,6 +722,7 @@ const GameMahjongJapanese = () => {
     setHistory([]);
     setGameLog([]);
     setWinResult(null);
+    setDeclinedRonToken(null);
     setGame(initRiichiGame());
     setView('game');
     addLog('新一局');
@@ -283,8 +739,11 @@ const GameMahjongJapanese = () => {
       piles[player].push(tile);
       addLog(`自家 打出 ${getTileLabel(tile)}`);
       if (player === 0) sounds.playDiscard();
+      const nextTimeBanks = consumeSeatTimeBank(game, player);
+      turnClockRef.current = null;
       setGame({
         ...game,
+        timeBanks: nextTimeBanks,
         hands,
         discardPiles: piles,
         drawnTile: null,
@@ -295,53 +754,76 @@ const GameMahjongJapanese = () => {
         lastClaimMsg: null,
       });
     },
-    [game, addLog, sounds],
+    [game, addLog, sounds, consumeSeatTimeBank],
   );
 
   const passClaim = useCallback(() => {
     if (!game || game.phase !== 'claim' || game.lastDiscardFrom === null)
       return;
-    const nextIndex = game.claimIndex + 1;
-    if (nextIndex >= 3) {
-      const nextPlayer = (game.lastDiscardFrom + 1) % 4;
-      if (game.wall.length === 0) {
-        addLog('流局（荒牌）');
-        setGame({
-          ...game,
-          phase: 'discard',
-          lastDiscard: null,
-          lastDiscardFrom: null,
-          claimIndex: 0,
-          currentPlayer: nextPlayer,
-          lastClaimMsg: null,
-          ryuukyoku: true,
-        });
-        return;
-      }
-      const draw = game.wall[0];
-      const newWall = game.wall.slice(1);
-      const newHands = game.hands.map((h) => [...h]);
-      newHands[nextPlayer].push(draw);
-      newHands[nextPlayer].sort(
-        (a, b) => getBaseTile(a) - getBaseTile(b) || a - b,
-      );
+    const timedBanks = consumeSeatTimeBank(game, 0);
+    turnClockRef.current = null;
+    const ronDeclined = canSeatRonByRules(game, 0);
+    const nextFuritenStates = ronDeclined
+      ? game.furitenStates.map((s, i) =>
+          i === 0
+            ? applyRonDeclinedFuriten(
+                s ?? createInitialFuritenState(),
+                game.riichiDeclared[0],
+              )
+            : s,
+        )
+      : game.furitenStates;
+    const passResult = resolveClaimPass(game.claimIndex, game.wall.length);
+    if (passResult.type === 'next') {
+      addLog('自家 过');
       setGame({
         ...game,
-        hands: newHands,
-        wall: newWall,
+        timeBanks: timedBanks,
+        furitenStates: nextFuritenStates,
+        claimIndex: passResult.nextClaimIndex,
+        lastClaimMsg: null,
+      });
+      return;
+    }
+    const nextPlayer = (game.lastDiscardFrom + 1) % 4;
+    if (passResult.type === 'ryuukyoku') {
+      addLog('流局（荒牌）');
+      setGame({
+        ...game,
+        timeBanks: timedBanks,
+        furitenStates: nextFuritenStates,
         phase: 'discard',
         lastDiscard: null,
         lastDiscardFrom: null,
         claimIndex: 0,
         currentPlayer: nextPlayer,
-        drawnTile: draw,
         lastClaimMsg: null,
+        ryuukyoku: true,
       });
-    } else {
-      addLog('自家 过');
-      setGame({ ...game, claimIndex: nextIndex, lastClaimMsg: null });
+      return;
     }
-  }, [game, addLog]);
+    const draw = game.wall[0];
+    const newWall = game.wall.slice(1);
+    const newHands = game.hands.map((h) => [...h]);
+    newHands[nextPlayer].push(draw);
+    newHands[nextPlayer].sort(
+      (a, b) => getBaseTile(a) - getBaseTile(b) || a - b,
+    );
+    setGame({
+      ...game,
+      timeBanks: timedBanks,
+      hands: newHands,
+      wall: newWall,
+      furitenStates: clearSeatDoujunStates(nextFuritenStates, nextPlayer),
+      phase: 'discard',
+      lastDiscard: null,
+      lastDiscardFrom: null,
+      claimIndex: 0,
+      currentPlayer: nextPlayer,
+      drawnTile: draw,
+      lastClaimMsg: null,
+    });
+  }, [game, addLog, consumeSeatTimeBank]);
 
   const doChi = useCallback(
     (option: [number, number]) => {
@@ -352,6 +834,19 @@ const GameMahjongJapanese = () => {
         game.lastDiscardFrom === null
       )
         return;
+      const ronDeclined = canSeatRonByRules(game, 0);
+      const timedBanks = consumeSeatTimeBank(game, 0);
+      turnClockRef.current = null;
+      const nextFuritenStates = ronDeclined
+        ? game.furitenStates.map((s, i) =>
+            i === 0
+              ? applyRonDeclinedFuriten(
+                  s ?? createInitialFuritenState(),
+                  game.riichiDeclared[0],
+                )
+              : s,
+          )
+        : game.furitenStates;
       const [a, b] = option;
       const hands = game.hands.map((h) => [...h]);
       const melds = game.melds.map((m) => [...m]);
@@ -378,6 +873,8 @@ const GameMahjongJapanese = () => {
       sounds.playChi();
       setGame({
         ...game,
+        timeBanks: timedBanks,
+        furitenStates: nextFuritenStates,
         hands,
         melds,
         discardPiles: piles,
@@ -389,11 +886,24 @@ const GameMahjongJapanese = () => {
         lastClaimMsg: null,
       });
     },
-    [game, addLog, sounds],
+    [game, addLog, sounds, consumeSeatTimeBank],
   );
 
   const doPeng = useCallback(() => {
     if (!game || game.phase !== 'claim' || game.lastDiscard === null) return;
+    const timedBanks = consumeSeatTimeBank(game, 0);
+    turnClockRef.current = null;
+    const ronDeclined = canSeatRonByRules(game, 0);
+    const nextFuritenStates = ronDeclined
+      ? game.furitenStates.map((s, i) =>
+          i === 0
+            ? applyRonDeclinedFuriten(
+                s ?? createInitialFuritenState(),
+                game.riichiDeclared[0],
+              )
+            : s,
+        )
+      : game.furitenStates;
     const base = getBaseTile(game.lastDiscard);
     const h0 = [...game.hands[0]];
     const indices: number[] = [];
@@ -418,6 +928,8 @@ const GameMahjongJapanese = () => {
     sounds.playPon();
     setGame({
       ...game,
+      timeBanks: timedBanks,
+      furitenStates: nextFuritenStates,
       hands,
       melds,
       discardPiles: piles,
@@ -428,7 +940,7 @@ const GameMahjongJapanese = () => {
       currentPlayer: 0,
       lastClaimMsg: null,
     });
-  }, [game, addLog, sounds]);
+  }, [game, addLog, sounds, consumeSeatTimeBank]);
 
   /** 获取听牌信息（需传入 game 以取 roundWind/dealer） */
   const getWaitingTilesRiichi = useCallback(
@@ -436,8 +948,10 @@ const GameMahjongJapanese = () => {
       hand: number[],
       melds: RiichiMeld[],
       gameState?: RiichiGameState | null,
+      options?: { seat?: number; isTsumo?: boolean; treatAsRiichi?: boolean },
     ): number[] => {
       if (hand.length !== 13) return [];
+      const seat = options?.seat ?? 0;
       const waiting: number[] = [];
       for (let t = 0; t < 34; t++) {
         const testHand = [...hand, t];
@@ -446,12 +960,15 @@ const GameMahjongJapanese = () => {
             hand: testHand,
             melds: melds.map((m) => ({ tiles: m.tiles })),
             isMenzhen: melds.every((m) => m.type === 'angang'),
-            isTsumo: true,
-            isRiichi: true,
+            isTsumo: options?.isTsumo ?? true,
+            isRiichi:
+              options?.treatAsRiichi ??
+              gameState?.riichiDeclared[seat] ??
+              false,
             ippatsuPossible: false,
             seatWind: getSeatWind(
               gameState?.roundWind ?? 0,
-              0,
+              seat,
               gameState?.dealer ?? 0,
             ),
             roundWind: gameState?.roundWind ?? 0,
@@ -482,14 +999,24 @@ const GameMahjongJapanese = () => {
     if (!isMenzen) return;
 
     // 检查是否听牌
-    const waitingTiles = getWaitingTilesRiichi(game.hands[0], melds, game);
+    const waitingTiles = getWaitingTilesRiichi(game.hands[0], melds, game, {
+      seat: 0,
+      isTsumo: false,
+      treatAsRiichi: true,
+    });
     if (waitingTiles.length === 0) return;
+    if (game.scores[0] < 1000) {
+      addLog('点数不足 1000，不能立直');
+      return;
+    }
 
-    addLog('自家 立直宣言！');
+    addLog('自家 立直宣言！（-1000 点）');
     sounds.playRiichi();
 
     setGame({
       ...game,
+      scores: game.scores.map((v, i) => (i === 0 ? v - 1000 : v)),
+      riichiPot: game.riichiPot + 1000,
       riichiDeclared: game.riichiDeclared.map((declared, i) =>
         i === 0 ? true : declared,
       ),
@@ -505,6 +1032,19 @@ const GameMahjongJapanese = () => {
       game.wall.length === 0
     )
       return;
+    const timedBanks = consumeSeatTimeBank(game, 0);
+    turnClockRef.current = null;
+    const ronDeclined = canSeatRonByRules(game, 0);
+    const nextFuritenStates = ronDeclined
+      ? game.furitenStates.map((s, i) =>
+          i === 0
+            ? applyRonDeclinedFuriten(
+                s ?? createInitialFuritenState(),
+                game.riichiDeclared[0],
+              )
+            : s,
+        )
+      : game.furitenStates;
     const base = getBaseTile(game.lastDiscard);
     const h0 = [...game.hands[0]];
     const indices: number[] = [];
@@ -533,6 +1073,8 @@ const GameMahjongJapanese = () => {
     sounds.playKan();
     setGame({
       ...game,
+      timeBanks: timedBanks,
+      furitenStates: clearSeatDoujunStates(nextFuritenStates, 0),
       hands,
       melds,
       discardPiles: piles,
@@ -545,7 +1087,7 @@ const GameMahjongJapanese = () => {
       drawnTile: rinshan,
       lastClaimMsg: null,
     });
-  }, [game, addLog, sounds]);
+  }, [game, addLog, sounds, consumeSeatTimeBank]);
 
   /** 暗杠：从手牌移除 4 张，加暗杠面子，摸岭上 1 张（暗杠不算副露） */
   const doAngang = useCallback(
@@ -577,6 +1119,7 @@ const GameMahjongJapanese = () => {
         hands: game.hands.map((h, i) => (i === 0 ? h0 : h)),
         melds,
         wall: newWall,
+        furitenStates: clearSeatDoujunStates(game.furitenStates, 0),
       });
     },
     [game, sounds],
@@ -635,7 +1178,15 @@ const GameMahjongJapanese = () => {
     newHands[0].push(draw);
     newHands[0].sort((a, b) => getBaseTile(a) - getBaseTile(b) || a - b);
     setGame((g) =>
-      !g ? g : { ...g, hands: newHands, wall: newWall, drawnTile: draw },
+      !g
+        ? g
+        : {
+            ...g,
+            hands: newHands,
+            wall: newWall,
+            drawnTile: draw,
+            furitenStates: clearSeatDoujunStates(g.furitenStates, 0),
+          },
     );
   }, [
     game?.currentPlayer,
@@ -665,7 +1216,15 @@ const GameMahjongJapanese = () => {
     newHands[p].push(draw);
     newHands[p].sort((a, b) => getBaseTile(a) - getBaseTile(b) || a - b);
     setGame((g) =>
-      !g ? g : { ...g, hands: newHands, wall: newWall, drawnTile: draw },
+      !g
+        ? g
+        : {
+            ...g,
+            hands: newHands,
+            wall: newWall,
+            drawnTile: draw,
+            furitenStates: clearSeatDoujunStates(g.furitenStates, p),
+          },
     );
   }, [game?.currentPlayer, game?.drawnTile, game?.wall.length, game]);
 
@@ -695,8 +1254,14 @@ const GameMahjongJapanese = () => {
       hand.shift();
       const piles = g.discardPiles.map((q) => [...q]);
       piles[p].push(toDiscard);
+      const elapsed = getElapsedSecondsForSeat(p);
+      const nextTimeBanks = g.timeBanks.map((tb, i) =>
+        i === p ? consumeTimeBankSeconds(tb, elapsed) : tb,
+      );
+      turnClockRef.current = null;
       return {
         ...g,
+        timeBanks: nextTimeBanks,
         hands: g.hands.map((h, i) => (i === p ? hand : h)),
         discardPiles: piles,
         phase: 'claim',
@@ -707,9 +1272,17 @@ const GameMahjongJapanese = () => {
         lastClaimMsg: null,
       };
     });
-  }, [game?.phase, game?.currentPlayer, game?.drawnTile, game?.hands, game]);
+  }, [
+    game?.phase,
+    game?.currentPlayer,
+    game?.drawnTile,
+    game?.hands,
+    game,
+    getElapsedSecondsForSeat,
+  ]);
 
   // AI 回合 2：已摸牌则 500ms 后出牌（独立 effect）；仅出牌阶段
+  // biome-ignore lint/correctness/useExhaustiveDependencies: granular deps to avoid redundant effect runs
   useEffect(() => {
     if (
       !game ||
@@ -723,6 +1296,58 @@ const GameMahjongJapanese = () => {
       setGame((g) => {
         if (!g || g.currentPlayer !== p || g.drawnTile === null) return g;
         const hand = [...g.hands[p]];
+        const tsumoCtx = buildYakuCtx(p, hand, true);
+        if (
+          isWinShapeRiichi(hand, g.melds[p]) &&
+          tsumoCtx &&
+          hasYaku(tsumoCtx)
+        ) {
+          const yaku = computeYaku(tsumoCtx);
+          const han = getTotalHan(yaku);
+          const fu = calcFu({
+            isTsumo: true,
+            isMenzhen: g.melds[p].every((m) => m.type === 'angang'),
+            hasPinfu: yaku.some((y) => y.id === 'pinfu'),
+            isChiitoitsu: yaku.some((y) => y.id === 'chiitoitsu'),
+          });
+          addLogRef.current(`${SEAT_NAMES[p]} 自摸！`);
+          sounds.playTsumo();
+          const ten = calcScore(fu, han, g.dealer === p, true);
+          const enriched = enrichWinResultWithUra({
+            state: g,
+            winner: p,
+            isTsumo: true,
+            handWithWin: hand,
+            yaku,
+            han,
+            fu,
+            ten,
+          });
+          setWinResult({
+            winner: p,
+            isTsumo: true,
+            yaku: enriched.yaku,
+            han: enriched.han,
+            fu: enriched.fu,
+            ten: enriched.ten,
+            uraHan: enriched.uraHan,
+            uraDoraIndicators: enriched.uraDoraIndicators,
+          });
+          return g;
+        }
+
+        const doAiRiichi = shouldAiDeclareRiichi({
+          alreadyRiichi: g.riichiDeclared[p],
+          isMenzen: g.melds[p].every((m) => m.type === 'angang'),
+          score: g.scores[p],
+          waitingCount: getWaitingTilesRiichi(hand, g.melds[p], g, {
+            seat: p,
+            isTsumo: false,
+            treatAsRiichi: true,
+          }).length,
+          random: Math.random(),
+        });
+
         const angOpts = getAngangOptionsRiichi(hand);
         if (angOpts.length > 0 && g.wall.length > 0 && Math.random() < 0.2) {
           const fourTiles = [...angOpts[0]];
@@ -739,7 +1364,20 @@ const GameMahjongJapanese = () => {
           const rinshan = g.wall[0];
           h.push(rinshan);
           h.sort((a, b) => getBaseTile(a) - getBaseTile(b) || a - b);
-          const toDiscard = rinshan;
+          const aiRiichiLocked = g.riichiDeclared[p];
+          const defensiveChoice = !aiRiichiLocked
+            ? chooseAiDefensiveDiscardWithMeta({
+                hand: h,
+                aiSeat: p,
+                riichiDeclared: g.riichiDeclared,
+                discardPiles: g.discardPiles,
+                doraIndicators: [g.doraIndicator],
+              })
+            : null;
+          const defensiveDiscard = defensiveChoice?.tile ?? null;
+          const toDiscard = aiRiichiLocked
+            ? rinshan
+            : (defensiveDiscard ?? rinshan);
           const idx = h.indexOf(toDiscard);
           if (idx === -1) return g;
           h.splice(idx, 1);
@@ -748,8 +1386,32 @@ const GameMahjongJapanese = () => {
           );
           const piles = g.discardPiles.map((q) => [...q]);
           piles[p].push(toDiscard);
+          if (
+            !aiRiichiLocked &&
+            defensiveChoice &&
+            defensiveChoice.tile !== null &&
+            defensiveChoice.reason
+          ) {
+            addLogRef.current(`${SEAT_NAMES[p]} ${defensiveChoice.reason}`);
+          }
+          if (doAiRiichi) {
+            addLogRef.current(`${SEAT_NAMES[p]} 立直宣言！（-1000 点）`);
+            sounds.playRiichi();
+          }
+          const elapsed = getElapsedSecondsForSeat(p);
+          const timedBanks = g.timeBanks.map((tb, i) =>
+            i === p ? consumeTimeBankSeconds(tb, elapsed) : tb,
+          );
+          turnClockRef.current = null;
+          const nextRiichi = doAiRiichi
+            ? applyAiRiichiState(g.scores, g.riichiDeclared, g.riichiPot, p)
+            : null;
           return {
             ...g,
+            timeBanks: timedBanks,
+            scores: nextRiichi?.scores ?? g.scores,
+            riichiPot: nextRiichi?.riichiPot ?? g.riichiPot,
+            riichiDeclared: nextRiichi?.riichiDeclared ?? g.riichiDeclared,
             hands: g.hands.map((h0, i) => (i === p ? h : h0)),
             melds,
             wall: g.wall.slice(1),
@@ -760,18 +1422,57 @@ const GameMahjongJapanese = () => {
             lastDiscard: toDiscard,
             lastDiscardFrom: p,
             claimIndex: 0,
-            lastClaimMsg: null,
+            lastClaimMsg: doAiRiichi
+              ? `${SEAT_NAMES[p]} 立直宣言！（-1000 点）`
+              : null,
           };
         }
-        const toDiscard = g.drawnTile;
+        const aiRiichiLocked = g.riichiDeclared[p];
+        const defensiveChoice = !aiRiichiLocked
+          ? chooseAiDefensiveDiscardWithMeta({
+              hand,
+              aiSeat: p,
+              riichiDeclared: g.riichiDeclared,
+              discardPiles: g.discardPiles,
+              doraIndicators: [g.doraIndicator],
+            })
+          : null;
+        const defensiveDiscard = defensiveChoice?.tile ?? null;
+        const toDiscard = aiRiichiLocked
+          ? g.drawnTile
+          : (defensiveDiscard ?? g.drawnTile);
         const idx = hand.indexOf(toDiscard);
         if (idx === -1) return g;
         hand.splice(idx, 1);
         const piles = g.discardPiles.map((q) => [...q]);
         piles[p].push(toDiscard);
         const next = (p + 1) % 4;
+        if (
+          !aiRiichiLocked &&
+          defensiveChoice &&
+          defensiveChoice.tile !== null &&
+          defensiveChoice.reason
+        ) {
+          addLogRef.current(`${SEAT_NAMES[p]} ${defensiveChoice.reason}`);
+        }
+        if (doAiRiichi) {
+          addLogRef.current(`${SEAT_NAMES[p]} 立直宣言！（-1000 点）`);
+          sounds.playRiichi();
+        }
+        const elapsed = getElapsedSecondsForSeat(p);
+        const timedBanks = g.timeBanks.map((tb, i) =>
+          i === p ? consumeTimeBankSeconds(tb, elapsed) : tb,
+        );
+        turnClockRef.current = null;
+        const nextRiichi = doAiRiichi
+          ? applyAiRiichiState(g.scores, g.riichiDeclared, g.riichiPot, p)
+          : null;
         return {
           ...g,
+          timeBanks: timedBanks,
+          scores: nextRiichi?.scores ?? g.scores,
+          riichiPot: nextRiichi?.riichiPot ?? g.riichiPot,
+          riichiDeclared: nextRiichi?.riichiDeclared ?? g.riichiDeclared,
           hands: g.hands.map((h, i) => (i === p ? hand : h)),
           discardPiles: piles,
           currentPlayer: next,
@@ -780,7 +1481,9 @@ const GameMahjongJapanese = () => {
           lastDiscard: toDiscard,
           lastDiscardFrom: p,
           claimIndex: 0,
-          lastClaimMsg: null,
+          lastClaimMsg: doAiRiichi
+            ? `${SEAT_NAMES[p]} 立直宣言！（-1000 点）`
+            : null,
         };
       });
     }, 500);
@@ -797,6 +1500,13 @@ const GameMahjongJapanese = () => {
       ? (game.lastDiscardFrom + 1 + game.claimIndex) % 4
       : null;
   const isMyClaim = isClaimPhase && claimPlayer === 0;
+  const currentClaimToken =
+    game &&
+    isClaimPhase &&
+    game.lastDiscardFrom !== null &&
+    game.lastDiscard !== null
+      ? `${game.roundWind}:${game.roundNumber}:${game.honba}:${game.wall.length}:${game.lastDiscardFrom}:${game.lastDiscard}:${game.discardPiles[game.lastDiscardFrom]?.length ?? 0}`
+      : null;
   /** 立直后禁止吃/碰/明杠（技能：立直约束） */
   const riichiNoClaim = game?.riichiDeclared[0] ?? false;
   const chiOptions =
@@ -827,9 +1537,9 @@ const GameMahjongJapanese = () => {
 
   /** 构建役判定上下文（自家）；立直/一发按当前局状态传入 */
   const buildYakuCtx = useCallback(
-    (hand: number[], isTsumo: boolean) => {
+    (seat: number, hand: number[], isTsumo: boolean) => {
       if (!game) return null;
-      const melds = game.melds[0];
+      const melds = game.melds[seat];
       const menzen = melds.every((m) => m.type === 'angang');
       return {
         hand,
@@ -837,14 +1547,48 @@ const GameMahjongJapanese = () => {
         meldsTyped: melds,
         isMenzhen: menzen,
         isTsumo,
-        isRiichi: game.riichiDeclared[0],
+        isRiichi: game.riichiDeclared[seat],
         ippatsuPossible: false, // 一发需立直后一巡内和了，可后续按巡数细化
-        seatWind: getSeatWind(game.roundWind, 0, game.dealer),
+        seatWind: getSeatWind(game.roundWind, seat, game.dealer),
         roundWind: game.roundWind,
       };
     },
     [game],
   );
+
+  const getRonWaitingTilesForSeat = useCallback(
+    (seat: number, state: RiichiGameState): number[] =>
+      getWaitingTilesRiichi(state.hands[seat], state.melds[seat], state, {
+        seat,
+        isTsumo: false,
+      }),
+    [getWaitingTilesRiichi],
+  );
+
+  const isSeatFuriten = useCallback(
+    (seat: number, state: RiichiGameState): boolean =>
+      isRonForbiddenByFuriten({
+        waitingTiles: getRonWaitingTilesForSeat(seat, state),
+        ownDiscards: state.discardPiles[seat],
+        state: state.furitenStates[seat] ?? createInitialFuritenState(),
+      }),
+    [getRonWaitingTilesForSeat],
+  );
+
+  const markSeatRonDeclined = useCallback((seat: number) => {
+    setGame((g) => {
+      if (!g) return g;
+      const furitenStates = g.furitenStates.map((s, i) =>
+        i === seat
+          ? applyRonDeclinedFuriten(
+              s ?? createInitialFuritenState(),
+              g.riichiDeclared[seat],
+            )
+          : s,
+      );
+      return { ...g, furitenStates };
+    });
+  }, []);
 
   const canTsumo =
     game &&
@@ -853,30 +1597,97 @@ const GameMahjongJapanese = () => {
     game.hands[0].length === 14 &&
     isWinShapeRiichi(game.hands[0], game.melds[0]) &&
     (() => {
-      const ctx = buildYakuCtx(game.hands[0], true);
+      const ctx = buildYakuCtx(0, game.hands[0], true);
       return ctx ? hasYaku(ctx) : false;
     })();
 
   const canRon =
     game &&
-    isMyClaim &&
-    game.lastDiscard !== null &&
-    game.lastDiscardFrom !== null &&
     (() => {
       const lastD = game.lastDiscard;
-      if (lastD === undefined) return;
+      if (lastD === null) return false;
       const handWithClaim = [...game.hands[0], lastD];
-      if (!isWinShapeRiichi(handWithClaim, game.melds[0])) return false;
-      const ctx = buildYakuCtx(handWithClaim, false);
-      return ctx ? hasYaku(ctx) : false;
+      const winShape = isWinShapeRiichi(handWithClaim, game.melds[0]);
+      const ctx = buildYakuCtx(0, handWithClaim, false);
+      const yakuReady = ctx ? hasYaku(ctx) : false;
+      const furitenBlocked = isSeatFuriten(0, game);
+      return canOfferRon({
+        phase: game.phase,
+        lastDiscard: game.lastDiscard,
+        lastDiscardFrom: game.lastDiscardFrom,
+        currentClaimToken,
+        declinedRonToken,
+        isWinShape: winShape,
+        hasYaku: yakuReady && !furitenBlocked,
+      });
     })();
 
-  const hasAnyClaimOption =
-    chiOptions.length > 0 || canPeng || canMingang || canRon;
+  const hasNonRonClaimOption = chiOptions.length > 0 || canPeng || canMingang;
+  const hasAnyClaimOption = hasNonRonClaimOption || canRon;
+  const decisionSeat =
+    game && needsTimedDecision(game) ? getDecisionSeat(game) : null;
+  const decisionSeatRemainSeconds =
+    game && decisionSeat !== null
+      ? (() => {
+          const c = turnClockRef.current;
+          if (!c || c.player !== decisionSeat) {
+            return getTurnTotalSeconds(game.timeBanks[decisionSeat]);
+          }
+          const elapsed = Math.max(0, (clockNowMs - c.startedAt) / 1000);
+          return Math.max(
+            0,
+            Math.ceil(
+              getTurnTotalSeconds(game.timeBanks[decisionSeat]) - elapsed,
+            ),
+          );
+        })()
+      : null;
+  const currentTurnRemainSeconds =
+    game && decisionSeat === 0 ? decisionSeatRemainSeconds : null;
+  const timerTextClass = (seat: number): string => {
+    const active = decisionSeat === seat && decisionSeatRemainSeconds != null;
+    if (!active) return 'text-[#a8dadc]';
+    if (decisionSeatRemainSeconds <= 3)
+      return 'text-red-300 animate-pulse font-semibold';
+    if (decisionSeatRemainSeconds <= 8) return 'text-amber-300 font-semibold';
+    return 'text-emerald-300';
+  };
+
+  const decisionTurnKey =
+    game && decisionSeat !== null
+      ? `${game.phase}:${decisionSeat}:${game.currentPlayer}:${game.claimIndex}:${game.lastDiscardFrom ?? -1}:${game.lastDiscard ?? -1}`
+      : null;
+
+  useEffect(() => {
+    if (!game || decisionSeat !== 0 || currentTurnRemainSeconds == null) return;
+    if (currentTurnRemainSeconds > 3 || currentTurnRemainSeconds <= 0) return;
+    if (!decisionTurnKey) return;
+    if (lowTimeWarnedTurnRef.current === decisionTurnKey) return;
+    sounds.playTimeWarning();
+    lowTimeWarnedTurnRef.current = decisionTurnKey;
+  }, [game, decisionSeat, currentTurnRemainSeconds, decisionTurnKey, sounds]);
+  const myFuritenReason =
+    game && isClaimPhase
+      ? (() => {
+          const waits = getRonWaitingTilesForSeat(0, game);
+          const st = game.furitenStates[0] ?? createInitialFuritenState();
+          const sutehai = isRonForbiddenByFuriten({
+            waitingTiles: waits,
+            ownDiscards: game.discardPiles[0],
+            state: { ...st, doujun: false, riichi: false, sutehai: false },
+          });
+          if (st.riichi) return '立直振听（本局不可荣和）';
+          if (st.doujun) return '同巡振听（下次摸牌后解除）';
+          if (sutehai) return '舍张振听（当前听牌牌种与自家河重复）';
+          return null;
+        })()
+      : null;
 
   /** 自摸：当前手牌 14 张且和牌形+有役；优先用 riichi-rs 算分 */
   const doTsumo = useCallback(() => {
     if (!game || !canTsumo) return;
+    const timedBanks = consumeSeatTimeBank(game, 0);
+    turnClockRef.current = null;
     const hand = game.hands[0];
     const stateForRs: GameStateForRs = {
       hand,
@@ -893,28 +1704,79 @@ const GameMahjongJapanese = () => {
     if (rs && rs.yaku.length > 0) {
       addLog(`自家 自摸！${rs.fu}符 ${rs.han}番 ${rs.ten}点`);
       sounds.playTsumo();
-      setWinResult({
+      const enriched = enrichWinResultWithUra({
+        state: game,
         winner: 0,
         isTsumo: true,
+        handWithWin: hand,
         yaku: rs.yaku,
         fu: rs.fu,
         han: rs.han,
         ten: rs.ten,
       });
+      setWinResult({
+        winner: 0,
+        isTsumo: true,
+        yaku: enriched.yaku,
+        fu: enriched.fu,
+        han: enriched.han,
+        ten: enriched.ten,
+        uraHan: enriched.uraHan,
+        uraDoraIndicators: enriched.uraDoraIndicators,
+      });
+      setGame((g) => (g ? { ...g, timeBanks: timedBanks } : g));
       return;
     }
-    const ctx = buildYakuCtx(hand, true);
+    const ctx = buildYakuCtx(0, hand, true);
     if (!ctx) return;
     const yaku = computeYaku(ctx);
     if (yaku.length === 0) return;
     addLog(`自家 自摸！役: ${yaku.map((y) => y.name).join(' ')}`);
     sounds.playTsumo();
-    setWinResult({ winner: 0, isTsumo: true, yaku });
-  }, [game, canTsumo, buildYakuCtx, addLog, sounds]);
+    const han = getTotalHan(yaku);
+    const fu = calcFu({
+      isTsumo: true,
+      isMenzhen: game.melds[0].every((m) => m.type === 'angang'),
+      hasPinfu: yaku.some((yy) => yy.id === 'pinfu'),
+      isChiitoitsu: yaku.some((yy) => yy.id === 'chiitoitsu'),
+    });
+    const ten = calcScore(fu, han, game.dealer === 0, true);
+    const enriched = enrichWinResultWithUra({
+      state: game,
+      winner: 0,
+      isTsumo: true,
+      handWithWin: hand,
+      yaku,
+      fu,
+      han,
+      ten,
+    });
+    setWinResult({
+      winner: 0,
+      isTsumo: true,
+      yaku: enriched.yaku,
+      fu: enriched.fu,
+      han: enriched.han,
+      ten: enriched.ten,
+      uraHan: enriched.uraHan,
+      uraDoraIndicators: enriched.uraDoraIndicators,
+    });
+    setGame((g) => (g ? { ...g, timeBanks: timedBanks } : g));
+  }, [
+    game,
+    canTsumo,
+    buildYakuCtx,
+    addLog,
+    sounds,
+    enrichWinResultWithUra,
+    consumeSeatTimeBank,
+  ]);
 
   /** 荣和：要牌阶段别人打的牌能胡；优先用 riichi-rs 算分 */
   const doRon = useCallback(() => {
     if (!game || !canRon || game.lastDiscard === null) return;
+    const timedBanks = consumeSeatTimeBank(game, 0);
+    turnClockRef.current = null;
     const handWithClaim = [...game.hands[0], game.lastDiscard];
     const stateForRs: GameStateForRs = {
       hand: handWithClaim,
@@ -933,17 +1795,30 @@ const GameMahjongJapanese = () => {
         `自家 荣和 ${getTileLabel(game.lastDiscard)}！${rs.fu}符 ${rs.han}番 ${rs.ten}点`,
       );
       sounds.playRon();
-      setWinResult({
+      const enriched = enrichWinResultWithUra({
+        state: game,
         winner: 0,
         isTsumo: false,
+        handWithWin: handWithClaim,
         yaku: rs.yaku,
         fu: rs.fu,
         han: rs.han,
         ten: rs.ten,
       });
+      setWinResult({
+        winner: 0,
+        isTsumo: false,
+        yaku: enriched.yaku,
+        fu: enriched.fu,
+        han: enriched.han,
+        ten: enriched.ten,
+        uraHan: enriched.uraHan,
+        uraDoraIndicators: enriched.uraDoraIndicators,
+      });
+      setGame((g) => (g ? { ...g, timeBanks: timedBanks } : g));
       return;
     }
-    const ctx = buildYakuCtx(handWithClaim, false);
+    const ctx = buildYakuCtx(0, handWithClaim, false);
     if (!ctx) return;
     const yaku = computeYaku(ctx);
     if (yaku.length === 0) return;
@@ -951,12 +1826,95 @@ const GameMahjongJapanese = () => {
       `自家 荣和 ${getTileLabel(game.lastDiscard)}！役: ${yaku.map((y) => y.name).join(' ')}`,
     );
     sounds.playRon();
-    setWinResult({ winner: 0, isTsumo: false, yaku });
-  }, [game, canRon, buildYakuCtx, addLog, sounds]);
+    const han = getTotalHan(yaku);
+    const fu = calcFu({
+      isTsumo: false,
+      isMenzhen: game.melds[0].every((m) => m.type === 'angang'),
+      hasPinfu: yaku.some((yy) => yy.id === 'pinfu'),
+      isChiitoitsu: yaku.some((yy) => yy.id === 'chiitoitsu'),
+    });
+    const ten = calcScore(fu, han, game.dealer === 0, false);
+    const enriched = enrichWinResultWithUra({
+      state: game,
+      winner: 0,
+      isTsumo: false,
+      handWithWin: handWithClaim,
+      yaku,
+      fu,
+      han,
+      ten,
+    });
+    setWinResult({
+      winner: 0,
+      isTsumo: false,
+      yaku: enriched.yaku,
+      fu: enriched.fu,
+      han: enriched.han,
+      ten: enriched.ten,
+      uraHan: enriched.uraHan,
+      uraDoraIndicators: enriched.uraDoraIndicators,
+    });
+    setGame((g) => (g ? { ...g, timeBanks: timedBanks } : g));
+  }, [
+    game,
+    canRon,
+    buildYakuCtx,
+    addLog,
+    sounds,
+    enrichWinResultWithUra,
+    consumeSeatTimeBank,
+  ]);
+
+  const passRonOpportunity = useCallback(() => {
+    if (!currentClaimToken) return;
+    markSeatRonDeclined(0);
+    setGame((g) => (g ? { ...g, timeBanks: consumeSeatTimeBank(g, 0) } : g));
+    turnClockRef.current = null;
+    setDeclinedRonToken(currentClaimToken);
+    addLog('自家 过（放弃荣和）');
+  }, [currentClaimToken, addLog, markSeatRonDeclined, consumeSeatTimeBank]);
+
+  const resolveWinBaseTen = useCallback(
+    (result: NonNullable<typeof winResult>, state: RiichiGameState): number => {
+      if (result.ten != null && result.ten > 0) return result.ten;
+      const han = result.han ?? getTotalHan(result.yaku);
+      if (han <= 0) return 1000;
+      const hasPinfu = result.yaku.some((y) => y.id === 'pinfu');
+      const isChiitoitsu = result.yaku.some((y) => y.id === 'chiitoitsu');
+      const isMenzhen = state.melds[result.winner].every(
+        (m) => m.type === 'angang',
+      );
+      const fu =
+        result.fu ??
+        calcFu({
+          isTsumo: result.isTsumo,
+          isMenzhen,
+          hasPinfu,
+          isChiitoitsu,
+        });
+      return calcScore(fu, han, state.dealer === result.winner, result.isTsumo);
+    },
+    [],
+  );
 
   /** 胡牌后进入下一局 */
   const proceedToNextRound = useCallback(() => {
     if (!game || !winResult) return;
+    const baseTen = resolveWinBaseTen(winResult, game);
+    const settlement = settleWin({
+      scores: game.scores,
+      winner: winResult.winner,
+      isTsumo: winResult.isTsumo,
+      baseTen,
+      dealer: game.dealer,
+      honba: game.honba,
+      riichiPot: game.riichiPot,
+      ronFrom: game.lastDiscardFrom,
+    });
+    const scoreLine = SEAT_NAMES.map(
+      (name, i) => `${name} ${formatPoints(settlement.newScores[i])}`,
+    ).join(' · ');
+    addLog(`本局结算：${scoreLine}`);
     const dealerWon = game.dealer === winResult.winner;
     const next = getNextRound(
       game.dealer,
@@ -966,15 +1924,46 @@ const GameMahjongJapanese = () => {
       dealerWon,
     );
     setWinResult(null);
+    setDeclinedRonToken(null);
     setGame(
-      initRiichiGame(next.dealer, next.roundWind, next.roundNumber, next.honba),
+      initRiichiGame(
+        next.dealer,
+        next.roundWind,
+        next.roundNumber,
+        next.honba,
+        settlement.newScores,
+        undefined,
+        settlement.nextRiichiPot,
+        {
+          payments: settlement.payments,
+          deltas: settlement.deltas,
+          newScores: settlement.newScores,
+          timeoutEvents: game.timeoutEvents,
+        },
+      ),
     );
     addLog(dealerWon ? '庄家胡，连庄' : '子家胡，换庄');
-  }, [game, winResult, addLog]);
+  }, [game, winResult, addLog, resolveWinBaseTen]);
 
   /** 流局后进入下一局（庄家连庄，本场+1） */
   const proceedAfterRyuukyoku = useCallback(() => {
     if (!game || !game.ryuukyoku) return;
+    const tenpaiSeats = getTenpaiSeatsForDraw(game, getWaitingTilesRiichi);
+    const settlement = settleRyuukyoku(
+      game.scores,
+      tenpaiSeats,
+      game.riichiPot,
+    );
+    const tenpaiText =
+      tenpaiSeats.length === 0
+        ? '无人听牌'
+        : tenpaiSeats.length === 4
+          ? '全员听牌'
+          : `听牌：${tenpaiSeats.map((i) => SEAT_NAMES[i]).join('、')}`;
+    const scoreLine = SEAT_NAMES.map(
+      (name, i) => `${name} ${formatPoints(settlement.newScores[i])}`,
+    ).join(' · ');
+    addLog(`流局结算（${tenpaiText}）：${scoreLine}`);
     const next = getNextRound(
       game.dealer,
       game.roundWind,
@@ -982,11 +1971,65 @@ const GameMahjongJapanese = () => {
       game.honba,
       true,
     );
+    setDeclinedRonToken(null);
     setGame(
-      initRiichiGame(next.dealer, next.roundWind, next.roundNumber, next.honba),
+      initRiichiGame(
+        next.dealer,
+        next.roundWind,
+        next.roundNumber,
+        next.honba,
+        settlement.newScores,
+        undefined,
+        settlement.nextRiichiPot,
+        {
+          payments: settlement.payments,
+          deltas: settlement.deltas,
+          newScores: settlement.newScores,
+          tenpaiSeats,
+          timeoutEvents: game.timeoutEvents,
+        },
+      ),
     );
     addLog('流局，连庄');
-  }, [game, addLog]);
+  }, [game, addLog, getWaitingTilesRiichi]);
+
+  const winSettlementPreview = useMemo(() => {
+    if (!game || !winResult) return null;
+    const baseTen = resolveWinBaseTen(winResult, game);
+    try {
+      return settleWin({
+        scores: game.scores,
+        winner: winResult.winner,
+        isTsumo: winResult.isTsumo,
+        baseTen,
+        dealer: game.dealer,
+        honba: game.honba,
+        riichiPot: game.riichiPot,
+        ronFrom: game.lastDiscardFrom,
+      });
+    } catch {
+      return null;
+    }
+  }, [game, winResult, resolveWinBaseTen]);
+
+  const drawSettlementPreview = useMemo(() => {
+    if (!game || !game.ryuukyoku) return null;
+    const tenpaiSeats = getTenpaiSeatsForDraw(game, getWaitingTilesRiichi);
+    const settlement = settleRyuukyoku(
+      game.scores,
+      tenpaiSeats,
+      game.riichiPot,
+    );
+    return { tenpaiSeats, settlement };
+  }, [game, getWaitingTilesRiichi]);
+
+  const winnerPaymentSummary = useMemo(() => {
+    if (!winResult || !winSettlementPreview) return null;
+    return summarizeWinnerPayments(
+      winSettlementPreview.payments,
+      winResult.winner,
+    );
+  }, [winResult, winSettlementPreview]);
 
   // 要牌阶段：轮到自家且没有任何吃/碰/杠可选时，自动过，不暂停
   useEffect(() => {
@@ -1015,43 +2058,48 @@ const GameMahjongJapanese = () => {
       const peng = canPengRiichi(g.hands[0], lastTile);
       const gang = canMingangRiichi(g.hands[0], lastTile);
       if (chiOpts.length > 0 || peng || gang) return g;
-      const nextIndex = g.claimIndex + 1;
-      if (nextIndex >= 3) {
-        const nextPlayer = (g.lastDiscardFrom + 1) % 4;
-        if (g.wall.length === 0) {
-          addLogRef.current('流局（荒牌）');
-          return {
-            ...g,
-            phase: 'discard',
-            lastDiscard: null,
-            lastDiscardFrom: null,
-            claimIndex: 0,
-            currentPlayer: nextPlayer,
-            lastClaimMsg: null,
-            ryuukyoku: true,
-          };
-        }
-        const draw = g.wall[0];
-        const newWall = g.wall.slice(1);
-        const newHands = g.hands.map((h) => [...h]);
-        newHands[nextPlayer].push(draw);
-        newHands[nextPlayer].sort(
-          (a, b) => getBaseTile(a) - getBaseTile(b) || a - b,
-        );
+      const passResult = resolveClaimPass(g.claimIndex, g.wall.length);
+      if (passResult.type === 'next') {
         return {
           ...g,
-          hands: newHands,
-          wall: newWall,
+          claimIndex: passResult.nextClaimIndex,
+          lastClaimMsg: null,
+        };
+      }
+      const nextPlayer = (g.lastDiscardFrom + 1) % 4;
+      if (passResult.type === 'ryuukyoku') {
+        addLogRef.current('流局（荒牌）');
+        return {
+          ...g,
           phase: 'discard',
           lastDiscard: null,
           lastDiscardFrom: null,
           claimIndex: 0,
           currentPlayer: nextPlayer,
-          drawnTile: draw,
           lastClaimMsg: null,
+          ryuukyoku: true,
         };
       }
-      return { ...g, claimIndex: nextIndex, lastClaimMsg: null };
+      const draw = g.wall[0];
+      const newWall = g.wall.slice(1);
+      const newHands = g.hands.map((h) => [...h]);
+      newHands[nextPlayer].push(draw);
+      newHands[nextPlayer].sort(
+        (a, b) => getBaseTile(a) - getBaseTile(b) || a - b,
+      );
+      return {
+        ...g,
+        hands: newHands,
+        wall: newWall,
+        furitenStates: clearSeatDoujunStates(g.furitenStates, nextPlayer),
+        phase: 'discard',
+        lastDiscard: null,
+        lastDiscardFrom: null,
+        claimIndex: 0,
+        currentPlayer: nextPlayer,
+        drawnTile: draw,
+        lastClaimMsg: null,
+      };
     });
   }, [
     game?.phase,
@@ -1063,12 +2111,14 @@ const GameMahjongJapanese = () => {
   ]);
 
   // 要牌阶段：轮到 AI 时自动 吃/碰/杠 或 过
+  // biome-ignore lint/correctness/useExhaustiveDependencies: granular deps to avoid redundant effect runs
   useEffect(() => {
     if (
       !game ||
       game.phase !== 'claim' ||
       claimPlayer === null ||
-      claimPlayer === 0
+      claimPlayer === 0 ||
+      canRon
     )
       return;
     const p = claimPlayer;
@@ -1076,10 +2126,56 @@ const GameMahjongJapanese = () => {
     const from = game.lastDiscardFrom;
     if (last === null || from === null) return;
     const hand = game.hands[p];
-    const chiOpts = getChiOptionsRiichi(hand, last, from, p);
-    const peng = canPengRiichi(hand, last);
-    const gang = canMingangRiichi(hand, last);
+    const handWithClaim = [...hand, last];
+    const ronCtx = buildYakuCtx(p, handWithClaim, false);
+    const furitenBlocked = isSeatFuriten(p, game);
+    const aiCanRon = canAiRonOnClaim({
+      fromPlayer: from,
+      aiSeat: p,
+      isWinShape: isWinShapeRiichi(handWithClaim, game.melds[p]),
+      hasYaku: (ronCtx ? hasYaku(ronCtx) : false) && !furitenBlocked,
+    });
+    const aiRiichiLocked = game.riichiDeclared[p];
+    const chiOpts = aiRiichiLocked
+      ? []
+      : getChiOptionsRiichi(hand, last, from, p);
+    const peng = aiRiichiLocked ? false : canPengRiichi(hand, last);
+    const gang = aiRiichiLocked ? false : canMingangRiichi(hand, last);
     const tid = setTimeout(() => {
+      if (aiCanRon) {
+        const yaku = ronCtx ? computeYaku(ronCtx) : [];
+        const han = getTotalHan(yaku);
+        const fu = calcFu({
+          isTsumo: false,
+          isMenzhen: game.melds[p].every((m) => m.type === 'angang'),
+          hasPinfu: yaku.some((y) => y.id === 'pinfu'),
+          isChiitoitsu: yaku.some((y) => y.id === 'chiitoitsu'),
+        });
+        addLogRef.current(`${SEAT_NAMES[p]} 荣和 ${getTileLabel(last)}！`);
+        sounds.playRon();
+        const ten = calcScore(fu, han, game.dealer === p, false);
+        const enriched = enrichWinResultWithUra({
+          state: game,
+          winner: p,
+          isTsumo: false,
+          handWithWin: handWithClaim,
+          yaku,
+          han,
+          fu,
+          ten,
+        });
+        setWinResult({
+          winner: p,
+          isTsumo: false,
+          yaku: enriched.yaku,
+          han: enriched.han,
+          fu: enriched.fu,
+          ten: enriched.ten,
+          uraHan: enriched.uraHan,
+          uraDoraIndicators: enriched.uraDoraIndicators,
+        });
+        return;
+      }
       if (chiOpts.length > 0 && Math.random() < 0.6) {
         const [a, b] = chiOpts[0];
         const hands = game.hands.map((h) => [...h]);
@@ -1195,6 +2291,7 @@ const GameMahjongJapanese = () => {
             melds,
             discardPiles: pilesGang,
             wall: newWall,
+            furitenStates: clearSeatDoujunStates(game.furitenStates, p),
             phase: 'discard',
             lastDiscard: null,
             lastDiscardFrom: null,
@@ -1209,39 +2306,48 @@ const GameMahjongJapanese = () => {
       addLogRef.current(`${SEAT_NAMES[p]} 过`);
       setGame((g) => {
         if (!g || g.phase !== 'claim' || g.lastDiscardFrom === null) return g;
-        const nextIndex = g.claimIndex + 1;
-        if (nextIndex >= 3) {
-          const nextPlayer = (g.lastDiscardFrom + 1) % 4;
-          if (g.wall.length === 0) {
-            return {
-              ...g,
-              phase: 'discard',
-              lastDiscard: null,
-              lastDiscardFrom: null,
-              claimIndex: 0,
-              currentPlayer: nextPlayer,
-            };
-          }
-          const draw = g.wall[0];
-          const newWall = g.wall.slice(1);
-          const newHands = g.hands.map((h) => [...h]);
-          newHands[nextPlayer].push(draw);
-          newHands[nextPlayer].sort(
-            (a, b) => getBaseTile(a) - getBaseTile(b) || a - b,
-          );
+        const passResult = resolveClaimPass(g.claimIndex, g.wall.length);
+        if (passResult.type === 'next') {
           return {
             ...g,
-            hands: newHands,
-            wall: newWall,
+            claimIndex: passResult.nextClaimIndex,
+            lastClaimMsg: null,
+          };
+        }
+        const nextPlayer = (g.lastDiscardFrom + 1) % 4;
+        if (passResult.type === 'ryuukyoku') {
+          addLogRef.current('流局（荒牌）');
+          return {
+            ...g,
             phase: 'discard',
             lastDiscard: null,
             lastDiscardFrom: null,
             claimIndex: 0,
             currentPlayer: nextPlayer,
-            drawnTile: draw,
+            lastClaimMsg: null,
+            ryuukyoku: true,
           };
         }
-        return { ...g, claimIndex: nextIndex };
+        const draw = g.wall[0];
+        const newWall = g.wall.slice(1);
+        const newHands = g.hands.map((h) => [...h]);
+        newHands[nextPlayer].push(draw);
+        newHands[nextPlayer].sort(
+          (a, b) => getBaseTile(a) - getBaseTile(b) || a - b,
+        );
+        return {
+          ...g,
+          hands: newHands,
+          wall: newWall,
+          furitenStates: clearSeatDoujunStates(g.furitenStates, nextPlayer),
+          phase: 'discard',
+          lastDiscard: null,
+          lastDiscardFrom: null,
+          claimIndex: 0,
+          currentPlayer: nextPlayer,
+          drawnTile: draw,
+          lastClaimMsg: null,
+        };
       });
     }, 400);
     return () => clearTimeout(tid);
@@ -1249,6 +2355,7 @@ const GameMahjongJapanese = () => {
     game?.phase,
     game?.claimIndex,
     claimPlayer,
+    canRon,
     game?.lastDiscard,
     game?.lastDiscardFrom,
     game?.discardPiles?.map,
@@ -1256,7 +2363,6 @@ const GameMahjongJapanese = () => {
     game?.wall?.slice,
     game?.wall?.length,
     game?.wall?.[0],
-    game?.melds?.map,
     game?.hands?.[claimPlayer ?? 0],
     game,
   ]);
@@ -1338,6 +2444,9 @@ const GameMahjongJapanese = () => {
               ? `${WIND_NAMES[game.roundWind]}${game.roundNumber}局 ${WIND_NAMES[game.roundWind]}${game.honba}场 · 庄 ${SEAT_NAMES[game.dealer]} (${WIND_NAMES[getSeatWind(game.roundWind, game.dealer, game.dealer)]})`
               : '东1局 东0场 · 庄 自家 (东)'}
           </span>
+          <span className="text-xs text-[#ffd700]">
+            立直棒池 {formatPoints(game.riichiPot)}
+          </span>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -1383,6 +2492,42 @@ const GameMahjongJapanese = () => {
       </header>
 
       <main className="mx-auto max-w-6xl p-4 md:p-6">
+        <div className="mb-3 rounded-lg border border-[#d4b886]/30 bg-[#1a2e25]/70 px-3 py-2 text-xs text-[#f1faee]/90">
+          {SEAT_NAMES.map((name, i) => (
+            <span key={name}>
+              {i > 0 && ' · '}
+              {name}{' '}
+              <span className="font-semibold text-[#ffd700]">
+                {formatPoints(game.scores[i])}
+              </span>
+            </span>
+          ))}
+        </div>
+        {game.lastSettlement && (
+          <div className="mb-3 rounded-lg border border-[#457b9d]/40 bg-[#1d3557]/35 px-3 py-2">
+            <p className="text-xs font-medium text-[#a8dadc]">上一局结算</p>
+            {game.lastSettlement.tenpaiSeats && (
+              <p className="mt-1 text-[11px] text-[#f1faee]/80">
+                听牌：
+                {game.lastSettlement.tenpaiSeats.length === 0
+                  ? ' 无'
+                  : ` ${game.lastSettlement.tenpaiSeats.map((i) => SEAT_NAMES[i]).join('、')}`}
+              </p>
+            )}
+            <p className="mt-1 text-[11px] text-[#f1faee]/80">
+              分差：{' '}
+              {game.lastSettlement.deltas
+                .map((d, i) => `${SEAT_NAMES[i]} ${d >= 0 ? '+' : ''}${d}`)
+                .join(' · ')}
+            </p>
+            {game.lastSettlement.timeoutEvents &&
+              game.lastSettlement.timeoutEvents.length > 0 && (
+                <p className="mt-1 text-[11px] text-[#f1faee]/80">
+                  超时：{game.lastSettlement.timeoutEvents.join('；')}
+                </p>
+              )}
+          </div>
+        )}
         <div className="rounded-2xl bg-[#2d4a3c] p-4 md:p-6 mb-4 min-h-[480px] shadow-[0_12px_32px_rgba(0,0,0,0.4)]">
           {/* 新手引导面板 */}
           {showGuide && (
@@ -1456,12 +2601,13 @@ const GameMahjongJapanese = () => {
             </div>
 
             {/* 操作建议 */}
-            {isMyClaim && hasAnyClaimOption && (
+            {(canRon || (isMyClaim && hasNonRonClaimOption)) && (
               <div className="mb-2">
                 <p className="text-xs text-[#a8dadc] bg-[#1d3557]/50 rounded-lg py-1 px-3 inline-block">
                   💡 可选操作：{canRon && '胡牌 '}{' '}
                   {chiOptions.length > 0 && `吃(${chiOptions.length}种) `}{' '}
-                  {canPeng && '碰 '} {canMingang && '杠 '} {'过'}
+                  {canPeng && '碰 '} {canMingang && '杠 '}{' '}
+                  {isMyClaim ? '过' : canRon ? '放弃荣和' : ''}
                 </p>
               </div>
             )}
@@ -1471,6 +2617,13 @@ const GameMahjongJapanese = () => {
               <div className="mb-2">
                 <span className="inline-block text-xs text-amber-300/95 bg-amber-900/30 rounded-lg py-1 px-3">
                   📢 {game.lastClaimMsg}
+                </span>
+              </div>
+            )}
+            {myFuritenReason && (
+              <div className="mb-2">
+                <span className="inline-block text-xs text-rose-200 bg-rose-900/30 rounded-lg py-1 px-3">
+                  ⚠️ {myFuritenReason}
                 </span>
               </div>
             )}
@@ -1510,6 +2663,17 @@ const GameMahjongJapanese = () => {
               </p>
               <p className="text-xs text-[#ffd700]">
                 {game.hands[2].length} 张
+              </p>
+              <p className="text-[11px] text-amber-200">
+                {formatPoints(game.scores[2])}
+              </p>
+              <p className="text-[11px] text-[#a8dadc]">
+                <span className={timerTextClass(2)}>
+                  时库 {game.timeBanks[2]}s
+                  {decisionSeat === 2 &&
+                    decisionSeatRemainSeconds != null &&
+                    ` · 本巡 ${decisionSeatRemainSeconds}s`}
+                </span>
               </p>
               {game.hands[2].length > 0 && (
                 <div className="flex flex-wrap justify-center gap-0.5 mt-1">
@@ -1556,6 +2720,17 @@ const GameMahjongJapanese = () => {
               </p>
               <p className="text-xs text-[#ffd700]">
                 {game.hands[3].length} 张
+              </p>
+              <p className="text-[11px] text-amber-200">
+                {formatPoints(game.scores[3])}
+              </p>
+              <p className="text-[11px] text-[#a8dadc]">
+                <span className={timerTextClass(3)}>
+                  时库 {game.timeBanks[3]}s
+                  {decisionSeat === 3 &&
+                    decisionSeatRemainSeconds != null &&
+                    ` · 本巡 ${decisionSeatRemainSeconds}s`}
+                </span>
               </p>
               {game.hands[3].length > 0 && (
                 <div className="flex flex-wrap justify-center gap-0.5 mt-1">
@@ -1631,6 +2806,17 @@ const GameMahjongJapanese = () => {
               <p className="text-xs text-[#ffd700]">
                 {game.hands[1].length} 张
               </p>
+              <p className="text-[11px] text-amber-200">
+                {formatPoints(game.scores[1])}
+              </p>
+              <p className="text-[11px] text-[#a8dadc]">
+                <span className={timerTextClass(1)}>
+                  时库 {game.timeBanks[1]}s
+                  {decisionSeat === 1 &&
+                    decisionSeatRemainSeconds != null &&
+                    ` · 本巡 ${decisionSeatRemainSeconds}s`}
+                </span>
+              </p>
               {game.hands[1].length > 0 && (
                 <div className="flex flex-wrap justify-center gap-0.5 mt-1">
                   {game.hands[1].map((_, i) => (
@@ -1663,6 +2849,42 @@ const GameMahjongJapanese = () => {
             </div>
             <div />
             <div className="col-span-3 rounded-xl bg-[#2d4a3c]/80 p-4 space-y-3">
+              <div className="text-center text-xs text-[#a8dadc]/90 space-y-1">
+                <p>
+                  <span className={timerTextClass(0)}>
+                    自家时库 {game.timeBanks[0]}s
+                  </span>
+                  {currentTurnRemainSeconds != null &&
+                    ` · 本巡剩余 ${currentTurnRemainSeconds}s`}
+                  {decisionSeat !== null &&
+                    ` · 当前决策 ${SEAT_NAMES[decisionSeat]}`}
+                </p>
+                {currentTurnRemainSeconds != null && (
+                  <div className="mx-auto h-1.5 w-44 rounded bg-black/20 overflow-hidden">
+                    <div
+                      className={cn(
+                        'h-full transition-all duration-300',
+                        currentTurnRemainSeconds <= 3
+                          ? 'bg-red-400'
+                          : currentTurnRemainSeconds <= 8
+                            ? 'bg-amber-400'
+                            : 'bg-emerald-400',
+                      )}
+                      style={{
+                        width: `${Math.max(
+                          0,
+                          Math.min(
+                            100,
+                            (currentTurnRemainSeconds /
+                              getTurnTotalSeconds(game.timeBanks[0])) *
+                              100,
+                          ),
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
               {canTsumo && (
                 <div className="space-y-2">
                   <div className="text-center">
@@ -1681,11 +2903,12 @@ const GameMahjongJapanese = () => {
                   </div>
                 </div>
               )}
-              {isMyClaim && hasAnyClaimOption && (
+              {(canRon || (isMyClaim && hasNonRonClaimOption)) && (
                 <div className="space-y-3">
                   <div className="text-center">
                     <p className="text-sm text-[#f1faee]/90 bg-[#1d3557]/50 rounded-lg py-2 px-4 inline-block">
-                      ⚠️ 请选择你要的操作：
+                      ⚠️{' '}
+                      {canRon ? '你可以荣和，是否和牌？' : '请选择你要的操作：'}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center justify-center gap-2">
@@ -1698,18 +2921,19 @@ const GameMahjongJapanese = () => {
                         🎉 胡牌（荣和）
                       </Button>
                     )}
-                    {chiOptions.map((opt, i) => (
-                      <Button
-                        key={i}
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3"
-                        onClick={() => doChi(opt)}
-                      >
-                        🍣 吃({getTileLabel(opt[0])}
-                        {getTileLabel(opt[1])})
-                      </Button>
-                    ))}
-                    {canPeng && (
+                    {isMyClaim &&
+                      chiOptions.map((opt, i) => (
+                        <Button
+                          key={i}
+                          size="sm"
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3"
+                          onClick={() => doChi(opt)}
+                        >
+                          🍣 吃({getTileLabel(opt[0])}
+                          {getTileLabel(opt[1])})
+                        </Button>
+                      ))}
+                    {isMyClaim && canPeng && (
                       <Button
                         size="sm"
                         className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-3"
@@ -1718,7 +2942,7 @@ const GameMahjongJapanese = () => {
                         🔨 碰
                       </Button>
                     )}
-                    {canMingang && (
+                    {isMyClaim && canMingang && (
                       <Button
                         size="sm"
                         className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-3"
@@ -1727,19 +2951,31 @@ const GameMahjongJapanese = () => {
                         ⚡ 杠
                       </Button>
                     )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-[#d4b886] bg-[#3d5a4a] text-[#f1faee] hover:bg-[#4a6b58] hover:text-white px-4 py-3"
-                      onClick={passClaim}
-                    >
-                      ❌ 过
-                    </Button>
+                    {isMyClaim ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-[#d4b886] bg-[#3d5a4a] text-[#f1faee] hover:bg-[#4a6b58] hover:text-white px-4 py-3"
+                        onClick={passClaim}
+                      >
+                        ❌ 过
+                      </Button>
+                    ) : (
+                      canRon && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-[#d4b886] bg-[#3d5a4a] text-[#f1faee] hover:bg-[#4a6b58] hover:text-white px-4 py-3"
+                          onClick={passRonOpportunity}
+                        >
+                          ❌ 放弃荣和
+                        </Button>
+                      )
+                    )}
                   </div>
                   <div className="text-center">
                     <p className="text-xs text-[#a8dadc]/80">
-                      💡 提示：胡牌 {'>'} 杠 {'>'} 碰 {'>'} 吃 {'>'}{' '}
-                      过（按优先级排序）
+                      💡 提示：胡牌 {'>'} 杠 {'>'} 碰 {'>'} 吃 {'>'} 过
                     </p>
                   </div>
                 </div>
@@ -1765,6 +3001,11 @@ const GameMahjongJapanese = () => {
                               game.hands[0],
                               game.melds[0],
                               game,
+                              {
+                                seat: 0,
+                                isTsumo: false,
+                                treatAsRiichi: true,
+                              },
                             ).length === 0
                           }
                         >
@@ -1925,6 +3166,69 @@ const GameMahjongJapanese = () => {
                   </li>
                 ))}
               </ul>
+              {winResult.uraDoraIndicators &&
+                winResult.uraDoraIndicators.length > 0 && (
+                  <p className="mb-2 text-xs text-[#a8dadc]">
+                    里宝牌表示：{' '}
+                    {winResult.uraDoraIndicators
+                      .map((t) => getTileLabel(t))
+                      .join(' · ')}
+                    {winResult.uraHan != null
+                      ? `（里宝牌 ${winResult.uraHan} 番）`
+                      : ''}
+                  </p>
+                )}
+              {winSettlementPreview && (
+                <div className="mb-4 rounded-lg border border-[#d4b886]/40 bg-[#1a2e25]/70 p-3 text-xs text-[#f1faee]/90 space-y-1">
+                  {winnerPaymentSummary && (
+                    <p>
+                      本局收入： 和牌基础 +{winnerPaymentSummary.base}
+                      {' / '}
+                      本场棒 +{winnerPaymentSummary.honba}
+                      {' / '}
+                      立直棒 +{winnerPaymentSummary.riichi}
+                    </p>
+                  )}
+                  <p>
+                    分差：{' '}
+                    {winSettlementPreview.deltas
+                      .map(
+                        (d, i) => `${SEAT_NAMES[i]} ${d >= 0 ? '+' : ''}${d}`,
+                      )
+                      .join(' · ')}
+                  </p>
+                  <p>
+                    总分：{' '}
+                    {winSettlementPreview.newScores
+                      .map((s, i) => `${SEAT_NAMES[i]} ${s}`)
+                      .join(' · ')}
+                  </p>
+                  {winSettlementPreview.payments.length > 0 && (
+                    <ul className="list-disc list-inside text-[11px] text-[#f1faee]/80">
+                      {winSettlementPreview.payments.slice(0, 8).map((p, i) => (
+                        <li key={i}>
+                          {p.from >= 0 ? SEAT_NAMES[p.from] : '立直棒池'} →{' '}
+                          {SEAT_NAMES[p.to]} {p.amount}点
+                          {p.reason === 'honba'
+                            ? '（本场棒）'
+                            : p.reason === 'riichi'
+                              ? '（立直棒）'
+                              : p.reason === 'ron'
+                                ? '（荣和）'
+                                : p.reason === 'tsumo'
+                                  ? '（自摸）'
+                                  : ''}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {game.timeoutEvents.length > 0 && (
+                    <p className="text-[11px] text-[#f1faee]/80">
+                      超时：{game.timeoutEvents.join('；')}
+                    </p>
+                  )}
+                </div>
+              )}
               <Button
                 className="w-full bg-[#d4b886] text-[#1a2e25] hover:bg-[#e5c997] font-semibold"
                 onClick={proceedToNextRound}
@@ -1941,9 +3245,38 @@ const GameMahjongJapanese = () => {
               <h3 className="text-xl font-bold text-amber-200 text-center mb-3">
                 流局（荒牌）
               </h3>
-              <p className="text-sm text-[#f1faee]/90 mb-4 text-center">
+              <p className="text-sm text-[#f1faee]/90 mb-2 text-center">
                 牌墙摸完无人和，本场+1，庄家连庄
               </p>
+              {drawSettlementPreview && (
+                <div className="mb-4 rounded-lg border border-[#d4b886]/40 bg-[#1a2e25]/70 p-3 text-xs text-[#f1faee]/90 space-y-1">
+                  <p>
+                    听牌：
+                    {drawSettlementPreview.tenpaiSeats.length === 0
+                      ? ' 无'
+                      : ` ${drawSettlementPreview.tenpaiSeats.map((i) => SEAT_NAMES[i]).join('、')}`}
+                  </p>
+                  <p>
+                    分差：{' '}
+                    {drawSettlementPreview.settlement.deltas
+                      .map(
+                        (d, i) => `${SEAT_NAMES[i]} ${d >= 0 ? '+' : ''}${d}`,
+                      )
+                      .join(' · ')}
+                  </p>
+                  <p>
+                    总分：{' '}
+                    {drawSettlementPreview.settlement.newScores
+                      .map((s, i) => `${SEAT_NAMES[i]} ${s}`)
+                      .join(' · ')}
+                  </p>
+                  {game.timeoutEvents.length > 0 && (
+                    <p className="text-[11px] text-[#f1faee]/80">
+                      超时：{game.timeoutEvents.join('；')}
+                    </p>
+                  )}
+                </div>
+              )}
               <Button
                 className="w-full bg-[#d4b886] text-[#1a2e25] hover:bg-[#e5c997] font-semibold"
                 onClick={proceedAfterRyuukyoku}

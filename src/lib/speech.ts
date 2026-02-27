@@ -22,3 +22,34 @@ export function speak(text: string, lang: 'ja' | 'zh' = 'ja'): void {
     // ignore
   }
 }
+
+/** 轻提示音（短促 beep），用于倒计时临界提醒。 */
+export function playBeep(
+  frequency = 880,
+  durationMs = 120,
+  volume = 0.04,
+): void {
+  if (typeof window === 'undefined') return;
+  const Ctx =
+    window.AudioContext ||
+    (window as typeof window & { webkitAudioContext?: typeof AudioContext })
+      .webkitAudioContext;
+  if (!Ctx) return;
+  try {
+    const ctx = new Ctx();
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.value = frequency;
+    gain.gain.value = volume;
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.start();
+    window.setTimeout(() => {
+      oscillator.stop();
+      ctx.close().catch(() => {});
+    }, durationMs);
+  } catch {
+    // ignore
+  }
+}

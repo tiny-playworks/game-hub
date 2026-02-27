@@ -1,10 +1,10 @@
 /**
- * 日麻音效：立直/吃/碰/杠/自摸/荣和用 wav（public/sounds/riichi/*.wav）；
- * 打牌/摸牌/流局无资源时用浏览器 TTS 播报。
+ * 日麻音效：立直/吃/碰/杠/自摸/荣和用 wav（public/sounds/riichi/*.wav）。
+ * 出牌/摸牌不做语音播报，避免高频打断；流局保留 TTS 兜底。
  */
 
 import useSound from 'use-sound';
-import { speak } from '@/lib/speech';
+import { playBeep, speak } from '@/lib/speech';
 
 const BASE = '/sounds/riichi';
 
@@ -16,15 +16,22 @@ export function useRiichiSounds() {
   const [playTumo] = useSound(`${BASE}/tumo.wav`, { volume: 0.8 });
   const [playRon] = useSound(`${BASE}/ron.wav`, { volume: 0.8 });
 
-  /** 打牌（无 wav，用 TTS 短音） */
-  const playDiscard = () => speak('ぽん', 'ja');
-  /** 摸牌（无 wav，用 TTS） */
-  const playDraw = () => speak('ひ', 'ja');
+  /** 打牌：高频事件，默认静音 */
+  const playDiscard = () => {};
+  /** 摸牌：高频事件，默认静音 */
+  const playDraw = () => {};
   /** 流局（无 wav，用 TTS） */
   const playRyuukyoku = () => speak('りゅうきょく', 'ja');
+  /** 立直：保留 wav，同时补一个日语 TTS，确保有明确语音「リーチ」 */
+  const playRiichi = () => {
+    playRich();
+    speak('リーチ', 'ja');
+  };
+  /** 倒计时临界轻提示音 */
+  const playTimeWarning = () => playBeep(940, 110, 0.035);
 
   return {
-    playRiichi: playRich,
+    playRiichi,
     playChi,
     playPon,
     playKan,
@@ -33,5 +40,6 @@ export function useRiichiSounds() {
     playDiscard,
     playDraw,
     playRyuukyoku,
+    playTimeWarning,
   };
 }

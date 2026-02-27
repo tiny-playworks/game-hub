@@ -1,6 +1,6 @@
 /**
- * 通用麻将音效：川麻/国标复用 public/sounds/riichi 的 吃/碰/杠/自摸/荣和 wav；
- * 打牌/摸牌/流局用浏览器 TTS 中文播报。
+ * 通用麻将音效：川麻/国标复用 public/sounds/riichi 的 吃/碰/杠/自摸/荣和 wav。
+ * 出牌/摸牌默认静音，流局保留中文 TTS 兜底。
  */
 
 import useSound from 'use-sound';
@@ -15,8 +15,8 @@ export function useMahjongSounds() {
   const [playTumo] = useSound(`${BASE}/tumo.wav`, { volume: 0.8 });
   const [playRon] = useSound(`${BASE}/ron.wav`, { volume: 0.8 });
 
-  const playDiscard = () => speak('出', 'zh');
-  const playDraw = () => speak('摸', 'zh');
+  const playDiscard = () => {};
+  const playDraw = () => {};
   const playRyuukyoku = () => speak('流局', 'zh');
 
   return {
