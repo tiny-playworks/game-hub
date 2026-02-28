@@ -49,6 +49,210 @@ export function canAiRonOnClaim(params: {
   );
 }
 
+/** 有他家立直时，AI 在要牌阶段是否应转入防守（优先过牌）。 */
+export function shouldAiFoldClaimAgainstRiichi(input: {
+  aiSeat: number;
+  riichiDeclared: boolean[];
+}): boolean {
+  return input.riichiDeclared.some((declared, seat) => {
+    return seat !== input.aiSeat && declared;
+  });
+}
+
+function evaluateHandStructureScore(hand: number[]): number {
+  const counts = new Map<number, number>();
+  for (const t of hand) {
+    const b = getBaseTile(t);
+    counts.set(b, (counts.get(b) ?? 0) + 1);
+  }
+  let score = 0;
+  for (const [b, c] of counts) {
+    if (c >= 2) score += 0.35;
+    if (c >= 3) score += 0.2;
+    if (b >= 27) continue;
+    const suitStart = Math.floor(b / 9) * 9;
+    const inSuit = (x: number) => x >= suitStart && x <= suitStart + 8;
+    if (inSuit(b - 1) && (counts.get(b - 1) ?? 0) > 0) score += 0.18;
+    if (inSuit(b + 1) && (counts.get(b + 1) ?? 0) > 0) score += 0.18;
+    if (inSuit(b - 2) && (counts.get(b - 2) ?? 0) > 0) score += 0.08;
+    if (inSuit(b + 2) && (counts.get(b + 2) ?? 0) > 0) score += 0.08;
+  }
+  return score;
+}
+
+function removeConsumedTiles(hand: number[], consumed: number[]): number[] {
+  const rest = [...hand];
+  for (const c of consumed) {
+    const i = rest.indexOf(c);
+    if (i === -1) return [];
+    rest.splice(i, 1);
+  }
+  return rest;
+}
+
+function sumDangerAgainstRiichiOpponents(
+  tile: number,
+  riichiOpponents: number[],
+  discardPiles: number[][],
+): number {
+  return riichiOpponents.reduce((sum, opp) => {
+    return sum + evaluateTileDangerVsRiichi(tile, discardPiles[opp] ?? []);
+  }, 0);
+}
+
+export type AiClaimDecision =
+  | { action: 'pass'; reason: string }
+  | {
+      action: 'chi';
+      chiOption: [number, number];
+      discardTile: number;
+      reason: string;
+    }
+  | { action: 'peng'; discardTile: number; reason: string };
+
+/**
+ * 中间档要牌策略：立直压制下，只有“牌效提升明显 + 打出仍相对安全”才吃/碰，否则过。
+ */
+export function chooseAiClaimActionAgainstRiichi(input: {
+  aiSeat: number;
+  hand: number[];
+  chiOptions: [number, number][];
+  canPeng: boolean;
+  lastTile: number;
+  riichiDeclared: boolean[];
+  discardPiles: number[][];
+  doraIndicators?: number[];
+  seatWind?: number;
+  roundWind?: number;
+}): AiClaimDecision {
+  const riichiOpponents = input.riichiDeclared
+    .map((declared, seat) => (declared && seat !== input.aiSeat ? seat : -1))
+    .filter((seat) => seat >= 0);
+  if (riichiOpponents.length === 0) {
+    return { action: 'pass', reason: '' };
+  }
+
+  const baseScore = evaluateHandStructureScore(input.hand);
+  const lastBase = getBaseTile(input.lastTile);
+  const seatWindBase =
+    input.seatWind === undefined || input.seatWind < 0
+      ? -1
+      : input.seatWind + 27;
+  const roundWindBase =
+    input.roundWind === undefined || input.roundWind < 0
+      ? -1
+      : input.roundWind + 27;
+  const yakuhaiTypes = new Set<number>([
+    31,
+    32,
+    33,
+    seatWindBase,
+    roundWindBase,
+  ]);
+  const isYakuhaiPeng = yakuhaiTypes.has(lastBase);
+  let best:
+    | {
+        action: 'chi';
+        chiOption: [number, number];
+        discardTile: number;
+        score: number;
+      }
+    | { action: 'peng'; discardTile: number; score: number }
+    | null = null;
+
+  for (const option of input.chiOptions) {
+    const afterClaim = removeConsumedTiles(input.hand, [option[0], option[1]]);
+    if (afterClaim.length === 0) continue;
+    const discardChoice = chooseAiDefensiveDiscardWithMeta({
+      hand: afterClaim,
+      aiSeat: input.aiSeat,
+      riichiDeclared: input.riichiDeclared,
+      discardPiles: input.discardPiles,
+      doraIndicators: input.doraIndicators,
+    });
+    if (discardChoice.tile === null) continue;
+    const afterDiscard = removeConsumedTiles(afterClaim, [discardChoice.tile]);
+    if (afterDiscard.length === 0) continue;
+    const improvement =
+      evaluateHandStructureScore(afterDiscard) + 0.56 - baseScore;
+    const danger = sumDangerAgainstRiichiOpponents(
+      discardChoice.tile,
+      riichiOpponents,
+      input.discardPiles,
+    );
+    if (improvement < 0.65 || danger > 1.1) continue;
+    const score = improvement + 0.1 - 0.35 * danger;
+    if (!best || score > best.score) {
+      best = {
+        action: 'chi',
+        chiOption: option,
+        discardTile: discardChoice.tile,
+        score,
+      };
+    }
+  }
+
+  if (input.canPeng) {
+    const base = getBaseTile(input.lastTile);
+    const candidates = input.hand
+      .filter((t) => getBaseTile(t) === base)
+      .slice(0, 2);
+    if (candidates.length >= 2) {
+      const afterClaim = removeConsumedTiles(input.hand, candidates);
+      const discardChoice = chooseAiDefensiveDiscardWithMeta({
+        hand: afterClaim,
+        aiSeat: input.aiSeat,
+        riichiDeclared: input.riichiDeclared,
+        discardPiles: input.discardPiles,
+        doraIndicators: input.doraIndicators,
+      });
+      if (discardChoice.tile !== null) {
+        const afterDiscard = removeConsumedTiles(afterClaim, [
+          discardChoice.tile,
+        ]);
+        const improvement =
+          evaluateHandStructureScore(afterDiscard) + 1.08 - baseScore;
+        const danger = sumDangerAgainstRiichiOpponents(
+          discardChoice.tile,
+          riichiOpponents,
+          input.discardPiles,
+        );
+        const threshold = input.chiOptions.length > 0 ? 0.18 : 0.35;
+        if (improvement >= threshold && danger <= 1.25) {
+          const actionValue = isYakuhaiPeng ? 0.58 : 0.28;
+          const score = improvement + actionValue - 0.3 * danger;
+          if (!best || score > best.score) {
+            best = {
+              action: 'peng',
+              discardTile: discardChoice.tile,
+              score,
+            };
+          }
+        }
+      }
+    }
+  }
+
+  if (!best) {
+    return { action: 'pass', reason: '他家立直，牌效提升不足，继续防守' };
+  }
+  if (best.action === 'chi') {
+    return {
+      action: 'chi',
+      chiOption: best.chiOption,
+      discardTile: best.discardTile,
+      reason: '他家立直但吃后牌效明显改善（价值较低），谨慎推进',
+    };
+  }
+  return {
+    action: 'peng',
+    discardTile: best.discardTile,
+    reason: isYakuhaiPeng
+      ? '他家立直但役牌碰价值高且相对安全，谨慎推进'
+      : '他家立直但碰后牌效明显改善（高于吃），谨慎推进',
+  };
+}
+
 function isSujiSafer(tileBase: number, discardPile: number[]): boolean {
   if (tileBase >= 27) return false;
   const suitStart = Math.floor(tileBase / 9) * 9;

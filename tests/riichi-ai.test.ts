@@ -2,10 +2,12 @@ import { describe, expect, test } from '@rstest/core';
 import {
   applyAiRiichiState,
   canAiRonOnClaim,
+  chooseAiClaimActionAgainstRiichi,
   chooseAiDefensiveDiscard,
   chooseAiDefensiveDiscardWithMeta,
   evaluateTileDangerVsRiichi,
   shouldAiDeclareRiichi,
+  shouldAiFoldClaimAgainstRiichi,
 } from '../src/lib/riichiAi';
 
 describe('日麻 AI 决策回归', () => {
@@ -128,5 +130,66 @@ describe('日麻 AI 决策回归', () => {
     });
     expect(out.tile).toBe(4);
     expect(out.reason.length).toBeGreaterThan(0);
+  });
+
+  test('要牌防守：有他家立直时应转入过牌防守', () => {
+    const fold = shouldAiFoldClaimAgainstRiichi({
+      aiSeat: 2,
+      riichiDeclared: [false, true, false, false],
+    });
+    expect(fold).toBe(true);
+  });
+
+  test('要牌防守：无人立直时不应强制过牌', () => {
+    const fold = shouldAiFoldClaimAgainstRiichi({
+      aiSeat: 2,
+      riichiDeclared: [false, false, false, false],
+    });
+    expect(fold).toBe(false);
+  });
+
+  test('要牌中间档：牌效提升明显时允许谨慎碰', () => {
+    const out = chooseAiClaimActionAgainstRiichi({
+      aiSeat: 2,
+      hand: [31, 31, 1, 4, 7, 10, 13, 16, 19, 22, 25, 27, 30],
+      chiOptions: [],
+      canPeng: true,
+      lastTile: 31,
+      riichiDeclared: [false, true, false, false],
+      discardPiles: [[], [27, 31, 30], [], []],
+    });
+    expect(out.action).toBe('peng');
+    expect(out.reason.includes('高于吃') || out.reason.includes('役牌碰')).toBe(
+      true,
+    );
+  });
+
+  test('要牌中间档：牌效提升不足时应继续过牌', () => {
+    const out = chooseAiClaimActionAgainstRiichi({
+      aiSeat: 2,
+      hand: [1, 3, 7, 9, 12, 15, 18, 20, 22, 24, 27, 28, 29],
+      chiOptions: [[1, 3]],
+      canPeng: false,
+      lastTile: 2,
+      riichiDeclared: [false, true, false, false],
+      discardPiles: [[], [2, 11, 19], [], []],
+    });
+    expect(out.action).toBe('pass');
+  });
+
+  test('要牌中间档：役牌碰应给出更高价值理由', () => {
+    const out = chooseAiClaimActionAgainstRiichi({
+      aiSeat: 0,
+      hand: [27, 27, 1, 4, 7, 10, 13, 16, 19, 22, 25, 30, 31],
+      chiOptions: [],
+      canPeng: true,
+      lastTile: 27,
+      riichiDeclared: [false, true, false, false],
+      discardPiles: [[], [27, 30, 31], [], []],
+      seatWind: 0,
+      roundWind: 0,
+    });
+    expect(out.action).toBe('peng');
+    expect(out.reason.includes('役牌碰')).toBe(true);
   });
 });

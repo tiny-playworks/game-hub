@@ -24,10 +24,19 @@ import {
   type YakuResult,
 } from '@/lib/mahjongRiichi';
 import {
+  type AbortiveDrawReason,
+  canDeclareKyuushuKyuuhai,
+  shouldAbortOnSuuchaRiichi,
+  shouldAbortOnSuufonRenda,
+  shouldAbortOnSuukaikan,
+} from '@/lib/riichiAbortiveDraw';
+import {
   applyAiRiichiState,
   canAiRonOnClaim,
+  chooseAiClaimActionAgainstRiichi,
   chooseAiDefensiveDiscardWithMeta,
   shouldAiDeclareRiichi,
+  shouldAiFoldClaimAgainstRiichi,
 } from '@/lib/riichiAi';
 import { canOfferRon, resolveClaimPass } from '@/lib/riichiClaimFlow';
 import {
@@ -167,6 +176,8 @@ interface RiichiGameState {
   uraDoraIndicators: number[];
   /** 荒牌流局：牌墙摸完无人和 */
   ryuukyoku?: boolean;
+  /** 流局类型：荒牌/途中流局。 */
+  ryuukyokuReason?: '荒牌' | AbortiveDrawReason;
   /** 本局结算流水（用于弹窗/日志） */
   lastSettlement?: {
     payments: PaymentDetail[];
@@ -271,6 +282,29 @@ export function getNextRound(
 /** 自风：庄家=场风，下家/对家/上家依次为场风+1,+2,+3（随庄家变化） */
 function getSeatWind(roundWind: number, seat: number, dealer: number): number {
   return (roundWind + ((seat - dealer + 4) % 4)) % 4;
+}
+
+function getRyuukyokuReasonText(
+  reason?: RiichiGameState['ryuukyokuReason'],
+): string {
+  return reason ?? '荒牌';
+}
+
+function getRyuukyokuDescription(
+  reason?: RiichiGameState['ryuukyokuReason'],
+): string {
+  switch (reason) {
+    case '四风连打':
+      return '四家第一打同风牌，途中流局，本场+1，庄家连庄';
+    case '四家立直':
+      return '四家均已立直，途中流局，本场+1，庄家连庄';
+    case '四开杠':
+      return '全场四杠成立（非一人四杠），途中流局，本场+1，庄家连庄';
+    case '九种九牌':
+      return '九种九牌宣言成立，途中流局，本场+1，庄家连庄';
+    default:
+      return '牌墙摸完无人和，本场+1，庄家连庄';
+  }
 }
 
 function getRonWaitingTilesForSeatInState(
@@ -652,6 +686,7 @@ const GameMahjongJapanese = () => {
             currentPlayer: nextPlayer,
             lastClaimMsg: `${SEAT_NAMES[player]} 超时自动过`,
             ryuukyoku: true,
+            ryuukyokuReason: '荒牌',
           };
         }
         const draw = g.wall[0];
@@ -692,7 +727,7 @@ const GameMahjongJapanese = () => {
       );
       const timeoutEvent = `${SEAT_NAMES[player]} 超时自动打出 ${getTileLabel(toDiscard)}`;
       turnClockRef.current = null;
-      return {
+      const nextState: RiichiGameState = {
         ...g,
         timeoutEvents: [...g.timeoutEvents, timeoutEvent].slice(-20),
         timeBanks: nextBanks,
@@ -706,6 +741,31 @@ const GameMahjongJapanese = () => {
         claimIndex: 0,
         lastClaimMsg: `${SEAT_NAMES[player]} 超时自动出牌`,
       };
+      if (shouldAbortOnSuuchaRiichi(nextState.riichiDeclared)) {
+        addLogRef.current('流局（四家立直）');
+        return {
+          ...nextState,
+          phase: 'discard',
+          lastDiscard: null,
+          lastDiscardFrom: null,
+          claimIndex: 0,
+          ryuukyoku: true,
+          ryuukyokuReason: '四家立直',
+        };
+      }
+      if (shouldAbortOnSuufonRenda(nextState.discardPiles, nextState.melds)) {
+        addLogRef.current('流局（四风连打）');
+        return {
+          ...nextState,
+          phase: 'discard',
+          lastDiscard: null,
+          lastDiscardFrom: null,
+          claimIndex: 0,
+          ryuukyoku: true,
+          ryuukyokuReason: '四风连打',
+        };
+      }
+      return nextState;
     });
   }, [clockNowMs, game]);
 
@@ -741,7 +801,7 @@ const GameMahjongJapanese = () => {
       if (player === 0) sounds.playDiscard();
       const nextTimeBanks = consumeSeatTimeBank(game, player);
       turnClockRef.current = null;
-      setGame({
+      const nextState: RiichiGameState = {
         ...game,
         timeBanks: nextTimeBanks,
         hands,
@@ -752,7 +812,36 @@ const GameMahjongJapanese = () => {
         lastDiscardFrom: game.currentPlayer,
         claimIndex: 0,
         lastClaimMsg: null,
-      });
+      };
+      if (shouldAbortOnSuuchaRiichi(nextState.riichiDeclared)) {
+        addLog('流局（四家立直）');
+        sounds.playRyuukyoku();
+        setGame({
+          ...nextState,
+          phase: 'discard',
+          lastDiscard: null,
+          lastDiscardFrom: null,
+          claimIndex: 0,
+          ryuukyoku: true,
+          ryuukyokuReason: '四家立直',
+        });
+        return;
+      }
+      if (shouldAbortOnSuufonRenda(nextState.discardPiles, nextState.melds)) {
+        addLog('流局（四风连打）');
+        sounds.playRyuukyoku();
+        setGame({
+          ...nextState,
+          phase: 'discard',
+          lastDiscard: null,
+          lastDiscardFrom: null,
+          claimIndex: 0,
+          ryuukyoku: true,
+          ryuukyokuReason: '四风连打',
+        });
+        return;
+      }
+      setGame(nextState);
     },
     [game, addLog, sounds, consumeSeatTimeBank],
   );
@@ -799,6 +888,7 @@ const GameMahjongJapanese = () => {
         currentPlayer: nextPlayer,
         lastClaimMsg: null,
         ryuukyoku: true,
+        ryuukyokuReason: '荒牌',
       });
       return;
     }
@@ -1024,6 +1114,31 @@ const GameMahjongJapanese = () => {
     });
   }, [game, addLog, getWaitingTilesRiichi, sounds]);
 
+  const doKyuushuKyuuhai = useCallback(() => {
+    if (
+      !game ||
+      game.phase !== 'discard' ||
+      game.currentPlayer !== 0 ||
+      game.hands[0].length !== 14
+    )
+      return;
+    const isFirstTurnSelf = game.discardPiles[0].length === 0;
+    if (!isFirstTurnSelf) return;
+    if (!canDeclareKyuushuKyuuhai(game.hands[0])) return;
+    addLog('自家 九种九牌，途中流局');
+    sounds.playRyuukyoku();
+    setGame({
+      ...game,
+      ryuukyoku: true,
+      ryuukyokuReason: '九种九牌',
+      phase: 'discard',
+      lastDiscard: null,
+      lastDiscardFrom: null,
+      claimIndex: 0,
+      lastClaimMsg: null,
+    });
+  }, [game, addLog, sounds]);
+
   const doMingang = useCallback(() => {
     if (
       !game ||
@@ -1058,6 +1173,7 @@ const GameMahjongJapanese = () => {
       .forEach((i) => {
         h0.splice(i, 1);
       });
+    const handAfterKan = [...h0];
     const rinshan = game.wall[0];
     const newWall = game.wall.slice(1);
     h0.push(rinshan);
@@ -1071,6 +1187,29 @@ const GameMahjongJapanese = () => {
     if (piles[from].length > 0) piles[from].pop();
     addLog(`自家 明杠 ${getTileLabel(game.lastDiscard)}`);
     sounds.playKan();
+    if (shouldAbortOnSuukaikan(melds)) {
+      addLog('流局（四开杠）');
+      sounds.playRyuukyoku();
+      setGame({
+        ...game,
+        timeBanks: timedBanks,
+        furitenStates: clearSeatDoujunStates(nextFuritenStates, 0),
+        hands: game.hands.map((h, i) => (i === 0 ? handAfterKan : h)),
+        melds,
+        discardPiles: piles,
+        wall: game.wall,
+        phase: 'discard',
+        lastDiscard: null,
+        lastDiscardFrom: null,
+        claimIndex: 0,
+        currentPlayer: 0,
+        drawnTile: null,
+        lastClaimMsg: null,
+        ryuukyoku: true,
+        ryuukyokuReason: '四开杠',
+      });
+      return;
+    }
     setGame({
       ...game,
       timeBanks: timedBanks,
@@ -1106,6 +1245,7 @@ const GameMahjongJapanese = () => {
         h0.splice(i, 1);
       }
       if (h0.length !== 10) return;
+      const handAfterKan = [...h0];
       const rinshan = game.wall[0];
       const newWall = game.wall.slice(1);
       h0.push(rinshan);
@@ -1113,6 +1253,25 @@ const GameMahjongJapanese = () => {
       const melds = game.melds.map((m, i) =>
         i === 0 ? [...m, { type: 'angang' as const, tiles: fourTiles }] : m,
       );
+      if (shouldAbortOnSuukaikan(melds)) {
+        addLog('流局（四开杠）');
+        sounds.playRyuukyoku();
+        setGame({
+          ...game,
+          hands: game.hands.map((h, i) => (i === 0 ? handAfterKan : h)),
+          melds,
+          phase: 'discard',
+          lastDiscard: null,
+          lastDiscardFrom: null,
+          claimIndex: 0,
+          currentPlayer: 0,
+          drawnTile: null,
+          lastClaimMsg: null,
+          ryuukyoku: true,
+          ryuukyokuReason: '四开杠',
+        });
+        return;
+      }
       sounds.playKan();
       setGame({
         ...game,
@@ -1122,7 +1281,7 @@ const GameMahjongJapanese = () => {
         furitenStates: clearSeatDoujunStates(game.furitenStates, 0),
       });
     },
-    [game, sounds],
+    [game, addLog, sounds],
   );
 
   const angangOptions =
@@ -1131,6 +1290,12 @@ const GameMahjongJapanese = () => {
     game.hands[0].length === 14
       ? getAngangOptionsRiichi(game.hands[0])
       : [];
+  const canKyuushuKyuuhai =
+    game?.phase === 'discard' &&
+    game.currentPlayer === 0 &&
+    game.hands[0].length === 14 &&
+    game.discardPiles[0].length === 0 &&
+    canDeclareKyuushuKyuuhai(game.hands[0]);
 
   // 荒牌流局：自家待摸牌但牌墙已空
   useEffect(() => {
@@ -1146,7 +1311,9 @@ const GameMahjongJapanese = () => {
       return;
     addLog('流局（荒牌）');
     sounds.playRyuukyoku();
-    setGame((g) => (!g ? g : { ...g, ryuukyoku: true }));
+    setGame((g) =>
+      !g ? g : { ...g, ryuukyoku: true, ryuukyokuReason: '荒牌' },
+    );
   }, [
     game?.phase,
     game?.currentPlayer,
@@ -1406,7 +1573,7 @@ const GameMahjongJapanese = () => {
           const nextRiichi = doAiRiichi
             ? applyAiRiichiState(g.scores, g.riichiDeclared, g.riichiPot, p)
             : null;
-          return {
+          const nextState: RiichiGameState = {
             ...g,
             timeBanks: timedBanks,
             scores: nextRiichi?.scores ?? g.scores,
@@ -1426,6 +1593,48 @@ const GameMahjongJapanese = () => {
               ? `${SEAT_NAMES[p]} 立直宣言！（-1000 点）`
               : null,
           };
+          if (shouldAbortOnSuukaikan(nextState.melds)) {
+            addLogRef.current('流局（四开杠）');
+            sounds.playRyuukyoku();
+            return {
+              ...nextState,
+              phase: 'discard',
+              lastDiscard: null,
+              lastDiscardFrom: null,
+              claimIndex: 0,
+              ryuukyoku: true,
+              ryuukyokuReason: '四开杠',
+            };
+          }
+          if (shouldAbortOnSuuchaRiichi(nextState.riichiDeclared)) {
+            addLogRef.current('流局（四家立直）');
+            sounds.playRyuukyoku();
+            return {
+              ...nextState,
+              phase: 'discard',
+              lastDiscard: null,
+              lastDiscardFrom: null,
+              claimIndex: 0,
+              ryuukyoku: true,
+              ryuukyokuReason: '四家立直',
+            };
+          }
+          if (
+            shouldAbortOnSuufonRenda(nextState.discardPiles, nextState.melds)
+          ) {
+            addLogRef.current('流局（四风连打）');
+            sounds.playRyuukyoku();
+            return {
+              ...nextState,
+              phase: 'discard',
+              lastDiscard: null,
+              lastDiscardFrom: null,
+              claimIndex: 0,
+              ryuukyoku: true,
+              ryuukyokuReason: '四风连打',
+            };
+          }
+          return nextState;
         }
         const aiRiichiLocked = g.riichiDeclared[p];
         const defensiveChoice = !aiRiichiLocked
@@ -1467,7 +1676,7 @@ const GameMahjongJapanese = () => {
         const nextRiichi = doAiRiichi
           ? applyAiRiichiState(g.scores, g.riichiDeclared, g.riichiPot, p)
           : null;
-        return {
+        const nextState: RiichiGameState = {
           ...g,
           timeBanks: timedBanks,
           scores: nextRiichi?.scores ?? g.scores,
@@ -1485,6 +1694,33 @@ const GameMahjongJapanese = () => {
             ? `${SEAT_NAMES[p]} 立直宣言！（-1000 点）`
             : null,
         };
+        if (shouldAbortOnSuuchaRiichi(nextState.riichiDeclared)) {
+          addLogRef.current('流局（四家立直）');
+          sounds.playRyuukyoku();
+          return {
+            ...nextState,
+            phase: 'discard',
+            lastDiscard: null,
+            lastDiscardFrom: null,
+            claimIndex: 0,
+            ryuukyoku: true,
+            ryuukyokuReason: '四家立直',
+          };
+        }
+        if (shouldAbortOnSuufonRenda(nextState.discardPiles, nextState.melds)) {
+          addLogRef.current('流局（四风连打）');
+          sounds.playRyuukyoku();
+          return {
+            ...nextState,
+            phase: 'discard',
+            lastDiscard: null,
+            lastDiscardFrom: null,
+            claimIndex: 0,
+            ryuukyoku: true,
+            ryuukyokuReason: '四风连打',
+          };
+        }
+        return nextState;
       });
     }, 500);
     return () => clearTimeout(tid);
@@ -1948,14 +2184,22 @@ const GameMahjongJapanese = () => {
   /** 流局后进入下一局（庄家连庄，本场+1） */
   const proceedAfterRyuukyoku = useCallback(() => {
     if (!game || !game.ryuukyoku) return;
-    const tenpaiSeats = getTenpaiSeatsForDraw(game, getWaitingTilesRiichi);
-    const settlement = settleRyuukyoku(
-      game.scores,
-      tenpaiSeats,
-      game.riichiPot,
-    );
-    const tenpaiText =
-      tenpaiSeats.length === 0
+    const reason = game.ryuukyokuReason ?? '荒牌';
+    const isExhaustiveDraw = reason === '荒牌';
+    const tenpaiSeats = isExhaustiveDraw
+      ? getTenpaiSeatsForDraw(game, getWaitingTilesRiichi)
+      : [];
+    const settlement = isExhaustiveDraw
+      ? settleRyuukyoku(game.scores, tenpaiSeats, game.riichiPot)
+      : {
+          payments: [] as PaymentDetail[],
+          deltas: [0, 0, 0, 0],
+          newScores: [...game.scores],
+          nextRiichiPot: game.riichiPot,
+        };
+    const tenpaiText = !isExhaustiveDraw
+      ? '途中流局（不执行不听罚符）'
+      : tenpaiSeats.length === 0
         ? '无人听牌'
         : tenpaiSeats.length === 4
           ? '全员听牌'
@@ -1985,12 +2229,12 @@ const GameMahjongJapanese = () => {
           payments: settlement.payments,
           deltas: settlement.deltas,
           newScores: settlement.newScores,
-          tenpaiSeats,
+          tenpaiSeats: isExhaustiveDraw ? tenpaiSeats : undefined,
           timeoutEvents: game.timeoutEvents,
         },
       ),
     );
-    addLog('流局，连庄');
+    addLog(`流局（${reason}），连庄`);
   }, [game, addLog, getWaitingTilesRiichi]);
 
   const winSettlementPreview = useMemo(() => {
@@ -2014,12 +2258,19 @@ const GameMahjongJapanese = () => {
 
   const drawSettlementPreview = useMemo(() => {
     if (!game || !game.ryuukyoku) return null;
-    const tenpaiSeats = getTenpaiSeatsForDraw(game, getWaitingTilesRiichi);
-    const settlement = settleRyuukyoku(
-      game.scores,
-      tenpaiSeats,
-      game.riichiPot,
-    );
+    const reason = game.ryuukyokuReason ?? '荒牌';
+    const isExhaustiveDraw = reason === '荒牌';
+    const tenpaiSeats = isExhaustiveDraw
+      ? getTenpaiSeatsForDraw(game, getWaitingTilesRiichi)
+      : [];
+    const settlement = isExhaustiveDraw
+      ? settleRyuukyoku(game.scores, tenpaiSeats, game.riichiPot)
+      : {
+          payments: [] as PaymentDetail[],
+          deltas: [0, 0, 0, 0],
+          newScores: [...game.scores],
+          nextRiichiPot: game.riichiPot,
+        };
     return { tenpaiSeats, settlement };
   }, [game, getWaitingTilesRiichi]);
 
@@ -2078,6 +2329,7 @@ const GameMahjongJapanese = () => {
           currentPlayer: nextPlayer,
           lastClaimMsg: null,
           ryuukyoku: true,
+          ryuukyokuReason: '荒牌',
         };
       }
       const draw = g.wall[0];
@@ -2136,11 +2388,39 @@ const GameMahjongJapanese = () => {
       hasYaku: (ronCtx ? hasYaku(ronCtx) : false) && !furitenBlocked,
     });
     const aiRiichiLocked = game.riichiDeclared[p];
+    const foldClaimByRiichi =
+      !aiRiichiLocked &&
+      shouldAiFoldClaimAgainstRiichi({
+        aiSeat: p,
+        riichiDeclared: game.riichiDeclared,
+      });
     const chiOpts = aiRiichiLocked
       ? []
       : getChiOptionsRiichi(hand, last, from, p);
     const peng = aiRiichiLocked ? false : canPengRiichi(hand, last);
-    const gang = aiRiichiLocked ? false : canMingangRiichi(hand, last);
+    const gang =
+      aiRiichiLocked || foldClaimByRiichi
+        ? false
+        : canMingangRiichi(hand, last);
+    const claimDefensePlan = foldClaimByRiichi
+      ? chooseAiClaimActionAgainstRiichi({
+          aiSeat: p,
+          hand,
+          chiOptions: chiOpts,
+          canPeng: peng,
+          lastTile: last,
+          riichiDeclared: game.riichiDeclared,
+          discardPiles: game.discardPiles,
+          doraIndicators: [game.doraIndicator],
+          seatWind: getSeatWind(game.roundWind, p, game.dealer),
+          roundWind: game.roundWind,
+        })
+      : null;
+    const forcedChiOption =
+      claimDefensePlan?.action === 'chi' ? claimDefensePlan.chiOption : null;
+    const forcedPengDiscard =
+      claimDefensePlan?.action === 'peng' ? claimDefensePlan.discardTile : null;
+    const allowRandomClaim = !foldClaimByRiichi;
     const tid = setTimeout(() => {
       if (aiCanRon) {
         const yaku = ronCtx ? computeYaku(ronCtx) : [];
@@ -2176,8 +2456,11 @@ const GameMahjongJapanese = () => {
         });
         return;
       }
-      if (chiOpts.length > 0 && Math.random() < 0.6) {
-        const [a, b] = chiOpts[0];
+      if (
+        (forcedChiOption || chiOpts.length > 0) &&
+        (forcedChiOption || (allowRandomClaim && Math.random() < 0.6))
+      ) {
+        const [a, b] = forcedChiOption ?? chiOpts[0];
         const hands = game.hands.map((h) => [...h]);
         const melds = game.melds.map((m) => [...m]);
         const hp = hands[p];
@@ -2198,12 +2481,22 @@ const GameMahjongJapanese = () => {
           ];
           const pilesChi = game.discardPiles.map((q) => [...q]);
           if (pilesChi[from].length > 0) pilesChi[from].pop();
-          const toDiscard = hp[0];
-          hp.shift();
+          const plannedDiscard =
+            claimDefensePlan?.action === 'chi'
+              ? claimDefensePlan.discardTile
+              : null;
+          const discardIdx =
+            plannedDiscard !== null ? hp.indexOf(plannedDiscard) : -1;
+          const toDiscard = discardIdx >= 0 ? hp[discardIdx] : hp[0];
+          if (discardIdx >= 0) hp.splice(discardIdx, 1);
+          else hp.shift();
           pilesChi[p].push(toDiscard);
           addLogRef.current(
             `${SEAT_NAMES[p]} 吃了 ${getTileLabel(last)} 并打出 ${getTileLabel(toDiscard)}`,
           );
+          if (claimDefensePlan?.action === 'chi' && claimDefensePlan.reason) {
+            addLogRef.current(`${SEAT_NAMES[p]} ${claimDefensePlan.reason}`);
+          }
           setGame({
             ...game,
             hands,
@@ -2219,7 +2512,11 @@ const GameMahjongJapanese = () => {
           return;
         }
       }
-      if (peng && Math.random() < 0.4) {
+      if (
+        (forcedPengDiscard !== null || peng) &&
+        (forcedPengDiscard !== null ||
+          (allowRandomClaim && Math.random() < 0.4))
+      ) {
         const base = getBaseTile(last);
         const h = [...game.hands[p]];
         const indices: number[] = [];
@@ -2239,12 +2536,18 @@ const GameMahjongJapanese = () => {
           );
           const pilesPeng = game.discardPiles.map((q) => [...q]);
           if (pilesPeng[from].length > 0) pilesPeng[from].pop();
-          const toDiscard = h[0];
-          h.shift();
+          const discardIdx =
+            forcedPengDiscard !== null ? h.indexOf(forcedPengDiscard) : -1;
+          const toDiscard = discardIdx >= 0 ? h[discardIdx] : h[0];
+          if (discardIdx >= 0) h.splice(discardIdx, 1);
+          else h.shift();
           pilesPeng[p].push(toDiscard);
           addLogRef.current(
             `${SEAT_NAMES[p]} 碰了 ${getTileLabel(last)} 并打出 ${getTileLabel(toDiscard)}`,
           );
+          if (claimDefensePlan?.action === 'peng' && claimDefensePlan.reason) {
+            addLogRef.current(`${SEAT_NAMES[p]} ${claimDefensePlan.reason}`);
+          }
           setGame({
             ...game,
             hands,
@@ -2274,6 +2577,7 @@ const GameMahjongJapanese = () => {
             .forEach((i) => {
               h.splice(i, 1);
             });
+          const handAfterKan = [...h];
           const rinshan = game.wall[0];
           const newWall = game.wall.slice(1);
           h.push(rinshan);
@@ -2285,6 +2589,26 @@ const GameMahjongJapanese = () => {
           const pilesGang = game.discardPiles.map((q) => [...q]);
           if (pilesGang[from].length > 0) pilesGang[from].pop();
           addLogRef.current(`${SEAT_NAMES[p]} 杠了 ${getTileLabel(last)}`);
+          if (shouldAbortOnSuukaikan(melds)) {
+            addLogRef.current('流局（四开杠）');
+            sounds.playRyuukyoku();
+            setGame({
+              ...game,
+              hands: game.hands.map((h0, i) => (i === p ? handAfterKan : h0)),
+              melds,
+              discardPiles: pilesGang,
+              phase: 'discard',
+              lastDiscard: null,
+              lastDiscardFrom: null,
+              claimIndex: 0,
+              currentPlayer: p,
+              drawnTile: null,
+              lastClaimMsg: null,
+              ryuukyoku: true,
+              ryuukyokuReason: '四开杠',
+            });
+            return;
+          }
           setGame({
             ...game,
             hands,
@@ -2303,7 +2627,11 @@ const GameMahjongJapanese = () => {
           return;
         }
       }
-      addLogRef.current(`${SEAT_NAMES[p]} 过`);
+      addLogRef.current(
+        foldClaimByRiichi
+          ? `${SEAT_NAMES[p]} 过（${claimDefensePlan?.reason || '他家立直，防守优先'}）`
+          : `${SEAT_NAMES[p]} 过`,
+      );
       setGame((g) => {
         if (!g || g.phase !== 'claim' || g.lastDiscardFrom === null) return g;
         const passResult = resolveClaimPass(g.claimIndex, g.wall.length);
@@ -2326,6 +2654,7 @@ const GameMahjongJapanese = () => {
             currentPlayer: nextPlayer,
             lastClaimMsg: null,
             ryuukyoku: true,
+            ryuukyokuReason: '荒牌',
           };
         }
         const draw = g.wall[0];
@@ -2984,6 +3313,21 @@ const GameMahjongJapanese = () => {
                 <div className="space-y-3">
                   {/* 立直提示区域 */}
                   <div className="flex flex-wrap items-center justify-center gap-2">
+                    {canKyuushuKyuuhai && (
+                      <div className="flex items-center gap-2 bg-purple-900/30 rounded-lg px-3 py-2 border border-purple-400/40">
+                        <span className="text-xs text-[#f1faee]/85">
+                          九种九牌可宣言：
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-purple-400 text-[#f1faee] hover:bg-purple-600/40"
+                          onClick={doKyuushuKyuuhai}
+                        >
+                          🀄 九种九牌流局
+                        </Button>
+                      </div>
+                    )}
                     {!game.riichiDeclared[0] && (
                       <div className="flex items-center gap-2 bg-[#1d3557]/50 rounded-lg px-3 py-2">
                         <span className="text-xs text-[#f1faee]/80">
@@ -3243,19 +3587,23 @@ const GameMahjongJapanese = () => {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-riichi-overlay-in">
             <div className="rounded-2xl bg-[#2d4a3c] border-2 border-[#d4b886] p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in">
               <h3 className="text-xl font-bold text-amber-200 text-center mb-3">
-                流局（荒牌）
+                流局（{getRyuukyokuReasonText(game.ryuukyokuReason)}）
               </h3>
               <p className="text-sm text-[#f1faee]/90 mb-2 text-center">
-                牌墙摸完无人和，本场+1，庄家连庄
+                {getRyuukyokuDescription(game.ryuukyokuReason)}
               </p>
               {drawSettlementPreview && (
                 <div className="mb-4 rounded-lg border border-[#d4b886]/40 bg-[#1a2e25]/70 p-3 text-xs text-[#f1faee]/90 space-y-1">
-                  <p>
-                    听牌：
-                    {drawSettlementPreview.tenpaiSeats.length === 0
-                      ? ' 无'
-                      : ` ${drawSettlementPreview.tenpaiSeats.map((i) => SEAT_NAMES[i]).join('、')}`}
-                  </p>
+                  {(game.ryuukyokuReason ?? '荒牌') === '荒牌' ? (
+                    <p>
+                      听牌：
+                      {drawSettlementPreview.tenpaiSeats.length === 0
+                        ? ' 无'
+                        : ` ${drawSettlementPreview.tenpaiSeats.map((i) => SEAT_NAMES[i]).join('、')}`}
+                    </p>
+                  ) : (
+                    <p>途中流局：不执行不听罚符，立直棒保留到下一局</p>
+                  )}
                   <p>
                     分差：{' '}
                     {drawSettlementPreview.settlement.deltas
