@@ -52,6 +52,11 @@ import {
   isRonForbiddenByFuriten,
 } from '@/lib/riichiFuriten';
 import {
+  type MatchEndReason,
+  rankSeatsByScore,
+  resolveRiichiMatchEnd,
+} from '@/lib/riichiGameEnd';
+import {
   buildRiichiInput,
   calcWithRiichiRs,
   type GameStateForRs,
@@ -307,6 +312,19 @@ function getRyuukyokuDescription(
   }
 }
 
+function getMatchEndReasonText(reason?: MatchEndReason): string {
+  switch (reason) {
+    case 'tobi':
+      return '有人被击飞（负分）';
+    case 'agari_yame':
+      return '南4庄家连庄且头名，收场';
+    case 'south4_end':
+      return '南4本局结束';
+    default:
+      return '终局';
+  }
+}
+
 function getRonWaitingTilesForSeatInState(
   state: RiichiGameState,
   seat: number,
@@ -473,6 +491,11 @@ const GameMahjongJapanese = () => {
   const [showGuide, setShowGuide] = useState(true); // 新手引导状态
   const [declinedRonToken, setDeclinedRonToken] = useState<string | null>(null);
   const [clockNowMs, setClockNowMs] = useState(() => Date.now());
+  const [matchEnd, setMatchEnd] = useState<{
+    reason: MatchEndReason;
+    finalScores: number[];
+    ranking: number[];
+  } | null>(null);
   const prevGameRef = useRef<RiichiGameState | null>(null);
   const undoingRef = useRef(false);
   const addLogRef = useRef<(msg: string) => void>(() => {});
@@ -782,6 +805,7 @@ const GameMahjongJapanese = () => {
     setHistory([]);
     setGameLog([]);
     setWinResult(null);
+    setMatchEnd(null);
     setDeclinedRonToken(null);
     setGame(initRiichiGame());
     setView('game');
@@ -2152,6 +2176,24 @@ const GameMahjongJapanese = () => {
     ).join(' · ');
     addLog(`本局结算：${scoreLine}`);
     const dealerWon = game.dealer === winResult.winner;
+    const end = resolveRiichiMatchEnd({
+      scores: settlement.newScores,
+      roundWind: game.roundWind,
+      roundNumber: game.roundNumber,
+      dealer: game.dealer,
+      dealerStays: dealerWon,
+    });
+    if (end.end && end.reason) {
+      setWinResult(null);
+      setDeclinedRonToken(null);
+      setMatchEnd({
+        reason: end.reason,
+        finalScores: settlement.newScores,
+        ranking: rankSeatsByScore(settlement.newScores),
+      });
+      addLog(`牌局结束：${getMatchEndReasonText(end.reason)}`);
+      return;
+    }
     const next = getNextRound(
       game.dealer,
       game.roundWind,
@@ -2208,6 +2250,23 @@ const GameMahjongJapanese = () => {
       (name, i) => `${name} ${formatPoints(settlement.newScores[i])}`,
     ).join(' · ');
     addLog(`流局结算（${tenpaiText}）：${scoreLine}`);
+    const end = resolveRiichiMatchEnd({
+      scores: settlement.newScores,
+      roundWind: game.roundWind,
+      roundNumber: game.roundNumber,
+      dealer: game.dealer,
+      dealerStays: true,
+    });
+    if (end.end && end.reason) {
+      setDeclinedRonToken(null);
+      setMatchEnd({
+        reason: end.reason,
+        finalScores: settlement.newScores,
+        ranking: rankSeatsByScore(settlement.newScores),
+      });
+      addLog(`牌局结束：${getMatchEndReasonText(end.reason)}`);
+      return;
+    }
     const next = getNextRound(
       game.dealer,
       game.roundWind,
@@ -3630,6 +3689,33 @@ const GameMahjongJapanese = () => {
                 onClick={proceedAfterRyuukyoku}
               >
                 下一局
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {matchEnd && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 animate-riichi-overlay-in">
+            <div className="rounded-2xl bg-[#2d4a3c] border-2 border-[#d4b886] p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in">
+              <h3 className="text-xl font-bold text-amber-200 text-center mb-2">
+                对局结束
+              </h3>
+              <p className="text-sm text-[#f1faee]/90 mb-3 text-center">
+                {getMatchEndReasonText(matchEnd.reason)}
+              </p>
+              <div className="mb-4 rounded-lg border border-[#d4b886]/40 bg-[#1a2e25]/70 p-3 text-xs text-[#f1faee]/90 space-y-1">
+                {matchEnd.ranking.map((seat, i) => (
+                  <p key={seat}>
+                    {i + 1}位：{SEAT_NAMES[seat]}{' '}
+                    {formatPoints(matchEnd.finalScores[seat])}
+                  </p>
+                ))}
+              </div>
+              <Button
+                className="w-full bg-[#d4b886] text-[#1a2e25] hover:bg-[#e5c997] font-semibold"
+                onClick={startGame}
+              >
+                再来一局
               </Button>
             </div>
           </div>
