@@ -154,7 +154,6 @@ const GameMahjongSichuan = () => {
     return () => clearTimeout(t);
   }, [needAiQueMen, state, declareQueMen]);
 
-  // 自家摸牌时播放音效
   useEffect(() => {
     if (!state || state.phase !== 'discard' || state.currentPlayer !== 0)
       return;

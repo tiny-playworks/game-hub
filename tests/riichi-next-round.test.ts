@@ -1,5 +1,5 @@
 import { describe, expect, test } from '@rstest/core';
-import { getNextRound } from '../src/pages/GameMahjongJapanese';
+import { getNextRound } from '../src/pages/mahjong/japanese/index';
 
 describe('getNextRound 局数推进', () => {
   test('东4局 dealer=3 子家胡 → 南1局，不会出现东5局', () => {

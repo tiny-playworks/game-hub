@@ -10,9 +10,6 @@ import GameDoudizhu from '../src/pages/GameDoudizhu';
 import GameGo from '../src/pages/GameGo';
 import GameGomoku from '../src/pages/GameGomoku';
 import GameGuessNumber from '../src/pages/GameGuessNumber';
-import GameMahjongChinese from '../src/pages/GameMahjongChinese';
-import GameMahjongJapanese from '../src/pages/GameMahjongJapanese';
-import GameMahjongSichuan from '../src/pages/GameMahjongSichuan';
 import GameMemory from '../src/pages/GameMemory';
 import GameShengji from '../src/pages/GameShengji';
 import GameShooter from '../src/pages/GameShooter';
@@ -21,6 +18,9 @@ import GameTank from '../src/pages/GameTank';
 import GameTetris from '../src/pages/GameTetris';
 import GameTictactoe from '../src/pages/GameTictactoe';
 import GameXiangqi from '../src/pages/GameXiangqi';
+import GameMahjongChinese from '../src/pages/mahjong/chinese/index';
+import GameMahjongJapanese from '../src/pages/mahjong/japanese/index';
+import GameMahjongSichuan from '../src/pages/mahjong/sichuan/index';
 
 const withRouter = (children: React.ReactElement) => (
   <MemoryRouter>

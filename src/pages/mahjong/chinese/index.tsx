@@ -153,14 +153,12 @@ const GameMahjongChinese = () => {
     return () => clearTimeout(tid);
   }, [needAiDiscard, runAiTurn]);
 
-  // 轮到 AI 要牌时（claimOption 为 null）由 runAiClaim 决策：胡/杠/碰/吃 或 过
   useEffect(() => {
     if (!needPassClaim) return;
     const tid = setTimeout(runAiClaim, 400);
     return () => clearTimeout(tid);
   }, [needPassClaim, runAiClaim]);
 
-  // 自家摸牌时播放音效
   useEffect(() => {
     if (!state || state.phase !== 'discard' || state.currentPlayer !== 0)
       return;
@@ -175,7 +173,6 @@ const GameMahjongChinese = () => {
     sounds,
   ]);
 
-  // 流局时播报（仅一次）
   useEffect(() => {
     if (!state) return;
     if (!state.isDraw) {
@@ -192,7 +189,6 @@ const GameMahjongChinese = () => {
     state.currentPlayer === 0 &&
     state.winner === null;
   const isClaimPhase = state?.phase === 'claim' && state.lastDiscard !== null;
-  /** 自摸按钮：仅当手牌 14 张且真的能胡时才显示（之前只看了张数，没判胡型） */
   const canZiMo =
     state?.phase === 'discard' &&
     state?.currentPlayer === 0 &&
@@ -284,7 +280,6 @@ const GameMahjongChinese = () => {
           </div>
         ) : (
           <>
-            {/* 局终结算明细 */}
             {state?.lastSettlement &&
               state.lastSettlement.payments.length > 0 && (
                 <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-3">
@@ -309,7 +304,6 @@ const GameMahjongChinese = () => {
                 </div>
               )}
 
-            {/* 胡牌弹窗 */}
             {state.winner !== null && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-riichi-overlay-in">
                 <div className="rounded-2xl bg-[#2d4a3c] border-2 border-[#d4b886] p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in">
@@ -325,7 +319,6 @@ const GameMahjongChinese = () => {
                 </div>
               </div>
             )}
-            {/* 流局弹窗 */}
             {state.isDraw && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-riichi-overlay-in">
                 <div className="rounded-2xl bg-[#2d4a3c] border-2 border-[#d4b886] p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in">
@@ -334,7 +327,6 @@ const GameMahjongChinese = () => {
               </div>
             )}
 
-            {/* 牌桌：背景 #2d4a3c，边缘阴影 */}
             <div className="rounded-2xl bg-[#2d4a3c] p-4 md:p-6 mb-4 min-h-[520px] shadow-[0_12px_32px_rgba(0,0,0,0.4)]">
               <p className="text-center text-sm text-[#f1faee]/90 mb-3">
                 {state.isDraw
@@ -351,7 +343,6 @@ const GameMahjongChinese = () => {
               </p>
               <div className="grid grid-cols-[1fr_2fr_1fr] grid-rows-[auto_1fr_auto] gap-3">
                 <div />
-                {/* 对家 seat 2 - 上；当前玩家用柔和背景+“正在出牌” */}
                 <div
                   className={cn(
                     'rounded-lg px-3 py-2 flex flex-col items-center justify-center min-h-[64px] transition-colors',
@@ -390,7 +381,6 @@ const GameMahjongChinese = () => {
                   )}
                 </div>
                 <div />
-                {/* 上家 seat 3 - 左；去掉刺眼黄框，改用柔和背景 */}
                 <div
                   className={cn(
                     'rounded-lg px-3 py-2 flex flex-col items-center justify-center transition-colors',
@@ -423,7 +413,6 @@ const GameMahjongChinese = () => {
                     </div>
                   )}
                 </div>
-                {/* 中间：剩余牌数 + 弃牌区按家分行，不堆在一起 */}
                 <div className="rounded-lg bg-[#1a2e25]/50 flex flex-col p-3 min-h-[120px]">
                   <p className="text-center text-3xl font-extrabold text-[#ffd700] tabular-nums mb-2">
                     剩余 {state.deck.length}
@@ -449,7 +438,6 @@ const GameMahjongChinese = () => {
                     ))}
                   </div>
                 </div>
-                {/* 下家 seat 1 - 右 */}
                 <div
                   className={cn(
                     'rounded-lg px-3 py-2 flex flex-col items-center justify-center transition-colors',
@@ -483,7 +471,6 @@ const GameMahjongChinese = () => {
                   )}
                 </div>
                 <div />
-                {/* 自家 seat 0 - 下：手牌居中、牌间距 10px，刚摸高亮；出牌阶段提示 */}
                 <div className="col-span-3 rounded-xl bg-[#2d4a3c]/80 p-4 space-y-3">
                   {isMyTurn && state.winner === null && (
                     <p className="text-center text-sm text-[#ffc107]/90">
@@ -588,7 +575,6 @@ const GameMahjongChinese = () => {
               </div>
             </div>
 
-            {/* 底部中央操作区：胡红 / 杠碰橙 / 吃蓝 / 过灰；不可用时置灰，避免找不到按钮 */}
             <div className="flex flex-wrap justify-center items-center gap-2 py-3 px-4">
               {canZiMo && (
                 <button

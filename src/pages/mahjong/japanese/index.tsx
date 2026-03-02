@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useRiichiSounds } from '@/hooks/useRiichiSounds';
@@ -10,8 +9,6 @@ import {
   canPengRiichi,
   computeYaku,
   countDoraInHand,
-  createRiichiDeck,
-  dealRiichi,
   getAngangOptionsRiichi,
   getBaseTile,
   getChiOptionsRiichi,
@@ -19,13 +16,10 @@ import {
   getTileLabel,
   getTotalHan,
   hasYaku,
-  isAkaFive,
   isWinShapeRiichi,
-  TILE_LABELS_RIICHI,
   type YakuResult,
 } from '@/lib/mahjongRiichi';
 import {
-  type AbortiveDrawReason,
   canDeclareKyuushuKyuuhai,
   shouldAbortOnSuuchaRiichi,
   shouldAbortOnSuufonRenda,
@@ -44,11 +38,9 @@ import {
   consumeTimeBankSeconds,
   getTurnTotalSeconds,
   isTurnTimeout,
-  RIICHI_TIME_BANK_INITIAL_SECONDS,
 } from '@/lib/riichiClock';
 import {
   applyRonDeclinedFuriten,
-  clearDoujunFuriten,
   createInitialFuritenState,
   isRonForbiddenByFuriten,
 } from '@/lib/riichiFuriten';
@@ -64,447 +56,47 @@ import {
 } from '@/lib/riichiRsAdapter';
 import {
   type PaymentDetail,
-  RIICHI_INITIAL_POINTS,
   settleRyuukyoku,
   settleWin,
 } from '@/lib/riichiSettlement';
 import { cn } from '@/lib/utils';
+import { CenterArea } from './components/CenterArea';
+import { GameHeader } from './components/GameHeader';
+import { GameInfoBar } from './components/GameInfoBar';
+import { GuidePanel } from './components/GuidePanel';
+import { MatchEndModal, RyuukyokuModal, WinModal } from './components/Modals';
+import { OpponentSeat } from './components/OpponentSeat';
+import { RulesView } from './components/RulesView';
+import { StatusPanel } from './components/StatusPanel';
+import { getTileColorClass, RiichiTileFace } from './components/Tile';
+import {
+  DEFAULT_SCORES,
+  DEFAULT_TIME_BANKS,
+  MAX_HISTORY,
+  MAX_LOG,
+  SEAT_NAMES,
+  TILE_ACTIVE,
+  TILE_HAND,
+} from './constants';
+import { initRiichiGame } from './gameState';
+import {
+  appendUraDoraYaku,
+  canSeatRonByRules,
+  clearSeatDoujunStates,
+  countUraDoraHan,
+  countVisibleTilesByBase,
+  formatPoints,
+  getDecisionSeat,
+  getMatchEndReasonText,
+  getNextRound,
+  getSeatWind,
+  getTenpaiSeatsForDraw,
+  needsTimedDecision,
+  summarizeWinnerPayments,
+} from './helpers';
+import type { RiichiGameState, RiichiMeld } from './types';
 
-const SEAT_NAMES = ['自家', '下家', '对家', '上家'];
-const WIND_NAMES = ['东', '南', '西', '北'];
-
-const TILE_HAND =
-  'w-[70px] h-[96px] rounded-[6px] border-2 bg-[#fff9e6] flex items-center justify-center shrink-0 font-black text-2xl transition-all duration-200';
-const TILE_DISCARD =
-  'w-[50px] h-[68px] rounded-[6px] border-2 bg-[#fff9e6] flex items-center justify-center shrink-0 font-black text-sm transition-all duration-200';
-const TILE_ACTIVE =
-  'border-[#ffc107] border-[3px] -translate-y-3 shadow-xl ring-2 ring-[#ffc107]/60 animate-riichi-active-pulse';
-
-function getTileColorClass(tile: number): string {
-  const t = getBaseTile(tile);
-  if (t >= 27) {
-    if (t === 31) return 'text-red-700 bg-red-50 border-red-400';
-    if (t === 32) return 'text-green-800 bg-emerald-50 border-emerald-500';
-    if (t === 33) return 'text-stone-700 bg-stone-200 border-stone-500';
-    return 'text-stone-900 bg-stone-100 border-stone-600';
-  }
-  if (t < 9) return 'text-red-800 bg-red-50 border-red-400';
-  if (t < 18) return 'text-green-800 bg-green-50 border-green-500';
-  return 'text-amber-800 bg-amber-50 border-amber-500';
-}
-
-/** 牌面：日麻 0-36；红宝牌仅数字/花色用红色，不写「赤」 */
-function RiichiTileFace({
-  tile,
-  className,
-}: {
-  tile: number;
-  className?: string;
-}) {
-  const base = getBaseTile(tile);
-  const isRed = isAkaFive(tile);
-  if (base >= 27) {
-    return (
-      <span className={cn(className, isRed && 'text-red-600')}>
-        {TILE_LABELS_RIICHI[base]}
-      </span>
-    );
-  }
-  const num = (base % 9) + 1;
-  const suit = base < 9 ? '万' : base < 18 ? '条' : '筒';
-  return (
-    <span className={className}>
-      <span className={isRed ? 'text-red-600' : undefined}>{num}</span>
-      <span className={cn('text-[0.65em] opacity-90', isRed && 'text-red-600')}>
-        {suit}
-      </span>
-    </span>
-  );
-}
-
-/** 牌背：用于展示电脑手牌张数，不露牌面 */
-function TileBack({ className }: { className?: string }) {
-  return (
-    <span
-      className={cn(
-        'rounded-[4px] border-2 border-amber-800/60 bg-gradient-to-br from-amber-900/90 to-amber-800/70 flex items-center justify-center',
-        className,
-      )}
-      title="牌背"
-    >
-      <span className="text-[8px] text-amber-200/40 font-bold">🀄</span>
-    </span>
-  );
-}
-
-/** 副露：吃/碰/明杠；暗杠不算副露，保留门前清 */
-interface RiichiMeld {
-  type: 'chi' | 'peng' | 'mingang' | 'angang';
-  tiles: number[];
-  fromPlayer?: number;
-}
-
-interface RiichiGameState {
-  hands: number[][];
-  wall: number[];
-  discardPiles: number[][];
-  melds: RiichiMeld[][];
-  currentPlayer: number;
-  drawnTile: number | null;
-  doraIndicator: number;
-  phase: 'discard' | 'claim';
-  lastDiscard: number | null;
-  lastDiscardFrom: number | null;
-  claimIndex: number;
-  /** 上一动：谁 碰/吃/杠 了（用于提示「上家碰了所以你没轮到」） */
-  lastClaimMsg: string | null;
-  /** 场风 0=东 1=南 2=西 3=北；东场打满 4 局后进南场 */
-  roundWind: number;
-  /** 局数 1-4，东1局～东4局后变为南1局 */
-  roundNumber: number;
-  /** 本场 0,1,2,… 庄家连庄时+1，下庄后归零 */
-  honba: number;
-  /** 庄家座位 0-3；胡牌/流局后按结果换庄 */
-  dealer: number;
-  /** 四家总分（默认 25000 起） */
-  scores: number[];
-  /** 四家时间库（秒），每巡额外+5秒读秒 */
-  timeBanks: number[];
-  /** 立直棒池（点数，1000 的倍数） */
-  riichiPot: number;
-  /** 立直状态：每个玩家是否已立直 */
-  riichiDeclared: boolean[];
-  /** 振听状态（sutehai 为展示位，实时根据手牌与河计算） */
-  furitenStates: { sutehai: boolean; doujun: boolean; riichi: boolean }[];
-  /** 立直宣言牌：记录每个玩家立直时打出的牌（用于一发判定） */
-  riichiDiscard: (number | null)[];
-  /** 里宝牌指示牌 */
-  uraDoraIndicators: number[];
-  /** 荒牌流局：牌墙摸完无人和 */
-  ryuukyoku?: boolean;
-  /** 流局类型：荒牌/途中流局。 */
-  ryuukyokuReason?: '荒牌' | AbortiveDrawReason;
-  /** 本局结算流水（用于弹窗/日志） */
-  lastSettlement?: {
-    payments: PaymentDetail[];
-    deltas: number[];
-    newScores: number[];
-    tenpaiSeats?: number[];
-    timeoutEvents?: string[];
-  };
-  /** 本局超时自动出牌记录 */
-  timeoutEvents: string[];
-  /** 场次：东风场（东1～东4）或南风场（东1～南4） */
-  matchLength: 'east' | 'south';
-}
-
-function initRiichiGame(
-  dealer = 0,
-  roundWind = 0,
-  roundNumber = 1,
-  honba = 0,
-  scores: number[] = [
-    RIICHI_INITIAL_POINTS,
-    RIICHI_INITIAL_POINTS,
-    RIICHI_INITIAL_POINTS,
-    RIICHI_INITIAL_POINTS,
-  ],
-  timeBanks: number[] = [
-    RIICHI_TIME_BANK_INITIAL_SECONDS,
-    RIICHI_TIME_BANK_INITIAL_SECONDS,
-    RIICHI_TIME_BANK_INITIAL_SECONDS,
-    RIICHI_TIME_BANK_INITIAL_SECONDS,
-  ],
-  riichiPot = 0,
-  lastSettlement?: RiichiGameState['lastSettlement'],
-  matchLength: 'east' | 'south' = 'east',
-): RiichiGameState {
-  const deck = createRiichiDeck();
-  const [hands, rest] = dealRiichi(deck, dealer);
-  const doraIndicator = rest[0];
-  const uraDoraIndicator = rest[1];
-  const wall = rest.slice(2);
-  return {
-    hands,
-    wall,
-    discardPiles: [[], [], [], []],
-    melds: [[], [], [], []],
-    currentPlayer: dealer,
-    drawnTile: null,
-    doraIndicator,
-    phase: 'discard',
-    lastDiscard: null,
-    lastDiscardFrom: null,
-    claimIndex: 0,
-    lastClaimMsg: null,
-    roundWind,
-    roundNumber,
-    honba,
-    dealer,
-    scores: [...scores],
-    timeBanks: [...timeBanks],
-    riichiPot,
-    matchLength,
-    riichiDeclared: [false, false, false, false],
-    furitenStates: [
-      createInitialFuritenState(),
-      createInitialFuritenState(),
-      createInitialFuritenState(),
-      createInitialFuritenState(),
-    ],
-    riichiDiscard: [null, null, null, null],
-    uraDoraIndicators: uraDoraIndicator === undefined ? [] : [uraDoraIndicator],
-    timeoutEvents: [],
-    lastSettlement,
-  };
-}
-
-/**
- * 一局结束（胡牌或流局）后计算下一局：
- * - 庄家胡 或 流局：不换庄（相当于连庄），局数不变，本场+1。
- * - 子家胡：下庄，下家坐庄，本场归零；东4局（dealer=3）后下一局进南1局。
- * 局数由庄家唯一确定：每场 1～4 局对应 dealer 0～3，故用 nextDealer 推导下一局局数，
- * 避免 state 不同步时出现「东5局」等非法局数。
- * 由胡牌/流局逻辑调用；流局时传入 dealerStays=true，与庄家胡相同。
- */
-export function getNextRound(
-  dealer: number,
-  roundWind: number,
-  roundNumber: number,
-  honba: number,
-  dealerStays: boolean, // true = 庄家胡 或 流局（不换庄）
-): { dealer: number; roundWind: number; roundNumber: number; honba: number } {
-  if (dealerStays) return { dealer, roundWind, roundNumber, honba: honba + 1 };
-  const nextDealer = (dealer + 1) % 4;
-  if (nextDealer === 0)
-    return {
-      dealer: 0,
-      roundWind: (roundWind + 1) % 4,
-      roundNumber: 1,
-      honba: 0,
-    };
-  return {
-    dealer: nextDealer,
-    roundWind,
-    roundNumber: nextDealer + 1,
-    honba: 0,
-  };
-}
-
-/** 自风：庄家=场风，下家/对家/上家依次为场风+1,+2,+3（随庄家变化） */
-function getSeatWind(roundWind: number, seat: number, dealer: number): number {
-  return (roundWind + ((seat - dealer + 4) % 4)) % 4;
-}
-
-function getRyuukyokuReasonText(
-  reason?: RiichiGameState['ryuukyokuReason'],
-): string {
-  return reason ?? '荒牌';
-}
-
-function getRyuukyokuDescription(
-  reason?: RiichiGameState['ryuukyokuReason'],
-): string {
-  switch (reason) {
-    case '四风连打':
-      return '四家第一打同风牌，途中流局，本场+1，庄家连庄';
-    case '四家立直':
-      return '四家均已立直，途中流局，本场+1，庄家连庄';
-    case '四开杠':
-      return '全场四杠成立（非一人四杠），途中流局，本场+1，庄家连庄';
-    case '九种九牌':
-      return '九种九牌宣言成立，途中流局，本场+1，庄家连庄';
-    default:
-      return '牌墙摸完无人和，本场+1，庄家连庄';
-  }
-}
-
-function getMatchEndReasonText(reason?: MatchEndReason): string {
-  switch (reason) {
-    case 'tobi':
-      return '有人被击飞（负分）';
-    case 'east4_end':
-      return '东风场东4局结束';
-    case 'agari_yame':
-      return '南4庄家连庄且头名，收场';
-    case 'south4_end':
-      return '南风场南4局结束';
-    default:
-      return '终局';
-  }
-}
-
-/** 统计各基础牌型（0-33）在可见区的出现次数：自家手牌+自家副露+四家河+宝牌表示。用于推算剩余张数（每种最多 4 张）。 */
-function countVisibleTilesByBase(state: RiichiGameState): number[] {
-  const count = new Array<number>(34).fill(0);
-  const add = (tile: number) => {
-    const b = getBaseTile(tile);
-    if (b >= 0 && b < 34) count[b]++;
-  };
-  state.hands[0].forEach(add);
-  for (const m of state.melds[0]) m.tiles.forEach(add);
-  for (let i = 0; i < 4; i++) state.discardPiles[i].forEach(add);
-  add(state.doraIndicator);
-  return count;
-}
-
-function getRonWaitingTilesForSeatInState(
-  state: RiichiGameState,
-  seat: number,
-): number[] {
-  const hand = state.hands[seat];
-  const melds = state.melds[seat];
-  if (hand.length !== 13) return [];
-  const waiting: number[] = [];
-  for (let t = 0; t < 34; t++) {
-    const testHand = [...hand, t];
-    if (!isWinShapeRiichi(testHand, melds)) continue;
-    const ctx = {
-      hand: testHand,
-      melds: melds.map((m) => ({ tiles: m.tiles })),
-      meldsTyped: melds,
-      isMenzhen: melds.every((m) => m.type === 'angang'),
-      isTsumo: false,
-      isRiichi: state.riichiDeclared[seat],
-      ippatsuPossible: false,
-      seatWind: getSeatWind(state.roundWind, seat, state.dealer),
-      roundWind: state.roundWind,
-    };
-    if (hasYaku(ctx)) waiting.push(t);
-  }
-  return waiting;
-}
-
-function canSeatRonByRules(state: RiichiGameState, seat: number): boolean {
-  if (
-    state.phase !== 'claim' ||
-    state.lastDiscard === null ||
-    state.lastDiscardFrom === null ||
-    state.lastDiscardFrom === seat
-  )
-    return false;
-  const handWithClaim = [...state.hands[seat], state.lastDiscard];
-  if (!isWinShapeRiichi(handWithClaim, state.melds[seat])) return false;
-  const melds = state.melds[seat];
-  const yakuOk = hasYaku({
-    hand: handWithClaim,
-    melds: melds.map((m) => ({ tiles: m.tiles })),
-    meldsTyped: melds,
-    isMenzhen: melds.every((m) => m.type === 'angang'),
-    isTsumo: false,
-    isRiichi: state.riichiDeclared[seat],
-    ippatsuPossible: false,
-    seatWind: getSeatWind(state.roundWind, seat, state.dealer),
-    roundWind: state.roundWind,
-  });
-  if (!yakuOk) return false;
-  return !isRonForbiddenByFuriten({
-    waitingTiles: getRonWaitingTilesForSeatInState(state, seat),
-    ownDiscards: state.discardPiles[seat],
-    state: state.furitenStates[seat] ?? createInitialFuritenState(),
-  });
-}
-
-const MAX_HISTORY = 40;
-const MAX_LOG = 150;
-
-function formatPoints(points: number): string {
-  return `${points.toLocaleString()} 点`;
-}
-
-function countUraDoraHan(allTiles: number[], indicators: number[]): number {
-  if (indicators.length === 0) return 0;
-  const doraTypes = indicators.map((i) => getDoraFromIndicator(i));
-  return allTiles.filter((t) => doraTypes.includes(getBaseTile(t))).length;
-}
-
-function appendUraDoraYaku(yaku: YakuResult[], uraHan: number): YakuResult[] {
-  if (uraHan <= 0) return yaku;
-  const alreadyHasUra = yaku.some((y) => y.id === '54' || y.id === 'ura_dora');
-  if (alreadyHasUra) return yaku;
-  return [...yaku, { id: 'ura_dora', name: '里宝牌', han: uraHan }];
-}
-
-function summarizeWinnerPayments(
-  payments: PaymentDetail[],
-  winner: number,
-): { base: number; honba: number; riichi: number } {
-  let base = 0;
-  let honba = 0;
-  let riichi = 0;
-  for (const p of payments) {
-    if (p.to !== winner) continue;
-    if (p.reason === 'riichi') riichi += p.amount;
-    else if (p.reason === 'honba') honba += p.amount;
-    else base += p.amount;
-  }
-  return { base, honba, riichi };
-}
-
-function clearSeatDoujunStates(
-  states: RiichiGameState['furitenStates'],
-  seat: number,
-): RiichiGameState['furitenStates'] {
-  return states.map((s, i) =>
-    i === seat ? clearDoujunFuriten(s ?? createInitialFuritenState()) : s,
-  );
-}
-
-function needsDiscardDecision(state: RiichiGameState): boolean {
-  if (state.phase !== 'discard') return false;
-  const p = state.currentPlayer;
-  return state.drawnTile !== null || state.hands[p].length === 11;
-}
-
-function getClaimPlayerFromState(state: RiichiGameState): number | null {
-  if (state.phase !== 'claim' || state.lastDiscardFrom === null) return null;
-  return (state.lastDiscardFrom + 1 + state.claimIndex) % 4;
-}
-
-function needsTimedDecision(state: RiichiGameState): boolean {
-  if (needsDiscardDecision(state)) return true;
-  return (
-    state.phase === 'claim' &&
-    state.lastDiscard !== null &&
-    state.lastDiscardFrom !== null &&
-    getClaimPlayerFromState(state) !== null
-  );
-}
-
-function getDecisionSeat(state: RiichiGameState): number {
-  if (state.phase === 'discard') return state.currentPlayer;
-  return getClaimPlayerFromState(state) ?? state.currentPlayer;
-}
-
-function getTenpaiSeatsForDraw(
-  game: RiichiGameState,
-  getWaitingTiles: (
-    hand: number[],
-    melds: RiichiMeld[],
-    g?: RiichiGameState,
-  ) => number[],
-): number[] {
-  const tenpai: number[] = [];
-  for (let seat = 0; seat < 4; seat++) {
-    if (getWaitingTiles(game.hands[seat], game.melds[seat], game).length > 0) {
-      tenpai.push(seat);
-    }
-  }
-  return tenpai;
-}
-
-const DEFAULT_SCORES = [
-  RIICHI_INITIAL_POINTS,
-  RIICHI_INITIAL_POINTS,
-  RIICHI_INITIAL_POINTS,
-  RIICHI_INITIAL_POINTS,
-];
-const DEFAULT_TIME_BANKS = [
-  RIICHI_TIME_BANK_INITIAL_SECONDS,
-  RIICHI_TIME_BANK_INITIAL_SECONDS,
-  RIICHI_TIME_BANK_INITIAL_SECONDS,
-  RIICHI_TIME_BANK_INITIAL_SECONDS,
-];
+export { getNextRound } from './helpers';
 
 const GameMahjongJapanese = () => {
   const { t } = useLocale();
@@ -2897,85 +2489,11 @@ const GameMahjongJapanese = () => {
 
   if (view === 'rules') {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
-          <Link
-            to="/category/mahjong"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            ← {t('common.backToCategory')}
-          </Link>
-        </header>
-        <main className="mx-auto max-w-2xl px-4 py-6">
-          <h1 className="text-xl font-bold text-foreground">日本立直麻将</h1>
-          <p className="mt-2 text-muted-foreground">
-            天凤/雀魂标准，规则以 skill「mahjong-japanese-riichi」为准
-          </p>
-
-          <section className="mt-6 rounded-lg border border-border bg-card p-4">
-            <h2 className="text-sm font-semibold text-foreground">
-              核心规则摘要
-            </h2>
-            <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-muted-foreground">
-              <li>4 人 · 136 张 + 红宝牌 3 枚（赤 5 万/筒/索）</li>
-              <li>无役不能和了；振听只能自摸，不能荣和</li>
-              <li>
-                立直：门前清听牌宣告，放 1000
-                点棒；立直后禁止换牌、禁止吃/碰/明杠/补杠，仅可暗杠与和了
-              </li>
-              <li>宝牌只加番不算役；里宝牌在立直和了时翻开</li>
-              <li>
-                符数最小 10 符，七对子固定 25 符；1–2 番按 符×2^(番+2)，3
-                番满贯、5–6 番跳满、7–10 番倍满、≥13 役满
-              </li>
-            </ul>
-          </section>
-
-          <section className="mt-4 rounded-lg border border-border bg-card p-4">
-            <h2 className="text-sm font-semibold text-foreground">
-              起和役（常用）
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              立直(1)、门前清自摸(1)、断幺九(1)、役牌(1)、平和(1)、一发(1)、七对子(2)、混一色(3)、清一色(6)
-              等；满贯 12000/8000、跳满 18000/12000、役满 48000/32000（亲/子）
-            </p>
-          </section>
-
-          <section className="mt-4 rounded-lg border border-border bg-card p-4">
-            <h2 className="text-sm font-semibold text-foreground">场次</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              东风场：东1～东4局，东4局子家胡或流局后结束。南风场：东1～南4局。
-            </p>
-            <div className="mt-3 flex gap-2">
-              <Button
-                type="button"
-                variant={matchLength === 'east' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setMatchLength('east')}
-              >
-                东风场
-              </Button>
-              <Button
-                type="button"
-                variant={matchLength === 'south' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setMatchLength('south')}
-              >
-                南风场
-              </Button>
-            </div>
-          </section>
-
-          <div className="mt-6">
-            <Button
-              onClick={startGame}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              {t('common.startGame')}
-            </Button>
-          </div>
-        </main>
-      </div>
+      <RulesView
+        matchLength={matchLength}
+        onMatchLengthChange={setMatchLength}
+        onStart={startGame}
+      />
     );
   }
 
@@ -2983,423 +2501,67 @@ const GameMahjongJapanese = () => {
 
   return (
     <div className="min-h-screen bg-[#1a2e25] text-[#f1faee] bg-gradient-to-b from-[#1a2e25] to-[#152019]">
-      <header className="flex items-center justify-between border-b border-[#2d4a3c] bg-[#1a2e25] px-4 py-3">
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => setView('rules')}
-            className="text-[#f1faee]/80 hover:text-[#f1faee] text-sm"
-          >
-            ← {t('common.returnRules')}
-          </button>
-          <span className="text-sm text-[#f1faee]">
-            {game
-              ? `${WIND_NAMES[game.roundWind]}${game.roundNumber}局 ${WIND_NAMES[game.roundWind]}${game.honba}场 · 庄 ${SEAT_NAMES[game.dealer]} (${WIND_NAMES[getSeatWind(game.roundWind, game.dealer, game.dealer)]})`
-              : '东1局 东0场 · 庄 自家 (东)'}
-          </span>
-          <span className="text-xs text-[#ffd700]">
-            立直棒池 {formatPoints(game.riichiPot)}
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={startGame}
-              className="rounded-lg border border-[#d4b886] px-3 py-1.5 text-sm text-[#f1faee] hover:bg-[#2d4a3c]"
-            >
-              新一局
-            </button>
-            {game && history.length > 0 && (
-              <button
-                type="button"
-                onClick={undo}
-                className="rounded-lg border border-amber-600/70 px-3 py-1.5 text-sm text-amber-200 hover:bg-amber-900/30"
-                title="回退一步（便于排查问题）"
-              >
-                回退
-              </button>
-            )}
-            {game && (
-              <button
-                type="button"
-                onClick={() => setLogOpen((o) => !o)}
-                className="rounded-lg border border-slate-500/60 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-700/30"
-              >
-                {logOpen ? '收起日志' : '日志'}
-              </button>
-            )}
-          </div>
-        </div>
-        {game && (
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-[10px] text-[#f1faee]/80">宝牌表示</span>
-            <span
-              className={cn(
-                'w-[52px] h-[72px] rounded-[6px] border-2 bg-[#fff9e6] flex items-center justify-center font-black text-lg shrink-0 tile-dora-glow',
-                getTileColorClass(game.doraIndicator),
-              )}
-            >
-              <RiichiTileFace tile={game.doraIndicator} />
-            </span>
-          </div>
-        )}
-      </header>
+      <GameHeader
+        game={game}
+        logOpen={logOpen}
+        historyLength={history.length}
+        onStart={startGame}
+        onUndo={undo}
+        onToggleLog={() => setLogOpen((o) => !o)}
+        onBackToRules={() => setView('rules')}
+        returnRulesLabel={t('common.returnRules')}
+      />
 
       <main className="mx-auto max-w-6xl p-4 md:p-6">
-        <div className="mb-3 rounded-lg border border-[#d4b886]/30 bg-[#1a2e25]/70 px-3 py-2 text-xs text-[#f1faee]/90">
-          {SEAT_NAMES.map((name, i) => (
-            <span key={name}>
-              {i > 0 && ' · '}
-              {name}{' '}
-              <span className="font-semibold text-[#ffd700]">
-                {formatPoints(game.scores[i])}
-              </span>
-            </span>
-          ))}
-        </div>
-        {game.lastSettlement && (
-          <div className="mb-3 rounded-lg border border-[#457b9d]/40 bg-[#1d3557]/35 px-3 py-2">
-            <p className="text-xs font-medium text-[#a8dadc]">上一局结算</p>
-            {game.lastSettlement.tenpaiSeats && (
-              <p className="mt-1 text-[11px] text-[#f1faee]/80">
-                听牌：
-                {game.lastSettlement.tenpaiSeats.length === 0
-                  ? ' 无'
-                  : ` ${game.lastSettlement.tenpaiSeats.map((i) => SEAT_NAMES[i]).join('、')}`}
-              </p>
-            )}
-            <p className="mt-1 text-[11px] text-[#f1faee]/80">
-              分差：{' '}
-              {game.lastSettlement.deltas
-                .map((d, i) => `${SEAT_NAMES[i]} ${d >= 0 ? '+' : ''}${d}`)
-                .join(' · ')}
-            </p>
-            {game.lastSettlement.timeoutEvents &&
-              game.lastSettlement.timeoutEvents.length > 0 && (
-                <p className="mt-1 text-[11px] text-[#f1faee]/80">
-                  超时：{game.lastSettlement.timeoutEvents.join('；')}
-                </p>
-              )}
-          </div>
-        )}
+        <GameInfoBar game={game} />
         <div className="rounded-2xl bg-[#2d4a3c] p-4 md:p-6 mb-4 min-h-[480px] shadow-[0_12px_32px_rgba(0,0,0,0.4)]">
-          {/* 新手引导面板 */}
-          {showGuide && (
-            <div className="mb-4 p-4 bg-[#1d3557]/80 rounded-xl border border-[#457b9d]/50">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="text-lg font-bold text-[#a8dadc]">
-                  新人玩家指南
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setShowGuide(false)}
-                  className="text-[#f1faee]/70 hover:text-[#f1faee] text-sm"
-                >
-                  ✕ 关闭
-                </button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                <div className="bg-[#2d4a3c]/50 p-3 rounded-lg">
-                  <h4 className="font-semibold text-[#f1faee] mb-2">
-                    🎯 基本目标
-                  </h4>
-                  <ul className="text-[#f1faee]/80 space-y-1 text-xs">
-                    <li>• 组成 4 面子 + 1 对子</li>
-                    <li>• 必须有至少 1 个役种</li>
-                    <li>• 立直后听牌固定</li>
-                  </ul>
-                </div>
-                <div className="bg-[#2d4a3c]/50 p-3 rounded-lg">
-                  <h4 className="font-semibold text-[#f1faee] mb-2">
-                    🎮 操作说明
-                  </h4>
-                  <ul className="text-[#f1faee]/80 space-y-1 text-xs">
-                    <li>• 点击手牌出牌</li>
-                    <li>• 可吃/碰/杠时会提示</li>
-                    <li>• 听牌时可宣告立直</li>
-                  </ul>
-                </div>
-                <div className="bg-[#2d4a3c]/50 p-3 rounded-lg">
-                  <h4 className="font-semibold text-[#f1faee] mb-2">
-                    💡 小贴士
-                  </h4>
-                  <ul className="text-[#f1faee]/80 space-y-1 text-xs">
-                    <li>• 绿色=条子 红色=万子</li>
-                    <li>• 黄色=筒子 黑色=字牌</li>
-                    <li>• 红色数字=赤宝牌</li>
-                  </ul>
-                </div>
-              </div>
-              <div className="mt-3 pt-3 border-t border-[#457b9d]/30">
-                <p className="text-xs text-[#a8dadc]/90">
-                  💡
-                  提示：游戏上方会显示当前状态和可选操作，仔细阅读后再做决定哦！
-                </p>
-              </div>
-            </div>
-          )}
-          <div className="text-center mb-3">
-            {/* 主要状态提示 */}
-            <div className="mb-2">
-              <p className="text-sm text-[#f1faee] font-medium">
-                {isClaimPhase
-                  ? isMyClaim
-                    ? hasAnyClaimOption
-                      ? `⚠️ ${game.lastDiscardFrom != null ? SEAT_NAMES[game.lastDiscardFrom] : ''} 打出了 ${game.lastDiscard != null ? getTileLabel(game.lastDiscard) : ''}`
-                      : '⏳ 等待其他玩家行动...'
-                    : `⏳ ${game.lastDiscardFrom != null ? SEAT_NAMES[game.lastDiscardFrom] : ''} 打出了 ${game.lastDiscard != null ? getTileLabel(game.lastDiscard) : ''}，当前轮到 ${SEAT_NAMES[claimPlayer ?? 0]}`
-                  : isMyTurn
-                    ? '🎮 轮到你出牌了'
-                    : `⏳ 等待 ${SEAT_NAMES[game.currentPlayer]} 行动`}
-              </p>
-            </div>
-
-            {/* 操作建议 */}
-            {(canRon || (isMyClaim && hasNonRonClaimOption)) && (
-              <div className="mb-2">
-                <p className="text-xs text-[#a8dadc] bg-[#1d3557]/50 rounded-lg py-1 px-3 inline-block">
-                  💡 可选操作：{canRon && '胡牌 '}{' '}
-                  {chiOptions.length > 0 && `吃(${chiOptions.length}种) `}{' '}
-                  {canPeng && '碰 '} {canMingang && '杠 '}{' '}
-                  {isMyClaim ? '过' : canRon ? '放弃荣和' : ''}
-                </p>
-              </div>
-            )}
-
-            {/* 特殊状态提示 */}
-            {game.lastClaimMsg && (
-              <div className="mb-2">
-                <span className="inline-block text-xs text-amber-300/95 bg-amber-900/30 rounded-lg py-1 px-3">
-                  📢 {game.lastClaimMsg}
-                </span>
-              </div>
-            )}
-            {myFuritenReason && (
-              <div className="mb-2">
-                <span className="inline-block text-xs text-rose-200 bg-rose-900/30 rounded-lg py-1 px-3">
-                  ⚠️ {myFuritenReason}
-                </span>
-              </div>
-            )}
-
-            {/* 立直状态提示 */}
-            {game.riichiDeclared.some((d) => d) && (
-              <div className="mb-2">
-                <div className="flex flex-wrap justify-center gap-2">
-                  {game.riichiDeclared.map(
-                    (declared, i) =>
-                      declared && (
-                        <span
-                          key={i}
-                          className="text-xs text-red-300 bg-red-900/30 rounded-lg py-1 px-2"
-                        >
-                          🎯 {SEAT_NAMES[i]} 已立直
-                        </span>
-                      ),
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+          {showGuide && <GuidePanel onClose={() => setShowGuide(false)} />}
+          <StatusPanel
+            isClaimPhase={isClaimPhase}
+            isMyClaim={isMyClaim}
+            hasAnyClaimOption={hasAnyClaimOption}
+            lastDiscardFrom={game.lastDiscardFrom}
+            lastDiscard={game.lastDiscard}
+            claimPlayer={claimPlayer}
+            isMyTurn={isMyTurn}
+            currentPlayer={game.currentPlayer}
+            canRon={canRon}
+            hasNonRonClaimOption={hasNonRonClaimOption}
+            chiOptionsLength={chiOptions.length}
+            canPeng={canPeng}
+            canMingang={canMingang}
+            lastClaimMsg={game.lastClaimMsg}
+            myFuritenReason={myFuritenReason}
+            riichiDeclared={game.riichiDeclared}
+          />
 
           <div className="grid grid-cols-[1fr_2fr_1fr] grid-rows-[auto_1fr_auto] gap-3">
             <div />
-            <div
-              className={cn(
-                'rounded-lg px-3 py-2 flex flex-col items-center justify-center min-h-[64px]',
-                game.currentPlayer === 2 &&
-                  'bg-[#ffc107]/10 border border-[#ffc107]/40',
-              )}
-            >
-              <p className="text-xs font-semibold text-[#f1faee]">
-                {SEAT_NAMES[2]} (
-                {WIND_NAMES[getSeatWind(game.roundWind, 2, game.dealer)]})
-              </p>
-              <p className="text-xs text-[#ffd700]">
-                {game.hands[2].length} 张
-              </p>
-              <p className="text-[11px] text-amber-200">
-                {formatPoints(game.scores[2])}
-              </p>
-              <p className="text-[11px] text-[#a8dadc]">
-                <span className={timerTextClass(2)}>
-                  时库 {game.timeBanks[2]}s
-                  {decisionSeat === 2 &&
-                    decisionSeatRemainSeconds != null &&
-                    ` · 本巡 ${decisionSeatRemainSeconds}s`}
-                </span>
-              </p>
-              {game.hands[2].length > 0 && (
-                <div className="flex flex-wrap justify-center gap-0.5 mt-1">
-                  {game.hands[2].map((_, i) => (
-                    <TileBack
-                      key={i}
-                      className="w-[28px] h-[38px] text-[6px]"
-                    />
-                  ))}
-                </div>
-              )}
-              {game.melds[2].length > 0 && (
-                <div className="flex flex-wrap justify-center gap-0.5 mt-1">
-                  {game.melds[2].map((m, i) => (
-                    <span key={i} className="flex gap-0.5">
-                      {m.tiles.map((t, j) => (
-                        <span
-                          key={j}
-                          className={cn(
-                            'w-[32px] h-[42px] rounded flex items-center justify-center font-bold text-[10px]',
-                            getTileColorClass(t),
-                          )}
-                        >
-                          <RiichiTileFace tile={t} />
-                        </span>
-                      ))}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
+            <OpponentSeat
+              seat={2}
+              game={game}
+              timerLabel={`时库 ${game.timeBanks[2]}s${decisionSeat === 2 && decisionSeatRemainSeconds != null ? ` · 本巡 ${decisionSeatRemainSeconds}s` : ''}`}
+              timerClassName={timerTextClass(2)}
+              isCurrentTurn={game.currentPlayer === 2}
+            />
             <div />
 
-            <div
-              className={cn(
-                'rounded-lg px-3 py-2 flex flex-col items-center',
-                game.currentPlayer === 3 &&
-                  'bg-[#ffc107]/10 border border-[#ffc107]/40',
-              )}
-            >
-              <p className="text-xs font-semibold text-[#f1faee]">
-                {SEAT_NAMES[3]} (
-                {WIND_NAMES[getSeatWind(game.roundWind, 3, game.dealer)]})
-              </p>
-              <p className="text-xs text-[#ffd700]">
-                {game.hands[3].length} 张
-              </p>
-              <p className="text-[11px] text-amber-200">
-                {formatPoints(game.scores[3])}
-              </p>
-              <p className="text-[11px] text-[#a8dadc]">
-                <span className={timerTextClass(3)}>
-                  时库 {game.timeBanks[3]}s
-                  {decisionSeat === 3 &&
-                    decisionSeatRemainSeconds != null &&
-                    ` · 本巡 ${decisionSeatRemainSeconds}s`}
-                </span>
-              </p>
-              {game.hands[3].length > 0 && (
-                <div className="flex flex-wrap justify-center gap-0.5 mt-1">
-                  {game.hands[3].map((_, i) => (
-                    <TileBack
-                      key={i}
-                      className="w-[28px] h-[38px] text-[6px]"
-                    />
-                  ))}
-                </div>
-              )}
-              {game.melds[3].length > 0 && (
-                <div className="flex flex-wrap justify-center gap-0.5 mt-1">
-                  {game.melds[3].map((m, i) => (
-                    <span key={i} className="flex gap-0.5">
-                      {m.tiles.map((t, j) => (
-                        <span
-                          key={j}
-                          className={cn(
-                            'w-[32px] h-[42px] rounded flex items-center justify-center font-bold text-[10px]',
-                            getTileColorClass(t),
-                          )}
-                        >
-                          <RiichiTileFace tile={t} />
-                        </span>
-                      ))}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
+            <OpponentSeat
+              seat={3}
+              game={game}
+              timerLabel={`时库 ${game.timeBanks[3]}s${decisionSeat === 3 && decisionSeatRemainSeconds != null ? ` · 本巡 ${decisionSeatRemainSeconds}s` : ''}`}
+              timerClassName={timerTextClass(3)}
+              isCurrentTurn={game.currentPlayer === 3}
+            />
+            <CenterArea game={game} />
 
-            <div className="rounded-lg bg-[#1a2e25]/50 flex flex-col p-3 min-h-[100px]">
-              <p className="text-center text-2xl font-bold text-[#ffd700] tabular-nums">
-                剩余 {game.wall.length}
-              </p>
-              <div className="flex flex-col gap-1.5 overflow-auto mt-2">
-                {([0, 1, 2, 3] as const).map((seat) => (
-                  <div key={seat} className="flex flex-wrap items-center gap-1">
-                    <span className="text-[10px] text-[#f1faee]/70 shrink-0">
-                      {SEAT_NAMES[seat]} (
-                      {
-                        WIND_NAMES[
-                          getSeatWind(game.roundWind, seat, game.dealer)
-                        ]
-                      }
-                      )
-                    </span>
-                    {game.discardPiles[seat].slice(-8).map((t, i) => (
-                      <span
-                        key={`${seat}-${i}`}
-                        className={cn(TILE_DISCARD, getTileColorClass(t))}
-                      >
-                        <RiichiTileFace tile={t} />
-                      </span>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div
-              className={cn(
-                'rounded-lg px-3 py-2 flex flex-col items-center',
-                game.currentPlayer === 1 &&
-                  'bg-[#ffc107]/10 border border-[#ffc107]/40',
-              )}
-            >
-              <p className="text-xs font-semibold text-[#f1faee]">
-                {SEAT_NAMES[1]} (
-                {WIND_NAMES[getSeatWind(game.roundWind, 1, game.dealer)]})
-              </p>
-              <p className="text-xs text-[#ffd700]">
-                {game.hands[1].length} 张
-              </p>
-              <p className="text-[11px] text-amber-200">
-                {formatPoints(game.scores[1])}
-              </p>
-              <p className="text-[11px] text-[#a8dadc]">
-                <span className={timerTextClass(1)}>
-                  时库 {game.timeBanks[1]}s
-                  {decisionSeat === 1 &&
-                    decisionSeatRemainSeconds != null &&
-                    ` · 本巡 ${decisionSeatRemainSeconds}s`}
-                </span>
-              </p>
-              {game.hands[1].length > 0 && (
-                <div className="flex flex-wrap justify-center gap-0.5 mt-1">
-                  {game.hands[1].map((_, i) => (
-                    <TileBack
-                      key={i}
-                      className="w-[28px] h-[38px] text-[6px]"
-                    />
-                  ))}
-                </div>
-              )}
-              {game.melds[1].length > 0 && (
-                <div className="flex flex-wrap justify-center gap-0.5 mt-1">
-                  {game.melds[1].map((m, i) => (
-                    <span key={i} className="flex gap-0.5">
-                      {m.tiles.map((t, j) => (
-                        <span
-                          key={j}
-                          className={cn(
-                            'w-[32px] h-[42px] rounded flex items-center justify-center font-bold text-[10px]',
-                            getTileColorClass(t),
-                          )}
-                        >
-                          <RiichiTileFace tile={t} />
-                        </span>
-                      ))}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
+            <OpponentSeat
+              seat={1}
+              game={game}
+              timerLabel={`时库 ${game.timeBanks[1]}s${decisionSeat === 1 && decisionSeatRemainSeconds != null ? ` · 本巡 ${decisionSeatRemainSeconds}s` : ''}`}
+              timerClassName={timerTextClass(1)}
+              isCurrentTurn={game.currentPlayer === 1}
+            />
             <div />
             <div className="col-span-3 rounded-xl bg-[#2d4a3c]/80 p-4 space-y-3">
               <div className="text-center text-xs text-[#a8dadc]/90 space-y-1">
@@ -3731,177 +2893,26 @@ const GameMahjongJapanese = () => {
         )}
 
         {winResult && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-riichi-overlay-in">
-            <div className="rounded-2xl bg-[#2d4a3c] border-2 border-[#d4b886] p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in">
-              <h3 className="text-xl font-bold text-[#ffc107] text-center mb-3">
-                {winResult.isTsumo ? '自摸！' : '荣和！'}
-              </h3>
-              {winResult.ten != null && (
-                <p className="text-center text-[#ffc107] font-semibold mb-2">
-                  {winResult.fu != null && winResult.han != null
-                    ? `${winResult.fu} 符 ${winResult.han} 番 · `
-                    : ''}
-                  {winResult.ten} 点
-                </p>
-              )}
-              <p className="text-sm text-[#f1faee]/90 mb-2">役种：</p>
-              <ul className="list-disc list-inside text-sm text-[#f1faee] space-y-1 mb-4">
-                {winResult.yaku.map((y, i) => (
-                  <li key={i}>
-                    {y.name} {y.han}番
-                  </li>
-                ))}
-              </ul>
-              {winResult.uraDoraIndicators &&
-                winResult.uraDoraIndicators.length > 0 && (
-                  <p className="mb-2 text-xs text-[#a8dadc]">
-                    里宝牌表示：{' '}
-                    {winResult.uraDoraIndicators
-                      .map((t) => getTileLabel(t))
-                      .join(' · ')}
-                    {winResult.uraHan != null
-                      ? `（里宝牌 ${winResult.uraHan} 番）`
-                      : ''}
-                  </p>
-                )}
-              {winSettlementPreview && (
-                <div className="mb-4 rounded-lg border border-[#d4b886]/40 bg-[#1a2e25]/70 p-3 text-xs text-[#f1faee]/90 space-y-1">
-                  {winnerPaymentSummary && (
-                    <p>
-                      本局收入： 和牌基础 +{winnerPaymentSummary.base}
-                      {' / '}
-                      本场棒 +{winnerPaymentSummary.honba}
-                      {' / '}
-                      立直棒 +{winnerPaymentSummary.riichi}
-                    </p>
-                  )}
-                  <p>
-                    分差：{' '}
-                    {winSettlementPreview.deltas
-                      .map(
-                        (d, i) => `${SEAT_NAMES[i]} ${d >= 0 ? '+' : ''}${d}`,
-                      )
-                      .join(' · ')}
-                  </p>
-                  <p>
-                    总分：{' '}
-                    {winSettlementPreview.newScores
-                      .map((s, i) => `${SEAT_NAMES[i]} ${s}`)
-                      .join(' · ')}
-                  </p>
-                  {winSettlementPreview.payments.length > 0 && (
-                    <ul className="list-disc list-inside text-[11px] text-[#f1faee]/80">
-                      {winSettlementPreview.payments.slice(0, 8).map((p, i) => (
-                        <li key={i}>
-                          {p.from >= 0 ? SEAT_NAMES[p.from] : '立直棒池'} →{' '}
-                          {SEAT_NAMES[p.to]} {p.amount}点
-                          {p.reason === 'honba'
-                            ? '（本场棒）'
-                            : p.reason === 'riichi'
-                              ? '（立直棒）'
-                              : p.reason === 'ron'
-                                ? '（荣和）'
-                                : p.reason === 'tsumo'
-                                  ? '（自摸）'
-                                  : ''}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {game.timeoutEvents.length > 0 && (
-                    <p className="text-[11px] text-[#f1faee]/80">
-                      超时：{game.timeoutEvents.join('；')}
-                    </p>
-                  )}
-                </div>
-              )}
-              <Button
-                className="w-full bg-[#d4b886] text-[#1a2e25] hover:bg-[#e5c997] font-semibold"
-                onClick={proceedToNextRound}
-              >
-                下一局
-              </Button>
-            </div>
-          </div>
+          <WinModal
+            winResult={winResult}
+            winSettlementPreview={winSettlementPreview}
+            winnerPaymentSummary={winnerPaymentSummary}
+            timeoutEvents={game.timeoutEvents}
+            onNext={proceedToNextRound}
+          />
         )}
 
         {game.ryuukyoku && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-riichi-overlay-in">
-            <div className="rounded-2xl bg-[#2d4a3c] border-2 border-[#d4b886] p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in">
-              <h3 className="text-xl font-bold text-amber-200 text-center mb-3">
-                流局（{getRyuukyokuReasonText(game.ryuukyokuReason)}）
-              </h3>
-              <p className="text-sm text-[#f1faee]/90 mb-2 text-center">
-                {getRyuukyokuDescription(game.ryuukyokuReason)}
-              </p>
-              {drawSettlementPreview && (
-                <div className="mb-4 rounded-lg border border-[#d4b886]/40 bg-[#1a2e25]/70 p-3 text-xs text-[#f1faee]/90 space-y-1">
-                  {(game.ryuukyokuReason ?? '荒牌') === '荒牌' ? (
-                    <p>
-                      听牌：
-                      {drawSettlementPreview.tenpaiSeats.length === 0
-                        ? ' 无'
-                        : ` ${drawSettlementPreview.tenpaiSeats.map((i) => SEAT_NAMES[i]).join('、')}`}
-                    </p>
-                  ) : (
-                    <p>途中流局：不执行不听罚符，立直棒保留到下一局</p>
-                  )}
-                  <p>
-                    分差：{' '}
-                    {drawSettlementPreview.settlement.deltas
-                      .map(
-                        (d, i) => `${SEAT_NAMES[i]} ${d >= 0 ? '+' : ''}${d}`,
-                      )
-                      .join(' · ')}
-                  </p>
-                  <p>
-                    总分：{' '}
-                    {drawSettlementPreview.settlement.newScores
-                      .map((s, i) => `${SEAT_NAMES[i]} ${s}`)
-                      .join(' · ')}
-                  </p>
-                  {game.timeoutEvents.length > 0 && (
-                    <p className="text-[11px] text-[#f1faee]/80">
-                      超时：{game.timeoutEvents.join('；')}
-                    </p>
-                  )}
-                </div>
-              )}
-              <Button
-                className="w-full bg-[#d4b886] text-[#1a2e25] hover:bg-[#e5c997] font-semibold"
-                onClick={proceedAfterRyuukyoku}
-              >
-                下一局
-              </Button>
-            </div>
-          </div>
+          <RyuukyokuModal
+            ryuukyokuReason={game.ryuukyokuReason}
+            drawSettlementPreview={drawSettlementPreview}
+            timeoutEvents={game.timeoutEvents}
+            onNext={proceedAfterRyuukyoku}
+          />
         )}
 
         {matchEnd && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 animate-riichi-overlay-in">
-            <div className="rounded-2xl bg-[#2d4a3c] border-2 border-[#d4b886] p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in">
-              <h3 className="text-xl font-bold text-amber-200 text-center mb-2">
-                对局结束
-              </h3>
-              <p className="text-sm text-[#f1faee]/90 mb-3 text-center">
-                {getMatchEndReasonText(matchEnd.reason)}
-              </p>
-              <div className="mb-4 rounded-lg border border-[#d4b886]/40 bg-[#1a2e25]/70 p-3 text-xs text-[#f1faee]/90 space-y-1">
-                {matchEnd.ranking.map((seat, i) => (
-                  <p key={seat}>
-                    {i + 1}位：{SEAT_NAMES[seat]}{' '}
-                    {formatPoints(matchEnd.finalScores[seat])}
-                  </p>
-                ))}
-              </div>
-              <Button
-                className="w-full bg-[#d4b886] text-[#1a2e25] hover:bg-[#e5c997] font-semibold"
-                onClick={startGame}
-              >
-                再来一局
-              </Button>
-            </div>
-          </div>
+          <MatchEndModal matchEnd={matchEnd} onRestart={startGame} />
         )}
       </main>
     </div>
