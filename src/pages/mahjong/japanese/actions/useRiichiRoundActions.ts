@@ -1,0 +1,296 @@
+import { type RefObject, useCallback } from 'react';
+import { rankSeatsByScore, resolveRiichiMatchEnd } from '@/lib/riichiGameEnd';
+import {
+  type PaymentDetail,
+  settleRyuukyoku,
+  settleWin,
+} from '@/lib/riichiSettlement';
+import { DEFAULT_SCORES, DEFAULT_TIME_BANKS, SEAT_NAMES } from '../constants';
+import { resolveWinBaseTen } from '../gameLogic/winResult';
+import { initRiichiGame } from '../gameState';
+import {
+  formatPoints,
+  getMatchEndReasonText,
+  getNextRound,
+  getTenpaiSeatsForDraw,
+} from '../helpers';
+import type { RiichiMatchEnd, RiichiWinResult } from '../store/riichiGameStore';
+import type { RiichiGameState, RiichiMeld } from '../types';
+
+type SetGame = (
+  updater:
+    | RiichiGameState
+    | null
+    | ((prev: RiichiGameState | null) => RiichiGameState | null),
+) => void;
+
+type SetWinResult = (
+  updater:
+    | RiichiWinResult
+    | null
+    | ((prev: RiichiWinResult | null) => RiichiWinResult | null),
+) => void;
+
+type SetMatchEnd = (
+  updater:
+    | RiichiMatchEnd
+    | null
+    | ((prev: RiichiMatchEnd | null) => RiichiMatchEnd | null),
+) => void;
+
+type GetWaitingTilesFn = (
+  hand: number[],
+  melds: RiichiMeld[],
+  gameState?: RiichiGameState | null,
+  options?: { seat?: number; isTsumo?: boolean; treatAsRiichi?: boolean },
+) => number[];
+
+type UseRiichiRoundActionsParams = {
+  history: RiichiGameState[];
+  matchLength: 'east' | 'south';
+  game: RiichiGameState | null;
+  winResult: RiichiWinResult | null;
+  setView: (view: 'rules' | 'game') => void;
+  setGame: SetGame;
+  setHistory: (
+    updater:
+      | RiichiGameState[]
+      | ((prev: RiichiGameState[]) => RiichiGameState[]),
+  ) => void;
+  setGameLog: (updater: string[] | ((prev: string[]) => string[])) => void;
+  setWinResult: SetWinResult;
+  setMatchEnd: SetMatchEnd;
+  setDeclinedRonToken: (token: string | null) => void;
+  undoingRef: RefObject<boolean>;
+  addLog: (msg: string) => void;
+  getWaitingTilesRiichi: GetWaitingTilesFn;
+};
+
+export function useRiichiRoundActions({
+  history,
+  matchLength,
+  game,
+  winResult,
+  setView,
+  setGame,
+  setHistory,
+  setGameLog,
+  setWinResult,
+  setMatchEnd,
+  setDeclinedRonToken,
+  undoingRef,
+  addLog,
+  getWaitingTilesRiichi,
+}: UseRiichiRoundActionsParams) {
+  const undo = useCallback(() => {
+    if (history.length === 0) return;
+    const prev = history[history.length - 1];
+    undoingRef.current = true;
+    setHistory((h) => h.slice(0, -1));
+    setGame(prev);
+    addLog('回退一步');
+  }, [
+    history.length,
+    addLog,
+    history[history.length - 1],
+    setGame,
+    setHistory,
+    undoingRef,
+  ]);
+
+  const startGame = useCallback(() => {
+    setHistory([]);
+    setGameLog([]);
+    setWinResult(null);
+    setMatchEnd(null);
+    setDeclinedRonToken(null);
+    setGame(
+      initRiichiGame(
+        0,
+        0,
+        1,
+        0,
+        DEFAULT_SCORES,
+        DEFAULT_TIME_BANKS,
+        0,
+        undefined,
+        matchLength,
+      ),
+    );
+    setView('game');
+    addLog(matchLength === 'east' ? '东风场 新一局' : '南风场 新一局');
+  }, [
+    addLog,
+    matchLength,
+    setDeclinedRonToken,
+    setGame,
+    setGameLog,
+    setHistory,
+    setMatchEnd,
+    setView,
+    setWinResult,
+  ]);
+
+  const proceedToNextRound = useCallback(() => {
+    if (!game || !winResult) return;
+    const baseTen = resolveWinBaseTen(winResult, game);
+    const settlement = settleWin({
+      scores: game.scores,
+      winner: winResult.winner,
+      isTsumo: winResult.isTsumo,
+      baseTen,
+      dealer: game.dealer,
+      honba: game.honba,
+      riichiPot: game.riichiPot,
+      ronFrom: game.lastDiscardFrom,
+    });
+    const scoreLine = SEAT_NAMES.map(
+      (name, i) => `${name} ${formatPoints(settlement.newScores[i])}`,
+    ).join(' · ');
+    addLog(`本局结算：${scoreLine}`);
+    const dealerWon = game.dealer === winResult.winner;
+    const end = resolveRiichiMatchEnd({
+      scores: settlement.newScores,
+      roundWind: game.roundWind,
+      roundNumber: game.roundNumber,
+      dealer: game.dealer,
+      dealerStays: dealerWon,
+      matchLength: game.matchLength,
+    });
+    if (end.end && end.reason) {
+      setWinResult(null);
+      setDeclinedRonToken(null);
+      setMatchEnd({
+        reason: end.reason,
+        finalScores: settlement.newScores,
+        ranking: rankSeatsByScore(settlement.newScores),
+      });
+      addLog(`牌局结束：${getMatchEndReasonText(end.reason)}`);
+      return;
+    }
+    const next = getNextRound(
+      game.dealer,
+      game.roundWind,
+      game.roundNumber,
+      game.honba,
+      dealerWon,
+    );
+    setWinResult(null);
+    setDeclinedRonToken(null);
+    setGame(
+      initRiichiGame(
+        next.dealer,
+        next.roundWind,
+        next.roundNumber,
+        next.honba,
+        settlement.newScores,
+        undefined,
+        settlement.nextRiichiPot,
+        {
+          payments: settlement.payments,
+          deltas: settlement.deltas,
+          newScores: settlement.newScores,
+          timeoutEvents: game.timeoutEvents,
+        },
+        game.matchLength,
+      ),
+    );
+    addLog(dealerWon ? '庄家胡，连庄' : '子家胡，换庄');
+  }, [
+    game,
+    winResult,
+    addLog,
+    setDeclinedRonToken,
+    setGame,
+    setMatchEnd,
+    setWinResult,
+  ]);
+
+  const proceedAfterRyuukyoku = useCallback(() => {
+    if (!game || !game.ryuukyoku) return;
+    const reason = game.ryuukyokuReason ?? '荒牌';
+    const isExhaustiveDraw = reason === '荒牌';
+    const tenpaiSeats = isExhaustiveDraw
+      ? getTenpaiSeatsForDraw(game, getWaitingTilesRiichi)
+      : [];
+    const settlement = isExhaustiveDraw
+      ? settleRyuukyoku(game.scores, tenpaiSeats, game.riichiPot)
+      : {
+          payments: [] as PaymentDetail[],
+          deltas: [0, 0, 0, 0],
+          newScores: [...game.scores],
+          nextRiichiPot: game.riichiPot,
+        };
+    const tenpaiText = !isExhaustiveDraw
+      ? '途中流局（不执行不听罚符）'
+      : tenpaiSeats.length === 0
+        ? '无人听牌'
+        : tenpaiSeats.length === 4
+          ? '全员听牌'
+          : `听牌：${tenpaiSeats.map((i) => SEAT_NAMES[i]).join('、')}`;
+    const scoreLine = SEAT_NAMES.map(
+      (name, i) => `${name} ${formatPoints(settlement.newScores[i])}`,
+    ).join(' · ');
+    addLog(`流局结算（${tenpaiText}）：${scoreLine}`);
+    const end = resolveRiichiMatchEnd({
+      scores: settlement.newScores,
+      roundWind: game.roundWind,
+      roundNumber: game.roundNumber,
+      dealer: game.dealer,
+      dealerStays: true,
+      matchLength: game.matchLength,
+    });
+    if (end.end && end.reason) {
+      setDeclinedRonToken(null);
+      setMatchEnd({
+        reason: end.reason,
+        finalScores: settlement.newScores,
+        ranking: rankSeatsByScore(settlement.newScores),
+      });
+      addLog(`牌局结束：${getMatchEndReasonText(end.reason)}`);
+      return;
+    }
+    const next = getNextRound(
+      game.dealer,
+      game.roundWind,
+      game.roundNumber,
+      game.honba,
+      true,
+    );
+    setDeclinedRonToken(null);
+    setGame(
+      initRiichiGame(
+        next.dealer,
+        next.roundWind,
+        next.roundNumber,
+        next.honba,
+        settlement.newScores,
+        undefined,
+        settlement.nextRiichiPot,
+        {
+          payments: settlement.payments,
+          deltas: settlement.deltas,
+          newScores: settlement.newScores,
+          tenpaiSeats: isExhaustiveDraw ? tenpaiSeats : undefined,
+          timeoutEvents: game.timeoutEvents,
+        },
+        game.matchLength,
+      ),
+    );
+    addLog(`流局（${reason}），连庄`);
+  }, [
+    game,
+    addLog,
+    getWaitingTilesRiichi,
+    setDeclinedRonToken,
+    setGame,
+    setMatchEnd,
+  ]);
+
+  return {
+    undo,
+    startGame,
+    proceedToNextRound,
+    proceedAfterRyuukyoku,
+  };
+}
