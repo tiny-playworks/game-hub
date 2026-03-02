@@ -193,6 +193,8 @@ interface RiichiGameState {
   };
   /** 本局超时自动出牌记录 */
   timeoutEvents: string[];
+  /** 场次：东风场（东1～东4）或南风场（东1～南4） */
+  matchLength: 'east' | 'south';
 }
 
 function initRiichiGame(
@@ -214,6 +216,7 @@ function initRiichiGame(
   ],
   riichiPot = 0,
   lastSettlement?: RiichiGameState['lastSettlement'],
+  matchLength: 'east' | 'south' = 'east',
 ): RiichiGameState {
   const deck = createRiichiDeck();
   const [hands, rest] = dealRiichi(deck, dealer);
@@ -240,6 +243,7 @@ function initRiichiGame(
     scores: [...scores],
     timeBanks: [...timeBanks],
     riichiPot,
+    matchLength,
     riichiDeclared: [false, false, false, false],
     furitenStates: [
       createInitialFuritenState(),
@@ -257,7 +261,9 @@ function initRiichiGame(
 /**
  * 一局结束（胡牌或流局）后计算下一局：
  * - 庄家胡 或 流局：不换庄（相当于连庄），局数不变，本场+1。
- * - 子家胡：下庄，下家坐庄，本场归零，局数+1；东4局后进南1局。
+ * - 子家胡：下庄，下家坐庄，本场归零；东4局（dealer=3）后下一局进南1局。
+ * 局数由庄家唯一确定：每场 1～4 局对应 dealer 0～3，故用 nextDealer 推导下一局局数，
+ * 避免 state 不同步时出现「东5局」等非法局数。
  * 由胡牌/流局逻辑调用；流局时传入 dealerStays=true，与庄家胡相同。
  */
 export function getNextRound(
@@ -279,7 +285,7 @@ export function getNextRound(
   return {
     dealer: nextDealer,
     roundWind,
-    roundNumber: roundNumber + 1,
+    roundNumber: nextDealer + 1,
     honba: 0,
   };
 }
@@ -316,10 +322,12 @@ function getMatchEndReasonText(reason?: MatchEndReason): string {
   switch (reason) {
     case 'tobi':
       return '有人被击飞（负分）';
+    case 'east4_end':
+      return '东风场东4局结束';
     case 'agari_yame':
       return '南4庄家连庄且头名，收场';
     case 'south4_end':
-      return '南4本局结束';
+      return '南风场南4局结束';
     default:
       return '终局';
   }
@@ -470,10 +478,24 @@ function getTenpaiSeatsForDraw(
   return tenpai;
 }
 
+const DEFAULT_SCORES = [
+  RIICHI_INITIAL_POINTS,
+  RIICHI_INITIAL_POINTS,
+  RIICHI_INITIAL_POINTS,
+  RIICHI_INITIAL_POINTS,
+];
+const DEFAULT_TIME_BANKS = [
+  RIICHI_TIME_BANK_INITIAL_SECONDS,
+  RIICHI_TIME_BANK_INITIAL_SECONDS,
+  RIICHI_TIME_BANK_INITIAL_SECONDS,
+  RIICHI_TIME_BANK_INITIAL_SECONDS,
+];
+
 const GameMahjongJapanese = () => {
   const { t } = useLocale();
   const sounds = useRiichiSounds();
   const [view, setView] = useState<'rules' | 'game'>('rules');
+  const [matchLength, setMatchLength] = useState<'east' | 'south'>('east');
   const [game, setGame] = useState<RiichiGameState | null>(null);
   const [history, setHistory] = useState<RiichiGameState[]>([]);
   const [gameLog, setGameLog] = useState<string[]>([]);
@@ -807,10 +829,22 @@ const GameMahjongJapanese = () => {
     setWinResult(null);
     setMatchEnd(null);
     setDeclinedRonToken(null);
-    setGame(initRiichiGame());
+    setGame(
+      initRiichiGame(
+        0,
+        0,
+        1,
+        0,
+        DEFAULT_SCORES,
+        DEFAULT_TIME_BANKS,
+        0,
+        undefined,
+        matchLength,
+      ),
+    );
     setView('game');
-    addLog('新一局');
-  }, [addLog]);
+    addLog(matchLength === 'east' ? '东风场 新一局' : '南风场 新一局');
+  }, [addLog, matchLength]);
 
   const discard = useCallback(
     (player: number, tile: number) => {
@@ -2182,6 +2216,7 @@ const GameMahjongJapanese = () => {
       roundNumber: game.roundNumber,
       dealer: game.dealer,
       dealerStays: dealerWon,
+      matchLength: game.matchLength,
     });
     if (end.end && end.reason) {
       setWinResult(null);
@@ -2218,6 +2253,7 @@ const GameMahjongJapanese = () => {
           newScores: settlement.newScores,
           timeoutEvents: game.timeoutEvents,
         },
+        game.matchLength,
       ),
     );
     addLog(dealerWon ? '庄家胡，连庄' : '子家胡，换庄');
@@ -2256,6 +2292,7 @@ const GameMahjongJapanese = () => {
       roundNumber: game.roundNumber,
       dealer: game.dealer,
       dealerStays: true,
+      matchLength: game.matchLength,
     });
     if (end.end && end.reason) {
       setDeclinedRonToken(null);
@@ -2291,6 +2328,7 @@ const GameMahjongJapanese = () => {
           tenpaiSeats: isExhaustiveDraw ? tenpaiSeats : undefined,
           timeoutEvents: game.timeoutEvents,
         },
+        game.matchLength,
       ),
     );
     addLog(`流局（${reason}），连庄`);
@@ -2799,6 +2837,31 @@ const GameMahjongJapanese = () => {
               立直(1)、门前清自摸(1)、断幺九(1)、役牌(1)、平和(1)、一发(1)、七对子(2)、混一色(3)、清一色(6)
               等；满贯 12000/8000、跳满 18000/12000、役满 48000/32000（亲/子）
             </p>
+          </section>
+
+          <section className="mt-4 rounded-lg border border-border bg-card p-4">
+            <h2 className="text-sm font-semibold text-foreground">场次</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              东风场：东1～东4局，东4局子家胡或流局后结束。南风场：东1～南4局。
+            </p>
+            <div className="mt-3 flex gap-2">
+              <Button
+                type="button"
+                variant={matchLength === 'east' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setMatchLength('east')}
+              >
+                东风场
+              </Button>
+              <Button
+                type="button"
+                variant={matchLength === 'south' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setMatchLength('south')}
+              >
+                南风场
+              </Button>
+            </div>
           </section>
 
           <div className="mt-6">
