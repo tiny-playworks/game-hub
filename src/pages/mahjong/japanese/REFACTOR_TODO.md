@@ -19,8 +19,8 @@
   - `actions/useRiichiWinSpecialActions.ts`（ctx + extra）
 - **流程层**
   - `flows/useRiichiTurnClockFlow.ts`（ctx + extra）
-  - `flows/useRiichiDrawAiFlow.ts`（ctx + opts.flowDeps）
-  - `flows/useRiichiClaimFlow.ts`（ctx + extra）
+  - `flows/useRiichiDrawAiFlow.ts`（ctx + opts.flowDeps；摸牌用 `shared/drawFlowTransitions.ts`，AI 摸打用 `flows/drawAiFlowAfterDraw.ts`）
+  - `flows/useRiichiClaimFlow.ts`（ctx + extra；AI 要牌用 `flows/claimFlowAi.ts`）
 - **共享层（shared/）**
   - `claimTransitions.ts`：要牌「过」的纯函数 `applyClaimPassToState`。
   - `timeoutTransitions.ts`：超时出牌 `buildStateAfterTimeoutDiscard`、`appendTimeoutEvent`。
@@ -117,7 +117,7 @@
 
 ### 6.2 测试与质量
 
-- **单测**：日麻相关共 **10 个测试文件**（含 **riichi-flow-integration**），覆盖 lib 层、**shared 纯函数** 以及 **flow 集成**（useRiichiClaimFlow 要牌自动过：next/draw/ryuukyoku 三条路径）。
+- **单测**：全项目 **18 个测试文件、126 用例**；日麻相关约 10 个文件（含 riichi-flow-integration），覆盖 lib 层、shared 纯函数及 flow 集成（要牌自动过 next/draw/ryuukyoku）。
 - **可测试性**：ClaimFlow / DrawAiFlow 支持可选 `flowDeps`；flow 集成测用最小 ctx 渲染 harness，断言 setGame 得到的状态。
 - **校验**：`pnpm run check`（tsc + biome）、`pnpm run test` 全通过即视为当前 DoD。
 
@@ -130,7 +130,7 @@
 ### 6.4 风险与注意点
 
 1. ~~**RoundActions 未接 ctx**~~（已接 RiichiRoundContext）
-2. **Flow 体积**：useRiichiClaimFlow / useRiichiDrawAiFlow 单文件约 380~420 行，逻辑集中；若再扩展 AI 或分支，可考虑按「人类/AI/超时」或「状态转移 vs 副作用」拆分。
+2. ~~**Flow 体积**~~（已拆：ClaimFlow → `claimFlowAi.ts`；DrawAiFlow → `drawFlowTransitions.ts` + `drawAiFlowAfterDraw.ts`，主 flow 文件约 165/230 行）
 3. ~~**四开杠与岭上**~~（ClaimFlow 杠后四开杠已统一走 applyAbortiveDrawChecks，先建 stateForAbortive 再检查）
 4. **回归**：功能改动后建议跑文档第 4 节「回归检查清单」（check + test + 手动：超时出牌、要牌自动过、流局连庄、立直约束）。
 
@@ -148,3 +148,9 @@
 - ~~**ClaimFlow 杠后四开杠** 与 applyAbortiveDrawChecks 统一~~（已完成：先建 stateForAbortive 再 applyAbortiveDrawChecks）
 - ~~对 **flow 的集成测试**~~（已完成：`tests/riichi-flow-integration.test.tsx` 覆盖 useRiichiClaimFlow 要牌自动过三条路径 next/draw/ryuukyoku，用最小 ctx + 首次捕获规避 Strict Mode 多次 updater）。
 - 按需做 **包体/性能** 分析（`pnpm run build:analyze`），确认 WASM 与 chunk 分割合理。
+
+### 6.7 可改进（按需）
+
+- ~~**Flow 体积**~~：已按「AI 决策 / 状态转移」拆分（claimFlowAi、drawFlowTransitions、drawAiFlowAfterDraw）。
+- **i18n**：日麻页部分文案已用 `useLocale`（如返回、规则）；其余中文写死，多语言时再逐步抽 key。
+- **a11y**：主要操作按钮已补 `aria-label`，弹窗可聚焦；进一步无障碍可按需补键盘/焦点管理。

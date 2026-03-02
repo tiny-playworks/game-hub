@@ -56,9 +56,20 @@ export function WinModal({
   onNext,
 }: WinModalProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-riichi-overlay-in">
-      <div className="rounded-2xl bg-[#2d4a3c] border-2 border-[#d4b886] p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in">
-        <h3 className="text-xl font-bold text-[#ffc107] text-center mb-3">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-riichi-overlay-in"
+      role="presentation"
+    >
+      <div
+        className="rounded-2xl bg-[#2d4a3c] border-2 border-[#d4b886] p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="riichi-win-title"
+      >
+        <h3
+          id="riichi-win-title"
+          className="text-xl font-bold text-[#ffc107] text-center mb-3"
+        >
           {winResult.isTsumo ? '自摸！' : '荣和！'}
         </h3>
         {winResult.ten != null && (
@@ -164,9 +175,20 @@ export function RyuukyokuModal({
 }: RyuukyokuModalProps) {
   const reasonText = ryuukyokuReason ?? '荒牌';
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-riichi-overlay-in">
-      <div className="rounded-2xl bg-[#2d4a3c] border-2 border-[#d4b886] p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in">
-        <h3 className="text-xl font-bold text-amber-200 text-center mb-3">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-riichi-overlay-in"
+      role="presentation"
+    >
+      <div
+        className="rounded-2xl bg-[#2d4a3c] border-2 border-[#d4b886] p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="riichi-ryuukyoku-title"
+      >
+        <h3
+          id="riichi-ryuukyoku-title"
+          className="text-xl font-bold text-amber-200 text-center mb-3"
+        >
           流局（{getRyuukyokuReasonText(ryuukyokuReason)}）
         </h3>
         <p className="text-sm text-[#f1faee]/90 mb-2 text-center">
@@ -221,9 +243,20 @@ type MatchEndModalProps = {
 
 export function MatchEndModal({ matchEnd, onRestart }: MatchEndModalProps) {
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 animate-riichi-overlay-in">
-      <div className="rounded-2xl bg-[#2d4a3c] border-2 border-[#d4b886] p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in">
-        <h3 className="text-xl font-bold text-amber-200 text-center mb-2">
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 animate-riichi-overlay-in"
+      role="presentation"
+    >
+      <div
+        className="rounded-2xl bg-[#2d4a3c] border-2 border-[#d4b886] p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="riichi-match-end-title"
+      >
+        <h3
+          id="riichi-match-end-title"
+          className="text-xl font-bold text-amber-200 text-center mb-2"
+        >
           对局结束
         </h3>
         <p className="text-sm text-[#f1faee]/90 mb-3 text-center">

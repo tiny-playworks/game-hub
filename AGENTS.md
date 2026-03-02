@@ -8,7 +8,7 @@ Game Hub（游戏合集）：基于 Rsbuild + React 的纯前端 SPA，**18 款�
 - `pnpm run build` - 生产构建
 - `pnpm run preview` - 本地预览构建结果
 - `pnpm run check` - 类型检查 (tsc) + Biome 检查（无单独 lint 脚本）
-- `pnpm run test` - 运行测试（7 文件、60 用例）
+- `pnpm run test` - 运行测试（18 文件、126 用例）
 
 ## Docs
 

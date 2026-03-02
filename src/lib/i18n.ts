@@ -109,6 +109,17 @@ const messages: Record<Locale, Record<string, string>> = {
     'game.shengji.name': '升级',
     'game.shengji.description':
       '四人两对升级入门，单副牌单张跟牌，闲家 40 分升级。',
+    'riichi.tsumo': '自摸胡牌',
+    'riichi.ron': '胡牌（荣和）',
+    'riichi.pass': '过',
+    'riichi.passRon': '放弃荣和',
+    'riichi.declareRiichi': '立直宣言',
+    'riichi.kyuushu': '九种九牌流局',
+    'riichi.angang': '暗杠',
+    'riichi.kakan': '加杠',
+    'riichi.chi': '吃',
+    'riichi.peng': '碰',
+    'riichi.mingang': '明杠',
   },
   en: {
     'home.title': 'Game Hub',
@@ -213,6 +224,17 @@ const messages: Record<Locale, Record<string, string>> = {
     'game.shengji.name': 'Shengji',
     'game.shengji.description':
       'Four-player partnership game. Single deck, follow suit, 40 points to upgrade.',
+    'riichi.tsumo': 'Tsumo (self-draw)',
+    'riichi.ron': 'Ron (win on discard)',
+    'riichi.pass': 'Pass',
+    'riichi.passRon': 'Pass on Ron',
+    'riichi.declareRiichi': 'Declare Riichi',
+    'riichi.kyuushu': 'Nine kinds draw',
+    'riichi.angang': 'Concealed kan',
+    'riichi.kakan': 'Added kan',
+    'riichi.chi': 'Chi',
+    'riichi.peng': 'Peng',
+    'riichi.mingang': 'Open kan',
   },
 };
 

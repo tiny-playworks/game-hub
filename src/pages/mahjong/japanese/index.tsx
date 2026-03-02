@@ -18,7 +18,7 @@ import { useRiichiGame } from './useRiichiGame';
 export { getNextRound } from './helpers';
 
 const GameMahjongJapanese = () => {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const bag = useRiichiGame();
   const {
     view,
@@ -201,8 +201,9 @@ const GameMahjongJapanese = () => {
                       size="sm"
                       className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-4 text-lg"
                       onClick={doTsumo}
+                      aria-label={t('riichi.tsumo')}
                     >
-                      🏆 自摸胡牌
+                      🏆 {t('riichi.tsumo')}
                     </Button>
                   </div>
                 </div>
@@ -221,8 +222,9 @@ const GameMahjongJapanese = () => {
                         size="sm"
                         className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3"
                         onClick={doRon}
+                        aria-label={t('riichi.ron')}
                       >
-                        🎉 胡牌（荣和）
+                        🎉 {t('riichi.ron')}
                       </Button>
                     )}
                     {isMyClaim &&
@@ -232,8 +234,9 @@ const GameMahjongJapanese = () => {
                           size="sm"
                           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3"
                           onClick={() => doChi(opt)}
+                          aria-label={`${t('riichi.chi')} ${getTileLabel(opt[0])} ${getTileLabel(opt[1])}`}
                         >
-                          🍣 吃({getTileLabel(opt[0])}
+                          🍣 {t('riichi.chi')}({getTileLabel(opt[0])}
                           {getTileLabel(opt[1])})
                         </Button>
                       ))}
@@ -242,8 +245,9 @@ const GameMahjongJapanese = () => {
                         size="sm"
                         className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-3"
                         onClick={doPeng}
+                        aria-label={t('riichi.peng')}
                       >
-                        🔨 碰
+                        🔨 {t('riichi.peng')}
                       </Button>
                     )}
                     {isMyClaim && canMingang && (
@@ -251,8 +255,9 @@ const GameMahjongJapanese = () => {
                         size="sm"
                         className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-3"
                         onClick={doMingang}
+                        aria-label={t('riichi.mingang')}
                       >
-                        ⚡ 杠
+                        ⚡ {t('riichi.mingang')}
                       </Button>
                     )}
                     {isMyClaim ? (
@@ -261,8 +266,9 @@ const GameMahjongJapanese = () => {
                         variant="outline"
                         className="border-[#d4b886] bg-[#3d5a4a] text-[#f1faee] hover:bg-[#4a6b58] hover:text-white px-4 py-3"
                         onClick={passClaim}
+                        aria-label={t('riichi.pass')}
                       >
-                        ❌ 过
+                        ❌ {t('riichi.pass')}
                       </Button>
                     ) : (
                       canRon && (
@@ -271,8 +277,9 @@ const GameMahjongJapanese = () => {
                           variant="outline"
                           className="border-[#d4b886] bg-[#3d5a4a] text-[#f1faee] hover:bg-[#4a6b58] hover:text-white px-4 py-3"
                           onClick={passRonOpportunity}
+                          aria-label={t('riichi.passRon')}
                         >
-                          ❌ 放弃荣和
+                          ❌ {t('riichi.passRon')}
                         </Button>
                       )
                     )}
@@ -297,8 +304,9 @@ const GameMahjongJapanese = () => {
                           variant="outline"
                           className="border-purple-400 text-[#f1faee] hover:bg-purple-600/40"
                           onClick={doKyuushuKyuuhai}
+                          aria-label={t('riichi.kyuushu')}
                         >
-                          🀄 九种九牌流局
+                          🀄 {t('riichi.kyuushu')}
                         </Button>
                       </div>
                     )}
@@ -312,6 +320,7 @@ const GameMahjongJapanese = () => {
                           variant="outline"
                           className="border-red-400 text-[#f1faee] hover:bg-red-600/50"
                           onClick={doRiichi}
+                          aria-label={t('riichi.declareRiichi')}
                           disabled={
                             game.riichiDeclared[0] ||
                             !game.melds[0].every((m) => m.type === 'angang') ||
@@ -327,7 +336,7 @@ const GameMahjongJapanese = () => {
                             ).length === 0
                           }
                         >
-                          🎯 立直宣言
+                          🎯 {t('riichi.declareRiichi')}
                         </Button>
                       </div>
                     )}
@@ -344,8 +353,9 @@ const GameMahjongJapanese = () => {
                             variant="outline"
                             className="border-slate-400 text-[#f1faee] hover:bg-slate-600/50"
                             onClick={() => doAngang(opt)}
+                            aria-label={`${t('riichi.angang')} ${getTileLabel(opt[0])}`}
                           >
-                            ⚡ 暗杠({getTileLabel(opt[0])})
+                            ⚡ {t('riichi.angang')}({getTileLabel(opt[0])})
                           </Button>
                         ))}
                       </div>
@@ -362,8 +372,16 @@ const GameMahjongJapanese = () => {
                             variant="outline"
                             className="border-amber-400 text-[#f1faee] hover:bg-amber-600/50"
                             onClick={() => doKakan(meldIndex)}
+                            aria-label={
+                              locale === 'zh'
+                                ? `${t('riichi.kakan')} 第${meldIndex + 1}组碰`
+                                : `${t('riichi.kakan')} (Group ${meldIndex + 1})`
+                            }
                           >
-                            📎 加杠(第{meldIndex + 1}组碰)
+                            📎{' '}
+                            {locale === 'zh'
+                              ? `${t('riichi.kakan')}(第${meldIndex + 1}组碰)`
+                              : `${t('riichi.kakan')} (Group ${meldIndex + 1})`}
                           </Button>
                         ))}
                       </div>

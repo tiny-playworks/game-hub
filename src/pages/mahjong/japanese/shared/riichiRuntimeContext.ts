@@ -3,6 +3,15 @@ import type { hasYaku } from '@/lib/mahjongRiichi';
 import type { RiichiWinResult } from '../store/riichiGameStore';
 import type { RiichiGameState, RiichiMeld } from '../types';
 
+/** ClaimFlow 的 extra 参数（人类/超时由 hook 处理，AI 由 claimFlowAi 处理） */
+export type ClaimFlowExtra = {
+  claimPlayer: number | null;
+  hasAnyClaimOption: boolean;
+  canRon: boolean;
+  isSeatFuriten: (seat: number, state: RiichiGameState) => boolean;
+  flowDeps?: import('./flowDeps').RiichiFlowDeps | null;
+};
+
 /** setGame 的 updater 类型 */
 export type SetGameUpdater = (
   updater:
