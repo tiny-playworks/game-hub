@@ -9,6 +9,7 @@ import {
   canMingangRiichi,
   canPengRiichi,
   computeYaku,
+  countDoraInHand,
   createRiichiDeck,
   dealRiichi,
   getAngangOptionsRiichi,
@@ -331,6 +332,20 @@ function getMatchEndReasonText(reason?: MatchEndReason): string {
     default:
       return '终局';
   }
+}
+
+/** 统计各基础牌型（0-33）在可见区的出现次数：自家手牌+自家副露+四家河+宝牌表示。用于推算剩余张数（每种最多 4 张）。 */
+function countVisibleTilesByBase(state: RiichiGameState): number[] {
+  const count = new Array<number>(34).fill(0);
+  const add = (tile: number) => {
+    const b = getBaseTile(tile);
+    if (b >= 0 && b < 34) count[b]++;
+  };
+  state.hands[0].forEach(add);
+  for (const m of state.melds[0]) m.tiles.forEach(add);
+  for (let i = 0; i < 4; i++) state.discardPiles[i].forEach(add);
+  add(state.doraIndicator);
+  return count;
 }
 
 function getRonWaitingTilesForSeatInState(
@@ -1171,6 +1186,93 @@ const GameMahjongJapanese = () => {
       lastClaimMsg: '立直宣言！听牌固定，不能换牌',
     });
   }, [game, addLog, getWaitingTilesRiichi, sounds]);
+
+  /** 听牌提示：可胡的牌（含形听无役）+ 剩余张数 + 番数/无役。13 张时当前听牌；14 张时各打牌选项的听牌。 */
+  const tenpaiHint = useMemo(() => {
+    if (!game || game.ryuukyoku) return null;
+    const hand = game.hands[0];
+    const melds = game.melds[0];
+    const visibleCounts = countVisibleTilesByBase(game);
+    const remaining = (baseTile: number) =>
+      Math.max(0, 4 - (visibleCounts[baseTile] ?? 0));
+    const doraTypes = [getDoraFromIndicator(game.doraIndicator)];
+
+    /** 形听：能组成和牌形的所有待牌（含无役） */
+    const getWaitingTilesShapeOnly = (
+      hand13: number[],
+      meldList: RiichiMeld[],
+    ): number[] => {
+      if (hand13.length !== 13) return [];
+      const out: number[] = [];
+      for (let t = 0; t < 34; t++) {
+        if (isWinShapeRiichi([...hand13, t], meldList)) out.push(t);
+      }
+      return out;
+    };
+
+    const getHanForWaitingTile = (
+      hand13: number[],
+      baseTile: number,
+    ): number => {
+      const handWithWin = [...hand13, baseTile];
+      const ctx = {
+        hand: handWithWin,
+        melds: melds.map((m) => ({ tiles: m.tiles })),
+        meldsTyped: melds,
+        isMenzhen: melds.every((m) => m.type === 'angang'),
+        isTsumo: true,
+        isRiichi: game.riichiDeclared[0],
+        ippatsuPossible: false,
+        seatWind: getSeatWind(game.roundWind, 0, game.dealer),
+        roundWind: game.roundWind,
+      };
+      const yaku = computeYaku(ctx);
+      const allTiles = [...handWithWin, ...melds.flatMap((m) => m.tiles)];
+      const doraHan = countDoraInHand(allTiles, doraTypes, true);
+      return getTotalHan(yaku) + doraHan;
+    };
+
+    const formatWait = (hand13: number[], baseTile: number): string => {
+      const han = getHanForWaitingTile(hand13, baseTile);
+      const hanStr = han > 0 ? `${han}番` : '无役';
+      return `${getTileLabel(baseTile)}(剩${remaining(baseTile)}, ${hanStr})`;
+    };
+
+    if (hand.length === 13) {
+      const waitingShape = getWaitingTilesShapeOnly(hand, melds);
+      if (waitingShape.length === 0) return null;
+      const uniqueBase = [...new Set(waitingShape.map(getBaseTile))];
+      return {
+        kind: 'current' as const,
+        line: `听牌：${uniqueBase.map((b) => formatWait(hand, b)).join(' ')}`,
+        waiting: uniqueBase,
+        remaining,
+      };
+    }
+    if (hand.length === 14) {
+      const options: {
+        discardTile: number;
+        discardLabel: string;
+        waiting: number[];
+        line: string;
+      }[] = [];
+      for (let i = 0; i < hand.length; i++) {
+        const handWithout = hand.filter((_, j) => j !== i);
+        const waitingShape = getWaitingTilesShapeOnly(handWithout, melds);
+        if (waitingShape.length === 0) continue;
+        const uniqueBase = [...new Set(waitingShape.map(getBaseTile))];
+        options.push({
+          discardTile: hand[i],
+          discardLabel: getTileLabel(hand[i]),
+          waiting: uniqueBase,
+          line: `打 ${getTileLabel(hand[i])} 听 ${uniqueBase.map((b) => formatWait(handWithout, b)).join(' ')}`,
+        });
+      }
+      if (options.length === 0) return null;
+      return { kind: 'choices' as const, options, remaining };
+    }
+    return null;
+  }, [game]);
 
   const doKyuushuKyuuhai = useCallback(() => {
     if (
@@ -3548,6 +3650,24 @@ const GameMahjongJapanese = () => {
                       ))}
                     </span>
                   ))}
+                </div>
+              )}
+              {tenpaiHint && (
+                <div className="rounded-lg border border-[#457b9d]/50 bg-[#1d3557]/40 px-3 py-2">
+                  <p className="text-xs text-[#a8dadc]/90 mb-1.5">
+                    🎯 听牌提示（可见区推算剩余，含他家手牌未现）
+                  </p>
+                  {tenpaiHint.kind === 'current' ? (
+                    <p className="text-sm text-[#f1faee] font-medium">
+                      {tenpaiHint.line}
+                    </p>
+                  ) : (
+                    <ul className="space-y-1 text-sm text-[#f1faee]">
+                      {tenpaiHint.options.map((opt, i) => (
+                        <li key={i}>{opt.line}</li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               )}
               {isMyTurn && (
