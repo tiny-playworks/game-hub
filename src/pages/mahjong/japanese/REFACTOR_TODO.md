@@ -61,8 +61,10 @@
 
 ## P7 - 参数收敛与上下文对象化
 
-- [ ] 为 actions/flows 引入统一上下文类型（如 `RiichiRuntimeContext`）
-- [ ] 收敛重复参数（`game`, `setGame`, `addLogRef`, `turnClockRef`, `sounds` 等）
+- [x] 为 actions/flows 引入统一上下文类型（如 `RiichiRuntimeContext`）
+  - 已实现：`shared/riichiRuntimeContext.ts` 定义 `RiichiRuntimeContext`（game, setGame, addLog, addLogRef, turnClockRef, sounds, setWinResult, consumeSeatTimeBank, getElapsedSecondsForSeat, getWaitingTilesRiichi, buildYakuCtx, clockNowMs, setClockNowMs, setDeclinedRonToken, markSeatRonDeclined）
+- [x] 收敛重复参数（`game`, `setGame`, `addLogRef`, `turnClockRef`, `sounds` 等）
+  - 已实现：`useRiichiGame` 构建 `riichiContext` 并传入；`useRiichiClaimActions(ctx)`、`useRiichiTurnClockFlow(ctx, extra)`、`useRiichiDrawAiFlow(ctx)`、`useRiichiClaimFlow(ctx, extra)`、`useRiichiWinSpecialActions(ctx, extra)` 均改为接收上下文；`useRiichiRoundActions` 仍保留原参数（round/history/match 相关，与 gameplay 上下文分离）
 
 **完成标准**
 - actions/flows 的参数接口更短、更稳定；

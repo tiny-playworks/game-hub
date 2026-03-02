@@ -1,0 +1,68 @@
+import type { RefObject } from 'react';
+import type { hasYaku } from '@/lib/mahjongRiichi';
+import type { RiichiWinResult } from '../store/riichiGameStore';
+import type { RiichiGameState, RiichiMeld } from '../types';
+
+/** setGame 的 updater 类型 */
+export type SetGameUpdater = (
+  updater:
+    | RiichiGameState
+    | null
+    | ((prev: RiichiGameState | null) => RiichiGameState | null),
+) => void;
+
+/** setWinResult 的 updater 类型 */
+export type SetWinResultUpdater = (
+  updater:
+    | RiichiWinResult
+    | null
+    | ((prev: RiichiWinResult | null) => RiichiWinResult | null),
+) => void;
+
+export type TurnClockRef = RefObject<{
+  player: number;
+  startedAt: number;
+} | null>;
+
+export type AddLogRef = RefObject<(msg: string) => void>;
+
+/** buildYakuCtx 返回类型与 hasYaku 入参兼容 */
+export type BuildYakuCtx = (
+  seat: number,
+  hand: number[],
+  isTsumo: boolean,
+) => Parameters<typeof hasYaku>[0] | null;
+
+export type GetWaitingTilesRiichi = (
+  hand: number[],
+  melds: RiichiMeld[],
+  gameState?: RiichiGameState | null,
+  options?: { seat?: number; isTsumo?: boolean; treatAsRiichi?: boolean },
+) => number[];
+
+/** 日麻音效（与 useRiichiSounds 返回值一致） */
+export type RiichiSounds = ReturnType<
+  typeof import('@/hooks/useRiichiSounds').useRiichiSounds
+>;
+
+/**
+ * 统一运行时上下文，收敛 actions/flows 的重复参数。
+ * 由 useRiichiGame 构建并传入各 hook，后续新增字段只需改此处与 useRiichiGame。
+ */
+export interface RiichiRuntimeContext {
+  game: RiichiGameState | null;
+  setGame: SetGameUpdater;
+  addLog: (msg: string) => void;
+  addLogRef: AddLogRef;
+  turnClockRef: TurnClockRef;
+  sounds: RiichiSounds;
+  setWinResult: SetWinResultUpdater;
+  consumeSeatTimeBank: (state: RiichiGameState, seat: number) => number[];
+  getElapsedSecondsForSeat: (seat: number) => number;
+  getWaitingTilesRiichi: GetWaitingTilesRiichi;
+  buildYakuCtx: BuildYakuCtx;
+  clockNowMs: number;
+  setClockNowMs: (value: number) => void;
+  setDeclinedRonToken: (token: string | null) => void;
+  markSeatRonDeclined: (seat: number) => void;
+}

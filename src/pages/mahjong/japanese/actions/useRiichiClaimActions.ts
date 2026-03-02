@@ -1,4 +1,4 @@
-import { type RefObject, useCallback } from 'react';
+import { useCallback } from 'react';
 import { getBaseTile, getTileLabel } from '@/lib/mahjongRiichi';
 import { shouldAbortOnSuukaikan } from '@/lib/riichiAbortiveDraw';
 import { resolveClaimPass } from '@/lib/riichiClaimFlow';
@@ -9,38 +9,12 @@ import {
 import { canSeatRonByRules, clearSeatDoujunStates } from '../helpers';
 import { applyAbortiveDrawChecks } from '../shared/abortiveDrawChecks';
 import { applyClaimPassToState } from '../shared/claimTransitions';
+import type { RiichiRuntimeContext } from '../shared/riichiRuntimeContext';
 import type { RiichiGameState } from '../types';
 
-type SetGame = (
-  updater:
-    | RiichiGameState
-    | null
-    | ((prev: RiichiGameState | null) => RiichiGameState | null),
-) => void;
-
-type UseRiichiClaimActionsParams = {
-  game: RiichiGameState | null;
-  setGame: SetGame;
-  addLog: (msg: string) => void;
-  sounds: {
-    playDiscard: () => void;
-    playChi: () => void;
-    playPon: () => void;
-    playKan: () => void;
-    playRyuukyoku: () => void;
-  };
-  consumeSeatTimeBank: (state: RiichiGameState, seat: number) => number[];
-  turnClockRef: RefObject<{ player: number; startedAt: number } | null>;
-};
-
-export function useRiichiClaimActions({
-  game,
-  setGame,
-  addLog,
-  sounds,
-  consumeSeatTimeBank,
-  turnClockRef,
-}: UseRiichiClaimActionsParams) {
+export function useRiichiClaimActions(ctx: RiichiRuntimeContext) {
+  const { game, setGame, addLog, sounds, consumeSeatTimeBank, turnClockRef } =
+    ctx;
   const discard = useCallback(
     (player: number, tile: number) => {
       if (!game || game.phase !== 'discard') return;

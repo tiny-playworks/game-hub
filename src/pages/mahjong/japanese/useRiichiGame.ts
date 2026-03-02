@@ -14,6 +14,7 @@ import { useRiichiClaimFlow } from './flows/useRiichiClaimFlow';
 import { useRiichiDrawAiFlow } from './flows/useRiichiDrawAiFlow';
 import { useRiichiTurnClockFlow } from './flows/useRiichiTurnClockFlow';
 import { getSeatWind } from './helpers';
+import type { RiichiRuntimeContext } from './shared/riichiRuntimeContext';
 import { useRiichiGameStore } from './store/riichiGameStore';
 import type { RiichiGameState, RiichiMeld } from './types';
 import { useRiichiDerived } from './useRiichiDerived';
@@ -124,15 +125,23 @@ export function useRiichiGame() {
     [getElapsedSecondsForSeat],
   );
 
-  const { discard, passClaim, doChi, doPeng, doMingang } =
-    useRiichiClaimActions({
-      game,
-      setGame,
-      addLog,
-      sounds,
-      consumeSeatTimeBank,
-      turnClockRef,
-    });
+  const markSeatRonDeclined = useCallback(
+    (seat: number) => {
+      setGame((g) => {
+        if (!g) return g;
+        const furitenStates = g.furitenStates.map((s, i) =>
+          i === seat
+            ? applyRonDeclinedFuriten(
+                s ?? createInitialFuritenState(),
+                g.riichiDeclared[seat],
+              )
+            : s,
+        );
+        return { ...g, furitenStates };
+      });
+    },
+    [setGame],
+  );
 
   /** 获取听牌信息（需传入 game 以取 roundWind/dealer） */
   const getWaitingTilesRiichi = useCallback(
@@ -210,48 +219,33 @@ export function useRiichiGame() {
     turnClockRef,
   });
 
-  useRiichiTurnClockFlow({
+  const riichiContext: RiichiRuntimeContext = {
     game,
     setGame,
-    clockNowMs,
-    setClockNowMs,
-    turnClockRef,
-    addLogRef,
-    decisionSeat,
-    currentTurnRemainSeconds,
-    playTimeWarning: sounds.playTimeWarning,
-  });
-
-  useRiichiDrawAiFlow({
-    game,
-    setGame,
-    setWinResult,
     addLog,
     addLogRef,
-    sounds,
-    buildYakuCtx,
-    getWaitingTilesRiichi,
-    getElapsedSecondsForSeat,
     turnClockRef,
+    sounds,
+    setWinResult,
+    consumeSeatTimeBank,
+    getElapsedSecondsForSeat,
+    getWaitingTilesRiichi,
+    buildYakuCtx,
+    clockNowMs,
+    setClockNowMs,
+    setDeclinedRonToken,
+    markSeatRonDeclined,
+  };
+
+  const { discard, passClaim, doChi, doPeng, doMingang } =
+    useRiichiClaimActions(riichiContext);
+
+  useRiichiTurnClockFlow(riichiContext, {
+    decisionSeat,
+    currentTurnRemainSeconds,
   });
 
-  const markSeatRonDeclined = useCallback(
-    (seat: number) => {
-      setGame((g) => {
-        if (!g) return g;
-        const furitenStates = g.furitenStates.map((s, i) =>
-          i === seat
-            ? applyRonDeclinedFuriten(
-                s ?? createInitialFuritenState(),
-                g.riichiDeclared[seat],
-              )
-            : s,
-        );
-        return { ...g, furitenStates };
-      });
-    },
-    [setGame],
-  );
+  useRiichiDrawAiFlow(riichiContext);
 
   const {
     doTsumo,
@@ -260,22 +254,11 @@ export function useRiichiGame() {
     doRiichi,
     doAngang,
     doKyuushuKyuuhai,
-  } = useRiichiWinSpecialActions({
-    game,
+  } = useRiichiWinSpecialActions(riichiContext, {
     canTsumo,
     canRon,
     canKyuushuKyuuhai,
     currentClaimToken,
-    buildYakuCtx,
-    getWaitingTilesRiichi,
-    addLog,
-    sounds,
-    setGame,
-    setWinResult,
-    setDeclinedRonToken,
-    consumeSeatTimeBank,
-    markSeatRonDeclined,
-    turnClockRef,
   });
 
   const { undo, startGame, proceedToNextRound, proceedAfterRyuukyoku } =
@@ -296,16 +279,10 @@ export function useRiichiGame() {
       getWaitingTilesRiichi,
     });
 
-  useRiichiClaimFlow({
-    game,
-    setGame,
-    setWinResult,
-    addLogRef,
-    sounds,
+  useRiichiClaimFlow(riichiContext, {
     claimPlayer,
     hasAnyClaimOption: Boolean(hasAnyClaimOption),
     canRon: Boolean(canRon),
-    buildYakuCtx,
     isSeatFuriten,
   });
 

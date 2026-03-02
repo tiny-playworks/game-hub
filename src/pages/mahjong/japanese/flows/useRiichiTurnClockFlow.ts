@@ -1,4 +1,4 @@
-import { type RefObject, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { getTileLabel } from '@/lib/mahjongRiichi';
 import { resolveClaimPass } from '@/lib/riichiClaimFlow';
 import { consumeTimeBankSeconds, isTurnTimeout } from '@/lib/riichiClock';
@@ -14,48 +14,29 @@ import {
 } from '../helpers';
 import { applyAbortiveDrawChecks } from '../shared/abortiveDrawChecks';
 import { applyClaimPassToState } from '../shared/claimTransitions';
+import type { RiichiRuntimeContext } from '../shared/riichiRuntimeContext';
 import { buildStateAfterTimeoutDiscard } from '../shared/timeoutTransitions';
-import type { RiichiGameState } from '../types';
 
-type TurnClockRef = RefObject<{
-  player: number;
-  startedAt: number;
-} | null>;
-
-type AddLogRef = RefObject<(msg: string) => void>;
-
-type SetGame = (
-  updater:
-    | RiichiGameState
-    | null
-    | ((prev: RiichiGameState | null) => RiichiGameState | null),
-) => void;
-
-type SetClockNowMs = (value: number) => void;
-
-interface UseRiichiTurnClockFlowParams {
-  game: RiichiGameState | null;
-  setGame: SetGame;
-  clockNowMs: number;
-  setClockNowMs: SetClockNowMs;
-  turnClockRef: TurnClockRef;
-  addLogRef: AddLogRef;
+interface TurnClockFlowExtra {
   decisionSeat: number | null;
   currentTurnRemainSeconds: number | null;
-  playTimeWarning: () => void;
 }
 
-export function useRiichiTurnClockFlow({
-  game,
-  setGame,
-  clockNowMs,
-  setClockNowMs,
-  turnClockRef,
-  addLogRef,
-  decisionSeat,
-  currentTurnRemainSeconds,
-  playTimeWarning,
-}: UseRiichiTurnClockFlowParams) {
+export function useRiichiTurnClockFlow(
+  ctx: RiichiRuntimeContext,
+  extra: TurnClockFlowExtra,
+) {
+  const {
+    game,
+    setGame,
+    clockNowMs,
+    setClockNowMs,
+    turnClockRef,
+    addLogRef,
+    sounds,
+  } = ctx;
+  const { decisionSeat, currentTurnRemainSeconds } = extra;
+  const playTimeWarning = sounds.playTimeWarning;
   useEffect(() => {
     const id = window.setInterval(() => setClockNowMs(Date.now()), 250);
     return () => window.clearInterval(id);

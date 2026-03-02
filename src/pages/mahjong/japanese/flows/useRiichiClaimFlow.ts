@@ -1,4 +1,4 @@
-import { type RefObject, useEffect } from 'react';
+import { useEffect } from 'react';
 import {
   calcFu,
   calcScore,
@@ -24,64 +24,26 @@ import { enrichWinResultWithUra } from '../gameLogic/winResult';
 import { clearSeatDoujunStates, getSeatWind } from '../helpers';
 import { applyClaimPassToState } from '../shared/claimTransitions';
 import { getRng, getScheduler } from '../shared/flowDeps';
-import type { RiichiWinResult } from '../store/riichiGameStore';
+import type { RiichiRuntimeContext } from '../shared/riichiRuntimeContext';
 import type { RiichiGameState } from '../types';
-
-type AddLogRef = RefObject<(msg: string) => void>;
-
-type SetGame = (
-  updater:
-    | RiichiGameState
-    | null
-    | ((prev: RiichiGameState | null) => RiichiGameState | null),
-) => void;
-
-type SetWinResult = (
-  updater:
-    | RiichiWinResult
-    | null
-    | ((prev: RiichiWinResult | null) => RiichiWinResult | null),
-) => void;
-
-type BuildYakuCtx = (
-  seat: number,
-  hand: number[],
-  isTsumo: boolean,
-) => Parameters<typeof hasYaku>[0] | null;
 
 type IsSeatFuriten = (seat: number, state: RiichiGameState) => boolean;
 
-interface UseRiichiClaimFlowParams {
-  game: RiichiGameState | null;
-  setGame: SetGame;
-  setWinResult: SetWinResult;
-  addLogRef: AddLogRef;
-  sounds: {
-    playRon: () => void;
-    playRyuukyoku: () => void;
-  };
+interface ClaimFlowExtra {
   claimPlayer: number | null;
   hasAnyClaimOption: boolean;
   canRon: boolean;
-  buildYakuCtx: BuildYakuCtx;
   isSeatFuriten: IsSeatFuriten;
-  /** 可选：注入 rng/schedule 便于测试 */
   flowDeps?: import('../shared/flowDeps').RiichiFlowDeps | null;
 }
 
-export function useRiichiClaimFlow({
-  game,
-  setGame,
-  setWinResult,
-  addLogRef,
-  sounds,
-  claimPlayer,
-  hasAnyClaimOption,
-  canRon,
-  buildYakuCtx,
-  isSeatFuriten,
-  flowDeps,
-}: UseRiichiClaimFlowParams) {
+export function useRiichiClaimFlow(
+  ctx: RiichiRuntimeContext,
+  extra: ClaimFlowExtra,
+) {
+  const { game, setGame, setWinResult, addLogRef, sounds, buildYakuCtx } = ctx;
+  const { claimPlayer, hasAnyClaimOption, canRon, isSeatFuriten, flowDeps } =
+    extra;
   const rng = getRng(flowDeps);
   const schedule = getScheduler(flowDeps);
   useEffect(() => {

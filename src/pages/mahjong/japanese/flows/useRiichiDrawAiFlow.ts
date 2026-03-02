@@ -1,4 +1,4 @@
-import { type RefObject, useEffect } from 'react';
+import { useEffect } from 'react';
 import {
   calcFu,
   calcScore,
@@ -20,81 +20,32 @@ import { enrichWinResultWithUra } from '../gameLogic/winResult';
 import { clearSeatDoujunStates } from '../helpers';
 import { applyAbortiveDrawChecks } from '../shared/abortiveDrawChecks';
 import { getRng, getScheduler } from '../shared/flowDeps';
-import type { RiichiWinResult } from '../store/riichiGameStore';
-import type { RiichiGameState, RiichiMeld } from '../types';
+import type { RiichiRuntimeContext } from '../shared/riichiRuntimeContext';
+import type { RiichiGameState } from '../types';
 
-type TurnClockRef = RefObject<{
-  player: number;
-  startedAt: number;
-} | null>;
-
-type AddLog = (msg: string) => void;
-type AddLogRef = RefObject<(msg: string) => void>;
-
-type SetGame = (
-  updater:
-    | RiichiGameState
-    | null
-    | ((prev: RiichiGameState | null) => RiichiGameState | null),
-) => void;
-
-type SetWinResult = (
-  updater:
-    | RiichiWinResult
-    | null
-    | ((prev: RiichiWinResult | null) => RiichiWinResult | null),
-) => void;
-
-type BuildYakuCtx = (
-  seat: number,
-  hand: number[],
-  isTsumo: boolean,
-) => Parameters<typeof hasYaku>[0] | null;
-
-type GetWaitingTilesRiichi = (
-  hand: number[],
-  melds: RiichiMeld[],
-  gameState?: RiichiGameState | null,
-  options?: { seat?: number; isTsumo?: boolean; treatAsRiichi?: boolean },
-) => number[];
-
-type GetElapsedSecondsForSeat = (seat: number) => number;
-
-interface UseRiichiDrawAiFlowParams {
-  game: RiichiGameState | null;
-  setGame: SetGame;
-  setWinResult: SetWinResult;
-  addLog: AddLog;
-  addLogRef: AddLogRef;
-  sounds: {
-    playDraw: () => void;
-    playRiichi: () => void;
-    playRyuukyoku: () => void;
-    playTsumo: () => void;
-  };
-  buildYakuCtx: BuildYakuCtx;
-  getWaitingTilesRiichi: GetWaitingTilesRiichi;
-  getElapsedSecondsForSeat: GetElapsedSecondsForSeat;
-  turnClockRef: TurnClockRef;
+interface DrawAiFlowOpts {
   /** 可选：注入 rng/schedule 便于测试 */
   flowDeps?: import('../shared/flowDeps').RiichiFlowDeps | null;
 }
 
-export function useRiichiDrawAiFlow({
-  game,
-  setGame,
-  setWinResult,
-  addLog,
-  addLogRef,
-  sounds,
-  buildYakuCtx,
-  getWaitingTilesRiichi,
-  getElapsedSecondsForSeat,
-  turnClockRef,
-  flowDeps,
-}: UseRiichiDrawAiFlowParams) {
-  const rng = getRng(flowDeps);
-  const schedule = getScheduler(flowDeps);
+export function useRiichiDrawAiFlow(
+  ctx: RiichiRuntimeContext,
+  opts?: DrawAiFlowOpts,
+) {
+  const {
+    game,
+    setGame,
+    setWinResult,
+    addLog,
+    addLogRef,
+    sounds,
+    buildYakuCtx,
+    getWaitingTilesRiichi,
+    getElapsedSecondsForSeat,
+    turnClockRef,
+  } = ctx;
+  const rng = getRng(opts?.flowDeps);
+  const schedule = getScheduler(opts?.flowDeps);
   useEffect(() => {
     if (
       !game ||

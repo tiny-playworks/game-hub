@@ -1,4 +1,4 @@
-import { type RefObject, useCallback } from 'react';
+import { useCallback } from 'react';
 import {
   calcFu,
   calcScore,
@@ -15,87 +15,33 @@ import {
 } from '@/lib/riichiRsAdapter';
 import { enrichWinResultWithUra } from '../gameLogic/winResult';
 import { clearSeatDoujunStates } from '../helpers';
-import type { RiichiWinResult } from '../store/riichiGameStore';
-import type { RiichiGameState, RiichiMeld } from '../types';
+import type { RiichiRuntimeContext } from '../shared/riichiRuntimeContext';
 
-type SetGame = (
-  updater:
-    | RiichiGameState
-    | null
-    | ((prev: RiichiGameState | null) => RiichiGameState | null),
-) => void;
-
-type SetWinResult = (
-  updater:
-    | RiichiWinResult
-    | null
-    | ((prev: RiichiWinResult | null) => RiichiWinResult | null),
-) => void;
-
-type BuildYakuCtx = (
-  seat: number,
-  hand: number[],
-  isTsumo: boolean,
-) => {
-  hand: number[];
-  melds: { tiles: number[] }[];
-  meldsTyped: RiichiMeld[];
-  isMenzhen: boolean;
-  isTsumo: boolean;
-  isRiichi: boolean;
-  ippatsuPossible: boolean;
-  seatWind: number;
-  roundWind: number;
-} | null;
-
-type GetWaitingTilesFn = (
-  hand: number[],
-  melds: RiichiMeld[],
-  gameState?: RiichiGameState | null,
-  options?: { seat?: number; isTsumo?: boolean; treatAsRiichi?: boolean },
-) => number[];
-
-type UseRiichiWinSpecialActionsParams = {
-  game: RiichiGameState | null;
+interface WinSpecialActionsExtra {
   canTsumo: boolean | null | undefined;
   canRon: boolean | null | undefined;
   canKyuushuKyuuhai: boolean | null | undefined;
   currentClaimToken: string | null;
-  buildYakuCtx: BuildYakuCtx;
-  getWaitingTilesRiichi: GetWaitingTilesFn;
-  addLog: (msg: string) => void;
-  sounds: {
-    playTsumo: () => void;
-    playRon: () => void;
-    playRiichi: () => void;
-    playKan: () => void;
-    playRyuukyoku: () => void;
-  };
-  setGame: SetGame;
-  setWinResult: SetWinResult;
-  setDeclinedRonToken: (token: string | null) => void;
-  consumeSeatTimeBank: (state: RiichiGameState, seat: number) => number[];
-  markSeatRonDeclined: (seat: number) => void;
-  turnClockRef: RefObject<{ player: number; startedAt: number } | null>;
-};
+}
 
-export function useRiichiWinSpecialActions({
-  game,
-  canTsumo,
-  canRon,
-  canKyuushuKyuuhai,
-  currentClaimToken,
-  buildYakuCtx,
-  getWaitingTilesRiichi,
-  addLog,
-  sounds,
-  setGame,
-  setWinResult,
-  setDeclinedRonToken,
-  consumeSeatTimeBank,
-  markSeatRonDeclined,
-  turnClockRef,
-}: UseRiichiWinSpecialActionsParams) {
+export function useRiichiWinSpecialActions(
+  ctx: RiichiRuntimeContext,
+  extra: WinSpecialActionsExtra,
+) {
+  const {
+    game,
+    setGame,
+    setWinResult,
+    addLog,
+    sounds,
+    setDeclinedRonToken,
+    consumeSeatTimeBank,
+    markSeatRonDeclined,
+    turnClockRef,
+    buildYakuCtx,
+    getWaitingTilesRiichi,
+  } = ctx;
+  const { canTsumo, canRon, canKyuushuKyuuhai, currentClaimToken } = extra;
   const doRiichi = useCallback(() => {
     if (
       !game ||
