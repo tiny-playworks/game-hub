@@ -100,6 +100,9 @@ export function useRiichiDrawAiFlow(
             hands: newHands,
             wall: newWall,
             drawnTile: draw,
+            ippatsuPossible: (
+              g.ippatsuPossible ?? g.riichiDeclared.map(() => false)
+            ).map((v, i) => (i === 0 ? false : v)),
             furitenStates: clearSeatDoujunStates(g.furitenStates, 0),
           },
     );
@@ -137,6 +140,9 @@ export function useRiichiDrawAiFlow(
             hands: newHands,
             wall: newWall,
             drawnTile: draw,
+            ippatsuPossible: (
+              g.ippatsuPossible ?? g.riichiDeclared.map(() => false)
+            ).map((v, i) => (i === p ? false : v)),
             furitenStates: clearSeatDoujunStates(g.furitenStates, p),
           },
     );
@@ -329,6 +335,9 @@ export function useRiichiDrawAiFlow(
             scores: nextRiichi?.scores ?? g.scores,
             riichiPot: nextRiichi?.riichiPot ?? g.riichiPot,
             riichiDeclared: nextRiichi?.riichiDeclared ?? g.riichiDeclared,
+            ippatsuPossible: (
+              g.ippatsuPossible ?? g.riichiDeclared.map(() => false)
+            ).map((v, i) => (i === p ? true : v)),
             hands: g.hands.map((h0, i) => (i === p ? h : h0)),
             melds,
             wall: newWall,
@@ -398,6 +407,9 @@ export function useRiichiDrawAiFlow(
           scores: nextRiichi?.scores ?? g.scores,
           riichiPot: nextRiichi?.riichiPot ?? g.riichiPot,
           riichiDeclared: nextRiichi?.riichiDeclared ?? g.riichiDeclared,
+          ippatsuPossible: (
+            g.ippatsuPossible ?? g.riichiDeclared.map(() => false)
+          ).map((v, i) => (i === p && doAiRiichi ? true : v)),
           hands: g.hands.map((h, i) => (i === p ? hand : h)),
           discardPiles: piles,
           currentPlayer: next,

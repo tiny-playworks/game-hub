@@ -69,9 +69,11 @@ const GameMahjongJapanese = () => {
     currentTurnRemainSeconds,
     timerTextClass,
     angangOptions,
+    kakanOptions,
     canKyuushuKyuuhai,
     getWaitingTilesRiichi,
     canTsumo,
+    doKakan,
   } = bag;
 
   if (view === 'rules') {
@@ -344,6 +346,24 @@ const GameMahjongJapanese = () => {
                             onClick={() => doAngang(opt)}
                           >
                             ⚡ 暗杠({getTileLabel(opt[0])})
+                          </Button>
+                        ))}
+                      </div>
+                    )}
+                    {kakanOptions.length > 0 && (
+                      <div className="flex items-center gap-2 bg-[#2d4a3c]/50 rounded-lg px-3 py-2">
+                        <span className="text-xs text-[#f1faee]/80">
+                          加杠（可被抢杠）：
+                        </span>
+                        {kakanOptions.map((meldIndex) => (
+                          <Button
+                            key={meldIndex}
+                            size="sm"
+                            variant="outline"
+                            className="border-amber-400 text-[#f1faee] hover:bg-amber-600/50"
+                            onClick={() => doKakan(meldIndex)}
+                          >
+                            📎 加杠(第{meldIndex + 1}组碰)
                           </Button>
                         ))}
                       </div>

@@ -87,6 +87,8 @@
   - [ ] 要牌阶段自动过与 AI 要牌动作
   - [ ] 流局后连庄与下一局切换
   - [ ] 立直后约束（不能吃/碰/明杠/补杠）
+  - [ ] 加杠后：抢杠或全员过→岭上摸牌+杠宝牌
+  - [ ] 一发：立直一巡内和了且本巡无吃碰杠时 +1 番
 
 ## 5. 约定
 
@@ -132,7 +134,15 @@
 3. ~~**四开杠与岭上**~~（ClaimFlow 杠后四开杠已统一走 applyAbortiveDrawChecks，先建 stateForAbortive 再检查）
 4. **回归**：功能改动后建议跑文档第 4 节「回归检查清单」（check + test + 手动：超时出牌、要牌自动过、流局连庄、立直约束）。
 
-### 6.5 后续可选项（非必须）
+### 6.5 规则补全（一发 / 加杠 / 抢杠）
+
+- **一发**：状态 `ippatsuPossible`，立直时置 true、吃碰杠/摸牌时清除；和了时传 riichi-rs `ippatsu`。
+- **加杠**：meld 类型 `kakan`，`getKakanOptions` + `doKakan`，加杠后进入要牌阶段仅抢杠；全员过走 `applyKakanRinshanAfterPass`（岭上+杠宝牌）。
+- **抢杠**：加杠牌作为 `lastDiscard` 可荣和，点炮者=加杠者；`afterKan` 传 riichi-rs。四开杠统计含 `kakan`。
+
+单测：`riichi-japanese-shared.test.ts` 增加 applyClaimPassToState(draw) 一发清除、applyKakanRinshanAfterPass、getKakanOptions；`riichi-abortive-draw.test.ts` 增加四开杠含 kakan。
+
+### 6.6 后续可选项（非必须）
 
 - ~~为 **useRiichiRoundActions** 引入 RiichiRoundContext~~（已完成：`shared/riichiRoundContext.ts`，useRiichiGame 构建并传入）
 - ~~**ClaimFlow 杠后四开杠** 与 applyAbortiveDrawChecks 统一~~（已完成：先建 stateForAbortive 再 applyAbortiveDrawChecks）

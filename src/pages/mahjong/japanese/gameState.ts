@@ -52,6 +52,7 @@ export function initRiichiGame(
     riichiPot,
     matchLength,
     riichiDeclared: [false, false, false, false],
+    ippatsuPossible: [false, false, false, false],
     furitenStates: [
       createInitialFuritenState(),
       createInitialFuritenState(),

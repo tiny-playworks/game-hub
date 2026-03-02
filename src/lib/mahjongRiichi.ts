@@ -200,7 +200,12 @@ export function getAngangOptionsRiichi(hand: number[]): number[][] {
 
 /** 是否算副露（吃/碰/明杠算副露，暗杠不算） */
 export function isOpenMeld(meld: { type: string }): boolean {
-  return meld.type === 'chi' || meld.type === 'peng' || meld.type === 'mingang';
+  return (
+    meld.type === 'chi' ||
+    meld.type === 'peng' ||
+    meld.type === 'mingang' ||
+    meld.type === 'kakan'
+  );
 }
 
 /** 是否门前清：无副露（暗杠不计入） */
@@ -470,9 +475,9 @@ export function isWinShapeRiichi(
 
 /** 扩展的役判定上下文（含特殊和了方式、杠数等） */
 export interface YakuContextFull extends YakuContext {
-  /** 役种判定用：带 type 的副露（chi/peng/mingang/angang）；不传则按碰处理（视为副露） */
+  /** 役种判定用：带 type 的副露（chi/peng/mingang/angang/kakan）；不传则按碰处理（视为副露） */
   meldsTyped?: {
-    type: 'chi' | 'peng' | 'mingang' | 'angang';
+    type: 'chi' | 'peng' | 'mingang' | 'angang' | 'kakan';
     tiles: number[];
   }[];
   /** 岭上开花 */

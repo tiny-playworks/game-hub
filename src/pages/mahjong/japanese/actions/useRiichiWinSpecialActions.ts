@@ -76,6 +76,7 @@ export function useRiichiWinSpecialActions(
       riichiDeclared: game.riichiDeclared.map((declared, i) =>
         i === 0 ? true : declared,
       ),
+      ippatsuPossible: game.ippatsuPossible.map((v, i) => (i === 0 ? true : v)),
       lastClaimMsg: '立直宣言！听牌固定，不能换牌',
     });
   }, [game, addLog, getWaitingTilesRiichi, sounds, setGame]);
@@ -134,7 +135,54 @@ export function useRiichiWinSpecialActions(
         melds,
         wall: newWall,
         doraIndicators: newDoraIndicators,
+        ippatsuPossible: [false, false, false, false],
         furitenStates: clearSeatDoujunStates(game.furitenStates, 0),
+      });
+    },
+    [game, addLog, sounds, setGame],
+  );
+
+  const doKakan = useCallback(
+    (meldIndex: number) => {
+      if (
+        !game ||
+        game.phase !== 'discard' ||
+        game.currentPlayer !== 0 ||
+        game.drawnTile === null
+      )
+        return;
+      const melds0 = game.melds[0];
+      const m = melds0[meldIndex];
+      if (!m || m.type !== 'peng' || m.tiles.length !== 3) return;
+      const drawn = game.drawnTile;
+      if (getBaseTile(drawn) !== getBaseTile(m.tiles[0])) return;
+      const hand0 = [...game.hands[0]];
+      const idx = hand0.indexOf(drawn);
+      if (idx === -1) return;
+      hand0.splice(idx, 1);
+      const newMelds = game.melds.map((melds, i) =>
+        i === 0
+          ? melds.map((mm, j) =>
+              j === meldIndex
+                ? { ...mm, type: 'kakan' as const, tiles: [...mm.tiles, drawn] }
+                : mm,
+            )
+          : melds,
+      );
+      addLog(`自家 加杠 ${getTileLabel(drawn)}`);
+      sounds.playKan();
+      setGame({
+        ...game,
+        hands: game.hands.map((h, i) => (i === 0 ? hand0 : h)),
+        melds: newMelds,
+        phase: 'claim',
+        lastDiscard: drawn,
+        lastDiscardFrom: 0,
+        claimIndex: 0,
+        drawnTile: null,
+        lastClaimMsg: null,
+        lastClaimWasKakan: true,
+        ippatsuPossible: [false, false, false, false],
       });
     },
     [game, addLog, sounds, setGame],
@@ -179,6 +227,7 @@ export function useRiichiWinSpecialActions(
       riichiDeclared: game.riichiDeclared,
       wallLength: game.wall.length,
       lastDiscard: game.lastDiscard,
+      ippatsu: game.riichiDeclared[0] && (game.ippatsuPossible?.[0] ?? false),
     };
     const input = buildRiichiInput(stateForRs, true);
     const rs = calcWithRiichiRs(input);
@@ -269,6 +318,8 @@ export function useRiichiWinSpecialActions(
       riichiDeclared: game.riichiDeclared,
       wallLength: game.wall.length,
       lastDiscard: game.lastDiscard,
+      ippatsu: game.riichiDeclared[0] && (game.ippatsuPossible?.[0] ?? false),
+      afterKan: game.lastClaimWasKakan ?? false,
     };
     const input = buildRiichiInput(stateForRs, false, game.lastDiscard);
     const rs = calcWithRiichiRs(input);
@@ -372,6 +423,7 @@ export function useRiichiWinSpecialActions(
     passRonOpportunity,
     doRiichi,
     doAngang,
+    doKakan,
     doKyuushuKyuuhai,
   };
 }

@@ -188,6 +188,7 @@ export function useRiichiGame() {
   const {
     tenpaiHint,
     angangOptions,
+    kakanOptions,
     canKyuushuKyuuhai,
     isMyTurn,
     isClaimPhase,
@@ -254,6 +255,7 @@ export function useRiichiGame() {
     passRonOpportunity,
     doRiichi,
     doAngang,
+    doKakan,
     doKyuushuKyuuhai,
   } = useRiichiWinSpecialActions(riichiContext, {
     canTsumo,
@@ -314,6 +316,7 @@ export function useRiichiGame() {
     doPeng,
     doMingang,
     doAngang,
+    doKakan,
     doRiichi,
     doKyuushuKyuuhai,
     passClaim,
@@ -340,6 +343,7 @@ export function useRiichiGame() {
     currentTurnRemainSeconds,
     timerTextClass,
     angangOptions,
+    kakanOptions,
     canKyuushuKyuuhai,
     getWaitingTilesRiichi,
     canTsumo,

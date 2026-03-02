@@ -50,6 +50,36 @@ export function getNextRound(
   };
 }
 
+/**
+ * 当前可加杠的副露下标（手牌含 drawnTile 且与某碰同种牌）。
+ * 仅当 phase=discard、drawnTile 非空、该座有碰时有效。
+ */
+export function getKakanOptions(
+  state: RiichiGameState,
+  seat: number,
+): number[] {
+  if (
+    state.phase !== 'discard' ||
+    state.drawnTile === null ||
+    state.currentPlayer !== seat
+  )
+    return [];
+  const melds = state.melds[seat];
+  const drawn = state.drawnTile;
+  const base = getBaseTile(drawn);
+  const indices: number[] = [];
+  for (let i = 0; i < melds.length; i++) {
+    const m = melds[i];
+    if (
+      m.type === 'peng' &&
+      m.tiles.length === 3 &&
+      getBaseTile(m.tiles[0]) === base
+    )
+      indices.push(i);
+  }
+  return indices;
+}
+
 export function getMatchEndReasonText(reason?: MatchEndReason): string {
   switch (reason) {
     case 'tobi':

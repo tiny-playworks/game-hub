@@ -22,7 +22,10 @@ import { SEAT_NAMES } from '../constants';
 import { enrichWinResultWithUra } from '../gameLogic/winResult';
 import { clearSeatDoujunStates, getSeatWind } from '../helpers';
 import { applyAbortiveDrawChecks } from '../shared/abortiveDrawChecks';
-import { applyClaimPassToState } from '../shared/claimTransitions';
+import {
+  applyClaimPassToState,
+  applyKakanRinshanAfterPass,
+} from '../shared/claimTransitions';
 import { getRng, getScheduler } from '../shared/flowDeps';
 import type { RiichiRuntimeContext } from '../shared/riichiRuntimeContext';
 import type { RiichiGameState } from '../types';
@@ -73,7 +76,10 @@ export function useRiichiClaimFlow(
       const gang = canMingangRiichi(g.hands[0], lastTile);
       if (chiOpts.length > 0 || peng || gang) return g;
       const passResult = resolveClaimPass(g.claimIndex, g.wall.length);
-      const next = applyClaimPassToState(g, passResult);
+      const next =
+        g.lastClaimWasKakan && passResult.type === 'draw'
+          ? applyKakanRinshanAfterPass(g)
+          : applyClaimPassToState(g, passResult);
       if (next.ryuukyoku && next.ryuukyokuReason === '荒牌') {
         addLogRef.current('流局（荒牌）');
       }
@@ -229,6 +235,7 @@ export function useRiichiClaimFlow(
             hands,
             melds,
             discardPiles: pilesChi,
+            ippatsuPossible: [false, false, false, false],
             phase: 'claim',
             lastDiscard: toDiscard,
             lastDiscardFrom: p,
@@ -279,6 +286,7 @@ export function useRiichiClaimFlow(
             hands,
             melds,
             discardPiles: pilesPeng,
+            ippatsuPossible: [false, false, false, false],
             phase: 'claim',
             lastDiscard: toDiscard,
             lastDiscardFrom: p,
@@ -350,6 +358,7 @@ export function useRiichiClaimFlow(
             discardPiles: pilesGang,
             wall: newWall,
             doraIndicators: newDoraIndicators,
+            ippatsuPossible: [false, false, false, false],
             furitenStates: clearSeatDoujunStates(game.furitenStates, p),
             phase: 'discard',
             lastDiscard: null,

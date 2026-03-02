@@ -6,7 +6,9 @@ export type AbortiveDrawReason =
   | '四家立直'
   | '四开杠';
 
-type RiichiMeldLike = { type: 'chi' | 'peng' | 'mingang' | 'angang' };
+type RiichiMeldLike = {
+  type: 'chi' | 'peng' | 'mingang' | 'angang' | 'kakan';
+};
 
 const YAOCHUU_BASES = new Set<number>([
   0, 8, 9, 17, 18, 26, 27, 28, 29, 30, 31, 32, 33,
@@ -53,7 +55,7 @@ export function shouldAbortOnSuukaikan(melds: RiichiMeldLike[][]): boolean {
   let kanSeats = 0;
   for (const seatMelds of melds) {
     const seatKan = seatMelds.filter(
-      (m) => m.type === 'mingang' || m.type === 'angang',
+      (m) => m.type === 'mingang' || m.type === 'angang' || m.type === 'kakan',
     ).length;
     totalKan += seatKan;
     if (seatKan > 0) kanSeats++;

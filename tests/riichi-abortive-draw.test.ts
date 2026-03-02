@@ -28,15 +28,12 @@ describe('日麻途中流局判定', () => {
   });
 
   test('四开杠：两家以上合计四杠触发；一人四杠不触发', () => {
+    type M = { type: 'chi' | 'peng' | 'mingang' | 'angang' | 'kakan' };
     const byTwoSeats = shouldAbortOnSuukaikan([
-      [{ type: 'mingang' }, { type: 'angang' }] as Array<{
-        type: 'chi' | 'peng' | 'mingang' | 'angang';
-      }>,
-      [] as Array<{ type: 'chi' | 'peng' | 'mingang' | 'angang' }>,
-      [{ type: 'mingang' }, { type: 'angang' }] as Array<{
-        type: 'chi' | 'peng' | 'mingang' | 'angang';
-      }>,
-      [] as Array<{ type: 'chi' | 'peng' | 'mingang' | 'angang' }>,
+      [{ type: 'mingang' }, { type: 'angang' }] as M[],
+      [] as M[],
+      [{ type: 'mingang' }, { type: 'angang' }] as M[],
+      [] as M[],
     ]);
     expect(byTwoSeats).toBe(true);
 
@@ -46,11 +43,22 @@ describe('日麻途中流局判定', () => {
         { type: 'angang' },
         { type: 'mingang' },
         { type: 'angang' },
-      ] as Array<{ type: 'chi' | 'peng' | 'mingang' | 'angang' }>,
-      [] as Array<{ type: 'chi' | 'peng' | 'mingang' | 'angang' }>,
-      [] as Array<{ type: 'chi' | 'peng' | 'mingang' | 'angang' }>,
-      [] as Array<{ type: 'chi' | 'peng' | 'mingang' | 'angang' }>,
+      ] as M[],
+      [] as M[],
+      [] as M[],
+      [] as M[],
     ]);
     expect(byOneSeat).toBe(false);
+  });
+
+  test('四开杠：加杠(kakan) 计入杠数', () => {
+    type M = { type: 'chi' | 'peng' | 'mingang' | 'angang' | 'kakan' };
+    const withKakan = shouldAbortOnSuukaikan([
+      [{ type: 'mingang' }, { type: 'kakan' }] as M[],
+      [{ type: 'angang' }, { type: 'angang' }] as M[],
+      [] as M[],
+      [] as M[],
+    ]);
+    expect(withKakan).toBe(true);
   });
 });

@@ -4,9 +4,9 @@ import type { PaymentDetail } from '@/lib/riichiSettlement';
 
 export type { AbortiveDrawReason, MatchEndReason, PaymentDetail };
 
-/** 副露：吃/碰/明杠；暗杠不算副露，保留门前清 */
+/** 副露：吃/碰/明杠/加杠；暗杠不算副露，保留门前清 */
 export interface RiichiMeld {
-  type: 'chi' | 'peng' | 'mingang' | 'angang';
+  type: 'chi' | 'peng' | 'mingang' | 'angang' | 'kakan';
   tiles: number[];
   fromPlayer?: number;
 }
@@ -25,6 +25,8 @@ export interface RiichiGameState {
   lastDiscardFrom: number | null;
   claimIndex: number;
   lastClaimMsg: string | null;
+  /** 当前要牌是否因加杠（仅允许抢杠） */
+  lastClaimWasKakan?: boolean;
   roundWind: number;
   roundNumber: number;
   honba: number;
@@ -33,6 +35,8 @@ export interface RiichiGameState {
   timeBanks: number[];
   riichiPot: number;
   riichiDeclared: boolean[];
+  /** 立直后一巡内尚未摸牌且本巡无人吃碰杠则为 true，用于一发 */
+  ippatsuPossible: boolean[];
   furitenStates: { sutehai: boolean; doujun: boolean; riichi: boolean }[];
   riichiDiscard: (number | null)[];
   uraDoraIndicators: number[];

@@ -56,11 +56,15 @@ export function applyClaimPassToState(
   const newHands = g.hands.map((h) => [...h]);
   newHands[nextPlayer].push(draw);
   newHands[nextPlayer].sort((a, b) => getBaseTile(a) - getBaseTile(b) || a - b);
+  const ippatsuPossible = (
+    g.ippatsuPossible ?? g.riichiDeclared.map(() => false)
+  ).map((v, i) => (i === nextPlayer ? false : v));
   return {
     ...g,
     timeBanks,
     hands: newHands,
     wall: newWall,
+    ippatsuPossible,
     furitenStates: clearSeatDoujunStates(furitenStates, nextPlayer),
     phase: 'discard',
     lastDiscard: null,
@@ -69,5 +73,43 @@ export function applyClaimPassToState(
     currentPlayer: nextPlayer,
     drawnTile: draw,
     lastClaimMsg,
+  };
+}
+
+/**
+ * 加杠后全员过：加杠者摸岭上牌，翻杠宝牌，进入打牌阶段。
+ * 仅在 lastClaimWasKakan 且 wall.length >= 2 时使用。
+ */
+export function applyKakanRinshanAfterPass(
+  g: RiichiGameState,
+  opts?: ApplyClaimPassOptions,
+): RiichiGameState {
+  const timeBanks = opts?.timeBanks ?? g.timeBanks;
+  const furitenStates = opts?.furitenStates ?? g.furitenStates;
+  const kanPlayer = g.lastDiscardFrom ?? 0;
+  if (g.wall.length < 2) return g;
+  const rinshan = g.wall[0];
+  const kanDoraIndicator = g.wall[1];
+  const newWall = g.wall.slice(2);
+  const newDoraIndicators = [...g.doraIndicators, kanDoraIndicator];
+  const newHands = g.hands.map((h) => [...h]);
+  newHands[kanPlayer].push(rinshan);
+  newHands[kanPlayer].sort((a, b) => getBaseTile(a) - getBaseTile(b) || a - b);
+  return {
+    ...g,
+    timeBanks,
+    furitenStates: clearSeatDoujunStates(furitenStates, kanPlayer),
+    hands: newHands,
+    wall: newWall,
+    doraIndicators: newDoraIndicators,
+    ippatsuPossible: [false, false, false, false],
+    phase: 'discard',
+    lastDiscard: null,
+    lastDiscardFrom: null,
+    claimIndex: 0,
+    currentPlayer: kanPlayer,
+    drawnTile: rinshan,
+    lastClaimMsg: null,
+    lastClaimWasKakan: undefined,
   };
 }

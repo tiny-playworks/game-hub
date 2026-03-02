@@ -29,6 +29,7 @@ import { resolveWinBaseTen } from './gameLogic/winResult';
 import {
   countVisibleTilesByBase,
   getDecisionSeat,
+  getKakanOptions,
   getSeatWind,
   getTenpaiSeatsForDraw,
   needsTimedDecision,
@@ -154,6 +155,7 @@ export function useRiichiDerived({
     game.hands[0].length === 14
       ? getAngangOptionsRiichi(game.hands[0])
       : [];
+  const kakanOptions = game ? getKakanOptions(game, 0) : [];
   const canKyuushuKyuuhai =
     game?.phase === 'discard' &&
     game.currentPlayer === 0 &&
@@ -276,7 +278,9 @@ export function useRiichiDerived({
       });
     })();
 
-  const hasNonRonClaimOption = chiOptions.length > 0 || canPeng || canMingang;
+  const hasNonRonClaimOption =
+    !game?.lastClaimWasKakan &&
+    (chiOptions.length > 0 || canPeng || canMingang);
   const hasAnyClaimOption = hasNonRonClaimOption || canRon;
   const decisionSeat =
     game && needsTimedDecision(game) ? getDecisionSeat(game) : null;
@@ -372,6 +376,7 @@ export function useRiichiDerived({
   return {
     tenpaiHint,
     angangOptions,
+    kakanOptions,
     canKyuushuKyuuhai,
     isMyTurn,
     isClaimPhase,

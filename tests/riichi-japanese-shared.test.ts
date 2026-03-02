@@ -1,7 +1,11 @@
 import { describe, expect, test } from '@rstest/core';
 import { initRiichiGame } from '../src/pages/mahjong/japanese/gameState';
+import { getKakanOptions } from '../src/pages/mahjong/japanese/helpers';
 import { applyAbortiveDrawChecks } from '../src/pages/mahjong/japanese/shared/abortiveDrawChecks';
-import { applyClaimPassToState } from '../src/pages/mahjong/japanese/shared/claimTransitions';
+import {
+  applyClaimPassToState,
+  applyKakanRinshanAfterPass,
+} from '../src/pages/mahjong/japanese/shared/claimTransitions';
 import {
   appendTimeoutEvent,
   buildStateAfterTimeoutDiscard,
@@ -54,6 +58,43 @@ describe('日麻 shared/claimTransitions', () => {
     expect(next.hands[2]).toContain(42);
     expect(next.lastDiscard).toBeNull();
     expect(next.claimIndex).toBe(0);
+  });
+
+  test('applyClaimPassToState(type=draw) 摸牌者 ippatsuPossible 被清除', () => {
+    const g = claimPhaseState({
+      wall: [42, 43],
+      lastDiscardFrom: 1,
+      ippatsuPossible: [false, true, false, false],
+    });
+    const next = applyClaimPassToState(g, { type: 'draw' });
+    expect(next.ippatsuPossible[2]).toBe(false);
+    expect(next.currentPlayer).toBe(2);
+  });
+
+  test('applyKakanRinshanAfterPass 加杠者摸岭上、翻杠宝牌、清除 lastClaimWasKakan', () => {
+    const g = claimPhaseState({
+      lastDiscard: 4,
+      lastDiscardFrom: 0,
+      lastClaimWasKakan: true,
+      claimIndex: 3,
+      wall: [50, 51],
+      doraIndicators: [10],
+      hands: [
+        [0, 1, 2, 3, 5, 6, 7, 8, 9, 10],
+        [1, 1, 1],
+        [2, 2, 2],
+        [3, 3, 3],
+      ],
+    });
+    const next = applyKakanRinshanAfterPass(g);
+    expect(next.phase).toBe('discard');
+    expect(next.currentPlayer).toBe(0);
+    expect(next.drawnTile).toBe(50);
+    expect(next.wall).toEqual([]);
+    expect(next.doraIndicators).toEqual([10, 51]);
+    expect(next.lastClaimWasKakan).toBeUndefined();
+    expect(next.hands[0]).toContain(50);
+    expect(next.ippatsuPossible).toEqual([false, false, false, false]);
   });
 
   test('opts 可覆盖 timeBanks / furitenStates / lastClaimMsg', () => {
@@ -178,5 +219,54 @@ describe('日麻 shared/abortiveDrawChecks', () => {
     const { state: next, ryuukyokuReason } = applyAbortiveDrawChecks(state);
     expect(ryuukyokuReason).toBe('四开杠');
     expect(next.ryuukyokuReason).toBe('四开杠');
+  });
+});
+
+describe('日麻 helpers', () => {
+  test('getKakanOptions 无 drawnTile 或非 discard 阶段返回空', () => {
+    const base = initRiichiGame();
+    expect(getKakanOptions({ ...base, drawnTile: null }, 0)).toEqual([]);
+    expect(
+      getKakanOptions(
+        { ...base, phase: 'claim', drawnTile: 4, currentPlayer: 0 },
+        0,
+      ),
+    ).toEqual([]);
+  });
+
+  test('getKakanOptions 有碰且摸到同种第 4 张时返回该碰的下标', () => {
+    const base = initRiichiGame();
+    const state: RiichiGameState = {
+      ...base,
+      phase: 'discard',
+      currentPlayer: 0,
+      drawnTile: 4,
+      hands: [
+        [0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11],
+        base.hands[1],
+        base.hands[2],
+        base.hands[3],
+      ],
+      melds: [[{ type: 'peng', tiles: [4, 4, 4] }], [], [], []],
+    };
+    expect(getKakanOptions(state, 0)).toEqual([0]);
+  });
+
+  test('getKakanOptions 摸牌与碰不同种时返回空', () => {
+    const base = initRiichiGame();
+    const state: RiichiGameState = {
+      ...base,
+      phase: 'discard',
+      currentPlayer: 0,
+      drawnTile: 0,
+      hands: [
+        [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12],
+        base.hands[1],
+        base.hands[2],
+        base.hands[3],
+      ],
+      melds: [[{ type: 'peng', tiles: [4, 4, 4] }], [], [], []],
+    };
+    expect(getKakanOptions(state, 0)).toEqual([]);
   });
 });

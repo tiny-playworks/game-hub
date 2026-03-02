@@ -8,7 +8,10 @@ import {
 } from '@/lib/riichiFuriten';
 import { canSeatRonByRules, clearSeatDoujunStates } from '../helpers';
 import { applyAbortiveDrawChecks } from '../shared/abortiveDrawChecks';
-import { applyClaimPassToState } from '../shared/claimTransitions';
+import {
+  applyClaimPassToState,
+  applyKakanRinshanAfterPass,
+} from '../shared/claimTransitions';
 import type { RiichiRuntimeContext } from '../shared/riichiRuntimeContext';
 import type { RiichiGameState } from '../types';
 
@@ -69,11 +72,18 @@ export function useRiichiClaimActions(ctx: RiichiRuntimeContext) {
         )
       : game.furitenStates;
     const passResult = resolveClaimPass(game.claimIndex, game.wall.length);
-    const next = applyClaimPassToState(game, passResult, {
-      timeBanks: timedBanks,
-      furitenStates: nextFuritenStates,
-      lastClaimMsg: null,
-    });
+    const next =
+      game.lastClaimWasKakan && passResult.type === 'draw'
+        ? applyKakanRinshanAfterPass(game, {
+            timeBanks: timedBanks,
+            furitenStates: nextFuritenStates,
+            lastClaimMsg: null,
+          })
+        : applyClaimPassToState(game, passResult, {
+            timeBanks: timedBanks,
+            furitenStates: nextFuritenStates,
+            lastClaimMsg: null,
+          });
     if (next.ryuukyoku && next.ryuukyokuReason === '荒牌') {
       addLog('流局（荒牌）');
     } else {
@@ -135,6 +145,7 @@ export function useRiichiClaimActions(ctx: RiichiRuntimeContext) {
         hands,
         melds,
         discardPiles: piles,
+        ippatsuPossible: [false, false, false, false],
         phase: 'discard',
         lastDiscard: null,
         lastDiscardFrom: null,
@@ -190,6 +201,7 @@ export function useRiichiClaimActions(ctx: RiichiRuntimeContext) {
       hands,
       melds,
       discardPiles: piles,
+      ippatsuPossible: [false, false, false, false],
       phase: 'discard',
       lastDiscard: null,
       lastDiscardFrom: null,
@@ -283,6 +295,7 @@ export function useRiichiClaimActions(ctx: RiichiRuntimeContext) {
       discardPiles: piles,
       wall: newWall,
       doraIndicators: newDoraIndicators,
+      ippatsuPossible: [false, false, false, false],
       phase: 'discard',
       lastDiscard: null,
       lastDiscardFrom: null,

@@ -35,7 +35,10 @@ const AKA_5_SOU = 36;
 
 export interface GameStateForRs {
   hand: number[];
-  melds: { type: 'chi' | 'peng' | 'mingang' | 'angang'; tiles: number[] }[];
+  melds: {
+    type: 'chi' | 'peng' | 'mingang' | 'angang' | 'kakan';
+    tiles: number[];
+  }[];
   /** 明宝牌表示牌（开局 1 张 + 每开杠 1 张） */
   doraIndicators: number[];
   roundWind: number;
@@ -45,6 +48,8 @@ export interface GameStateForRs {
   lastDiscard: number | null;
   /** 是否岭上开花（自摸）或抢杠（荣和） */
   afterKan?: boolean;
+  /** 一发：立直后一巡内和了且本巡无吃碰杠 */
+  ippatsu?: boolean;
 }
 
 /** 场风 → riichi-rs 风牌 Tile */
@@ -73,7 +78,10 @@ export function buildRiichiInput(
   const open_part: Meld[] = [];
   for (const m of state.melds) {
     const isOpen =
-      m.type === 'chi' || m.type === 'peng' || m.type === 'mingang';
+      m.type === 'chi' ||
+      m.type === 'peng' ||
+      m.type === 'mingang' ||
+      m.type === 'kakan';
     if (m.tiles.length === 3) {
       open_part.push([
         true,
@@ -102,7 +110,7 @@ export function buildRiichiInput(
     dora: doraTiles.map((t) => ourTileToRs(t)),
     aka_count: aka,
     riichi: state.riichiDeclared[0],
-    ippatsu: false,
+    ippatsu: state.ippatsu ?? false,
     double_riichi: false,
     after_kan: state.afterKan ?? false,
     tile_discarded_by_someone: isTsumo
