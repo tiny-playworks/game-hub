@@ -92,7 +92,10 @@ export function OpponentSeat({
           {game.melds[seat].map((m, i) => (
             <span
               key={i}
-              className={cn('flex gap-0.5', isVertical && 'flex-col items-center')}
+              className={cn(
+                'flex gap-0.5',
+                isVertical && 'flex-col items-center',
+              )}
             >
               {m.tiles.map((t, j) => (
                 <span
