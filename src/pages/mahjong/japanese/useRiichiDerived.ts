@@ -70,7 +70,7 @@ export function useRiichiDerived({
     const visibleCounts = countVisibleTilesByBase(game);
     const remaining = (baseTile: number) =>
       Math.max(0, 4 - (visibleCounts[baseTile] ?? 0));
-    const doraTypes = [getDoraFromIndicator(game.doraIndicator)];
+    const doraTypes = game.doraIndicators.map(getDoraFromIndicator);
 
     const getWaitingTilesShapeOnly = (
       hand13: number[],

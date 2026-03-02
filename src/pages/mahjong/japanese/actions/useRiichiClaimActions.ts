@@ -227,6 +227,7 @@ export function useRiichiClaimActions(ctx: RiichiRuntimeContext) {
       if (getBaseTile(h0[i]) === base) indices.push(i);
     }
     if (indices.length < 3) return;
+    if (game.wall.length < 2) return;
     const tiles = [game.lastDiscard, ...indices.map((i) => h0[i])];
     indices
       .sort((x, y) => y - x)
@@ -235,7 +236,9 @@ export function useRiichiClaimActions(ctx: RiichiRuntimeContext) {
       });
     const handAfterKan = [...h0];
     const rinshan = game.wall[0];
-    const newWall = game.wall.slice(1);
+    const kanDoraIndicator = game.wall[1];
+    const newWall = game.wall.slice(2);
+    const newDoraIndicators = [...game.doraIndicators, kanDoraIndicator];
     h0.push(rinshan);
     h0.sort((a, b) => getBaseTile(a) - getBaseTile(b) || a - b);
     const hands = game.hands.map((h, i) => (i === 0 ? h0 : h));
@@ -257,7 +260,8 @@ export function useRiichiClaimActions(ctx: RiichiRuntimeContext) {
         hands: game.hands.map((h, i) => (i === 0 ? handAfterKan : h)),
         melds,
         discardPiles: piles,
-        wall: game.wall,
+        wall: newWall,
+        doraIndicators: newDoraIndicators,
         phase: 'discard',
         lastDiscard: null,
         lastDiscardFrom: null,
@@ -278,6 +282,7 @@ export function useRiichiClaimActions(ctx: RiichiRuntimeContext) {
       melds,
       discardPiles: piles,
       wall: newWall,
+      doraIndicators: newDoraIndicators,
       phase: 'discard',
       lastDiscard: null,
       lastDiscardFrom: null,

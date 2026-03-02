@@ -138,7 +138,7 @@ export function useRiichiClaimFlow(
           lastTile: last,
           riichiDeclared: game.riichiDeclared,
           discardPiles: game.discardPiles,
-          doraIndicators: [game.doraIndicator],
+          doraIndicators: game.doraIndicators,
           seatWind: getSeatWind(game.roundWind, p, game.dealer),
           roundWind: game.roundWind,
         })
@@ -289,7 +289,7 @@ export function useRiichiClaimFlow(
           return;
         }
       }
-      if (gang && rng() < 0.3 && game.wall.length > 0) {
+      if (gang && rng() < 0.3 && game.wall.length >= 2) {
         const base = getBaseTile(last);
         const h = [...game.hands[p]];
         const indices: number[] = [];
@@ -305,7 +305,9 @@ export function useRiichiClaimFlow(
             });
           const handAfterKan = [...h];
           const rinshan = game.wall[0];
-          const newWall = game.wall.slice(1);
+          const kanDoraIndicator = game.wall[1];
+          const newWall = game.wall.slice(2);
+          const newDoraIndicators = [...game.doraIndicators, kanDoraIndicator];
           h.push(rinshan);
           h.sort((a, b) => getBaseTile(a) - getBaseTile(b) || a - b);
           const hands = game.hands.map((h0, i) => (i === p ? h : h0));
@@ -320,6 +322,8 @@ export function useRiichiClaimFlow(
             hands: game.hands.map((h0, i) => (i === p ? handAfterKan : h0)),
             melds,
             discardPiles: pilesGang,
+            wall: newWall,
+            doraIndicators: newDoraIndicators,
             phase: 'discard',
             lastDiscard: null,
             lastDiscardFrom: null,
@@ -345,6 +349,7 @@ export function useRiichiClaimFlow(
             melds,
             discardPiles: pilesGang,
             wall: newWall,
+            doraIndicators: newDoraIndicators,
             furitenStates: clearSeatDoujunStates(game.furitenStates, p),
             phase: 'discard',
             lastDiscard: null,

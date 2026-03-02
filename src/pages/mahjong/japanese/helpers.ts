@@ -98,7 +98,7 @@ export function countVisibleTilesByBase(state: RiichiGameState): number[] {
   state.hands[0].forEach(add);
   for (const m of state.melds[0]) m.tiles.forEach(add);
   for (let i = 0; i < 4; i++) state.discardPiles[i].forEach(add);
-  add(state.doraIndicator);
+  for (const ind of state.doraIndicators) add(ind);
   return count;
 }
 

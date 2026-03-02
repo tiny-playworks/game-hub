@@ -70,14 +70,19 @@ export function GameHeader({
       </div>
       <div className="flex flex-col items-center gap-1">
         <span className="text-[10px] text-[#f1faee]/80">宝牌表示</span>
-        <span
-          className={cn(
-            'w-[52px] h-[72px] rounded-[6px] border-2 bg-[#fff9e6] flex items-center justify-center font-black text-lg shrink-0 tile-dora-glow',
-            getTileColorClass(game.doraIndicator),
-          )}
-        >
-          <RiichiTileFace tile={game.doraIndicator} />
-        </span>
+        <div className="flex flex-wrap justify-center gap-1">
+          {game.doraIndicators.map((ind, i) => (
+            <span
+              key={i}
+              className={cn(
+                'w-[52px] h-[72px] rounded-[6px] border-2 bg-[#fff9e6] flex items-center justify-center font-black text-lg shrink-0 tile-dora-glow',
+                getTileColorClass(ind),
+              )}
+            >
+              <RiichiTileFace tile={ind} />
+            </span>
+          ))}
+        </div>
       </div>
     </header>
   );

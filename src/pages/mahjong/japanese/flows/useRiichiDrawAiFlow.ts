@@ -263,7 +263,7 @@ export function useRiichiDrawAiFlow(
         });
 
         const angOpts = getAngangOptionsRiichi(hand);
-        if (angOpts.length > 0 && g.wall.length > 0 && rng() < 0.2) {
+        if (angOpts.length > 0 && g.wall.length >= 2 && rng() < 0.2) {
           const fourTiles = [...angOpts[0]];
           const consumed = [...fourTiles];
           const h = hand.filter((t) => {
@@ -274,8 +274,11 @@ export function useRiichiDrawAiFlow(
             }
             return true;
           });
-          if (h.length !== 10) return g;
+          if (h.length !== 10 || g.wall.length < 2) return g;
           const rinshan = g.wall[0];
+          const kanDoraIndicator = g.wall[1];
+          const newWall = g.wall.slice(2);
+          const newDoraIndicators = [...g.doraIndicators, kanDoraIndicator];
           h.push(rinshan);
           h.sort((a, b) => getBaseTile(a) - getBaseTile(b) || a - b);
           const aiRiichiLocked = g.riichiDeclared[p];
@@ -285,7 +288,7 @@ export function useRiichiDrawAiFlow(
                 aiSeat: p,
                 riichiDeclared: g.riichiDeclared,
                 discardPiles: g.discardPiles,
-                doraIndicators: [g.doraIndicator],
+                doraIndicators: g.doraIndicators,
               })
             : null;
           const defensiveDiscard = defensiveChoice?.tile ?? null;
@@ -328,7 +331,8 @@ export function useRiichiDrawAiFlow(
             riichiDeclared: nextRiichi?.riichiDeclared ?? g.riichiDeclared,
             hands: g.hands.map((h0, i) => (i === p ? h : h0)),
             melds,
-            wall: g.wall.slice(1),
+            wall: newWall,
+            doraIndicators: newDoraIndicators,
             discardPiles: piles,
             currentPlayer: (p + 1) % 4,
             drawnTile: null,
@@ -355,7 +359,7 @@ export function useRiichiDrawAiFlow(
               aiSeat: p,
               riichiDeclared: g.riichiDeclared,
               discardPiles: g.discardPiles,
-              doraIndicators: [g.doraIndicator],
+              doraIndicators: g.doraIndicators,
             })
           : null;
         const defensiveDiscard = defensiveChoice?.tile ?? null;

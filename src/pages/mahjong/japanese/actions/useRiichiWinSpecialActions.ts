@@ -86,7 +86,7 @@ export function useRiichiWinSpecialActions(
         !game ||
         game.phase !== 'discard' ||
         game.currentPlayer !== 0 ||
-        game.wall.length === 0
+        game.wall.length < 2
       )
         return;
       const h0 = [...game.hands[0]];
@@ -98,7 +98,9 @@ export function useRiichiWinSpecialActions(
       if (h0.length !== 10) return;
       const handAfterKan = [...h0];
       const rinshan = game.wall[0];
-      const newWall = game.wall.slice(1);
+      const kanDoraIndicator = game.wall[1];
+      const newWall = game.wall.slice(2);
+      const newDoraIndicators = [...game.doraIndicators, kanDoraIndicator];
       h0.push(rinshan);
       h0.sort((a, b) => getBaseTile(a) - getBaseTile(b) || a - b);
       const melds = game.melds.map((m, i) =>
@@ -111,6 +113,8 @@ export function useRiichiWinSpecialActions(
           ...game,
           hands: game.hands.map((h, i) => (i === 0 ? handAfterKan : h)),
           melds,
+          wall: newWall,
+          doraIndicators: newDoraIndicators,
           phase: 'discard',
           lastDiscard: null,
           lastDiscardFrom: null,
@@ -129,6 +133,7 @@ export function useRiichiWinSpecialActions(
         hands: game.hands.map((h, i) => (i === 0 ? h0 : h)),
         melds,
         wall: newWall,
+        doraIndicators: newDoraIndicators,
         furitenStates: clearSeatDoujunStates(game.furitenStates, 0),
       });
     },
@@ -168,7 +173,7 @@ export function useRiichiWinSpecialActions(
     const stateForRs: GameStateForRs = {
       hand,
       melds: game.melds[0],
-      doraIndicator: game.doraIndicator,
+      doraIndicators: game.doraIndicators,
       roundWind: game.roundWind,
       dealer: game.dealer,
       riichiDeclared: game.riichiDeclared,
@@ -258,7 +263,7 @@ export function useRiichiWinSpecialActions(
     const stateForRs: GameStateForRs = {
       hand: handWithClaim,
       melds: game.melds[0],
-      doraIndicator: game.doraIndicator,
+      doraIndicators: game.doraIndicators,
       roundWind: game.roundWind,
       dealer: game.dealer,
       riichiDeclared: game.riichiDeclared,

@@ -36,7 +36,8 @@ const AKA_5_SOU = 36;
 export interface GameStateForRs {
   hand: number[];
   melds: { type: 'chi' | 'peng' | 'mingang' | 'angang'; tiles: number[] }[];
-  doraIndicator: number;
+  /** 明宝牌表示牌（开局 1 张 + 每开杠 1 张） */
+  doraIndicators: number[];
   roundWind: number;
   dealer: number;
   riichiDeclared: boolean[];
@@ -94,9 +95,11 @@ export function buildRiichiInput(
       ] as Meld);
     }
   }
-  const doraTile = getDoraFromIndicator(state.doraIndicator);
+  const doraTiles = state.doraIndicators.map((ind) =>
+    getDoraFromIndicator(ind),
+  );
   const options: RiichiInput['options'] = {
-    dora: [ourTileToRs(doraTile)],
+    dora: doraTiles.map((t) => ourTileToRs(t)),
     aka_count: aka,
     riichi: state.riichiDeclared[0],
     ippatsu: false,

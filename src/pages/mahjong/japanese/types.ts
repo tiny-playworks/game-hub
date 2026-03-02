@@ -18,7 +18,8 @@ export interface RiichiGameState {
   melds: RiichiMeld[][];
   currentPlayer: number;
   drawnTile: number | null;
-  doraIndicator: number;
+  /** 明宝牌表示牌（开局 1 张，每开杠追加 1 张） */
+  doraIndicators: number[];
   phase: 'discard' | 'claim';
   lastDiscard: number | null;
   lastDiscardFrom: number | null;

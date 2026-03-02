@@ -27,7 +27,7 @@ export function initRiichiGame(
 ): RiichiGameState {
   const deck = createRiichiDeck();
   const [hands, rest] = dealRiichi(deck, dealer);
-  const doraIndicator = rest[0];
+  const doraIndicators = [rest[0]];
   const uraDoraIndicator = rest[1];
   const wall = rest.slice(2);
   return {
@@ -37,7 +37,7 @@ export function initRiichiGame(
     melds: [[], [], [], []],
     currentPlayer: dealer,
     drawnTile: null,
-    doraIndicator,
+    doraIndicators,
     phase: 'discard',
     lastDiscard: null,
     lastDiscardFrom: null,
