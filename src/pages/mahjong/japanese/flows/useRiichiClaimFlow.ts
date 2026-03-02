@@ -22,6 +22,7 @@ import { resolveClaimPass } from '@/lib/riichiClaimFlow';
 import { SEAT_NAMES } from '../constants';
 import { enrichWinResultWithUra } from '../gameLogic/winResult';
 import { clearSeatDoujunStates, getSeatWind } from '../helpers';
+import { applyClaimPassToState } from '../shared/claimTransitions';
 import type { RiichiWinResult } from '../store/riichiGameStore';
 import type { RiichiGameState } from '../types';
 
@@ -104,48 +105,11 @@ export function useRiichiClaimFlow({
       const gang = canMingangRiichi(g.hands[0], lastTile);
       if (chiOpts.length > 0 || peng || gang) return g;
       const passResult = resolveClaimPass(g.claimIndex, g.wall.length);
-      if (passResult.type === 'next') {
-        return {
-          ...g,
-          claimIndex: passResult.nextClaimIndex,
-          lastClaimMsg: null,
-        };
-      }
-      const nextPlayer = (g.lastDiscardFrom + 1) % 4;
-      if (passResult.type === 'ryuukyoku') {
+      const next = applyClaimPassToState(g, passResult);
+      if (next.ryuukyoku && next.ryuukyokuReason === '荒牌') {
         addLogRef.current('流局（荒牌）');
-        return {
-          ...g,
-          phase: 'discard',
-          lastDiscard: null,
-          lastDiscardFrom: null,
-          claimIndex: 0,
-          currentPlayer: nextPlayer,
-          lastClaimMsg: null,
-          ryuukyoku: true,
-          ryuukyokuReason: '荒牌',
-        };
       }
-      const draw = g.wall[0];
-      const newWall = g.wall.slice(1);
-      const newHands = g.hands.map((h) => [...h]);
-      newHands[nextPlayer].push(draw);
-      newHands[nextPlayer].sort(
-        (a, b) => getBaseTile(a) - getBaseTile(b) || a - b,
-      );
-      return {
-        ...g,
-        hands: newHands,
-        wall: newWall,
-        furitenStates: clearSeatDoujunStates(g.furitenStates, nextPlayer),
-        phase: 'discard',
-        lastDiscard: null,
-        lastDiscardFrom: null,
-        claimIndex: 0,
-        currentPlayer: nextPlayer,
-        drawnTile: draw,
-        lastClaimMsg: null,
-      };
+      return next;
     });
   }, [
     game?.phase,
@@ -430,48 +394,11 @@ export function useRiichiClaimFlow({
       setGame((g) => {
         if (!g || g.phase !== 'claim' || g.lastDiscardFrom === null) return g;
         const passResult = resolveClaimPass(g.claimIndex, g.wall.length);
-        if (passResult.type === 'next') {
-          return {
-            ...g,
-            claimIndex: passResult.nextClaimIndex,
-            lastClaimMsg: null,
-          };
-        }
-        const nextPlayer = (g.lastDiscardFrom + 1) % 4;
-        if (passResult.type === 'ryuukyoku') {
+        const next = applyClaimPassToState(g, passResult);
+        if (next.ryuukyoku && next.ryuukyokuReason === '荒牌') {
           addLogRef.current('流局（荒牌）');
-          return {
-            ...g,
-            phase: 'discard',
-            lastDiscard: null,
-            lastDiscardFrom: null,
-            claimIndex: 0,
-            currentPlayer: nextPlayer,
-            lastClaimMsg: null,
-            ryuukyoku: true,
-            ryuukyokuReason: '荒牌',
-          };
         }
-        const draw = g.wall[0];
-        const newWall = g.wall.slice(1);
-        const newHands = g.hands.map((h) => [...h]);
-        newHands[nextPlayer].push(draw);
-        newHands[nextPlayer].sort(
-          (a, b) => getBaseTile(a) - getBaseTile(b) || a - b,
-        );
-        return {
-          ...g,
-          hands: newHands,
-          wall: newWall,
-          furitenStates: clearSeatDoujunStates(g.furitenStates, nextPlayer),
-          phase: 'discard',
-          lastDiscard: null,
-          lastDiscardFrom: null,
-          claimIndex: 0,
-          currentPlayer: nextPlayer,
-          drawnTile: draw,
-          lastClaimMsg: null,
-        };
+        return next;
       });
     }, 400);
     return () => clearTimeout(tid);

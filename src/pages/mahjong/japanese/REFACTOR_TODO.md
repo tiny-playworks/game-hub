@@ -36,18 +36,12 @@
 
 ## P5 - 去重与纯函数化（推荐优先做）
 
-- [ ] 抽出 claim 阶段通用转移函数（`shared/claimTransitions.ts`）
-  - 候选函数：
-    - `advanceClaimOrResolveDraw(...)`
-    - `drawForNextPlayerAfterClaimPass(...)`
-    - `resolveClaimPassResult(...)`
-- [ ] 抽出超时出牌通用函数（`shared/timeoutTransitions.ts`）
-  - 候选函数：
-    - `buildTimeoutAutoDiscardState(...)`
-    - `appendTimeoutEvent(...)`
-- [ ] 抽出“四家立直 / 四风连打 / 四开杠”检查组合函数
-  - 候选函数：
-    - `applyAbortiveDrawChecks(...)`
+- [x] 抽出 claim 阶段通用转移函数（`shared/claimTransitions.ts`）
+  - 已实现：`applyClaimPassToState(g, passResult, opts?)`，供 ClaimFlow / TurnClockFlow / ClaimActions 使用
+- [x] 抽出超时出牌通用函数（`shared/timeoutTransitions.ts`）
+  - 已实现：`buildStateAfterTimeoutDiscard(...)`、`appendTimeoutEvent(...)`
+- [x] 抽出“四家立直 / 四风连打 / 四开杠”检查组合函数（`shared/abortiveDrawChecks.ts`）
+  - 已实现：`applyAbortiveDrawChecks(state)`，顺序：四家立直 → 四风连打 → 四开杠
 
 **完成标准**
 - `flows/useRiichiClaimFlow.ts`、`flows/useRiichiDrawAiFlow.ts` 重复块减少；

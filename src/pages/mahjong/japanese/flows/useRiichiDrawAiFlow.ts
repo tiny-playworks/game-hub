@@ -10,11 +10,6 @@ import {
   isWinShapeRiichi,
 } from '@/lib/mahjongRiichi';
 import {
-  shouldAbortOnSuuchaRiichi,
-  shouldAbortOnSuufonRenda,
-  shouldAbortOnSuukaikan,
-} from '@/lib/riichiAbortiveDraw';
-import {
   applyAiRiichiState,
   chooseAiDefensiveDiscardWithMeta,
   shouldAiDeclareRiichi,
@@ -23,6 +18,7 @@ import { consumeTimeBankSeconds } from '@/lib/riichiClock';
 import { SEAT_NAMES } from '../constants';
 import { enrichWinResultWithUra } from '../gameLogic/winResult';
 import { clearSeatDoujunStates } from '../helpers';
+import { applyAbortiveDrawChecks } from '../shared/abortiveDrawChecks';
 import type { RiichiWinResult } from '../store/riichiGameStore';
 import type { RiichiGameState, RiichiMeld } from '../types';
 
@@ -387,46 +383,11 @@ export function useRiichiDrawAiFlow({
               ? `${SEAT_NAMES[p]} 立直宣言！（-1000 点）`
               : null,
           };
-          if (shouldAbortOnSuukaikan(nextState.melds)) {
-            addLogRef.current('流局（四开杠）');
+          const { state: afterAbortive } = applyAbortiveDrawChecks(nextState);
+          if (afterAbortive.ryuukyoku && afterAbortive.ryuukyokuReason) {
+            addLogRef.current(`流局（${afterAbortive.ryuukyokuReason}）`);
             sounds.playRyuukyoku();
-            return {
-              ...nextState,
-              phase: 'discard',
-              lastDiscard: null,
-              lastDiscardFrom: null,
-              claimIndex: 0,
-              ryuukyoku: true,
-              ryuukyokuReason: '四开杠',
-            };
-          }
-          if (shouldAbortOnSuuchaRiichi(nextState.riichiDeclared)) {
-            addLogRef.current('流局（四家立直）');
-            sounds.playRyuukyoku();
-            return {
-              ...nextState,
-              phase: 'discard',
-              lastDiscard: null,
-              lastDiscardFrom: null,
-              claimIndex: 0,
-              ryuukyoku: true,
-              ryuukyokuReason: '四家立直',
-            };
-          }
-          if (
-            shouldAbortOnSuufonRenda(nextState.discardPiles, nextState.melds)
-          ) {
-            addLogRef.current('流局（四风连打）');
-            sounds.playRyuukyoku();
-            return {
-              ...nextState,
-              phase: 'discard',
-              lastDiscard: null,
-              lastDiscardFrom: null,
-              claimIndex: 0,
-              ryuukyoku: true,
-              ryuukyokuReason: '四风连打',
-            };
+            return afterAbortive;
           }
           return nextState;
         }
@@ -488,31 +449,11 @@ export function useRiichiDrawAiFlow({
             ? `${SEAT_NAMES[p]} 立直宣言！（-1000 点）`
             : null,
         };
-        if (shouldAbortOnSuuchaRiichi(nextState.riichiDeclared)) {
-          addLogRef.current('流局（四家立直）');
+        const { state: afterAbortive } = applyAbortiveDrawChecks(nextState);
+        if (afterAbortive.ryuukyoku && afterAbortive.ryuukyokuReason) {
+          addLogRef.current(`流局（${afterAbortive.ryuukyokuReason}）`);
           sounds.playRyuukyoku();
-          return {
-            ...nextState,
-            phase: 'discard',
-            lastDiscard: null,
-            lastDiscardFrom: null,
-            claimIndex: 0,
-            ryuukyoku: true,
-            ryuukyokuReason: '四家立直',
-          };
-        }
-        if (shouldAbortOnSuufonRenda(nextState.discardPiles, nextState.melds)) {
-          addLogRef.current('流局（四风连打）');
-          sounds.playRyuukyoku();
-          return {
-            ...nextState,
-            phase: 'discard',
-            lastDiscard: null,
-            lastDiscardFrom: null,
-            claimIndex: 0,
-            ryuukyoku: true,
-            ryuukyokuReason: '四风连打',
-          };
+          return afterAbortive;
         }
         return nextState;
       });

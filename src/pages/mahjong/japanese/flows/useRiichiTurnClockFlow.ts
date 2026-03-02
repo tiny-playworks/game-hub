@@ -1,9 +1,5 @@
 import { type RefObject, useEffect, useRef } from 'react';
-import { getBaseTile, getTileLabel } from '@/lib/mahjongRiichi';
-import {
-  shouldAbortOnSuuchaRiichi,
-  shouldAbortOnSuufonRenda,
-} from '@/lib/riichiAbortiveDraw';
+import { getTileLabel } from '@/lib/mahjongRiichi';
 import { resolveClaimPass } from '@/lib/riichiClaimFlow';
 import { consumeTimeBankSeconds, isTurnTimeout } from '@/lib/riichiClock';
 import {
@@ -13,10 +9,12 @@ import {
 import { SEAT_NAMES } from '../constants';
 import {
   canSeatRonByRules,
-  clearSeatDoujunStates,
   getDecisionSeat,
   needsTimedDecision,
 } from '../helpers';
+import { applyAbortiveDrawChecks } from '../shared/abortiveDrawChecks';
+import { applyClaimPassToState } from '../shared/claimTransitions';
+import { buildStateAfterTimeoutDiscard } from '../shared/timeoutTransitions';
 import type { RiichiGameState } from '../types';
 
 type TurnClockRef = RefObject<{
@@ -114,112 +112,39 @@ export function useRiichiTurnClockFlow({
             )
           : g.furitenStates;
         const passResult = resolveClaimPass(g.claimIndex, g.wall.length);
-        if (passResult.type === 'next') {
-          addLogRef.current(`${SEAT_NAMES[player]} 要牌超时，自动过`);
-          turnClockRef.current = null;
-          return {
-            ...g,
-            timeBanks: nextBanks,
-            furitenStates: nextFuritenStates,
-            claimIndex: passResult.nextClaimIndex,
-            lastClaimMsg: `${SEAT_NAMES[player]} 超时自动过`,
-          };
-        }
-        const nextPlayer = (g.lastDiscardFrom + 1) % 4;
-        if (passResult.type === 'ryuukyoku') {
-          addLogRef.current(`${SEAT_NAMES[player]} 要牌超时，自动过（流局）`);
-          turnClockRef.current = null;
-          return {
-            ...g,
-            timeBanks: nextBanks,
-            furitenStates: nextFuritenStates,
-            phase: 'discard',
-            lastDiscard: null,
-            lastDiscardFrom: null,
-            claimIndex: 0,
-            currentPlayer: nextPlayer,
-            lastClaimMsg: `${SEAT_NAMES[player]} 超时自动过`,
-            ryuukyoku: true,
-            ryuukyokuReason: '荒牌',
-          };
-        }
-        const draw = g.wall[0];
-        const newWall = g.wall.slice(1);
-        const newHands = g.hands.map((h) => [...h]);
-        newHands[nextPlayer].push(draw);
-        newHands[nextPlayer].sort(
-          (a, b) => getBaseTile(a) - getBaseTile(b) || a - b,
-        );
-        addLogRef.current(`${SEAT_NAMES[player]} 要牌超时，自动过`);
-        turnClockRef.current = null;
-        return {
-          ...g,
+        const next = applyClaimPassToState(g, passResult, {
           timeBanks: nextBanks,
-          furitenStates: clearSeatDoujunStates(nextFuritenStates, nextPlayer),
-          hands: newHands,
-          wall: newWall,
-          phase: 'discard',
-          lastDiscard: null,
-          lastDiscardFrom: null,
-          claimIndex: 0,
-          currentPlayer: nextPlayer,
-          drawnTile: draw,
+          furitenStates: nextFuritenStates,
           lastClaimMsg: `${SEAT_NAMES[player]} 超时自动过`,
-        };
+        });
+        addLogRef.current(
+          passResult.type === 'ryuukyoku'
+            ? `${SEAT_NAMES[player]} 要牌超时，自动过（流局）`
+            : `${SEAT_NAMES[player]} 要牌超时，自动过`,
+        );
+        turnClockRef.current = null;
+        return next;
       }
       const toDiscard = g.drawnTile ?? g.hands[player][0];
       if (toDiscard === undefined) return g;
-      const hand = [...g.hands[player]];
-      const idx = hand.indexOf(toDiscard);
-      if (idx < 0) return g;
-      hand.splice(idx, 1);
-      const piles = g.discardPiles.map((q) => [...q]);
-      piles[player].push(toDiscard);
-      const nextPlayer = (player + 1) % 4;
       addLogRef.current(
         `${SEAT_NAMES[player]} 超时，自动打出 ${getTileLabel(toDiscard)}`,
       );
       const timeoutEvent = `${SEAT_NAMES[player]} 超时自动打出 ${getTileLabel(toDiscard)}`;
       turnClockRef.current = null;
-      const nextState: RiichiGameState = {
-        ...g,
-        timeoutEvents: [...g.timeoutEvents, timeoutEvent].slice(-20),
-        timeBanks: nextBanks,
-        hands: g.hands.map((h, i) => (i === player ? hand : h)),
-        discardPiles: piles,
-        currentPlayer: nextPlayer,
-        drawnTile: null,
-        phase: 'claim',
-        lastDiscard: toDiscard,
-        lastDiscardFrom: player,
-        claimIndex: 0,
-        lastClaimMsg: `${SEAT_NAMES[player]} 超时自动出牌`,
-      };
-      if (shouldAbortOnSuuchaRiichi(nextState.riichiDeclared)) {
-        addLogRef.current('流局（四家立直）');
-        return {
-          ...nextState,
-          phase: 'discard',
-          lastDiscard: null,
-          lastDiscardFrom: null,
-          claimIndex: 0,
-          ryuukyoku: true,
-          ryuukyokuReason: '四家立直',
-        };
+      const nextState = buildStateAfterTimeoutDiscard(
+        g,
+        player,
+        nextBanks,
+        toDiscard,
+        timeoutEvent,
+        `${SEAT_NAMES[player]} 超时自动出牌`,
+      );
+      const { state: afterAbortive } = applyAbortiveDrawChecks(nextState);
+      if (afterAbortive.ryuukyoku && afterAbortive.ryuukyokuReason) {
+        addLogRef.current(`流局（${afterAbortive.ryuukyokuReason}）`);
       }
-      if (shouldAbortOnSuufonRenda(nextState.discardPiles, nextState.melds)) {
-        addLogRef.current('流局（四风连打）');
-        return {
-          ...nextState,
-          phase: 'discard',
-          lastDiscard: null,
-          lastDiscardFrom: null,
-          claimIndex: 0,
-          ryuukyoku: true,
-          ryuukyokuReason: '四风连打',
-        };
-      }
-      return nextState;
+      return afterAbortive;
     });
   }, [clockNowMs, game, setGame, turnClockRef, addLogRef]);
 

@@ -1,16 +1,14 @@
 import { type RefObject, useCallback } from 'react';
 import { getBaseTile, getTileLabel } from '@/lib/mahjongRiichi';
-import {
-  shouldAbortOnSuuchaRiichi,
-  shouldAbortOnSuufonRenda,
-  shouldAbortOnSuukaikan,
-} from '@/lib/riichiAbortiveDraw';
+import { shouldAbortOnSuukaikan } from '@/lib/riichiAbortiveDraw';
 import { resolveClaimPass } from '@/lib/riichiClaimFlow';
 import {
   applyRonDeclinedFuriten,
   createInitialFuritenState,
 } from '@/lib/riichiFuriten';
 import { canSeatRonByRules, clearSeatDoujunStates } from '../helpers';
+import { applyAbortiveDrawChecks } from '../shared/abortiveDrawChecks';
+import { applyClaimPassToState } from '../shared/claimTransitions';
 import type { RiichiGameState } from '../types';
 
 type SetGame = (
@@ -68,32 +66,11 @@ export function useRiichiClaimActions({
         claimIndex: 0,
         lastClaimMsg: null,
       };
-      if (shouldAbortOnSuuchaRiichi(nextState.riichiDeclared)) {
-        addLog('流局（四家立直）');
+      const { state: afterAbortive } = applyAbortiveDrawChecks(nextState);
+      if (afterAbortive.ryuukyoku && afterAbortive.ryuukyokuReason) {
+        addLog(`流局（${afterAbortive.ryuukyokuReason}）`);
         sounds.playRyuukyoku();
-        setGame({
-          ...nextState,
-          phase: 'discard',
-          lastDiscard: null,
-          lastDiscardFrom: null,
-          claimIndex: 0,
-          ryuukyoku: true,
-          ryuukyokuReason: '四家立直',
-        });
-        return;
-      }
-      if (shouldAbortOnSuufonRenda(nextState.discardPiles, nextState.melds)) {
-        addLog('流局（四风连打）');
-        sounds.playRyuukyoku();
-        setGame({
-          ...nextState,
-          phase: 'discard',
-          lastDiscard: null,
-          lastDiscardFrom: null,
-          claimIndex: 0,
-          ryuukyoku: true,
-          ryuukyokuReason: '四风连打',
-        });
+        setGame(afterAbortive);
         return;
       }
       setGame(nextState);
@@ -118,57 +95,18 @@ export function useRiichiClaimActions({
         )
       : game.furitenStates;
     const passResult = resolveClaimPass(game.claimIndex, game.wall.length);
-    if (passResult.type === 'next') {
-      addLog('自家 过');
-      setGame({
-        ...game,
-        timeBanks: timedBanks,
-        furitenStates: nextFuritenStates,
-        claimIndex: passResult.nextClaimIndex,
-        lastClaimMsg: null,
-      });
-      return;
-    }
-    const nextPlayer = (game.lastDiscardFrom + 1) % 4;
-    if (passResult.type === 'ryuukyoku') {
-      addLog('流局（荒牌）');
-      setGame({
-        ...game,
-        timeBanks: timedBanks,
-        furitenStates: nextFuritenStates,
-        phase: 'discard',
-        lastDiscard: null,
-        lastDiscardFrom: null,
-        claimIndex: 0,
-        currentPlayer: nextPlayer,
-        lastClaimMsg: null,
-        ryuukyoku: true,
-        ryuukyokuReason: '荒牌',
-      });
-      return;
-    }
-    const draw = game.wall[0];
-    const newWall = game.wall.slice(1);
-    const newHands = game.hands.map((h) => [...h]);
-    newHands[nextPlayer].push(draw);
-    newHands[nextPlayer].sort(
-      (a, b) => getBaseTile(a) - getBaseTile(b) || a - b,
-    );
-    setGame({
-      ...game,
+    const next = applyClaimPassToState(game, passResult, {
       timeBanks: timedBanks,
-      hands: newHands,
-      wall: newWall,
-      furitenStates: clearSeatDoujunStates(nextFuritenStates, nextPlayer),
-      phase: 'discard',
-      lastDiscard: null,
-      lastDiscardFrom: null,
-      claimIndex: 0,
-      currentPlayer: nextPlayer,
-      drawnTile: draw,
+      furitenStates: nextFuritenStates,
       lastClaimMsg: null,
     });
-  }, [game, addLog, consumeSeatTimeBank, setGame, turnClockRef]);
+    if (next.ryuukyoku && next.ryuukyokuReason === '荒牌') {
+      addLog('流局（荒牌）');
+    } else {
+      addLog('自家 过');
+    }
+    setGame(next);
+  }, [game, addLog, setGame, consumeSeatTimeBank, turnClockRef]);
 
   const doChi = useCallback(
     (option: [number, number]) => {
