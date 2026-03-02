@@ -19,6 +19,7 @@ import { SEAT_NAMES } from '../constants';
 import { enrichWinResultWithUra } from '../gameLogic/winResult';
 import { clearSeatDoujunStates } from '../helpers';
 import { applyAbortiveDrawChecks } from '../shared/abortiveDrawChecks';
+import { getRng, getScheduler } from '../shared/flowDeps';
 import type { RiichiWinResult } from '../store/riichiGameStore';
 import type { RiichiGameState, RiichiMeld } from '../types';
 
@@ -75,6 +76,8 @@ interface UseRiichiDrawAiFlowParams {
   getWaitingTilesRiichi: GetWaitingTilesRiichi;
   getElapsedSecondsForSeat: GetElapsedSecondsForSeat;
   turnClockRef: TurnClockRef;
+  /** 可选：注入 rng/schedule 便于测试 */
+  flowDeps?: import('../shared/flowDeps').RiichiFlowDeps | null;
 }
 
 export function useRiichiDrawAiFlow({
@@ -88,7 +91,10 @@ export function useRiichiDrawAiFlow({
   getWaitingTilesRiichi,
   getElapsedSecondsForSeat,
   turnClockRef,
+  flowDeps,
 }: UseRiichiDrawAiFlowParams) {
+  const rng = getRng(flowDeps);
+  const schedule = getScheduler(flowDeps);
   useEffect(() => {
     if (
       !game ||
@@ -249,7 +255,7 @@ export function useRiichiDrawAiFlow({
     )
       return;
     const p = game.currentPlayer;
-    const tid = setTimeout(() => {
+    const cancel = schedule(() => {
       setGame((g) => {
         if (!g || g.currentPlayer !== p || g.drawnTile === null) return g;
         const hand = [...g.hands[p]];
@@ -302,11 +308,11 @@ export function useRiichiDrawAiFlow({
             isTsumo: false,
             treatAsRiichi: true,
           }).length,
-          random: Math.random(),
+          random: rng(),
         });
 
         const angOpts = getAngangOptionsRiichi(hand);
-        if (angOpts.length > 0 && g.wall.length > 0 && Math.random() < 0.2) {
+        if (angOpts.length > 0 && g.wall.length > 0 && rng() < 0.2) {
           const fourTiles = [...angOpts[0]];
           const consumed = [...fourTiles];
           const h = hand.filter((t) => {
@@ -458,6 +464,6 @@ export function useRiichiDrawAiFlow({
         return nextState;
       });
     }, 500);
-    return () => clearTimeout(tid);
+    return () => cancel();
   }, [game?.currentPlayer, game?.drawnTile, game]);
 }

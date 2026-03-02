@@ -23,6 +23,7 @@ import { SEAT_NAMES } from '../constants';
 import { enrichWinResultWithUra } from '../gameLogic/winResult';
 import { clearSeatDoujunStates, getSeatWind } from '../helpers';
 import { applyClaimPassToState } from '../shared/claimTransitions';
+import { getRng, getScheduler } from '../shared/flowDeps';
 import type { RiichiWinResult } from '../store/riichiGameStore';
 import type { RiichiGameState } from '../types';
 
@@ -64,6 +65,8 @@ interface UseRiichiClaimFlowParams {
   canRon: boolean;
   buildYakuCtx: BuildYakuCtx;
   isSeatFuriten: IsSeatFuriten;
+  /** 可选：注入 rng/schedule 便于测试 */
+  flowDeps?: import('../shared/flowDeps').RiichiFlowDeps | null;
 }
 
 export function useRiichiClaimFlow({
@@ -77,7 +80,10 @@ export function useRiichiClaimFlow({
   canRon,
   buildYakuCtx,
   isSeatFuriten,
+  flowDeps,
 }: UseRiichiClaimFlowParams) {
+  const rng = getRng(flowDeps);
+  const schedule = getScheduler(flowDeps);
   useEffect(() => {
     if (
       !game ||
@@ -180,7 +186,7 @@ export function useRiichiClaimFlow({
     const forcedPengDiscard =
       claimDefensePlan?.action === 'peng' ? claimDefensePlan.discardTile : null;
     const allowRandomClaim = !foldClaimByRiichi;
-    const tid = setTimeout(() => {
+    const cancel = schedule(() => {
       if (aiCanRon) {
         const yaku = ronCtx ? computeYaku(ronCtx) : [];
         const han = getTotalHan(yaku);
@@ -217,7 +223,7 @@ export function useRiichiClaimFlow({
       }
       if (
         (forcedChiOption || chiOpts.length > 0) &&
-        (forcedChiOption || (allowRandomClaim && Math.random() < 0.6))
+        (forcedChiOption || (allowRandomClaim && rng() < 0.6))
       ) {
         const [a, b] = forcedChiOption ?? chiOpts[0];
         const hands = game.hands.map((h) => [...h]);
@@ -273,8 +279,7 @@ export function useRiichiClaimFlow({
       }
       if (
         (forcedPengDiscard !== null || peng) &&
-        (forcedPengDiscard !== null ||
-          (allowRandomClaim && Math.random() < 0.4))
+        (forcedPengDiscard !== null || (allowRandomClaim && rng() < 0.4))
       ) {
         const base = getBaseTile(last);
         const h = [...game.hands[p]];
@@ -322,7 +327,7 @@ export function useRiichiClaimFlow({
           return;
         }
       }
-      if (gang && Math.random() < 0.3 && game.wall.length > 0) {
+      if (gang && rng() < 0.3 && game.wall.length > 0) {
         const base = getBaseTile(last);
         const h = [...game.hands[p]];
         const indices: number[] = [];
@@ -401,7 +406,7 @@ export function useRiichiClaimFlow({
         return next;
       });
     }, 400);
-    return () => clearTimeout(tid);
+    return () => cancel();
   }, [
     game?.phase,
     game?.claimIndex,

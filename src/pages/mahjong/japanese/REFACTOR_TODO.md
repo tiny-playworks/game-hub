@@ -50,14 +50,10 @@
 
 ## P6 - 可测试性增强
 
-- [ ] 将随机与延时从流程中可注入化（默认仍用 `Math.random` / `setTimeout`）
-  - 例如注入：
-    - `rng(): number`
-    - `schedule(fn, ms): () => void`
-- [ ] 给关键路径补单测（建议先补纯函数层）
-  - 超时自动出牌
-  - claim pass -> next / draw / ryuukyoku
-  - abortive draw 检查顺序
+- [x] 将随机与延时从流程中可注入化（默认仍用 `Math.random` / `setTimeout`）
+  - 已实现：`shared/flowDeps.ts` 的 `RiichiFlowDeps`（`rng`、`schedule`），`getRng`/`getScheduler`；`useRiichiClaimFlow`、`useRiichiDrawAiFlow` 支持可选 `flowDeps` 参数
+- [x] 给关键路径补单测（建议先补纯函数层）
+  - 已实现：`tests/riichi-japanese-shared.test.ts` 覆盖 `applyClaimPassToState`（next/ryuukyoku/draw、opts）、`buildStateAfterTimeoutDiscard`、`appendTimeoutEvent`、`applyAbortiveDrawChecks`（顺序与无命中）
 
 **完成标准**
 - 新增测试覆盖关键状态转移路径；
