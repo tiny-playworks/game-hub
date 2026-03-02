@@ -9,7 +9,16 @@ type Props = {
 export function GameInfoBar({ game }: Props) {
   return (
     <>
-      <div className="mb-3 rounded-lg border border-[#d4b886]/30 bg-[#1a2e25]/70 px-3 py-2 text-xs text-[#f1faee]/90">
+      <div
+        className="mb-3 rounded-lg border px-3 py-2 text-xs opacity-90"
+        style={{
+          borderColor:
+            'color-mix(in srgb, var(--riichi-border) 30%, transparent)',
+          backgroundColor:
+            'color-mix(in srgb, var(--riichi-table-inner) 70%, transparent)',
+          color: 'var(--riichi-text)',
+        }}
+      >
         {SEAT_NAMES.map((name, i) => (
           <span key={name}>
             {i > 0 && ' · '}

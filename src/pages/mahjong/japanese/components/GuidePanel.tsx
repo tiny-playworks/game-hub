@@ -6,7 +6,9 @@ export function GuidePanel({ onClose }: Props) {
   return (
     <div className="mb-4 p-4 bg-[#1d3557]/80 rounded-xl border border-[#457b9d]/50">
       <div className="flex justify-between items-start mb-2">
-        <h3 className="text-lg font-bold text-[#a8dadc]">新人玩家指南</h3>
+        <h3 id="guide-title" className="text-lg font-bold text-[#a8dadc]">
+          新人玩家指南
+        </h3>
         <button
           type="button"
           onClick={onClose}

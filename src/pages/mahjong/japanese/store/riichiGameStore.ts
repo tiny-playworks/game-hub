@@ -65,7 +65,7 @@ export const useRiichiGameStore = createWithEqualityFn<RiichiGameStore>()(
       gameLog: [],
       logOpen: false,
       winResult: null,
-      showGuide: true,
+      showGuide: false,
       declinedRonToken: null,
       clockNowMs: Date.now(),
       matchEnd: null,

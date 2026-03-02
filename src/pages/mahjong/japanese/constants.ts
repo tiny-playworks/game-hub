@@ -4,6 +4,14 @@ import { RIICHI_INITIAL_POINTS } from '@/lib/riichiSettlement';
 export const SEAT_NAMES = ['自家', '下家', '对家', '上家'];
 export const WIND_NAMES = ['东', '南', '西', '北'];
 
+export type RiichiThemeId = 'green' | 'blue' | 'warm';
+export const RIICHI_THEMES: { id: RiichiThemeId; label: string }[] = [
+  { id: 'green', label: '绿桌' },
+  { id: 'blue', label: '蓝桌' },
+  { id: 'warm', label: '暖桌' },
+];
+export const RIICHI_THEME_STORAGE_KEY = 'game-hub-riichi-theme';
+
 export const TILE_HAND =
   'w-[70px] h-[96px] rounded-[6px] border-2 bg-[#fff9e6] flex items-center justify-center shrink-0 font-black text-2xl transition-all duration-200';
 export const TILE_DISCARD =

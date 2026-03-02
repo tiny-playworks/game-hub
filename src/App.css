@@ -305,3 +305,49 @@ body {
 .animate-riichi-active-pulse {
   animation: riichi-active-pulse 1.2s ease-in-out infinite;
 }
+
+/* 日麻多主题：通过 data-riichi-theme 切换，子元素用 var(--riichi-*) */
+[data-riichi-theme="green"] {
+  --riichi-bg: #1a2e25;
+  --riichi-bg-to: #152019;
+  --riichi-text: #f1faee;
+  --riichi-text-muted: #a8dadc;
+  --riichi-table: #2d4a3c;
+  --riichi-table-inner: #1a2e25;
+  --riichi-border: #d4b886;
+  --riichi-accent: #ffc107;
+  --riichi-accent-soft: rgba(255, 193, 7, 0.1);
+  --riichi-btn-primary: #d4b886;
+  --riichi-btn-primary-text: #1a2e25;
+  --riichi-btn-primary-hover: #e5c997;
+}
+
+[data-riichi-theme="blue"] {
+  --riichi-bg: #0f172a;
+  --riichi-bg-to: #020617;
+  --riichi-text: #e0f2fe;
+  --riichi-text-muted: #7dd3fc;
+  --riichi-table: #1e3a5f;
+  --riichi-table-inner: #0f172a;
+  --riichi-border: #60a5fa;
+  --riichi-accent: #38bdf8;
+  --riichi-accent-soft: rgba(56, 189, 248, 0.12);
+  --riichi-btn-primary: #60a5fa;
+  --riichi-btn-primary-text: #0f172a;
+  --riichi-btn-primary-hover: #93c5fd;
+}
+
+[data-riichi-theme="warm"] {
+  --riichi-bg: #29201a;
+  --riichi-bg-to: #1c1612;
+  --riichi-text: #faf5f0;
+  --riichi-text-muted: #d4b896;
+  --riichi-table: #3d2e24;
+  --riichi-table-inner: #2a211a;
+  --riichi-border: #d4a574;
+  --riichi-accent: #e5c997;
+  --riichi-accent-soft: rgba(229, 201, 151, 0.15);
+  --riichi-btn-primary: #d4a574;
+  --riichi-btn-primary-text: #1c1612;
+  --riichi-btn-primary-hover: #e5c997;
+}

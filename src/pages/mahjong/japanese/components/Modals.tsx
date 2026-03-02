@@ -61,27 +61,43 @@ export function WinModal({
       role="presentation"
     >
       <div
-        className="rounded-2xl bg-[#2d4a3c] border-2 border-[#d4b886] p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in"
+        className="rounded-2xl border-2 p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in"
+        style={{
+          backgroundColor: 'var(--riichi-table)',
+          borderColor: 'var(--riichi-border)',
+        }}
         role="dialog"
         aria-modal="true"
         aria-labelledby="riichi-win-title"
       >
         <h3
           id="riichi-win-title"
-          className="text-xl font-bold text-[#ffc107] text-center mb-3"
+          className="text-xl font-bold text-center mb-3"
+          style={{ color: 'var(--riichi-accent)' }}
         >
           {winResult.isTsumo ? '自摸！' : '荣和！'}
         </h3>
         {winResult.ten != null && (
-          <p className="text-center text-[#ffc107] font-semibold mb-2">
+          <p
+            className="text-center font-semibold mb-2"
+            style={{ color: 'var(--riichi-accent)' }}
+          >
             {winResult.fu != null && winResult.han != null
               ? `${winResult.fu} 符 ${winResult.han} 番 · `
               : ''}
             {winResult.ten} 点
           </p>
         )}
-        <p className="text-sm text-[#f1faee]/90 mb-2">役种：</p>
-        <ul className="list-disc list-inside text-sm text-[#f1faee] space-y-1 mb-4">
+        <p
+          className="text-sm mb-2 opacity-90"
+          style={{ color: 'var(--riichi-text)' }}
+        >
+          役种：
+        </p>
+        <ul
+          className="list-disc list-inside text-sm space-y-1 mb-4"
+          style={{ color: 'var(--riichi-text)' }}
+        >
           {winResult.yaku.map((y, i) => (
             <li key={i}>
               {y.name} {y.han}番
@@ -101,7 +117,16 @@ export function WinModal({
             </p>
           )}
         {winSettlementPreview && (
-          <div className="mb-4 rounded-lg border border-[#d4b886]/40 bg-[#1a2e25]/70 p-3 text-xs text-[#f1faee]/90 space-y-1">
+          <div
+            className="mb-4 rounded-lg border p-3 text-xs space-y-1 opacity-90"
+            style={{
+              borderColor:
+                'color-mix(in srgb, var(--riichi-border) 40%, transparent)',
+              backgroundColor:
+                'color-mix(in srgb, var(--riichi-table-inner) 70%, transparent)',
+              color: 'var(--riichi-text)',
+            }}
+          >
             {winnerPaymentSummary && (
               <p>
                 本局收入： 和牌基础 +{winnerPaymentSummary.base}
@@ -150,7 +175,11 @@ export function WinModal({
           </div>
         )}
         <Button
-          className="w-full bg-[#d4b886] text-[#1a2e25] hover:bg-[#e5c997] font-semibold"
+          className="w-full font-semibold"
+          style={{
+            backgroundColor: 'var(--riichi-btn-primary)',
+            color: 'var(--riichi-btn-primary-text)',
+          }}
           onClick={onNext}
         >
           下一局
@@ -180,22 +209,39 @@ export function RyuukyokuModal({
       role="presentation"
     >
       <div
-        className="rounded-2xl bg-[#2d4a3c] border-2 border-[#d4b886] p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in"
+        className="rounded-2xl border-2 p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in"
+        style={{
+          backgroundColor: 'var(--riichi-table)',
+          borderColor: 'var(--riichi-border)',
+        }}
         role="dialog"
         aria-modal="true"
         aria-labelledby="riichi-ryuukyoku-title"
       >
         <h3
           id="riichi-ryuukyoku-title"
-          className="text-xl font-bold text-amber-200 text-center mb-3"
+          className="text-xl font-bold text-center mb-3"
+          style={{ color: 'var(--riichi-accent)' }}
         >
           流局（{getRyuukyokuReasonText(ryuukyokuReason)}）
         </h3>
-        <p className="text-sm text-[#f1faee]/90 mb-2 text-center">
+        <p
+          className="text-sm mb-2 text-center opacity-90"
+          style={{ color: 'var(--riichi-text)' }}
+        >
           {getRyuukyokuDescription(ryuukyokuReason)}
         </p>
         {drawSettlementPreview && (
-          <div className="mb-4 rounded-lg border border-[#d4b886]/40 bg-[#1a2e25]/70 p-3 text-xs text-[#f1faee]/90 space-y-1">
+          <div
+            className="mb-4 rounded-lg border p-3 text-xs space-y-1 opacity-90"
+            style={{
+              borderColor:
+                'color-mix(in srgb, var(--riichi-border) 40%, transparent)',
+              backgroundColor:
+                'color-mix(in srgb, var(--riichi-table-inner) 70%, transparent)',
+              color: 'var(--riichi-text)',
+            }}
+          >
             {reasonText === '荒牌' ? (
               <p>
                 听牌：
@@ -226,7 +272,11 @@ export function RyuukyokuModal({
           </div>
         )}
         <Button
-          className="w-full bg-[#d4b886] text-[#1a2e25] hover:bg-[#e5c997] font-semibold"
+          className="w-full font-semibold"
+          style={{
+            backgroundColor: 'var(--riichi-btn-primary)',
+            color: 'var(--riichi-btn-primary-text)',
+          }}
           onClick={onNext}
         >
           下一局
@@ -248,21 +298,38 @@ export function MatchEndModal({ matchEnd, onRestart }: MatchEndModalProps) {
       role="presentation"
     >
       <div
-        className="rounded-2xl bg-[#2d4a3c] border-2 border-[#d4b886] p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in"
+        className="rounded-2xl border-2 p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in"
+        style={{
+          backgroundColor: 'var(--riichi-table)',
+          borderColor: 'var(--riichi-border)',
+        }}
         role="dialog"
         aria-modal="true"
         aria-labelledby="riichi-match-end-title"
       >
         <h3
           id="riichi-match-end-title"
-          className="text-xl font-bold text-amber-200 text-center mb-2"
+          className="text-xl font-bold text-center mb-2"
+          style={{ color: 'var(--riichi-accent)' }}
         >
           对局结束
         </h3>
-        <p className="text-sm text-[#f1faee]/90 mb-3 text-center">
+        <p
+          className="text-sm mb-3 text-center opacity-90"
+          style={{ color: 'var(--riichi-text)' }}
+        >
           {getMatchEndReasonText(matchEnd.reason)}
         </p>
-        <div className="mb-4 rounded-lg border border-[#d4b886]/40 bg-[#1a2e25]/70 p-3 text-xs text-[#f1faee]/90 space-y-1">
+        <div
+          className="mb-4 rounded-lg border p-3 text-xs space-y-1 opacity-90"
+          style={{
+            borderColor:
+              'color-mix(in srgb, var(--riichi-border) 40%, transparent)',
+            backgroundColor:
+              'color-mix(in srgb, var(--riichi-table-inner) 70%, transparent)',
+            color: 'var(--riichi-text)',
+          }}
+        >
           {matchEnd.ranking.map((seat, i) => (
             <p key={seat}>
               {i + 1}位：{SEAT_NAMES[seat]}{' '}
@@ -271,7 +338,11 @@ export function MatchEndModal({ matchEnd, onRestart }: MatchEndModalProps) {
           ))}
         </div>
         <Button
-          className="w-full bg-[#d4b886] text-[#1a2e25] hover:bg-[#e5c997] font-semibold"
+          className="w-full font-semibold"
+          style={{
+            backgroundColor: 'var(--riichi-btn-primary)',
+            color: 'var(--riichi-btn-primary-text)',
+          }}
           onClick={onRestart}
         >
           再来一局
