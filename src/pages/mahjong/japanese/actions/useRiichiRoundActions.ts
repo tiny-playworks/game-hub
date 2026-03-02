@@ -1,4 +1,4 @@
-import { type RefObject, useCallback } from 'react';
+import { useCallback } from 'react';
 import { rankSeatsByScore, resolveRiichiMatchEnd } from '@/lib/riichiGameEnd';
 import {
   type PaymentDetail,
@@ -14,74 +14,25 @@ import {
   getNextRound,
   getTenpaiSeatsForDraw,
 } from '../helpers';
-import type { RiichiMatchEnd, RiichiWinResult } from '../store/riichiGameStore';
-import type { RiichiGameState, RiichiMeld } from '../types';
+import type { RiichiRoundContext } from '../shared/riichiRoundContext';
 
-type SetGame = (
-  updater:
-    | RiichiGameState
-    | null
-    | ((prev: RiichiGameState | null) => RiichiGameState | null),
-) => void;
-
-type SetWinResult = (
-  updater:
-    | RiichiWinResult
-    | null
-    | ((prev: RiichiWinResult | null) => RiichiWinResult | null),
-) => void;
-
-type SetMatchEnd = (
-  updater:
-    | RiichiMatchEnd
-    | null
-    | ((prev: RiichiMatchEnd | null) => RiichiMatchEnd | null),
-) => void;
-
-type GetWaitingTilesFn = (
-  hand: number[],
-  melds: RiichiMeld[],
-  gameState?: RiichiGameState | null,
-  options?: { seat?: number; isTsumo?: boolean; treatAsRiichi?: boolean },
-) => number[];
-
-type UseRiichiRoundActionsParams = {
-  history: RiichiGameState[];
-  matchLength: 'east' | 'south';
-  game: RiichiGameState | null;
-  winResult: RiichiWinResult | null;
-  setView: (view: 'rules' | 'game') => void;
-  setGame: SetGame;
-  setHistory: (
-    updater:
-      | RiichiGameState[]
-      | ((prev: RiichiGameState[]) => RiichiGameState[]),
-  ) => void;
-  setGameLog: (updater: string[] | ((prev: string[]) => string[])) => void;
-  setWinResult: SetWinResult;
-  setMatchEnd: SetMatchEnd;
-  setDeclinedRonToken: (token: string | null) => void;
-  undoingRef: RefObject<boolean>;
-  addLog: (msg: string) => void;
-  getWaitingTilesRiichi: GetWaitingTilesFn;
-};
-
-export function useRiichiRoundActions({
-  history,
-  matchLength,
-  game,
-  winResult,
-  setView,
-  setGame,
-  setHistory,
-  setGameLog,
-  setWinResult,
-  setMatchEnd,
-  setDeclinedRonToken,
-  undoingRef,
-  addLog,
-  getWaitingTilesRiichi,
-}: UseRiichiRoundActionsParams) {
+export function useRiichiRoundActions(ctx: RiichiRoundContext) {
+  const {
+    history,
+    matchLength,
+    game,
+    winResult,
+    setView,
+    setGame,
+    setHistory,
+    setGameLog,
+    setWinResult,
+    setMatchEnd,
+    setDeclinedRonToken,
+    undoingRef,
+    addLog,
+    getWaitingTilesRiichi,
+  } = ctx;
   const undo = useCallback(() => {
     if (history.length === 0) return;
     const prev = history[history.length - 1];

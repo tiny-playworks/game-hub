@@ -12,7 +12,6 @@ import {
   hasYaku,
   isWinShapeRiichi,
 } from '@/lib/mahjongRiichi';
-import { shouldAbortOnSuukaikan } from '@/lib/riichiAbortiveDraw';
 import {
   canAiRonOnClaim,
   chooseAiClaimActionAgainstRiichi,
@@ -22,6 +21,7 @@ import { resolveClaimPass } from '@/lib/riichiClaimFlow';
 import { SEAT_NAMES } from '../constants';
 import { enrichWinResultWithUra } from '../gameLogic/winResult';
 import { clearSeatDoujunStates, getSeatWind } from '../helpers';
+import { applyAbortiveDrawChecks } from '../shared/abortiveDrawChecks';
 import { applyClaimPassToState } from '../shared/claimTransitions';
 import { getRng, getScheduler } from '../shared/flowDeps';
 import type { RiichiRuntimeContext } from '../shared/riichiRuntimeContext';
@@ -315,24 +315,28 @@ export function useRiichiClaimFlow(
           const pilesGang = game.discardPiles.map((q) => [...q]);
           if (pilesGang[from].length > 0) pilesGang[from].pop();
           addLogRef.current(`${SEAT_NAMES[p]} 杠了 ${getTileLabel(last)}`);
-          if (shouldAbortOnSuukaikan(melds)) {
+          const stateForAbortive: RiichiGameState = {
+            ...game,
+            hands: game.hands.map((h0, i) => (i === p ? handAfterKan : h0)),
+            melds,
+            discardPiles: pilesGang,
+            phase: 'discard',
+            lastDiscard: null,
+            lastDiscardFrom: null,
+            claimIndex: 0,
+            currentPlayer: p,
+            drawnTile: null,
+            lastClaimMsg: null,
+          };
+          const { state: afterAbortive } =
+            applyAbortiveDrawChecks(stateForAbortive);
+          if (
+            afterAbortive.ryuukyoku &&
+            afterAbortive.ryuukyokuReason === '四开杠'
+          ) {
             addLogRef.current('流局（四开杠）');
             sounds.playRyuukyoku();
-            setGame({
-              ...game,
-              hands: game.hands.map((h0, i) => (i === p ? handAfterKan : h0)),
-              melds,
-              discardPiles: pilesGang,
-              phase: 'discard',
-              lastDiscard: null,
-              lastDiscardFrom: null,
-              claimIndex: 0,
-              currentPlayer: p,
-              drawnTile: null,
-              lastClaimMsg: null,
-              ryuukyoku: true,
-              ryuukyokuReason: '四开杠',
-            });
+            setGame(afterAbortive);
             return;
           }
           setGame({

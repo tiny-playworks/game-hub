@@ -14,6 +14,7 @@ import { useRiichiClaimFlow } from './flows/useRiichiClaimFlow';
 import { useRiichiDrawAiFlow } from './flows/useRiichiDrawAiFlow';
 import { useRiichiTurnClockFlow } from './flows/useRiichiTurnClockFlow';
 import { getSeatWind } from './helpers';
+import type { RiichiRoundContext } from './shared/riichiRoundContext';
 import type { RiichiRuntimeContext } from './shared/riichiRuntimeContext';
 import { useRiichiGameStore } from './store/riichiGameStore';
 import type { RiichiGameState, RiichiMeld } from './types';
@@ -261,23 +262,25 @@ export function useRiichiGame() {
     currentClaimToken,
   });
 
+  const riichiRoundContext: RiichiRoundContext = {
+    history,
+    matchLength,
+    game,
+    winResult,
+    setView,
+    setGame,
+    setHistory,
+    setGameLog,
+    setWinResult,
+    setMatchEnd,
+    setDeclinedRonToken,
+    undoingRef,
+    addLog,
+    getWaitingTilesRiichi,
+  };
+
   const { undo, startGame, proceedToNextRound, proceedAfterRyuukyoku } =
-    useRiichiRoundActions({
-      history,
-      matchLength,
-      game,
-      winResult,
-      setView,
-      setGame,
-      setHistory,
-      setGameLog,
-      setWinResult,
-      setMatchEnd,
-      setDeclinedRonToken,
-      undoingRef,
-      addLog,
-      getWaitingTilesRiichi,
-    });
+    useRiichiRoundActions(riichiRoundContext);
 
   useRiichiClaimFlow(riichiContext, {
     claimPlayer,
