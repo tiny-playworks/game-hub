@@ -13,7 +13,7 @@ import { OpponentSeat } from './components/OpponentSeat';
 import { RulesView } from './components/RulesView';
 import { StatusPanel } from './components/StatusPanel';
 import { getTileColorClass, RiichiTileFace } from './components/Tile';
-import { SEAT_NAMES, TILE_ACTIVE, TILE_HAND } from './constants';
+import { SEAT_NAMES, TILE_ACTIVE, TILE_HAND, TILE_DISCARD } from './constants';
 import { useRiichiGame } from './useRiichiGame';
 import { useRiichiTheme } from './useRiichiTheme';
 
@@ -509,7 +509,8 @@ const GameMahjongJapanese = () => {
                       <span
                         key={j}
                         className={cn(
-                          'w-[44px] h-[60px] rounded flex items-center justify-center font-bold text-sm',
+                          TILE_DISCARD,
+                          'w-[44px] h-[60px] text-lg',
                           getTileColorClass(t),
                         )}
                       >

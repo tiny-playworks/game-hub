@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { SEAT_NAMES, WIND_NAMES } from '../constants';
+import { SEAT_NAMES, WIND_NAMES, TILE_DISCARD } from '../constants';
 import { formatPoints, getSeatWind } from '../helpers';
 import type { RiichiGameState } from '../types';
 import { getTileColorClass, RiichiTileFace, TileBack } from './Tile';
@@ -106,7 +106,8 @@ export function OpponentSeat({
                   <span
                     style={tileStyle}
                     className={cn(
-                      'inline-flex items-center justify-center w-[32px] h-[42px] rounded',
+                      TILE_DISCARD,
+                      'w-[32px] h-[42px]',
                       getTileColorClass(t),
                     )}
                   >

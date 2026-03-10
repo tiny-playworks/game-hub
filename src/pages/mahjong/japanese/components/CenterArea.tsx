@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { SEAT_NAMES, WIND_NAMES } from '../constants';
+import { SEAT_NAMES, WIND_NAMES, TILE_DISCARD } from '../constants';
 import { getSeatWind } from '../helpers';
 import type { RiichiGameState } from '../types';
 import { getTileColorClass, RiichiTileFace } from './Tile';
@@ -70,7 +70,8 @@ export function CenterArea({ game }: Props) {
               <span
                 key={i}
                 className={cn(
-                  'w-[36px] h-[48px] rounded border-2 bg-[#fff9e6] flex items-center justify-center font-black text-xs shrink-0',
+                  TILE_DISCARD,
+                  'w-[36px] h-[48px] text-[10px]',
                   getTileColorClass(ind),
                 )}
                 title="宝牌"
@@ -130,8 +131,8 @@ export function CenterArea({ game }: Props) {
                 <span
                   key={`${seat}-${i}`}
                   className={cn(
-                    'inline-flex items-center justify-center flex-shrink-0 rounded border-2 bg-[#fff9e6] font-black text-xs',
-                    'w-[42px] h-[56px]',
+                    TILE_DISCARD,
+                    'w-[38px] h-[52px]',
                     getTileColorClass(t),
                   )}
                   style={{ transform: `rotate(${rot}deg)` }}

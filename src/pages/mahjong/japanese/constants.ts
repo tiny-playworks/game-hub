@@ -12,12 +12,9 @@ export const RIICHI_THEMES: { id: RiichiThemeId; label: string }[] = [
 ];
 export const RIICHI_THEME_STORAGE_KEY = 'game-hub-riichi-theme';
 
-export const TILE_HAND =
-  'w-[70px] h-[96px] rounded-[6px] border-2 bg-[#fff9e6] flex items-center justify-center shrink-0 font-black text-2xl transition-all duration-200';
-export const TILE_DISCARD =
-  'w-[50px] h-[68px] rounded-[6px] border-2 bg-[#fff9e6] flex items-center justify-center shrink-0 font-black text-sm transition-all duration-200';
-export const TILE_ACTIVE =
-  'border-[#ffc107] border-[3px] -translate-y-3 shadow-xl ring-2 ring-[#ffc107]/60 animate-riichi-active-pulse';
+export const TILE_HAND = 'riichi-tile-hand shrink-0 cursor-pointer';
+export const TILE_DISCARD = 'riichi-tile-discard shrink-0';
+export const TILE_ACTIVE = 'riichi-tile-active';
 
 export const MAX_HISTORY = 40;
 export const MAX_LOG = 150;
