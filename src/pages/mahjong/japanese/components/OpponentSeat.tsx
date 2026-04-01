@@ -5,10 +5,11 @@ import type { RiichiGameState } from '../types';
 import { getTileColorClass, RiichiTileFace, TileBack } from './Tile';
 
 /** 对家与自家一致（横排）；上下两家宽高互换、牌竖排成一条（红框） */
-const HAND_TILE_W = 28;
-const HAND_TILE_H = 38;
-const MELD_TILE_W = 32;
-const MELD_TILE_H = 42;
+/** 与 .riichi-tile-discard 视觉尺度一致（约 26×37） */
+const HAND_TILE_W = 26;
+const HAND_TILE_H = 37;
+const MELD_TILE_W = 26;
+const MELD_TILE_H = 37;
 
 function slotSize(
   seat: 1 | 2 | 3,
@@ -47,7 +48,8 @@ export function OpponentSeat({
   return (
     <div
       className={cn(
-        'rounded-lg px-2 py-1.5 flex flex-col items-center justify-center min-h-0',
+        'rounded-lg px-2 py-1.5 flex flex-col items-center justify-center min-h-0 overflow-visible',
+        isVertical && 'px-1.5 md:px-2',
         isCurrentTurn && 'bg-[#ffc107]/10 border border-[#ffc107]/40',
       )}
     >
@@ -65,7 +67,7 @@ export function OpponentSeat({
       {game.hands[seat].length > 0 && (
         <div
           className={cn(
-            'flex justify-center gap-0.5 mt-0.5',
+            'flex justify-center gap-0.5 mt-0.5 overflow-visible',
             isVertical ? 'flex-col items-center' : 'flex-wrap',
           )}
         >
@@ -76,7 +78,7 @@ export function OpponentSeat({
               style={{ width: handSlot.width, height: handSlot.height }}
             >
               <span style={tileStyle} className="inline-flex">
-                <TileBack className="w-[28px] h-[38px] text-[6px]" />
+                <TileBack className="w-[26px] h-[37px] text-[5px]" />
               </span>
             </span>
           ))}
@@ -105,11 +107,7 @@ export function OpponentSeat({
                 >
                   <span
                     style={tileStyle}
-                    className={cn(
-                      TILE_DISCARD,
-                      'w-[32px] h-[42px]',
-                      getTileColorClass(t),
-                    )}
+                    className={cn(TILE_DISCARD, getTileColorClass(t))}
                   >
                     <RiichiTileFace tile={t} />
                   </span>

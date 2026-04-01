@@ -69,11 +69,7 @@ export function CenterArea({ game }: Props) {
             {game.doraIndicators.map((ind, i) => (
               <span
                 key={i}
-                className={cn(
-                  TILE_DISCARD,
-                  'w-[36px] h-[48px] text-[10px]',
-                  getTileColorClass(ind),
-                )}
+                className={cn(TILE_DISCARD, getTileColorClass(ind))}
                 title="宝牌"
               >
                 <RiichiTileFace tile={ind} />
@@ -130,11 +126,7 @@ export function CenterArea({ game }: Props) {
               {tiles.map((t, i) => (
                 <span
                   key={`${seat}-${i}`}
-                  className={cn(
-                    TILE_DISCARD,
-                    'w-[38px] h-[52px]',
-                    getTileColorClass(t),
-                  )}
+                  className={cn(TILE_DISCARD, getTileColorClass(t))}
                   style={{ transform: `rotate(${rot}deg)` }}
                 >
                   <RiichiTileFace tile={t} />

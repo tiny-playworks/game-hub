@@ -129,85 +129,96 @@ const GameMahjongJapanese = () => {
       <main className="mx-auto max-w-6xl w-full p-3 md:p-4 flex flex-col flex-1 min-h-0">
         <GameInfoBar game={game} />
         {/* 牌桌区撑满视口，无滚动条；手牌区固定底部 */}
-        <div className="flex-1 min-h-0 flex flex-col gap-2">
-          <div
-            className="flex-1 min-h-0 overflow-hidden rounded-2xl border-2 p-3 md:p-4 shadow-[0_12px_32px_rgba(0,0,0,0.4)] flex flex-col"
-            style={{
-              borderColor:
-                'color-mix(in srgb, var(--riichi-border) 50%, transparent)',
-              backgroundColor: 'var(--riichi-table)',
-            }}
-          >
-            {showGuide && (
+        <div className="flex-1 min-h-0 flex flex-col gap-2 min-w-0">
+          <div className="riichi-playfield-outer min-w-0">
+            <div className="riichi-playfield-inner">
               <div
-                className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="guide-title"
+                className="flex-1 min-h-0 overflow-visible rounded-2xl border-2 p-3 md:p-4 shadow-[0_12px_32px_rgba(0,0,0,0.4)] flex flex-col min-h-0"
+                style={{
+                  borderColor:
+                    'color-mix(in srgb, var(--riichi-border) 50%, transparent)',
+                  backgroundColor: 'var(--riichi-table)',
+                }}
               >
-                <button
-                  type="button"
-                  className="absolute inset-0 bg-black/60"
-                  onClick={() => setShowGuide(false)}
-                  aria-label="关闭"
+                {showGuide && (
+                  <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="guide-title"
+                  >
+                    <button
+                      type="button"
+                      className="absolute inset-0 bg-black/60"
+                      onClick={() => setShowGuide(false)}
+                      aria-label="关闭"
+                    />
+                    <div className="relative z-10 max-h-[90vh] w-full max-w-lg overflow-auto rounded-2xl border border-[#457b9d]/50 bg-[#1d3557] shadow-xl">
+                      <GuidePanel onClose={() => setShowGuide(false)} />
+                    </div>
+                  </div>
+                )}
+                <StatusPanel
+                  isClaimPhase={isClaimPhase}
+                  isMyClaim={isMyClaim}
+                  hasAnyClaimOption={hasAnyClaimOption}
+                  lastDiscardFrom={game.lastDiscardFrom}
+                  lastDiscard={game.lastDiscard}
+                  claimPlayer={claimPlayer}
+                  isMyTurn={isMyTurn}
+                  currentPlayer={game.currentPlayer}
+                  canRon={canRon}
+                  hasNonRonClaimOption={hasNonRonClaimOption}
+                  chiOptionsLength={chiOptions.length}
+                  canPeng={canPeng}
+                  canMingang={canMingang}
+                  lastClaimMsg={game.lastClaimMsg}
+                  myFuritenReason={myFuritenReason}
+                  riichiDeclared={game.riichiDeclared}
                 />
-                <div className="relative z-10 max-h-[90vh] w-full max-w-lg overflow-auto rounded-2xl border border-[#457b9d]/50 bg-[#1d3557] shadow-xl">
-                  <GuidePanel onClose={() => setShowGuide(false)} />
+                <div
+                  className="flex flex-1 min-h-0 flex-col gap-2 md:grid md:min-h-0 md:items-stretch md:gap-2"
+                  style={{
+                    // md+ 使用命名网格：上行对家跨三列，下行左/中/右；左右列有最小宽度，避免侧家牌被压扁；行高上 auto、下吃满剩余
+                    gridTemplateAreas:
+                      '"riichi-top riichi-top riichi-top" "riichi-left riichi-center riichi-right"',
+                    gridTemplateColumns:
+                      'minmax(88px, 1fr) minmax(0, 2fr) minmax(88px, 1fr)',
+                    gridTemplateRows: 'auto minmax(0, 1fr)',
+                  }}
+                >
+                  <div className="order-1 min-w-0 md:order-none md:[grid-area:riichi-top]">
+                    <OpponentSeat
+                      seat={2}
+                      game={game}
+                      timerLabel={`时库 ${game.timeBanks[2]}s${decisionSeat === 2 && decisionSeatRemainSeconds != null ? ` · 本巡 ${decisionSeatRemainSeconds}s` : ''}`}
+                      timerClassName={timerTextClass(2)}
+                      isCurrentTurn={game.currentPlayer === 2}
+                    />
+                  </div>
+                  <div className="order-2 flex min-h-0 min-w-0 justify-center overflow-visible md:order-none md:[grid-area:riichi-left]">
+                    <OpponentSeat
+                      seat={3}
+                      game={game}
+                      timerLabel={`时库 ${game.timeBanks[3]}s${decisionSeat === 3 && decisionSeatRemainSeconds != null ? ` · 本巡 ${decisionSeatRemainSeconds}s` : ''}`}
+                      timerClassName={timerTextClass(3)}
+                      isCurrentTurn={game.currentPlayer === 3}
+                    />
+                  </div>
+                  <div className="order-3 min-h-[100px] min-w-0 md:order-none md:[grid-area:riichi-center] md:min-h-0">
+                    <CenterArea game={game} />
+                  </div>
+                  <div className="order-4 flex min-h-0 min-w-0 justify-center overflow-visible md:order-none md:[grid-area:riichi-right]">
+                    <OpponentSeat
+                      seat={1}
+                      game={game}
+                      timerLabel={`时库 ${game.timeBanks[1]}s${decisionSeat === 1 && decisionSeatRemainSeconds != null ? ` · 本巡 ${decisionSeatRemainSeconds}s` : ''}`}
+                      timerClassName={timerTextClass(1)}
+                      isCurrentTurn={game.currentPlayer === 1}
+                    />
+                  </div>
                 </div>
               </div>
-            )}
-            <StatusPanel
-              isClaimPhase={isClaimPhase}
-              isMyClaim={isMyClaim}
-              hasAnyClaimOption={hasAnyClaimOption}
-              lastDiscardFrom={game.lastDiscardFrom}
-              lastDiscard={game.lastDiscard}
-              claimPlayer={claimPlayer}
-              isMyTurn={isMyTurn}
-              currentPlayer={game.currentPlayer}
-              canRon={canRon}
-              hasNonRonClaimOption={hasNonRonClaimOption}
-              chiOptionsLength={chiOptions.length}
-              canPeng={canPeng}
-              canMingang={canMingang}
-              lastClaimMsg={game.lastClaimMsg}
-              myFuritenReason={myFuritenReason}
-              riichiDeclared={game.riichiDeclared}
-            />
-            <div className="flex-1 min-h-0 flex flex-col gap-2 md:grid md:grid-cols-[1fr_2fr_1fr] md:grid-rows-[1fr_auto] md:gap-2 md:min-h-0">
-              <div className="order-1 md:order-none hidden md:block" />
-              <div className="order-1 md:order-none">
-                <OpponentSeat
-                  seat={2}
-                  game={game}
-                  timerLabel={`时库 ${game.timeBanks[2]}s${decisionSeat === 2 && decisionSeatRemainSeconds != null ? ` · 本巡 ${decisionSeatRemainSeconds}s` : ''}`}
-                  timerClassName={timerTextClass(2)}
-                  isCurrentTurn={game.currentPlayer === 2}
-                />
-              </div>
-              <div className="order-2 md:order-none hidden md:block" />
-              <div className="order-2 md:order-none">
-                <OpponentSeat
-                  seat={3}
-                  game={game}
-                  timerLabel={`时库 ${game.timeBanks[3]}s${decisionSeat === 3 && decisionSeatRemainSeconds != null ? ` · 本巡 ${decisionSeatRemainSeconds}s` : ''}`}
-                  timerClassName={timerTextClass(3)}
-                  isCurrentTurn={game.currentPlayer === 3}
-                />
-              </div>
-              <div className="order-3 md:order-none min-h-[100px]">
-                <CenterArea game={game} />
-              </div>
-              <div className="order-4 md:order-none">
-                <OpponentSeat
-                  seat={1}
-                  game={game}
-                  timerLabel={`时库 ${game.timeBanks[1]}s${decisionSeat === 1 && decisionSeatRemainSeconds != null ? ` · 本巡 ${decisionSeatRemainSeconds}s` : ''}`}
-                  timerClassName={timerTextClass(1)}
-                  isCurrentTurn={game.currentPlayer === 1}
-                />
-              </div>
-              <div className="order-5 md:order-none hidden md:block" />
             </div>
           </div>
           {/* 手牌区：始终在视口底部，无需滚动 */}
@@ -510,7 +521,7 @@ const GameMahjongJapanese = () => {
                         key={j}
                         className={cn(
                           TILE_DISCARD,
-                          'w-[44px] h-[60px] text-lg',
+                          'text-sm',
                           getTileColorClass(t),
                         )}
                       >
@@ -559,7 +570,6 @@ const GameMahjongJapanese = () => {
                         onClick={() => canDiscard && discard(0, tile)}
                         className={cn(
                           TILE_HAND,
-                          'max-sm:w-[56px] max-sm:h-[76px] max-sm:text-xl',
                           getTileColorClass(tile),
                           isDrawn && TILE_ACTIVE,
                           isDrawn && 'animate-riichi-tile-drawn',
