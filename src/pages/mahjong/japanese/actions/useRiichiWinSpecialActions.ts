@@ -228,6 +228,7 @@ export function useRiichiWinSpecialActions(
       wallLength: game.wall.length,
       lastDiscard: game.lastDiscard,
       ippatsu: game.riichiDeclared[0] && (game.ippatsuPossible?.[0] ?? false),
+      winnerSeat: 0,
     };
     const input = buildRiichiInput(stateForRs, true);
     const rs = calcWithRiichiRs(input);
@@ -320,6 +321,7 @@ export function useRiichiWinSpecialActions(
       lastDiscard: game.lastDiscard,
       ippatsu: game.riichiDeclared[0] && (game.ippatsuPossible?.[0] ?? false),
       afterKan: game.lastClaimWasKakan ?? false,
+      winnerSeat: 0,
     };
     const input = buildRiichiInput(stateForRs, false, game.lastDiscard);
     const rs = calcWithRiichiRs(input);

@@ -50,6 +50,8 @@ export interface GameStateForRs {
   afterKan?: boolean;
   /** 一发：立直后一巡内和了且本巡无吃碰杠 */
   ippatsu?: boolean;
+  /** 和了者座位（0–3）；缺省 0，与「自家」一致 */
+  winnerSeat?: number;
 }
 
 /** 场风 → riichi-rs 风牌 Tile */
@@ -69,6 +71,7 @@ export function buildRiichiInput(
   isTsumo: boolean,
   winningTile?: number,
 ): RiichiInput {
+  const w = state.winnerSeat ?? 0;
   const closed: Tile[] = [];
   let aka = 0;
   for (const t of state.hand) {
@@ -109,7 +112,7 @@ export function buildRiichiInput(
   const options: RiichiInput['options'] = {
     dora: doraTiles.map((t) => ourTileToRs(t)),
     aka_count: aka,
-    riichi: state.riichiDeclared[0],
+    riichi: state.riichiDeclared[w],
     ippatsu: state.ippatsu ?? false,
     double_riichi: false,
     after_kan: state.afterKan ?? false,
@@ -119,7 +122,7 @@ export function buildRiichiInput(
         ? ourTileToRs(winningTile)
         : (-1 as Tile),
     bakaze: roundWindToTile(state.roundWind),
-    jikaze: seatWindToTile(state.roundWind, 0, state.dealer),
+    jikaze: seatWindToTile(state.roundWind, w, state.dealer),
     allow_aka: true,
     allow_kuitan: true,
     with_kiriage: false,

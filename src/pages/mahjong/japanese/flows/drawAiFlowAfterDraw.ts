@@ -18,6 +18,11 @@ import {
   shouldAiDeclareRiichi,
 } from '@/lib/riichiAi';
 import { consumeTimeBankSeconds } from '@/lib/riichiClock';
+import {
+  buildRiichiInput,
+  calcWithRiichiRs,
+  type GameStateForRs,
+} from '@/lib/riichiRsAdapter';
 import { SEAT_NAMES } from '../constants';
 import { enrichWinResultWithUra } from '../gameLogic/winResult';
 import { applyAbortiveDrawChecks } from '../shared/abortiveDrawChecks';
@@ -48,17 +53,36 @@ export function runAiAfterDraw(
       const hand = [...g.hands[p]];
       const tsumoCtx = buildYakuCtx(p, hand, true);
       if (isWinShapeRiichi(hand, g.melds[p]) && tsumoCtx && hasYaku(tsumoCtx)) {
-        const yaku = computeYaku(tsumoCtx);
-        const han = getTotalHan(yaku);
-        const fu = calcFu({
-          isTsumo: true,
-          isMenzhen: g.melds[p].every((m) => m.type === 'angang'),
-          hasPinfu: yaku.some((y) => y.id === 'pinfu'),
-          isChiitoitsu: yaku.some((y) => y.id === 'chiitoitsu'),
-        });
+        const stateForRs: GameStateForRs = {
+          hand,
+          melds: g.melds[p],
+          doraIndicators: g.doraIndicators,
+          roundWind: g.roundWind,
+          dealer: g.dealer,
+          riichiDeclared: g.riichiDeclared,
+          wallLength: g.wall.length,
+          lastDiscard: g.lastDiscard,
+          ippatsu: g.riichiDeclared[p] && (g.ippatsuPossible?.[p] ?? false),
+          winnerSeat: p,
+        };
+        const rs = calcWithRiichiRs(buildRiichiInput(stateForRs, true));
+        const yaku = rs && rs.yaku.length > 0 ? rs.yaku : computeYaku(tsumoCtx);
+        const han = rs && rs.yaku.length > 0 ? rs.han : getTotalHan(yaku);
+        const fu =
+          rs && rs.yaku.length > 0
+            ? rs.fu
+            : calcFu({
+                isTsumo: true,
+                isMenzhen: g.melds[p].every((m) => m.type === 'angang'),
+                hasPinfu: yaku.some((y) => y.id === 'pinfu'),
+                isChiitoitsu: yaku.some((y) => y.id === 'chiitoitsu'),
+              });
         addLogRef.current(`${SEAT_NAMES[p]} 自摸！`);
         sounds.playTsumo();
-        const ten = calcScore(fu, han, g.dealer === p, true);
+        const ten =
+          rs && rs.yaku.length > 0
+            ? rs.ten
+            : calcScore(fu, han, g.dealer === p, true);
         const enriched = enrichWinResultWithUra({
           state: g,
           winner: p,

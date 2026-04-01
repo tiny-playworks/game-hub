@@ -1,7 +1,4 @@
-import {
-  getBaseTile,
-  isAkaFive,
-} from '@/lib/mahjongRiichi';
+import { getBaseTile, isAkaFive } from '@/lib/mahjongRiichi';
 import { cn } from '@/lib/utils';
 
 export function getTileColorClass(tile: number): string {
@@ -48,11 +45,21 @@ export function RiichiTileFace({
   const topChar = suitIndex === 0 ? MANZU[numIndex] : NUMS[numIndex];
 
   return (
-    <div className={cn("flex flex-col items-center justify-center -space-y-0.5 w-full h-full", className)}>
-      <span className={cn("text-[1em] font-black leading-none", redClass)}>
+    <div
+      className={cn(
+        'flex flex-col items-center justify-center -space-y-0.5 w-full h-full',
+        className,
+      )}
+    >
+      <span className={cn('text-[1em] font-black leading-none', redClass)}>
         {topChar}
       </span>
-      <span className={cn("text-[0.65em] font-black leading-tight opacity-90", redClass)}>
+      <span
+        className={cn(
+          'text-[0.65em] font-black leading-tight opacity-90',
+          redClass,
+        )}
+      >
         {suits[suitIndex]}
       </span>
     </div>
@@ -60,10 +67,5 @@ export function RiichiTileFace({
 }
 
 export function TileBack({ className }: { className?: string }) {
-  return (
-    <span
-      className={cn('riichi-tile-back', className)}
-      title="牌背"
-    />
-  );
+  return <span className={cn('riichi-tile-back', className)} title="牌背" />;
 }

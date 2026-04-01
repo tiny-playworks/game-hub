@@ -21,6 +21,11 @@ import {
   shouldAiFoldClaimAgainstRiichi,
 } from '@/lib/riichiAi';
 import { resolveClaimPass } from '@/lib/riichiClaimFlow';
+import {
+  buildRiichiInput,
+  calcWithRiichiRs,
+  type GameStateForRs,
+} from '@/lib/riichiRsAdapter';
 import { SEAT_NAMES } from '../constants';
 import { enrichWinResultWithUra } from '../gameLogic/winResult';
 import { clearSeatDoujunStates, getSeatWind } from '../helpers';
@@ -93,6 +98,46 @@ export function runAiClaimPhase(
 
   const cancel = schedule(() => {
     if (aiCanRon) {
+      const stateForRs: GameStateForRs = {
+        hand: handWithClaim,
+        melds: game.melds[seat],
+        doraIndicators: game.doraIndicators,
+        roundWind: game.roundWind,
+        dealer: game.dealer,
+        riichiDeclared: game.riichiDeclared,
+        wallLength: game.wall.length,
+        lastDiscard: last,
+        ippatsu:
+          game.riichiDeclared[seat] && (game.ippatsuPossible?.[seat] ?? false),
+        afterKan: game.lastClaimWasKakan ?? false,
+        winnerSeat: seat,
+      };
+      const rs = calcWithRiichiRs(buildRiichiInput(stateForRs, false, last));
+      if (rs && rs.yaku.length > 0) {
+        addLogRef.current(`${SEAT_NAMES[seat]} 荣和 ${getTileLabel(last)}！`);
+        sounds.playRon();
+        const enriched = enrichWinResultWithUra({
+          state: game,
+          winner: seat,
+          isTsumo: false,
+          handWithWin: handWithClaim,
+          yaku: rs.yaku,
+          fu: rs.fu,
+          han: rs.han,
+          ten: rs.ten,
+        });
+        setWinResult({
+          winner: seat,
+          isTsumo: false,
+          yaku: enriched.yaku,
+          han: enriched.han,
+          fu: enriched.fu,
+          ten: enriched.ten,
+          uraHan: enriched.uraHan,
+          uraDoraIndicators: enriched.uraDoraIndicators,
+        });
+        return;
+      }
       const yaku = ronCtx ? computeYaku(ronCtx) : [];
       const han = getTotalHan(yaku);
       const fu = calcFu({

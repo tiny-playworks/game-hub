@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
+    /* TS 6.0: baseUrl 已弃用（TS 7 将移除），paths 以 tsconfig 所在目录为基准解析 @/* */
     "paths": {
       "@/*": ["./src/*"]
     },

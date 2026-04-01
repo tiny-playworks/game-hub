@@ -13,7 +13,7 @@ import { OpponentSeat } from './components/OpponentSeat';
 import { RulesView } from './components/RulesView';
 import { StatusPanel } from './components/StatusPanel';
 import { getTileColorClass, RiichiTileFace } from './components/Tile';
-import { SEAT_NAMES, TILE_ACTIVE, TILE_HAND, TILE_DISCARD } from './constants';
+import { SEAT_NAMES, TILE_ACTIVE, TILE_DISCARD, TILE_HAND } from './constants';
 import { useRiichiGame } from './useRiichiGame';
 import { useRiichiTheme } from './useRiichiTheme';
 

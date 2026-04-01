@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { SEAT_NAMES, WIND_NAMES, TILE_DISCARD } from '../constants';
+import { SEAT_NAMES, TILE_DISCARD, WIND_NAMES } from '../constants';
 import { getSeatWind } from '../helpers';
 import type { RiichiGameState } from '../types';
 import { getTileColorClass, RiichiTileFace } from './Tile';
