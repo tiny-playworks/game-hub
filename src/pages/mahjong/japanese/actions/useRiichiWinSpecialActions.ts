@@ -98,12 +98,6 @@ export function useRiichiWinSpecialActions(
       }
       if (h0.length !== 10) return;
       const handAfterKan = [...h0];
-      const rinshan = game.wall[0];
-      const kanDoraIndicator = game.wall[1];
-      const newWall = game.wall.slice(2);
-      const newDoraIndicators = [...game.doraIndicators, kanDoraIndicator];
-      h0.push(rinshan);
-      h0.sort((a, b) => getBaseTile(a) - getBaseTile(b) || a - b);
       const melds = game.melds.map((m, i) =>
         i === 0 ? [...m, { type: 'angang' as const, tiles: fourTiles }] : m,
       );
@@ -114,8 +108,6 @@ export function useRiichiWinSpecialActions(
           ...game,
           hands: game.hands.map((h, i) => (i === 0 ? handAfterKan : h)),
           melds,
-          wall: newWall,
-          doraIndicators: newDoraIndicators,
           phase: 'discard',
           lastDiscard: null,
           lastDiscardFrom: null,
@@ -128,13 +120,20 @@ export function useRiichiWinSpecialActions(
         });
         return;
       }
+      addLog(`自家 暗杠 ${getTileLabel(fourTiles[0])}`);
       sounds.playKan();
       setGame({
         ...game,
-        hands: game.hands.map((h, i) => (i === 0 ? h0 : h)),
+        hands: game.hands.map((h, i) => (i === 0 ? handAfterKan : h)),
         melds,
-        wall: newWall,
-        doraIndicators: newDoraIndicators,
+        phase: 'claim',
+        lastDiscard: fourTiles[0],
+        lastDiscardFrom: 0,
+        claimIndex: 0,
+        currentPlayer: 1,
+        drawnTile: null,
+        lastClaimMsg: `自家 暗杠 ${getTileLabel(fourTiles[0])}`,
+        lastClaimWasKakan: true,
         ippatsuPossible: [false, false, false, false],
         furitenStates: clearSeatDoujunStates(game.furitenStates, 0),
       });

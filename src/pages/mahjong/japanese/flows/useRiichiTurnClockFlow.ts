@@ -13,7 +13,10 @@ import {
   needsTimedDecision,
 } from '../helpers';
 import { applyAbortiveDrawChecks } from '../shared/abortiveDrawChecks';
-import { applyClaimPassToState } from '../shared/claimTransitions';
+import {
+  applyClaimPassToState,
+  applyKakanRinshanAfterPass,
+} from '../shared/claimTransitions';
 import type { RiichiRuntimeContext } from '../shared/riichiRuntimeContext';
 import { buildStateAfterTimeoutDiscard } from '../shared/timeoutTransitions';
 
@@ -93,11 +96,18 @@ export function useRiichiTurnClockFlow(
             )
           : g.furitenStates;
         const passResult = resolveClaimPass(g.claimIndex, g.wall.length);
-        const next = applyClaimPassToState(g, passResult, {
-          timeBanks: nextBanks,
-          furitenStates: nextFuritenStates,
-          lastClaimMsg: `${SEAT_NAMES[player]} 超时自动过`,
-        });
+        const next =
+          g.lastClaimWasKakan && passResult.type === 'draw'
+            ? applyKakanRinshanAfterPass(g, {
+                timeBanks: nextBanks,
+                furitenStates: nextFuritenStates,
+                lastClaimMsg: `${SEAT_NAMES[player]} 超时自动过`,
+              })
+            : applyClaimPassToState(g, passResult, {
+                timeBanks: nextBanks,
+                furitenStates: nextFuritenStates,
+                lastClaimMsg: `${SEAT_NAMES[player]} 超时自动过`,
+              });
         addLogRef.current(
           passResult.type === 'ryuukyoku'
             ? `${SEAT_NAMES[player]} 要牌超时，自动过（流局）`

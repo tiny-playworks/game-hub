@@ -25,7 +25,7 @@ export interface RiichiGameState {
   lastDiscardFrom: number | null;
   claimIndex: number;
   lastClaimMsg: string | null;
-  /** 当前要牌是否因加杠（仅允许抢杠） */
+  /** 当前要牌是否为杠后抢杠窗口（加杠/暗杠，仅允许荣和） */
   lastClaimWasKakan?: boolean;
   roundWind: number;
   roundNumber: number;

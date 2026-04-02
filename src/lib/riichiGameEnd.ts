@@ -11,7 +11,7 @@ export function isDealerTop(scores: number[], dealer: number): boolean {
  * 2) 东风场（matchLength='east'）：东4局子家胡（庄家没胡）→ 结束（east4_end）
  * 3) 南风场 南4（roundWind=1, roundNumber=4）时：
  *    - 庄家连庄且庄家头名：可收场（agari-yame）
- *    - 非连庄：本局后结束（south4_end）
+ *    - 非连庄：若有人 >= 30000 则结束（south4_end），否则继续（西入）
  */
 export function resolveRiichiMatchEnd(input: {
   scores: number[];
@@ -31,7 +31,11 @@ export function resolveRiichiMatchEnd(input: {
   const isSouth4 = input.roundWind === 1 && input.roundNumber === 4;
   if (!isSouth4) return { end: false };
 
-  if (!input.dealerStays) return { end: true, reason: 'south4_end' };
+  if (!input.dealerStays) {
+    const hasTargetScore = input.scores.some((s) => s >= 30000);
+    if (hasTargetScore) return { end: true, reason: 'south4_end' };
+    return { end: false };
+  }
   if (isDealerTop(input.scores, input.dealer)) {
     return { end: true, reason: 'agari_yame' };
   }

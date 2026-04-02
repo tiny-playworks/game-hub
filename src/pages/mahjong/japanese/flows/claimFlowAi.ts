@@ -30,7 +30,10 @@ import { SEAT_NAMES } from '../constants';
 import { enrichWinResultWithUra } from '../gameLogic/winResult';
 import { clearSeatDoujunStates, getSeatWind } from '../helpers';
 import { applyAbortiveDrawChecks } from '../shared/abortiveDrawChecks';
-import { applyClaimPassToState } from '../shared/claimTransitions';
+import {
+  applyClaimPassToState,
+  applyKakanRinshanAfterPass,
+} from '../shared/claimTransitions';
 import type {
   ClaimFlowExtra,
   RiichiRuntimeContext,
@@ -56,6 +59,7 @@ export function runAiClaimPhase(
   const hand = game.hands[seat];
   const handWithClaim = [...hand, last];
   const ronCtx = buildYakuCtx(seat, handWithClaim, false);
+  const onlyRonAllowed = game.lastClaimWasKakan ?? false;
   const furitenBlocked = isSeatFuriten(seat, game);
   const aiCanRon = canAiRonOnClaim({
     fromPlayer: from,
@@ -70,31 +74,37 @@ export function runAiClaimPhase(
       aiSeat: seat,
       riichiDeclared: game.riichiDeclared,
     });
-  const chiOpts = aiRiichiLocked
-    ? []
-    : getChiOptionsRiichi(hand, last, from, seat);
-  const peng = aiRiichiLocked ? false : canPengRiichi(hand, last);
+  const chiOpts =
+    aiRiichiLocked || onlyRonAllowed
+      ? []
+      : getChiOptionsRiichi(hand, last, from, seat);
+  const peng =
+    aiRiichiLocked || onlyRonAllowed ? false : canPengRiichi(hand, last);
   const gang =
-    aiRiichiLocked || foldClaimByRiichi ? false : canMingangRiichi(hand, last);
+    aiRiichiLocked || onlyRonAllowed || foldClaimByRiichi
+      ? false
+      : canMingangRiichi(hand, last);
   const claimDefensePlan = foldClaimByRiichi
-    ? chooseAiClaimActionAgainstRiichi({
-        aiSeat: seat,
-        hand,
-        chiOptions: chiOpts,
-        canPeng: peng,
-        lastTile: last,
-        riichiDeclared: game.riichiDeclared,
-        discardPiles: game.discardPiles,
-        doraIndicators: game.doraIndicators,
-        seatWind: getSeatWind(game.roundWind, seat, game.dealer),
-        roundWind: game.roundWind,
-      })
+    ? onlyRonAllowed
+      ? null
+      : chooseAiClaimActionAgainstRiichi({
+          aiSeat: seat,
+          hand,
+          chiOptions: chiOpts,
+          canPeng: peng,
+          lastTile: last,
+          riichiDeclared: game.riichiDeclared,
+          discardPiles: game.discardPiles,
+          doraIndicators: game.doraIndicators,
+          seatWind: getSeatWind(game.roundWind, seat, game.dealer),
+          roundWind: game.roundWind,
+        })
     : null;
   const forcedChiOption =
     claimDefensePlan?.action === 'chi' ? claimDefensePlan.chiOption : null;
   const forcedPengDiscard =
     claimDefensePlan?.action === 'peng' ? claimDefensePlan.discardTile : null;
-  const allowRandomClaim = !foldClaimByRiichi;
+  const allowRandomClaim = !foldClaimByRiichi && !onlyRonAllowed;
 
   const cancel = schedule(() => {
     if (aiCanRon) {
@@ -220,12 +230,14 @@ export function runAiClaimPhase(
           melds,
           discardPiles: pilesChi,
           ippatsuPossible: [false, false, false, false],
-          phase: 'claim',
-          lastDiscard: toDiscard,
-          lastDiscardFrom: seat,
+          phase: 'discard',
+          lastDiscard: null,
+          lastDiscardFrom: null,
           claimIndex: 0,
-          currentPlayer: (seat + 1) % 4,
-          lastClaimMsg: `${SEAT_NAMES[seat]} 吃了 ${getTileLabel(last)}`,
+          currentPlayer: seat,
+          lastClaimMsg: null,
+          drawnTile: null,
+          lastClaimWasKakan: undefined,
         });
         return;
       }
@@ -271,12 +283,14 @@ export function runAiClaimPhase(
           melds,
           discardPiles: pilesPeng,
           ippatsuPossible: [false, false, false, false],
-          phase: 'claim',
-          lastDiscard: toDiscard,
-          lastDiscardFrom: seat,
+          phase: 'discard',
+          lastDiscard: null,
+          lastDiscardFrom: null,
           claimIndex: 0,
-          currentPlayer: (seat + 1) % 4,
-          lastClaimMsg: `${SEAT_NAMES[seat]} 碰了 ${getTileLabel(last)}`,
+          currentPlayer: seat,
+          lastClaimMsg: null,
+          drawnTile: null,
+          lastClaimWasKakan: undefined,
         });
         return;
       }
@@ -363,7 +377,10 @@ export function runAiClaimPhase(
     setGame((g) => {
       if (!g || g.phase !== 'claim' || g.lastDiscardFrom === null) return g;
       const passResult = resolveClaimPass(g.claimIndex, g.wall.length);
-      const next = applyClaimPassToState(g, passResult);
+      const next =
+        g.lastClaimWasKakan && passResult.type === 'draw'
+          ? applyKakanRinshanAfterPass(g)
+          : applyClaimPassToState(g, passResult);
       if (next.ryuukyoku && next.ryuukyokuReason === '荒牌') {
         addLogRef.current('流局（荒牌）');
       }

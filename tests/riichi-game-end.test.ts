@@ -41,9 +41,21 @@ describe('日麻终局判定', () => {
     expect(out).toEqual({ end: false });
   });
 
-  test('南4子家和（不连庄）本局结束', () => {
+  test('南4子家和（不连庄）且无人到 30000 时继续', () => {
     const out = resolveRiichiMatchEnd({
       scores: [28000, 24000, 26000, 22000],
+      roundWind: 1,
+      roundNumber: 4,
+      dealer: 0,
+      dealerStays: false,
+      matchLength: 'south',
+    });
+    expect(out).toEqual({ end: false });
+  });
+
+  test('南4子家和（不连庄）且有人到 30000 时结束', () => {
+    const out = resolveRiichiMatchEnd({
+      scores: [29500, 31500, 21000, 18000],
       roundWind: 1,
       roundNumber: 4,
       dealer: 0,

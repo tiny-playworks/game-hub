@@ -7,7 +7,7 @@ import {
   calcScore,
   computeYaku,
   getAngangOptionsRiichi,
-  getBaseTile,
+  getTileLabel,
   getTotalHan,
   hasYaku,
   isWinShapeRiichi,
@@ -25,6 +25,7 @@ import {
 } from '@/lib/riichiRsAdapter';
 import { SEAT_NAMES } from '../constants';
 import { enrichWinResultWithUra } from '../gameLogic/winResult';
+import { clearSeatDoujunStates } from '../helpers';
 import { applyAbortiveDrawChecks } from '../shared/abortiveDrawChecks';
 import type { RiichiRuntimeContext } from '../shared/riichiRuntimeContext';
 import type { RiichiGameState } from '../types';
@@ -131,77 +132,34 @@ export function runAiAfterDraw(
           return true;
         });
         if (h.length !== 10 || g.wall.length < 2) return g;
-        const rinshan = g.wall[0];
-        const kanDoraIndicator = g.wall[1];
-        const newWall = g.wall.slice(2);
-        const newDoraIndicators = [...g.doraIndicators, kanDoraIndicator];
-        h.push(rinshan);
-        h.sort((a, b) => getBaseTile(a) - getBaseTile(b) || a - b);
-        const aiRiichiLocked = g.riichiDeclared[p];
-        const defensiveChoice = !aiRiichiLocked
-          ? chooseAiDefensiveDiscardWithMeta({
-              hand: h,
-              aiSeat: p,
-              riichiDeclared: g.riichiDeclared,
-              discardPiles: g.discardPiles,
-              doraIndicators: g.doraIndicators,
-            })
-          : null;
-        const defensiveDiscard = defensiveChoice?.tile ?? null;
-        const toDiscard = aiRiichiLocked
-          ? rinshan
-          : (defensiveDiscard ?? rinshan);
-        const idx = h.indexOf(toDiscard);
-        if (idx === -1) return g;
-        h.splice(idx, 1);
+        const handAfterKan = [...h];
         const melds = g.melds.map((m, i) =>
           i === p ? [...m, { type: 'angang' as const, tiles: fourTiles }] : m,
         );
-        const piles = g.discardPiles.map((q) => [...q]);
-        piles[p].push(toDiscard);
-        if (
-          !aiRiichiLocked &&
-          defensiveChoice &&
-          defensiveChoice.tile !== null &&
-          defensiveChoice.reason
-        ) {
-          addLogRef.current(`${SEAT_NAMES[p]} ${defensiveChoice.reason}`);
-        }
-        if (doAiRiichi) {
-          addLogRef.current(`${SEAT_NAMES[p]} 立直宣言！（-1000 点）`);
-          sounds.playRiichi();
-        }
+        addLogRef.current(
+          `${SEAT_NAMES[p]} 暗杠 ${getTileLabel(fourTiles[0])}`,
+        );
+        sounds.playKan();
         const elapsed = getElapsedSecondsForSeat(p);
         const timedBanks = g.timeBanks.map((tb, i) =>
           i === p ? consumeTimeBankSeconds(tb, elapsed) : tb,
         );
         turnClockRef.current = null;
-        const nextRiichi = doAiRiichi
-          ? applyAiRiichiState(g.scores, g.riichiDeclared, g.riichiPot, p)
-          : null;
         const nextState: RiichiGameState = {
           ...g,
           timeBanks: timedBanks,
-          scores: nextRiichi?.scores ?? g.scores,
-          riichiPot: nextRiichi?.riichiPot ?? g.riichiPot,
-          riichiDeclared: nextRiichi?.riichiDeclared ?? g.riichiDeclared,
-          ippatsuPossible: (
-            g.ippatsuPossible ?? g.riichiDeclared.map(() => false)
-          ).map((v, i) => (i === p ? true : v)),
-          hands: g.hands.map((h0, i) => (i === p ? h : h0)),
+          hands: g.hands.map((h0, i) => (i === p ? handAfterKan : h0)),
           melds,
-          wall: newWall,
-          doraIndicators: newDoraIndicators,
-          discardPiles: piles,
+          ippatsuPossible: [false, false, false, false],
+          furitenStates: clearSeatDoujunStates(g.furitenStates, p),
           currentPlayer: (p + 1) % 4,
           drawnTile: null,
           phase: 'claim',
-          lastDiscard: toDiscard,
+          lastDiscard: fourTiles[0],
           lastDiscardFrom: p,
           claimIndex: 0,
-          lastClaimMsg: doAiRiichi
-            ? `${SEAT_NAMES[p]} 立直宣言！（-1000 点）`
-            : null,
+          lastClaimMsg: `${SEAT_NAMES[p]} 暗杠 ${getTileLabel(fourTiles[0])}`,
+          lastClaimWasKakan: true,
         };
         const { state: afterAbortive } = applyAbortiveDrawChecks(nextState);
         if (afterAbortive.ryuukyoku && afterAbortive.ryuukyokuReason) {

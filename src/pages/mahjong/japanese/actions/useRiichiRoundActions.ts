@@ -172,6 +172,9 @@ export function useRiichiRoundActions(ctx: RiichiRoundContext) {
           newScores: [...game.scores],
           nextRiichiPot: game.riichiPot,
         };
+    const dealerStays = isExhaustiveDraw
+      ? tenpaiSeats.includes(game.dealer)
+      : true;
     const tenpaiText = !isExhaustiveDraw
       ? '途中流局（不执行不听罚符）'
       : tenpaiSeats.length === 0
@@ -188,7 +191,7 @@ export function useRiichiRoundActions(ctx: RiichiRoundContext) {
       roundWind: game.roundWind,
       roundNumber: game.roundNumber,
       dealer: game.dealer,
-      dealerStays: true,
+      dealerStays,
       matchLength: game.matchLength,
     });
     if (end.end && end.reason) {
@@ -206,7 +209,7 @@ export function useRiichiRoundActions(ctx: RiichiRoundContext) {
       game.roundWind,
       game.roundNumber,
       game.honba,
-      true,
+      dealerStays,
     );
     setDeclinedRonToken(null);
     setGame(
@@ -228,7 +231,7 @@ export function useRiichiRoundActions(ctx: RiichiRoundContext) {
         game.matchLength,
       ),
     );
-    addLog(`流局（${reason}），连庄`);
+    addLog(`流局（${reason}），${dealerStays ? '连庄' : '换庄'}`);
   }, [
     game,
     addLog,

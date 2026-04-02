@@ -78,7 +78,7 @@ export function applyClaimPassToState(
 
 /**
  * 加杠后全员过：加杠者摸岭上牌，翻杠宝牌，进入打牌阶段。
- * 仅在 lastClaimWasKakan 且 wall.length >= 2 时使用。
+ * 仅在 lastClaimWasKakan 且 wall.length >= 2 时使用（含暗杠抢杠窗口复用）。
  */
 export function applyKakanRinshanAfterPass(
   g: RiichiGameState,

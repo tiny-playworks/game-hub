@@ -163,10 +163,7 @@ export function useRiichiDerived({
     game.discardPiles[0].length === 0 &&
     canDeclareKyuushuKyuuhai(game.hands[0]);
 
-  const isMyTurn =
-    game?.phase === 'discard' &&
-    game.currentPlayer === 0 &&
-    game.wall.length >= 0;
+  const isMyTurn = game?.phase === 'discard' && game.currentPlayer === 0;
   const isClaimPhase = game?.phase === 'claim' && game.lastDiscard !== null;
   const claimPlayer =
     game?.phase === 'claim' && game.lastDiscardFrom !== null

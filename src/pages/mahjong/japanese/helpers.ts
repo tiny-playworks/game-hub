@@ -89,7 +89,7 @@ export function getMatchEndReasonText(reason?: MatchEndReason): string {
     case 'agari_yame':
       return '南4庄家连庄且头名，收场';
     case 'south4_end':
-      return '南风场南4局结束';
+      return '南风场南4局结束（已达返场线）';
     default:
       return '终局';
   }
@@ -114,7 +114,7 @@ export function getRyuukyokuDescription(
     case '九种九牌':
       return '九种九牌宣言成立，途中流局，本场+1，庄家连庄';
     default:
-      return '牌墙摸完无人和，本场+1，庄家连庄';
+      return '牌墙摸完无人和，本场+1，庄家听牌则连庄，不听换庄';
   }
 }
 
