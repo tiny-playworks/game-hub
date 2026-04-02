@@ -1,12 +1,12 @@
 # Game Hub · 游戏合集
 
-基于 React + Rsbuild 的小游戏与麻将合集 Web 应用（纯前端 SPA）。
+基于 React + Rsbuild 的小游戏与日本麻将主线 Web 应用（纯前端 SPA）。
 
 ## 功能
 
 - **小游戏**：猜数字、井字棋、记忆翻牌、2048、贪吃蛇、打砖块、飞机大战、坦克大战、俄罗斯方块
 - **棋类**：五子棋、中国象棋、国际象棋、围棋（9×9）
-- **麻将**：四川麻将、中国通用麻将、日本立直麻将（和了算分由 riichi-rs-bundlers 提供）
+- **麻将**：日本立直麻将（和了算分由 riichi-rs-bundlers 提供）
 - **扑克**：斗地主（简化版）、升级（入门）
 - **其他**：中/英切换、成就页（14 项）、PWA、响应式布局
 
@@ -29,7 +29,7 @@ pnpm run build    # 生产构建
 pnpm run build:analyze  # 构建并打开包体分析（Rsdoctor）
 pnpm run preview  # 预览构建结果
 pnpm run check    # 类型检查 + Biome（提交前建议执行）
-pnpm run test     # 测试（7 文件、60 用例）
+pnpm run test     # 测试（17 文件、112 用例）
 pnpm run format   # 格式化
 ```
 

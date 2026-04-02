@@ -3,6 +3,8 @@ import { games, getGameByPath, getGamesByCategory } from '../src/data/games';
 
 test('games 中每项均有 id、categoryId、name、path、difficulty、tags', () => {
   const categoryIds = new Set(['mini', 'board', 'mahjong', 'poker']);
+  expect(games).toHaveLength(16);
+
   for (const g of games) {
     expect(g.id).toBeDefined();
     expect(g.name).toBeDefined();

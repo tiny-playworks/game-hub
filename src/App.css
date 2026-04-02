@@ -429,6 +429,30 @@ body {
   animation: riichi-active-pulse 1.2s ease-in-out infinite;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .animate-riichi-tile-drawn,
+  .animate-riichi-overlay-in,
+  .animate-riichi-modal-in,
+  .animate-riichi-active-pulse,
+  .riichi-tile-active::after {
+    animation: none;
+  }
+
+  .riichi-tile-hand {
+    transition: none;
+  }
+
+  .riichi-tile-hand:hover {
+    transform: none;
+    box-shadow:
+      inset 0 0 6px rgba(0, 0, 0, 0.05),
+      inset -1px -1px 3px rgba(0, 0, 0, 0.1),
+      inset 1px 1px 4px rgba(255, 255, 255, 1),
+      0 4px 0 var(--riichi-tile-back-color),
+      0 5px 6px rgba(0, 0, 0, 0.3);
+  }
+}
+
 /* 日麻多主题：通过 data-riichi-theme 切换，子元素用 var(--riichi-*) */
 [data-riichi-theme="green"] {
   --riichi-bg: #102218;

@@ -1,7 +1,7 @@
 {
   "name": "game-hub",
   "version": "1.0.0",
-  "description": "小游戏与麻将合集：国标麻将、日麻、四川麻将、2048、贪吃蛇、俄罗斯方块等",
+  "description": "小游戏与日本麻将合集：日麻、2048、贪吃蛇、俄罗斯方块等",
   "private": true,
   "type": "module",
   "repository": {
