@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -23,7 +23,6 @@ export { getNextRound } from './helpers';
 
 const GameMahjongJapanese = () => {
   const { t, locale } = useLocale();
-  const [showExtraActions, setShowExtraActions] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const didHandleEntryRef = useRef(false);
   const { theme, setTheme } = useRiichiTheme();
@@ -66,7 +65,6 @@ const GameMahjongJapanese = () => {
     canMingang,
     canRon,
     hasAnyClaimOption,
-    hasNonRonClaimOption,
     myFuritenReason,
     tenpaiHint,
     winSettlementPreview,
@@ -127,6 +125,26 @@ const GameMahjongJapanese = () => {
 
   if (!game) return null;
 
+  const canDeclareRiichi =
+    !game.riichiDeclared[0] &&
+    game.melds[0].every((m) => m.type === 'angang') &&
+    getWaitingTilesRiichi(game.hands[0], game.melds[0], game, {
+      seat: 0,
+      isTsumo: false,
+      treatAsRiichi: true,
+    }).length > 0;
+  const claimActionsAvailable =
+    !!canRon ||
+    (!!isMyClaim && (chiOptions.length > 0 || !!canPeng || !!canMingang));
+  const myTurnActionsAvailable =
+    isMyTurn &&
+    (canTsumo ||
+      canDeclareRiichi ||
+      canKyuushuKyuuhai ||
+      angangOptions.length > 0 ||
+      kakanOptions.length > 0);
+  const showActionBar = claimActionsAvailable || myTurnActionsAvailable;
+
   return (
     <div
       data-riichi-theme={theme}
@@ -151,17 +169,17 @@ const GameMahjongJapanese = () => {
         onOpenGuide={() => setShowGuide(true)}
       />
 
-      <main className="mx-auto max-w-6xl w-full p-3 md:p-4 flex flex-col flex-1 min-h-0">
+      <main className="mx-auto max-w-[1400px] w-full p-2 md:p-3 flex flex-col flex-1 min-h-0">
         <GameInfoBar game={game} />
         {/* 牌桌区撑满视口，无滚动条；手牌区固定底部 */}
-        <div className="flex-1 min-h-0 flex flex-col gap-2 min-w-0">
+        <div className="flex-1 min-h-0 flex flex-col gap-1.5 min-w-0">
           <div className="riichi-playfield-outer min-w-0">
             <div className="riichi-playfield-inner">
               <div
-                className="flex-1 min-h-0 overflow-visible rounded-2xl border-2 p-3 md:p-4 shadow-[0_12px_32px_rgba(0,0,0,0.4)] flex flex-col min-h-0"
+                className="flex-1 min-h-0 overflow-visible rounded-2xl border-2 p-2 md:p-3 shadow-[0_16px_36px_rgba(0,0,0,0.45)] flex flex-col min-h-0"
                 style={{
                   borderColor:
-                    'color-mix(in srgb, var(--riichi-border) 50%, transparent)',
+                    'color-mix(in srgb, var(--riichi-border) 55%, transparent)',
                   backgroundColor: 'var(--riichi-table)',
                 }}
               >
@@ -192,11 +210,6 @@ const GameMahjongJapanese = () => {
                   claimPlayer={claimPlayer}
                   isMyTurn={isMyTurn}
                   currentPlayer={game.currentPlayer}
-                  canRon={canRon}
-                  hasNonRonClaimOption={hasNonRonClaimOption}
-                  chiOptionsLength={chiOptions.length}
-                  canPeng={canPeng}
-                  canMingang={canMingang}
                   lastClaimMsg={game.lastClaimMsg}
                   myFuritenReason={myFuritenReason}
                   riichiDeclared={game.riichiDeclared}
@@ -208,7 +221,7 @@ const GameMahjongJapanese = () => {
                     gridTemplateAreas:
                       '"riichi-top riichi-top riichi-top" "riichi-left riichi-center riichi-right"',
                     gridTemplateColumns:
-                      'minmax(88px, 1fr) minmax(0, 2fr) minmax(88px, 1fr)',
+                      'minmax(88px, 1fr) minmax(0, 2.6fr) minmax(88px, 1fr)',
                     gridTemplateRows: 'auto minmax(0, 1fr)',
                   }}
                 >
@@ -248,10 +261,10 @@ const GameMahjongJapanese = () => {
           </div>
           {/* 手牌区：始终在视口底部，无需滚动 */}
           <div
-            className="flex-shrink-0 rounded-xl p-3 md:p-4 space-y-2"
+            className="flex-shrink-0 rounded-xl p-2.5 md:p-3 space-y-2"
             style={{
               backgroundColor:
-                'color-mix(in srgb, var(--riichi-table) 80%, transparent)',
+                'color-mix(in srgb, var(--riichi-table) 86%, transparent)',
             }}
           >
             <div className="text-center text-xs text-[#a8dadc]/90 space-y-1">
@@ -290,232 +303,134 @@ const GameMahjongJapanese = () => {
                 </div>
               )}
             </div>
-            {canTsumo && (
-              <div className="space-y-2">
-                <div className="text-center">
-                  <p className="text-sm text-[#f1faee]/90 bg-[#1d3557]/50 rounded-lg py-2 px-4 inline-block">
-                    🎉 恭喜！你可以自摸胡牌了！
-                  </p>
-                </div>
+            {showActionBar && (
+              <div className="rounded-lg border border-[#d4b886]/25 bg-[#1a2e25]/55 p-2 md:p-3 space-y-2">
+                <p className="text-center text-xs text-[#a8dadc]/90">
+                  可执行操作
+                </p>
                 <div className="flex flex-wrap items-center justify-center gap-2">
-                  <Button
-                    size="sm"
-                    className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-4 text-lg"
-                    onClick={doTsumo}
-                    aria-label={t('riichi.tsumo')}
-                  >
-                    🏆 {t('riichi.tsumo')}
-                  </Button>
-                </div>
-              </div>
-            )}
-            {(canRon || (isMyClaim && hasNonRonClaimOption)) && (
-              <div className="space-y-3">
-                <div className="text-center">
-                  <p className="text-sm text-[#f1faee]/90 bg-[#1d3557]/50 rounded-lg py-2 px-4 inline-block">
-                    ⚠️ {canRon ? '你可以荣和，是否和牌？' : '请选择你要的操作：'}
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  {canRon && (
-                    <Button
-                      size="sm"
-                      className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3"
-                      onClick={doRon}
-                      aria-label={t('riichi.ron')}
-                    >
-                      🎉 {t('riichi.ron')}
-                    </Button>
-                  )}
-                  {isMyClaim &&
-                    chiOptions.map((opt, i) => (
-                      <Button
-                        key={i}
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3"
-                        onClick={() => doChi(opt)}
-                        aria-label={`${t('riichi.chi')} ${getTileLabel(opt[0])} ${getTileLabel(opt[1])}`}
-                      >
-                        🍣 {t('riichi.chi')}({getTileLabel(opt[0])}
-                        {getTileLabel(opt[1])})
-                      </Button>
-                    ))}
-                  {isMyClaim && canPeng && (
-                    <Button
-                      size="sm"
-                      className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-3"
-                      onClick={doPeng}
-                      aria-label={t('riichi.peng')}
-                    >
-                      🔨 {t('riichi.peng')}
-                    </Button>
-                  )}
-                  {isMyClaim && canMingang && (
-                    <Button
-                      size="sm"
-                      className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-3"
-                      onClick={doMingang}
-                      aria-label={t('riichi.mingang')}
-                    >
-                      ⚡ {t('riichi.mingang')}
-                    </Button>
-                  )}
-                  {isMyClaim ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-[#d4b886] bg-[#3d5a4a] text-[#f1faee] hover:bg-[#4a6b58] hover:text-white px-4 py-3"
-                      onClick={passClaim}
-                      aria-label={t('riichi.pass')}
-                    >
-                      ❌ {t('riichi.pass')}
-                    </Button>
-                  ) : (
-                    canRon && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-[#d4b886] bg-[#3d5a4a] text-[#f1faee] hover:bg-[#4a6b58] hover:text-white px-4 py-3"
-                        onClick={passRonOpportunity}
-                        aria-label={t('riichi.passRon')}
-                      >
-                        ❌ {t('riichi.passRon')}
-                      </Button>
-                    )
-                  )}
-                </div>
-                <div className="text-center">
-                  <p className="text-xs text-[#a8dadc]/80">
-                    💡 提示：胡牌 {'>'} 杠 {'>'} 碰 {'>'} 吃 {'>'} 过
-                  </p>
-                </div>
-              </div>
-            )}
-            {isMyTurn && (
-              <div className="space-y-3">
-                {(canKyuushuKyuuhai ||
-                  !game.riichiDeclared[0] ||
-                  angangOptions.length > 0 ||
-                  kakanOptions.length > 0) && (
-                  <div className="flex justify-center">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="border-[#a8dadc]/50 text-[#f1faee]/90 hover:bg-[#2d4a3c]/60"
-                      onClick={() => setShowExtraActions((v) => !v)}
-                      aria-expanded={showExtraActions}
-                      aria-label={
-                        showExtraActions ? '收起更多操作' : '展开更多操作'
-                      }
-                    >
-                      {showExtraActions ? '收起 ▲' : '更多操作 ▼'}
-                    </Button>
-                  </div>
-                )}
-                {showExtraActions && (
-                  <div className="flex flex-wrap items-center justify-center gap-2 rounded-lg border border-[#d4b886]/20 bg-[#1a2e25]/50 p-2">
-                    {canKyuushuKyuuhai && (
-                      <div className="flex items-center gap-2 bg-purple-900/30 rounded-lg px-3 py-2 border border-purple-400/40">
-                        <span className="text-xs text-[#f1faee]/85">
-                          九种九牌：
-                        </span>
+                  {claimActionsAvailable && (
+                    <>
+                      {canRon && (
                         <Button
                           size="sm"
-                          variant="outline"
-                          className="border-purple-400 text-[#f1faee] hover:bg-purple-600/40"
-                          onClick={doKyuushuKyuuhai}
-                          aria-label={t('riichi.kyuushu')}
+                          className="bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2.5"
+                          onClick={doRon}
+                          aria-label={t('riichi.ron')}
                         >
-                          🀄 {t('riichi.kyuushu')}
+                          {t('riichi.ron')}
                         </Button>
-                      </div>
-                    )}
-                    {!game.riichiDeclared[0] && (
-                      <div className="flex items-center gap-2 bg-[#1d3557]/50 rounded-lg px-3 py-2">
-                        <span className="text-xs text-[#f1faee]/80">
-                          立直：
-                        </span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-red-400 text-[#f1faee] hover:bg-red-600/50"
-                          onClick={doRiichi}
-                          aria-label={t('riichi.declareRiichi')}
-                          disabled={
-                            game.riichiDeclared[0] ||
-                            !game.melds[0].every((m) => m.type === 'angang') ||
-                            getWaitingTilesRiichi(
-                              game.hands[0],
-                              game.melds[0],
-                              game,
-                              {
-                                seat: 0,
-                                isTsumo: false,
-                                treatAsRiichi: true,
-                              },
-                            ).length === 0
-                          }
-                        >
-                          🎯 {t('riichi.declareRiichi')}
-                        </Button>
-                      </div>
-                    )}
-                    {angangOptions.length > 0 && (
-                      <div className="flex items-center gap-2 bg-[#2d4a3c]/50 rounded-lg px-3 py-2">
-                        <span className="text-xs text-[#f1faee]/80">
-                          暗杠：
-                        </span>
-                        {angangOptions.map((opt, i) => (
+                      )}
+                      {isMyClaim &&
+                        chiOptions.map((opt, i) => (
                           <Button
                             key={i}
                             size="sm"
-                            variant="outline"
-                            className="border-slate-400 text-[#f1faee] hover:bg-slate-600/50"
-                            onClick={() => doAngang(opt)}
-                            aria-label={`${t('riichi.angang')} ${getTileLabel(opt[0])}`}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5"
+                            onClick={() => doChi(opt)}
+                            aria-label={`${t('riichi.chi')} ${getTileLabel(opt[0])} ${getTileLabel(opt[1])}`}
                           >
-                            ⚡ {t('riichi.angang')}({getTileLabel(opt[0])})
+                            {t('riichi.chi')}({getTileLabel(opt[0])}
+                            {getTileLabel(opt[1])})
                           </Button>
                         ))}
-                      </div>
-                    )}
-                    {kakanOptions.length > 0 && (
-                      <div className="flex items-center gap-2 bg-[#2d4a3c]/50 rounded-lg px-3 py-2">
-                        <span className="text-xs text-[#f1faee]/80">
-                          加杠：
-                        </span>
-                        {kakanOptions.map((meldIndex) => (
-                          <Button
-                            key={meldIndex}
-                            size="sm"
-                            variant="outline"
-                            className="border-amber-400 text-[#f1faee] hover:bg-amber-600/50"
-                            onClick={() => doKakan(meldIndex)}
-                            aria-label={
-                              locale === 'zh'
-                                ? `${t('riichi.kakan')} 第${meldIndex + 1}组碰`
-                                : `${t('riichi.kakan')} (Group ${meldIndex + 1})`
-                            }
-                          >
-                            📎{' '}
-                            {locale === 'zh'
-                              ? `${t('riichi.kakan')}(第${meldIndex + 1}组碰)`
-                              : `${t('riichi.kakan')} (Group ${meldIndex + 1})`}
-                          </Button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <div className="text-center">
-                  <p className="text-sm text-[#ffc107]/90 flex items-center justify-center gap-2">
-                    🎮 点击下方手牌出牌
-                    <span className="text-xs text-[#f1faee]/70">
-                      (刚摸的牌会有金色高亮)
-                    </span>
-                  </p>
+                      {isMyClaim && canPeng && (
+                        <Button
+                          size="sm"
+                          className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5"
+                          onClick={doPeng}
+                          aria-label={t('riichi.peng')}
+                        >
+                          {t('riichi.peng')}
+                        </Button>
+                      )}
+                      {isMyClaim && canMingang && (
+                        <Button
+                          size="sm"
+                          className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2.5"
+                          onClick={doMingang}
+                          aria-label={t('riichi.mingang')}
+                        >
+                          {t('riichi.mingang')}
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-[#d4b886] bg-[#3d5a4a] text-[#f1faee] hover:bg-[#4a6b58] hover:text-white px-4 py-2.5"
+                        onClick={isMyClaim ? passClaim : passRonOpportunity}
+                        aria-label={t('riichi.pass')}
+                      >
+                        {t('riichi.pass')}
+                      </Button>
+                    </>
+                  )}
+                  {myTurnActionsAvailable && (
+                    <>
+                      {canTsumo && (
+                        <Button
+                          size="sm"
+                          className="bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2.5"
+                          onClick={doTsumo}
+                          aria-label={t('riichi.tsumo')}
+                        >
+                          {t('riichi.tsumo')}
+                        </Button>
+                      )}
+                      {canDeclareRiichi && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-red-400 text-[#f1faee] hover:bg-red-600/40"
+                          onClick={doRiichi}
+                          aria-label={t('riichi.declareRiichi')}
+                        >
+                          {t('riichi.declareRiichi')}
+                        </Button>
+                      )}
+                      {canKyuushuKyuuhai && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-purple-400 text-[#f1faee] hover:bg-purple-600/35"
+                          onClick={doKyuushuKyuuhai}
+                          aria-label={t('riichi.kyuushu')}
+                        >
+                          {t('riichi.kyuushu')}
+                        </Button>
+                      )}
+                      {angangOptions.map((opt, i) => (
+                        <Button
+                          key={i}
+                          size="sm"
+                          variant="outline"
+                          className="border-slate-400 text-[#f1faee] hover:bg-slate-600/40"
+                          onClick={() => doAngang(opt)}
+                          aria-label={`${t('riichi.angang')} ${getTileLabel(opt[0])}`}
+                        >
+                          {t('riichi.angang')}({getTileLabel(opt[0])})
+                        </Button>
+                      ))}
+                      {kakanOptions.map((meldIndex) => (
+                        <Button
+                          key={meldIndex}
+                          size="sm"
+                          variant="outline"
+                          className="border-amber-400 text-[#f1faee] hover:bg-amber-600/40"
+                          onClick={() => doKakan(meldIndex)}
+                          aria-label={
+                            locale === 'zh'
+                              ? `${t('riichi.kakan')} 第${meldIndex + 1}组碰`
+                              : `${t('riichi.kakan')} (Group ${meldIndex + 1})`
+                          }
+                        >
+                          {locale === 'zh'
+                            ? `${t('riichi.kakan')}(第${meldIndex + 1}组碰)`
+                            : `${t('riichi.kakan')} (Group ${meldIndex + 1})`}
+                        </Button>
+                      ))}
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -560,7 +475,7 @@ const GameMahjongJapanese = () => {
             {tenpaiHint && (
               <div className="rounded-lg border border-[#457b9d]/50 bg-[#1d3557]/40 px-3 py-2">
                 <p className="text-xs text-[#a8dadc]/90 mb-1.5">
-                  🎯 听牌提示（可见区推算剩余，含他家手牌未现）
+                  听牌提示（按可见信息估算）
                 </p>
                 {tenpaiHint.kind === 'current' ? (
                   <p className="text-sm text-[#f1faee] font-medium">
@@ -615,7 +530,7 @@ const GameMahjongJapanese = () => {
         {game && logOpen && (
           <div className="rounded-xl bg-[#1a2e25]/90 border border-[#2d4a3c] p-3 mt-4 max-h-48 overflow-hidden flex flex-col">
             <p className="text-xs text-[#f1faee]/80 mb-2">
-              游戏日志（便于排查问题，可复制到控制台）
+              游戏日志（调试信息）
             </p>
             <pre className="text-[11px] text-[#e0e0e0] overflow-auto flex-1 font-mono whitespace-pre-wrap break-all">
               {gameLog.length === 0 ? '（暂无）' : gameLog.join('\n')}

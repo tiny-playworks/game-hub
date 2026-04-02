@@ -158,7 +158,7 @@ export function useRiichiRoundActions(ctx: RiichiRoundContext) {
   ]);
 
   const proceedAfterRyuukyoku = useCallback(() => {
-    if (!game || !game.ryuukyoku) return;
+    if (!game?.ryuukyoku) return;
     const reason = game.ryuukyokuReason ?? '荒牌';
     const isExhaustiveDraw = reason === '荒牌';
     const tenpaiSeats = isExhaustiveDraw

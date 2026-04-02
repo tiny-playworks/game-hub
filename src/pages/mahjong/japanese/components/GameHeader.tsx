@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
@@ -39,17 +40,19 @@ export function GameHeader({
   onThemeChange,
   onOpenGuide,
 }: Props) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const roundText = `${WIND_NAMES[game.roundWind]}${game.roundNumber}局 ${WIND_NAMES[game.roundWind]}${game.honba}场 · 庄 ${SEAT_NAMES[game.dealer]}`;
+
   return (
     <header
-      className="flex flex-col md:flex-row md:items-center md:justify-between border-b px-3 py-2 md:px-4 md:py-3 gap-2"
+      className="flex items-center justify-between border-b px-3 py-2 md:px-4 md:py-3 gap-3"
       style={{
         backgroundColor: 'var(--riichi-bg)',
         borderColor: 'var(--riichi-table)',
         color: 'var(--riichi-text)',
       }}
     >
-      <div className="flex flex-wrap items-center gap-2 md:gap-4">
+      <div className="flex items-center gap-2 md:gap-3 min-w-0">
         <Link to="/" className="opacity-80 hover:opacity-100 text-sm shrink-0">
           ← {homeLabel}
         </Link>
@@ -60,122 +63,163 @@ export function GameHeader({
         >
           ← {returnRulesLabel}
         </button>
-        <span className="text-xs md:text-sm shrink-0">{roundText}</span>
-        <span
-          className="text-[11px] md:text-xs shrink-0 font-semibold"
+      </div>
+
+      <div className="min-w-0 flex-1 text-center px-2">
+        <p className="text-xs md:text-sm truncate">{roundText}</p>
+        <p
+          className="text-[11px] md:text-xs font-semibold"
           style={{ color: 'var(--riichi-accent)' }}
         >
           立直棒 {formatPoints(game.riichiPot)}
-        </span>
-        <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
+        </p>
+      </div>
+
+      <div className="flex items-center gap-2 shrink-0">
+        <div className="hidden md:flex items-center gap-1">
+          <span className="text-[10px] opacity-80">宝牌</span>
+          {game.doraIndicators.map((ind, i) => (
+            <span
+              key={i}
+              className={cn(
+                'w-8 h-11 rounded-[4px] border-2 bg-[#fff9e6] flex items-center justify-center font-black text-xs shrink-0',
+                getTileColorClass(ind),
+              )}
+            >
+              <RiichiTileFace tile={ind} />
+            </span>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => setMenuOpen(true)}
+          className="rounded-lg border px-2.5 py-1 text-xs md:text-sm"
+          style={{
+            borderColor: 'var(--riichi-border)',
+            color: 'var(--riichi-text)',
+            backgroundColor: 'transparent',
+          }}
+          aria-label="打开菜单"
+        >
+          菜单
+        </button>
+      </div>
+
+      {menuOpen && (
+        <div className="fixed inset-0 z-50">
           <button
             type="button"
-            onClick={onStart}
-            className="rounded-lg border px-2.5 py-1 md:px-3 md:py-1.5 text-xs md:text-sm hover:opacity-90"
+            className="absolute inset-0 bg-black/45"
+            onClick={() => setMenuOpen(false)}
+            aria-label="关闭菜单"
+          />
+          <aside
+            className="absolute right-0 top-0 h-full w-[280px] border-l p-4 overflow-auto"
             style={{
+              backgroundColor: 'var(--riichi-bg)',
               borderColor: 'var(--riichi-border)',
               color: 'var(--riichi-text)',
-              backgroundColor: 'transparent',
             }}
           >
-            再来一局
-          </button>
-          {historyLength > 0 && (
-            <button
-              type="button"
-              onClick={onUndo}
-              className="rounded-lg border border-amber-600/70 px-2.5 py-1 md:px-3 md:py-1.5 text-xs md:text-sm text-amber-200 hover:bg-amber-900/30"
-              title="回退一步（便于排查问题）"
-            >
-              回退
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={onOpenGuide}
-            className="rounded-lg border border-[#457b9d]/60 px-2.5 py-1 md:px-3 md:py-1.5 text-xs md:text-sm text-[#a8dadc] hover:bg-[#457b9d]/20"
-            aria-label="新手引导"
-          >
-            新手引导
-          </button>
-          <button
-            type="button"
-            onClick={onToggleLog}
-            className="rounded-lg border border-slate-500/60 px-2.5 py-1 md:px-3 md:py-1.5 text-xs md:text-sm text-slate-300 hover:bg-slate-700/30"
-          >
-            {logOpen ? '收起日志' : '日志'}
-          </button>
-          <span className="text-[10px] opacity-70 mx-0.5">主题</span>
-          {RIICHI_THEMES.map(({ id, label }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => onThemeChange(id)}
-              className={cn(
-                'rounded px-2 py-0.5 text-[11px] border',
-                theme === id ? 'font-semibold' : 'opacity-70 hover:opacity-100',
-              )}
-              style={{
-                borderColor:
-                  theme === id
-                    ? 'var(--riichi-accent)'
-                    : 'var(--riichi-border)',
-                color:
-                  theme === id ? 'var(--riichi-accent)' : 'var(--riichi-text)',
-                backgroundColor:
-                  theme === id ? 'var(--riichi-accent-soft)' : 'transparent',
-              }}
-              aria-pressed={theme === id}
-              aria-label={`主题 ${label}`}
-            >
-              {label}
-            </button>
-          ))}
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-semibold">对局菜单</p>
+              <button
+                type="button"
+                onClick={() => setMenuOpen(false)}
+                className="text-xs opacity-80 hover:opacity-100"
+              >
+                关闭
+              </button>
+            </div>
+
+            <div className="space-y-2 mb-4">
+              <button
+                type="button"
+                onClick={() => {
+                  onStart();
+                  setMenuOpen(false);
+                }}
+                className="w-full rounded-lg border px-3 py-2 text-sm text-left hover:opacity-90"
+                style={{ borderColor: 'var(--riichi-border)' }}
+              >
+                再来一局
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenGuide();
+                  setMenuOpen(false);
+                }}
+                className="w-full rounded-lg border px-3 py-2 text-sm text-left hover:opacity-90"
+                style={{ borderColor: 'var(--riichi-border)' }}
+              >
+                新手引导
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-xs opacity-75 mb-2">主题</p>
+              <div className="flex flex-wrap gap-2">
+                {RIICHI_THEMES.map(({ id, label }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => onThemeChange(id)}
+                    className={cn(
+                      'rounded px-2 py-1 text-xs border',
+                      theme === id
+                        ? 'font-semibold'
+                        : 'opacity-75 hover:opacity-100',
+                    )}
+                    style={{
+                      borderColor:
+                        theme === id
+                          ? 'var(--riichi-accent)'
+                          : 'var(--riichi-border)',
+                      color:
+                        theme === id
+                          ? 'var(--riichi-accent)'
+                          : 'var(--riichi-text)',
+                      backgroundColor:
+                        theme === id
+                          ? 'var(--riichi-accent-soft)'
+                          : 'transparent',
+                    }}
+                    aria-pressed={theme === id}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs opacity-75 mb-2">调试</p>
+              <div className="space-y-2">
+                {historyLength > 0 && (
+                  <button
+                    type="button"
+                    onClick={onUndo}
+                    className="w-full rounded-lg border px-3 py-2 text-sm text-left hover:opacity-90"
+                    style={{ borderColor: 'var(--riichi-border)' }}
+                    title="回退一步（便于排查问题）"
+                  >
+                    回退一步
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={onToggleLog}
+                  className="w-full rounded-lg border px-3 py-2 text-sm text-left hover:opacity-90"
+                  style={{ borderColor: 'var(--riichi-border)' }}
+                >
+                  {logOpen ? '收起日志' : '查看日志'}
+                </button>
+              </div>
+            </div>
+          </aside>
         </div>
-      </div>
-      {/* 小屏：宝牌折叠，点击展开 */}
-      <details className="md:hidden">
-        <summary className="flex cursor-pointer list-none items-center justify-center gap-1 text-[10px] opacity-80 [&::-webkit-details-marker]:hidden">
-          <span>宝牌</span>
-          <span
-            className="font-semibold"
-            style={{ color: 'var(--riichi-accent)' }}
-          >
-            ×{game.doraIndicators.length}
-          </span>
-          <span aria-hidden>▼</span>
-        </summary>
-        <div className="flex flex-wrap justify-center gap-0.5 mt-1">
-          {game.doraIndicators.map((ind, i) => (
-            <span
-              key={i}
-              className={cn(
-                'w-9 h-12 rounded-[4px] border-2 bg-[#fff9e6] flex items-center justify-center font-black text-xs shrink-0',
-                getTileColorClass(ind),
-              )}
-            >
-              <RiichiTileFace tile={ind} />
-            </span>
-          ))}
-        </div>
-      </details>
-      {/* 大屏：宝牌直接显示 */}
-      <div className="hidden md:flex flex-col items-center gap-1">
-        <span className="text-[10px] opacity-80">宝牌表示</span>
-        <div className="flex flex-wrap justify-center gap-1">
-          {game.doraIndicators.map((ind, i) => (
-            <span
-              key={i}
-              className={cn(
-                'w-[52px] h-[72px] rounded-[6px] border-2 bg-[#fff9e6] flex items-center justify-center font-black text-lg shrink-0 tile-dora-glow',
-                getTileColorClass(ind),
-              )}
-            >
-              <RiichiTileFace tile={ind} />
-            </span>
-          ))}
-        </div>
-      </div>
+      )}
     </header>
   );
 }

@@ -123,7 +123,9 @@
 body {
   margin: 0;
   color: #fff;
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+  font-family:
+    "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+    sans-serif;
   background-image: linear-gradient(to bottom, #020917, #101725);
 }
 
@@ -429,51 +431,51 @@ body {
 
 /* 日麻多主题：通过 data-riichi-theme 切换，子元素用 var(--riichi-*) */
 [data-riichi-theme="green"] {
-  --riichi-bg: #1a2e25;
-  --riichi-bg-to: #152019;
-  --riichi-text: #f1faee;
-  --riichi-text-muted: #a8dadc;
-  --riichi-table: #2d4a3c;
-  --riichi-table-inner: #1a2e25;
-  --riichi-border: #d4b886;
-  --riichi-accent: #ffc107;
-  --riichi-accent-soft: rgba(255, 193, 7, 0.1);
-  --riichi-btn-primary: #d4b886;
-  --riichi-btn-primary-text: #1a2e25;
-  --riichi-btn-primary-hover: #e5c997;
-  --riichi-tile-back-color: #2b5e3d;
+  --riichi-bg: #102218;
+  --riichi-bg-to: #0b1610;
+  --riichi-text: #f3efe3;
+  --riichi-text-muted: #9fbba8;
+  --riichi-table: #2f5846;
+  --riichi-table-inner: #17362b;
+  --riichi-border: #c2a876;
+  --riichi-accent: #ffd166;
+  --riichi-accent-soft: rgba(255, 209, 102, 0.14);
+  --riichi-btn-primary: #c2a876;
+  --riichi-btn-primary-text: #12271c;
+  --riichi-btn-primary-hover: #d8bd8b;
+  --riichi-tile-back-color: #35684d;
 }
 
 [data-riichi-theme="blue"] {
-  --riichi-bg: #0f172a;
-  --riichi-bg-to: #020617;
-  --riichi-text: #e0f2fe;
-  --riichi-text-muted: #7dd3fc;
-  --riichi-table: #1e3a5f;
-  --riichi-table-inner: #0f172a;
-  --riichi-border: #60a5fa;
-  --riichi-accent: #38bdf8;
-  --riichi-accent-soft: rgba(56, 189, 248, 0.12);
-  --riichi-btn-primary: #60a5fa;
-  --riichi-btn-primary-text: #0f172a;
-  --riichi-btn-primary-hover: #93c5fd;
-  --riichi-tile-back-color: #1e3a8a;
+  --riichi-bg: #0e1a2a;
+  --riichi-bg-to: #080f19;
+  --riichi-text: #e8f1ff;
+  --riichi-text-muted: #92b6de;
+  --riichi-table: #254768;
+  --riichi-table-inner: #13283d;
+  --riichi-border: #7fa5cc;
+  --riichi-accent: #7bd2ff;
+  --riichi-accent-soft: rgba(123, 210, 255, 0.16);
+  --riichi-btn-primary: #7fa5cc;
+  --riichi-btn-primary-text: #0d1a2a;
+  --riichi-btn-primary-hover: #9dbde0;
+  --riichi-tile-back-color: #31597f;
 }
 
 [data-riichi-theme="warm"] {
-  --riichi-bg: #29201a;
-  --riichi-bg-to: #1c1612;
-  --riichi-text: #faf5f0;
-  --riichi-text-muted: #d4b896;
-  --riichi-table: #3d2e24;
-  --riichi-table-inner: #2a211a;
-  --riichi-border: #d4a574;
-  --riichi-accent: #e5c997;
-  --riichi-accent-soft: rgba(229, 201, 151, 0.15);
-  --riichi-btn-primary: #d4a574;
-  --riichi-btn-primary-text: #1c1612;
-  --riichi-btn-primary-hover: #e5c997;
-  --riichi-tile-back-color: #633215;
+  --riichi-bg: #261c16;
+  --riichi-bg-to: #17100d;
+  --riichi-text: #f8efe3;
+  --riichi-text-muted: #c9a98a;
+  --riichi-table: #4a3326;
+  --riichi-table-inner: #2d1e16;
+  --riichi-border: #c69767;
+  --riichi-accent: #f0c58a;
+  --riichi-accent-soft: rgba(240, 197, 138, 0.18);
+  --riichi-btn-primary: #c69767;
+  --riichi-btn-primary-text: #1a110d;
+  --riichi-btn-primary-hover: #d7ab7f;
+  --riichi-tile-back-color: #6b3f24;
 }
 
 /* 日麻牌桌区：在 flex 剩余高度内保持 5:4，随容器缩放，减少挤压错位 */
@@ -484,13 +486,13 @@ body {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  padding: 0.125rem;
+  padding: 0;
   container-type: size;
 }
 
 .riichi-playfield-inner {
-  width: min(100cqw, calc(100cqh * 5 / 4));
-  height: min(100cqh, calc(100cqw * 4 / 5));
+  width: min(100cqw, calc(100cqh * 8 / 5));
+  height: min(100cqh, calc(100cqw * 5 / 8));
   max-width: 100%;
   max-height: 100%;
   min-height: 0;
@@ -505,7 +507,7 @@ body {
     width: 100%;
     max-width: 100%;
     max-height: 100%;
-    aspect-ratio: 5 / 4;
+    aspect-ratio: 8 / 5;
     height: auto;
   }
 }
@@ -585,11 +587,11 @@ body {
     inset -1px -1px 3px rgba(0, 0, 0, 0.1),
     inset 1px 1px 4px rgba(255, 255, 255, 1),
     0 8px 0 #d97706,
-    0 10px 12px rgba(217, 119, 6, 0.5) !important;
+    0 10px 12px rgba(217, 119, 6, 0.5);
   transform: translateY(-4px) scale(1.02);
   border-color: #f59e0b;
   z-index: 10;
-  animation: none !important; /* disabled default pulse to prefer our nice shadow */
+  animation: none; /* disabled default pulse to prefer our nice shadow */
 }
 
 /* Red ring for active pulse */

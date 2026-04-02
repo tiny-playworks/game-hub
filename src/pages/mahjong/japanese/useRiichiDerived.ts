@@ -348,7 +348,7 @@ export function useRiichiDerived({
   }, [game, winResult]);
 
   const drawSettlementPreview = useMemo(() => {
-    if (!game || !game.ryuukyoku) return null;
+    if (!game?.ryuukyoku) return null;
     const reason = game.ryuukyokuReason ?? '荒牌';
     const isExhaustiveDraw = reason === '荒牌';
     const tenpaiSeats = isExhaustiveDraw
