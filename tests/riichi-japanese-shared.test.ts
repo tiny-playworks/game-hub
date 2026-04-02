@@ -117,6 +117,7 @@ describe('日麻 shared/timeoutTransitions', () => {
   test('buildStateAfterTimeoutDiscard 从 hand 移除牌、进 pile、下一家、phase=claim', () => {
     const base = initRiichiGame();
     const tile = base.hands[0][0];
+    const beforeCount = base.hands[0].filter((value) => value === tile).length;
     const next = buildStateAfterTimeoutDiscard(
       base,
       0,
@@ -130,7 +131,9 @@ describe('日麻 shared/timeoutTransitions', () => {
     expect(next.lastDiscard).toBe(tile);
     expect(next.lastDiscardFrom).toBe(0);
     expect(next.drawnTile).toBeNull();
-    expect(next.hands[0]).not.toContain(tile);
+    expect(next.hands[0].filter((value) => value === tile).length).toBe(
+      beforeCount - 1,
+    );
     expect(next.discardPiles[0]).toContain(tile);
     expect(next.timeoutEvents).toContain('自家 超时自动打出');
     expect(next.lastClaimMsg).toBe('超时自动出牌');

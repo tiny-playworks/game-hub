@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import type { YakuResult } from '@/lib/mahjongRiichi';
 import { getTileLabel } from '@/lib/mahjongRiichi';
@@ -289,9 +290,14 @@ export function RyuukyokuModal({
 type MatchEndModalProps = {
   matchEnd: MatchEndState;
   onRestart: () => void;
+  homeLabel: string;
 };
 
-export function MatchEndModal({ matchEnd, onRestart }: MatchEndModalProps) {
+export function MatchEndModal({
+  matchEnd,
+  onRestart,
+  homeLabel,
+}: MatchEndModalProps) {
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 animate-riichi-overlay-in"
@@ -337,16 +343,21 @@ export function MatchEndModal({ matchEnd, onRestart }: MatchEndModalProps) {
             </p>
           ))}
         </div>
-        <Button
-          className="w-full font-semibold"
-          style={{
-            backgroundColor: 'var(--riichi-btn-primary)',
-            color: 'var(--riichi-btn-primary-text)',
-          }}
-          onClick={onRestart}
-        >
-          再来一局
-        </Button>
+        <div className="space-y-2">
+          <Button
+            className="w-full font-semibold"
+            style={{
+              backgroundColor: 'var(--riichi-btn-primary)',
+              color: 'var(--riichi-btn-primary-text)',
+            }}
+            onClick={onRestart}
+          >
+            再来一局
+          </Button>
+          <Button asChild className="w-full" variant="outline">
+            <Link to="/">{homeLabel}</Link>
+          </Button>
+        </div>
       </div>
     </div>
   );

@@ -27,7 +27,7 @@ export const categories: CategoryItem[] = [
   {
     id: 'mahjong',
     name: '麻将',
-    description: '四川麻将、中国通用、日本麻将等多种玩法',
+    description: '以日本麻将为核心的完整对局玩法',
     path: '/category/mahjong',
   },
 ];

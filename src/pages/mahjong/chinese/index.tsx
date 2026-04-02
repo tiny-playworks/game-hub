@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useMahjongGame } from '@/hooks/useMahjongGame';
 import { useMahjongSounds } from '@/hooks/useMahjongSounds';
@@ -126,6 +126,7 @@ function TileFace({ tile, className }: { tile: number; className?: string }) {
 
 const GameMahjongChinese = () => {
   const { t } = useLocale();
+  const [searchParams, setSearchParams] = useSearchParams();
   const sounds = useMahjongSounds();
   const {
     state,
@@ -146,6 +147,19 @@ const GameMahjongChinese = () => {
   } = useMahjongGame();
   const prevHandLenRef = useRef<number>(0);
   const didPlayRyuukyokuRef = useRef(false);
+  const didHandleEntryRef = useRef(false);
+
+  useEffect(() => {
+    if (didHandleEntryRef.current) return;
+    if (searchParams.get('start') !== '1') return;
+
+    didHandleEntryRef.current = true;
+    startGame();
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('start');
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams, startGame]);
 
   useEffect(() => {
     if (!needAiDiscard) return;

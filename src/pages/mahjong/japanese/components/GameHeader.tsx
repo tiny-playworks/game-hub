@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
   RIICHI_THEMES,
@@ -18,6 +19,7 @@ type Props = {
   onToggleLog: () => void;
   onBackToRules: () => void;
   returnRulesLabel: string;
+  homeLabel: string;
   theme: RiichiThemeId;
   onThemeChange: (theme: RiichiThemeId) => void;
   onOpenGuide: () => void;
@@ -32,6 +34,7 @@ export function GameHeader({
   onToggleLog,
   onBackToRules,
   returnRulesLabel,
+  homeLabel,
   theme,
   onThemeChange,
   onOpenGuide,
@@ -47,6 +50,9 @@ export function GameHeader({
       }}
     >
       <div className="flex flex-wrap items-center gap-2 md:gap-4">
+        <Link to="/" className="opacity-80 hover:opacity-100 text-sm shrink-0">
+          ← {homeLabel}
+        </Link>
         <button
           type="button"
           onClick={onBackToRules}
@@ -72,7 +78,7 @@ export function GameHeader({
               backgroundColor: 'transparent',
             }}
           >
-            新一局
+            再来一局
           </button>
           {historyLength > 0 && (
             <button
@@ -88,9 +94,9 @@ export function GameHeader({
             type="button"
             onClick={onOpenGuide}
             className="rounded-lg border border-[#457b9d]/60 px-2.5 py-1 md:px-3 md:py-1.5 text-xs md:text-sm text-[#a8dadc] hover:bg-[#457b9d]/20"
-            aria-label="新手提示"
+            aria-label="新手引导"
           >
-            新手提示
+            新手引导
           </button>
           <button
             type="button"

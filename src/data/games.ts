@@ -131,25 +131,7 @@ export const games: GameItem[] = [
     difficulty: 2,
     tags: ['五子棋', '双人'],
   },
-  // 麻将 - 三种
-  {
-    id: 'mahjong-sichuan',
-    categoryId: 'mahjong',
-    name: '四川麻将',
-    description: '血战到底、刮风下雨、定缺规则等特色玩法。',
-    path: '/game/mahjong-sichuan',
-    difficulty: 4,
-    tags: ['四川麻将', '四人'],
-  },
-  {
-    id: 'mahjong-chinese',
-    categoryId: 'mahjong',
-    name: '中国通用麻将',
-    description: '国标规则，吃碰杠胡，番种计分。',
-    path: '/game/mahjong-chinese',
-    difficulty: 4,
-    tags: ['中国麻将', '四人'],
-  },
+  // 麻将 - 仅保留日麻
   {
     id: 'mahjong-japanese',
     categoryId: 'mahjong',

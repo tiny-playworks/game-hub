@@ -127,6 +127,127 @@ body {
   background-image: linear-gradient(to bottom, #020917, #101725);
 }
 
+@keyframes premium-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(18px, -12px, 0) scale(1.03);
+  }
+}
+
+@keyframes premium-shimmer {
+  0% {
+    transform: translateX(-18%);
+    opacity: 0.18;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  100% {
+    transform: translateX(18%);
+    opacity: 0.18;
+  }
+}
+
+.premium-surface {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid color-mix(in oklab, var(--border) 78%, white 22%);
+  background:
+    linear-gradient(
+      135deg,
+      rgba(7, 18, 36, 0.96),
+      rgba(16, 23, 37, 0.88) 42%,
+      rgba(54, 38, 16, 0.72)
+    ),
+    radial-gradient(
+      circle at top left,
+      rgba(245, 158, 11, 0.16),
+      transparent 40%
+    );
+  box-shadow:
+    0 18px 50px rgba(2, 9, 23, 0.28),
+    inset 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.premium-surface::before {
+  position: absolute;
+  inset: -18% auto auto 58%;
+  width: 20rem;
+  height: 20rem;
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle,
+    rgba(245, 158, 11, 0.28),
+    rgba(245, 158, 11, 0.08) 38%,
+    transparent 72%
+  );
+  filter: blur(12px);
+  opacity: 0.9;
+  animation: premium-float 12s ease-in-out infinite;
+  content: "";
+  pointer-events: none;
+}
+
+.premium-surface::after {
+  position: absolute;
+  inset: -35% -10% auto;
+  height: 70%;
+  background: linear-gradient(
+    115deg,
+    transparent 18%,
+    rgba(255, 255, 255, 0.14) 50%,
+    transparent 82%
+  );
+  animation: premium-shimmer 12s linear infinite;
+  content: "";
+  pointer-events: none;
+}
+
+.premium-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.premium-panel {
+  position: relative;
+  border: 1px solid color-mix(in oklab, var(--border) 72%, white 28%);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.12),
+      rgba(255, 255, 255, 0.04)
+    ),
+    rgba(8, 15, 28, 0.54);
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, 0.08),
+    0 14px 32px rgba(2, 9, 23, 0.16);
+  backdrop-filter: blur(14px);
+}
+
+.premium-panel-soft {
+  border: 1px solid color-mix(in oklab, var(--border) 82%, white 18%);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.76),
+      rgba(255, 255, 255, 0.92)
+    ),
+    rgba(255, 255, 255, 0.92);
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, 0.66),
+    0 14px 32px rgba(15, 23, 42, 0.06);
+}
+
+.premium-outline {
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.08);
+}
+
 .content {
   display: flex;
   min-height: 100vh;

@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { LocaleProvider } from '@/contexts/LocaleContext';
 import Home from '@/pages/Home';
 import './App.css';
@@ -14,9 +14,7 @@ const GameGo = lazy(() => import('@/pages/GameGo'));
 const GameShengji = lazy(() => import('@/pages/GameShengji'));
 const GameGomoku = lazy(() => import('@/pages/GameGomoku'));
 const GameGuessNumber = lazy(() => import('@/pages/GameGuessNumber'));
-const GameMahjongChinese = lazy(() => import('@/pages/mahjong/chinese'));
 const GameMahjongJapanese = lazy(() => import('@/pages/mahjong/japanese'));
-const GameMahjongSichuan = lazy(() => import('@/pages/mahjong/sichuan'));
 const GameMemory = lazy(() => import('@/pages/GameMemory'));
 const GameShooter = lazy(() => import('@/pages/GameShooter'));
 const GameSnake = lazy(() => import('@/pages/GameSnake'));
@@ -44,11 +42,11 @@ const App = () => {
             <Route path="/category/:categoryId" element={<Category />} />
             <Route
               path="/game/mahjong-chinese"
-              element={<GameMahjongChinese />}
+              element={<Navigate to="/game/mahjong-japanese" replace />}
             />
             <Route
               path="/game/mahjong-sichuan"
-              element={<GameMahjongSichuan />}
+              element={<Navigate to="/game/mahjong-japanese" replace />}
             />
             <Route
               path="/game/mahjong-japanese"

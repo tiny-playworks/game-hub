@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { getTileLabel } from '@/lib/mahjongRiichi';
+import { markRecentMahjongPlayed } from '@/lib/recentMahjong';
 import { getTurnTotalSeconds } from '@/lib/riichiClock';
 import { cn } from '@/lib/utils';
 import { CenterArea } from './components/CenterArea';
@@ -22,6 +24,8 @@ export { getNextRound } from './helpers';
 const GameMahjongJapanese = () => {
   const { t, locale } = useLocale();
   const [showExtraActions, setShowExtraActions] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const didHandleEntryRef = useRef(false);
   const { theme, setTheme } = useRiichiTheme();
   const bag = useRiichiGame();
   const {
@@ -81,6 +85,26 @@ const GameMahjongJapanese = () => {
   } = bag;
 
   useEffect(() => {
+    markRecentMahjongPlayed();
+  }, []);
+
+  useEffect(() => {
+    if (didHandleEntryRef.current) return;
+    const shouldAutoStart = searchParams.get('start') === '1';
+    const shouldOpenGuide = searchParams.get('guide') === '1';
+    if (!shouldAutoStart && !shouldOpenGuide) return;
+
+    didHandleEntryRef.current = true;
+    startGame();
+    if (shouldOpenGuide) setShowGuide(true);
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('start');
+    nextParams.delete('guide');
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams, startGame, setShowGuide]);
+
+  useEffect(() => {
     if (!showGuide) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setShowGuide(false);
@@ -121,6 +145,7 @@ const GameMahjongJapanese = () => {
         onToggleLog={() => setLogOpen((o) => !o)}
         onBackToRules={() => setView('rules')}
         returnRulesLabel={t('common.returnRules')}
+        homeLabel={t('common.backHome')}
         theme={theme}
         onThemeChange={setTheme}
         onOpenGuide={() => setShowGuide(true)}
@@ -628,7 +653,11 @@ const GameMahjongJapanese = () => {
         )}
 
         {matchEnd && (
-          <MatchEndModal matchEnd={matchEnd} onRestart={startGame} />
+          <MatchEndModal
+            matchEnd={matchEnd}
+            onRestart={startGame}
+            homeLabel={t('common.backHome')}
+          />
         )}
       </main>
     </div>

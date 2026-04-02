@@ -30,8 +30,9 @@ test('getGamesByCategory 按 categoryId 过滤', () => {
   expect(mini.every((g) => g.categoryId === 'mini')).toBe(true);
 
   const mahjong = getGamesByCategory('mahjong');
-  expect(mahjong.length).toBe(3);
+  expect(mahjong.length).toBe(1);
   expect(mahjong.every((g) => g.categoryId === 'mahjong')).toBe(true);
+  expect(mahjong[0]?.id).toBe('mahjong-japanese');
 
   const empty = getGamesByCategory('nonexistent');
   expect(empty).toHaveLength(0);
@@ -43,9 +44,10 @@ test('getGameByPath 能根据 path 找到游戏', () => {
   expect(guess?.id).toBe('guess-number');
   expect(guess?.name).toBe('猜数字');
 
-  const sichuan = getGameByPath('/game/mahjong-sichuan');
-  expect(sichuan).toBeDefined();
-  expect(sichuan?.categoryId).toBe('mahjong');
+  const riichi = getGameByPath('/game/mahjong-japanese');
+  expect(riichi).toBeDefined();
+  expect(riichi?.categoryId).toBe('mahjong');
+  expect(riichi?.id).toBe('mahjong-japanese');
 });
 
 test('getGameByPath 不存在的 path 返回 undefined', () => {

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useMahjongSounds } from '@/hooks/useMahjongSounds';
 import { useSichuanMahjongGame } from '@/hooks/useSichuanMahjongGame';
@@ -121,6 +121,7 @@ function TileFace({ tile, className }: { tile: number; className?: string }) {
 
 const GameMahjongSichuan = () => {
   const { t } = useLocale();
+  const [searchParams, setSearchParams] = useSearchParams();
   const sounds = useMahjongSounds();
   const {
     state,
@@ -137,6 +138,19 @@ const GameMahjongSichuan = () => {
     SEAT_NAMES,
   } = useSichuanMahjongGame();
   const prevHandLenRef = useRef<number>(0);
+  const didHandleEntryRef = useRef(false);
+
+  useEffect(() => {
+    if (didHandleEntryRef.current) return;
+    if (searchParams.get('start') !== '1') return;
+
+    didHandleEntryRef.current = true;
+    startGame();
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('start');
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams, startGame]);
 
   const isQueMenPhase = state?.phase === 'queMen';
   const needHumanQueMen = isQueMenPhase && !state?.isQueMenDeclared[0];
