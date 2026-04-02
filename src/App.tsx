@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { LocaleProvider } from '@/contexts/LocaleContext';
 import Home from '@/pages/Home';
 import './App.css';
@@ -40,14 +40,6 @@ const App = () => {
             <Route path="/" element={<Home />} />
             <Route path="/achievements" element={<Achievements />} />
             <Route path="/category/:categoryId" element={<Category />} />
-            <Route
-              path="/game/mahjong-chinese"
-              element={<Navigate to="/game/mahjong-japanese" replace />}
-            />
-            <Route
-              path="/game/mahjong-sichuan"
-              element={<Navigate to="/game/mahjong-japanese" replace />}
-            />
             <Route
               path="/game/mahjong-japanese"
               element={<GameMahjongJapanese />}

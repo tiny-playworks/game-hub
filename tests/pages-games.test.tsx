@@ -18,9 +18,7 @@ import GameTank from '../src/pages/GameTank';
 import GameTetris from '../src/pages/GameTetris';
 import GameTictactoe from '../src/pages/GameTictactoe';
 import GameXiangqi from '../src/pages/GameXiangqi';
-import GameMahjongChinese from '../src/pages/mahjong/chinese/index';
 import GameMahjongJapanese from '../src/pages/mahjong/japanese/index';
-import GameMahjongSichuan from '../src/pages/mahjong/sichuan/index';
 
 const withRouter = (children: React.ReactElement) => (
   <MemoryRouter>
@@ -122,22 +120,6 @@ test('坦克大战：渲染操作说明', () => {
 test('俄罗斯方块：渲染得分/等级/消行', () => {
   render(withRouter(<GameTetris />));
   expect(screen.getByText(/消行:/)).toBeInTheDocument();
-});
-
-test('中国通用麻将：渲染标题与开始', () => {
-  render(withRouter(<GameMahjongChinese />));
-  expect(screen.getAllByText('中国通用麻将').length).toBeGreaterThanOrEqual(1);
-  expect(
-    screen.getAllByRole('button', { name: '开始' }).length,
-  ).toBeGreaterThanOrEqual(1);
-});
-
-test('四川麻将：渲染标题与开始', () => {
-  render(withRouter(<GameMahjongSichuan />));
-  expect(screen.getAllByText('四川麻将').length).toBeGreaterThanOrEqual(1);
-  expect(
-    screen.getAllByRole('button', { name: '开始' }).length,
-  ).toBeGreaterThanOrEqual(1);
 });
 
 test('日本立直麻将：渲染标题与开始游戏', () => {

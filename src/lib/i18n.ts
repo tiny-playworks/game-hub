@@ -130,11 +130,6 @@ const messages: Record<Locale, Record<string, string>> = {
     'game.chess.description': '王后车马象兵，经典西洋棋。',
     'game.gomoku.name': '五子棋',
     'game.gomoku.description': '五子连珠即胜，简单易上手。',
-    'game.mahjong-sichuan.name': '四川麻将',
-    'game.mahjong-sichuan.description':
-      '血战到底、刮风下雨、定缺规则等特色玩法。',
-    'game.mahjong-chinese.name': '中国通用麻将',
-    'game.mahjong-chinese.description': '国标规则，吃碰杠胡，番种计分。',
     'game.mahjong-japanese.name': '日本麻将',
     'game.mahjong-japanese.description':
       '立直、役种、符与点数计算。支持完整对局与流局。',
@@ -285,10 +280,6 @@ const messages: Record<Locale, Record<string, string>> = {
     'game.chess.description': 'Classic Western chess.',
     'game.gomoku.name': 'Gomoku',
     'game.gomoku.description': 'Five in a row wins.',
-    'game.mahjong-sichuan.name': 'Sichuan Mahjong',
-    'game.mahjong-sichuan.description': 'Blood battle, dingque & more.',
-    'game.mahjong-chinese.name': 'Chinese Mahjong',
-    'game.mahjong-chinese.description': 'Standard rules, fan scoring.',
     'game.mahjong-japanese.name': 'Japanese Mahjong',
     'game.mahjong-japanese.description':
       'Riichi, yaku, fu and points. Full game and exhaustive draw.',

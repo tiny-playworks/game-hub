@@ -478,7 +478,7 @@ body {
   --riichi-tile-back-color: #6b3f24;
 }
 
-/* 日麻牌桌区：在 flex 剩余高度内保持 5:4，随容器缩放，减少挤压错位 */
+/* 日麻牌桌区：在 flex 剩余高度内保持 8:5，随容器缩放，减少挤压错位 */
 .riichi-playfield-outer {
   flex: 1;
   min-height: 0;
@@ -501,7 +501,7 @@ body {
   overflow: hidden;
 }
 
-/* 无 cqw 时：用 aspect-ratio 保持 5:4，宽度撑满外层 */
+/* 无 cqw 时：用 aspect-ratio 保持 8:5，宽度撑满外层 */
 @supports not (width: 100cqw) {
   .riichi-playfield-inner {
     width: 100%;
