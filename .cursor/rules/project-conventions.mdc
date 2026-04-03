@@ -43,6 +43,11 @@ alwaysApply: true
 - React 组件用函数组件；类型用 TypeScript 严格模式
 - 新增依赖用 pnpm：`pnpm add <pkg>` / `pnpm add -D <pkg>`
 
+## 产品范围（麻将）
+
+- **仅日本立直麻将（日麻）**：算分与对局在 `src/pages/mahjong/japanese/`、`riichi-rs-bundlers` 等；不排期川麻、国标等其它麻将变种（贪多嚼不烂）。
+- 详细计划见 `docs/PLAN.md` 与 `docs/player-meta-roadmap.md`。
+
 ## 文档与参考
 
 - Rsbuild: https://rsbuild.rs/llms.txt

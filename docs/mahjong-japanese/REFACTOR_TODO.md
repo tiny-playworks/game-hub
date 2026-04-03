@@ -122,7 +122,7 @@
 
 ### 6.2 测试与质量
 
-- **单测**：全项目 **18 个测试文件、126 用例**；日麻相关约 10 个文件（含 riichi-flow-integration），覆盖 lib 层、shared 纯函数及 flow 集成（要牌自动过 next/draw/ryuukyoku）。
+- **单测**：全项目 **20 个测试文件、123 用例**；日麻相关约 10 个文件（含 riichi-flow-integration），覆盖 lib 层、shared 纯函数及 flow 集成（要牌自动过 next/draw/ryuukyoku）。
 - **可测试性**：ClaimFlow / DrawAiFlow 支持可选 `flowDeps`；flow 集成测用最小 ctx 渲染 harness，断言 setGame 得到的状态。
 - **校验**：`pnpm run check`（tsc + biome）、`pnpm run test` 全通过即视为当前 DoD。
 

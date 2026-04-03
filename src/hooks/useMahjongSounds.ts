@@ -1,6 +1,6 @@
 /**
- * 通用麻将音效：川麻/国标复用 public/sounds/riichi 的 吃/碰/杠/自摸/荣和 wav。
- * 出牌/摸牌默认静音，流局保留中文 TTS 兜底。
+ * 吃/碰/杠/自摸/荣和 wav 的轻量封装（资源位于 public/sounds/riichi/）。
+ * 产品仅日本立直麻将；对局内请用 useRiichiSounds。本 hook 供测试与接口一致性保留。
  */
 
 import useSound from 'use-sound';

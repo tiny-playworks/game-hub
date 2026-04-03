@@ -13,7 +13,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'home.hero.tertiary': '成就',
     'home.hero.stat.mahjong': '1 个核心麻将',
     'home.hero.stat.games': '16 款已上线游戏',
-    'home.hero.stat.tests': '112 条测试用例',
+    'home.hero.stat.tests': '123 条测试用例',
     'home.mahjong.title': '日本麻将',
     'home.mahjong.subtitle':
       '立直、役种、符点计算、流局处理，一套完整日麻体验。',
@@ -196,7 +196,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'home.hero.tertiary': 'Achievements',
     'home.hero.stat.mahjong': '1 core mahjong mode',
     'home.hero.stat.games': '16 shipped games',
-    'home.hero.stat.tests': '112 test cases',
+    'home.hero.stat.tests': '123 test cases',
     'home.mahjong.title': 'Japanese Mahjong',
     'home.mahjong.subtitle':
       'Riichi, yaku, fu and points, exhaustive draw flow. A complete table-ready experience.',

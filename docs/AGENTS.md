@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Game Hub（游戏合集）：基于 Rsbuild + React 的纯前端 SPA，**18 款已上线游戏**（含斗地主、升级），无占位。日本麻将和了算分由 **riichi-rs-bundlers**（Rust/WASM）提供，适配层 `src/lib/riichiRsAdapter.ts`。
+Game Hub（游戏合集）：基于 Rsbuild + React 的纯前端 SPA，**16 款已上线游戏**（9 小游戏 + 4 棋类 + 1 日麻 + 2 扑克），无占位。日本麻将和了算分由 **riichi-rs-bundlers**（Rust/WASM）提供，适配层 `src/lib/riichiRsAdapter.ts`。
 
 ## Commands
 
@@ -8,7 +8,7 @@ Game Hub（游戏合集）：基于 Rsbuild + React 的纯前端 SPA，**18 款�
 - `pnpm run build` - 生产构建
 - `pnpm run preview` - 本地预览构建结果
 - `pnpm run check` - 类型检查 (tsc) + Biome 检查（无单独 lint 脚本）
-- `pnpm run test` - 运行测试（18 文件、126 用例）
+- `pnpm run test` - 运行测试（20 文件、123 用例）
 
 ## Docs
 
@@ -30,4 +30,4 @@ Game Hub（游戏合集）：基于 Rsbuild + React 的纯前端 SPA，**18 款�
 
 ## 计划与优先级
 
-**需求排序**见 [PLAN.md](PLAN.md)。当前：占位游戏已补齐；日麻已接算分（riichi-rs-bundlers）、音效（wav + TTS）与动画；下一优先级 P2（更多麻将/游戏音效与动画，按需）。包体分析：`pnpm run build:analyze`（Rsdoctor）。
+**总览**见 [PLAN.md](PLAN.md)，**主线阶段与产出**见 [player-meta-roadmap.md](player-meta-roadmap.md)（玩家档案 → 成长 → 音频 → 游戏感 → 雀士等）。麻将仅做**日麻**；SSR/在线多人为远期 App 向，非当前 Web 迭代重点。包体分析：`pnpm run build:analyze`（Rsdoctor）。
