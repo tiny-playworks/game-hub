@@ -34,7 +34,9 @@ test('成就页：渲染标题与成就列表', () => {
       </LocaleProvider>
     </MemoryRouter>,
   );
-  expect(screen.getByText(/成就|Achievements/)).toBeInTheDocument();
+  expect(
+    screen.getByRole('heading', { name: /成就|Achievements/ }),
+  ).toBeInTheDocument();
   expect(
     screen.getAllByRole('link', { name: /返回首页|Back to Home/ }).length,
   ).toBeGreaterThanOrEqual(1);

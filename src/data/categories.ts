@@ -24,10 +24,4 @@ export const categories: CategoryItem[] = [
     description: '斗地主、升级等扑克牌类玩法',
     path: '/category/poker',
   },
-  {
-    id: 'mahjong',
-    name: '麻将',
-    description: '以日本麻将为核心的完整对局玩法',
-    path: '/category/mahjong',
-  },
 ];

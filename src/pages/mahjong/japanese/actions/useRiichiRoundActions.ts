@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { recordDailyTaskEvent } from '@/lib/dailyTasks';
 import { rankSeatsByScore, resolveRiichiMatchEnd } from '@/lib/riichiGameEnd';
 import {
   type PaymentDetail,
@@ -68,6 +69,7 @@ export function useRiichiRoundActions(ctx: RiichiRoundContext) {
         matchLength,
       ),
     );
+    recordDailyTaskEvent('enter-game');
     setView('game');
     addLog(matchLength === 'east' ? '东风场 新一局' : '南风场 新一局');
   }, [
@@ -84,6 +86,7 @@ export function useRiichiRoundActions(ctx: RiichiRoundContext) {
 
   const proceedToNextRound = useCallback(() => {
     if (!game || !winResult) return;
+    recordDailyTaskEvent('finish-round');
     const baseTen = resolveWinBaseTen(winResult, game);
     const settlement = settleWin({
       scores: game.scores,
@@ -159,6 +162,7 @@ export function useRiichiRoundActions(ctx: RiichiRoundContext) {
 
   const proceedAfterRyuukyoku = useCallback(() => {
     if (!game?.ryuukyoku) return;
+    recordDailyTaskEvent('finish-round');
     const reason = game.ryuukyokuReason ?? '荒牌';
     const isExhaustiveDraw = reason === '荒牌';
     const tenpaiSeats = isExhaustiveDraw

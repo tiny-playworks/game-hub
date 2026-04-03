@@ -129,6 +129,12 @@ body {
   background-image: linear-gradient(to bottom, #020917, #101725);
 }
 
+/* React 树与 body 解耦：浅色主题页用 shadcn foreground，避免继承 body 白字 */
+#root {
+  color: var(--foreground);
+  min-height: 100vh;
+}
+
 @keyframes premium-float {
   0%,
   100% {

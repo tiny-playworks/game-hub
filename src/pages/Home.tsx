@@ -1,10 +1,29 @@
-import { ArrowRight, Castle, Club, Gamepad2, Sparkles } from 'lucide-react';
-import { useMemo } from 'react';
+import {
+  ArrowRight,
+  Castle,
+  Club,
+  Gamepad2,
+  Sparkles,
+  Upload,
+} from 'lucide-react';
+import { type ChangeEventHandler, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useLocale } from '@/contexts/LocaleContext';
 import { categories } from '@/data/categories';
 import { games } from '@/data/games';
+import { claimDailyTask, ensureDailyTaskState } from '@/lib/dailyTasks';
+import { getGrowthOverview } from '@/lib/growth';
+import {
+  cropImageFileToSquareDataUrl,
+  getAvatarPresetById,
+  getPlayerProfile,
+  PLAYER_AVATAR_PRESETS,
+  type PlayerProfile,
+  sanitizeNickname,
+  updatePlayerProfile,
+} from '@/lib/playerProfile';
 import { getRecentMahjongEntry } from '@/lib/recentMahjong';
 import { useRiichiGameStore } from '@/pages/mahjong/japanese/store/riichiGameStore';
 
@@ -52,15 +71,49 @@ const categoryIconMap = {
   poker: Club,
 } as const;
 
+function ProfileAvatar({ profile }: { profile: PlayerProfile }) {
+  if (profile.avatarMode === 'upload' && profile.avatarUploadDataUrl) {
+    return (
+      <img
+        src={profile.avatarUploadDataUrl}
+        alt="avatar"
+        className="h-16 w-16 rounded-2xl border border-slate-200 object-cover"
+      />
+    );
+  }
+  const preset = getAvatarPresetById(profile.avatarPresetId);
+  return (
+    <div
+      className={`flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-200 text-2xl font-semibold ${preset.bgClass} ${preset.fgClass}`}
+      role="img"
+      aria-label={preset.label}
+    >
+      {preset.glyph}
+    </div>
+  );
+}
+
 const Home = () => {
   const { t, locale } = useLocale();
+  const [profile, setProfile] = useState<PlayerProfile>(() =>
+    getPlayerProfile(),
+  );
+  const [nicknameDraft, setNicknameDraft] = useState(profile.nickname);
+  const [dailyTaskState, setDailyTaskState] = useState(() =>
+    ensureDailyTaskState(),
+  );
+  const [growthOverview, setGrowthOverview] = useState(() =>
+    getGrowthOverview(),
+  );
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState('');
   const view = useRiichiGameStore((state) => state.view);
   const game = useRiichiGameStore((state) => state.game);
   const matchEnd = useRiichiGameStore((state) => state.matchEnd);
   const featuredMahjongGames = featuredMahjongIds
     .map((id) => games.find((game) => game.id === id))
     .filter((game) => game !== undefined);
-  const secondaryCategories = categories.filter((cat) => cat.id !== 'mahjong');
+  const secondaryCategories = categories;
   const mahjongActions = [
     { label: t('common.quickStart'), to: '/game/mahjong-japanese?start=1' },
     { label: t('common.viewRules'), to: '/game/mahjong-japanese' },
@@ -84,6 +137,56 @@ const Home = () => {
       },
     );
   }, [locale, recentMahjong]);
+
+  useEffect(() => {
+    setDailyTaskState(ensureDailyTaskState());
+    setGrowthOverview(getGrowthOverview());
+  }, []);
+
+  const saveNickname = () => {
+    const next = updatePlayerProfile({
+      nickname: sanitizeNickname(nicknameDraft),
+    });
+    setProfile(next);
+    setNicknameDraft(next.nickname);
+  };
+
+  const applyPresetAvatar = (presetId: string) => {
+    const next = updatePlayerProfile({
+      avatarMode: 'preset',
+      avatarPresetId: presetId,
+    });
+    setProfile(next);
+    setAvatarError('');
+  };
+
+  const onUploadAvatar: ChangeEventHandler<HTMLInputElement> = async (
+    event,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setAvatarUploading(true);
+    setAvatarError('');
+    try {
+      const dataUrl = await cropImageFileToSquareDataUrl(file);
+      const next = updatePlayerProfile({
+        avatarMode: 'upload',
+        avatarUploadDataUrl: dataUrl,
+      });
+      setProfile(next);
+    } catch {
+      setAvatarError(t('home.player.avatarUploadFailed'));
+    } finally {
+      setAvatarUploading(false);
+      event.target.value = '';
+    }
+  };
+
+  const claimTaskReward = (taskId: string) => {
+    const result = claimDailyTask(taskId);
+    setDailyTaskState(result.state);
+    setGrowthOverview(getGrowthOverview());
+  };
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,#f7f2e4_0,#edf4e8_46%,#dce8dd_100%)] font-['Avenir_Next','PingFang_SC','Hiragino_Sans_GB','Microsoft_YaHei',sans-serif] text-slate-900">
@@ -113,6 +216,183 @@ const Home = () => {
       </header>
 
       <main className="mx-auto flex max-w-6xl flex-col gap-10 px-4 py-8 md:py-10">
+        <section className="grid gap-4 md:grid-cols-2">
+          <div className="rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+            <p className="text-xs font-medium tracking-[0.2em] text-emerald-700/70 uppercase">
+              {t('home.player.title')}
+            </p>
+            <div className="mt-3 flex items-start gap-4">
+              <ProfileAvatar profile={profile} />
+              <div className="min-w-0 flex-1 space-y-2">
+                <label
+                  className="text-xs text-slate-500"
+                  htmlFor="nickname-input"
+                >
+                  {t('home.player.nickname')}
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    id="nickname-input"
+                    maxLength={16}
+                    value={nicknameDraft}
+                    onChange={(event) => setNicknameDraft(event.target.value)}
+                    onBlur={saveNickname}
+                    className="h-10 border-slate-200 bg-white"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-slate-200"
+                    onClick={saveNickname}
+                  >
+                    {t('home.player.save')}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              <p className="text-xs text-slate-500">
+                {t('home.player.avatarPreset')}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {PLAYER_AVATAR_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => applyPresetAvatar(preset.id)}
+                    className={`flex h-10 w-10 items-center justify-center rounded-lg text-sm font-semibold transition ${
+                      profile.avatarMode === 'preset' &&
+                      profile.avatarPresetId === preset.id
+                        ? 'ring-2 ring-emerald-500'
+                        : 'ring-1 ring-slate-200'
+                    } ${preset.bgClass} ${preset.fgClass}`}
+                    aria-label={preset.label}
+                  >
+                    {preset.glyph}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              <p className="text-xs text-slate-500">
+                {t('home.player.avatarUpload')}
+              </p>
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                <Upload className="size-4" />
+                {avatarUploading
+                  ? t('home.player.avatarUploading')
+                  : t('home.player.avatarUploadAction')}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={onUploadAvatar}
+                  disabled={avatarUploading}
+                />
+              </label>
+              {avatarError && (
+                <p className="text-xs text-rose-600" role="status">
+                  {avatarError}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+            <p className="text-xs font-medium tracking-[0.2em] text-emerald-700/70 uppercase">
+              {t('home.growth.title')}
+            </p>
+            <div className="mt-3 grid grid-cols-3 gap-3">
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs text-slate-500">
+                  {t('home.growth.totalPoints')}
+                </p>
+                <p className="mt-1 text-xl font-semibold text-slate-900">
+                  {growthOverview.totalPoints}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs text-slate-500">
+                  {t('home.growth.achievementPoints')}
+                </p>
+                <p className="mt-1 text-xl font-semibold text-slate-900">
+                  {growthOverview.achievementPoints}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs text-slate-500">
+                  {t('home.growth.taskPoints')}
+                </p>
+                <p className="mt-1 text-xl font-semibold text-slate-900">
+                  {growthOverview.taskPoints}
+                </p>
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-slate-500">
+              {t('home.growth.achievementProgress')}
+              {growthOverview.unlockedAchievements}/
+              {growthOverview.totalAchievements}
+            </p>
+
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-slate-800">
+                  {t('home.daily.title')}
+                </p>
+                <span className="text-xs text-slate-500">
+                  {dailyTaskState.dateKey}
+                </span>
+              </div>
+              <ul className="space-y-2">
+                {dailyTaskState.items.map((task) => (
+                  <li
+                    key={task.id}
+                    className="rounded-xl border border-slate-200 bg-white p-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-slate-900">
+                          {t(task.titleKey)}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {t(task.descKey)}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-600">
+                          {t('home.daily.progress')}
+                          {task.progress}/{task.target}
+                          {' · '}
+                          {t('home.daily.reward')}
+                          {task.rewardPoints}
+                        </p>
+                      </div>
+                      {task.claimed ? (
+                        <span className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600">
+                          {t('home.daily.claimed')}
+                        </span>
+                      ) : task.completed ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="bg-emerald-700 text-white hover:bg-emerald-600"
+                          onClick={() => claimTaskReward(task.id)}
+                        >
+                          {t('home.daily.claim')}
+                        </Button>
+                      ) : (
+                        <span className="rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-700">
+                          {t('home.daily.pending')}
+                        </span>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+
         <section className="relative overflow-hidden rounded-[36px] border border-emerald-200/80 bg-[linear-gradient(135deg,#f7efda,#edf6ed_50%,#deeadf)] p-6 shadow-[0_24px_56px_rgba(15,23,42,0.12)] animate-in fade-in duration-500 md:p-8">
           <div className="pointer-events-none absolute -left-20 top-[-90px] size-64 rounded-full bg-amber-200/45 blur-3xl" />
           <div className="pointer-events-none absolute -right-16 bottom-[-90px] size-72 rounded-full bg-emerald-300/32 blur-3xl" />

@@ -20,10 +20,10 @@ export function RulesView({
     <div className="min-h-screen bg-background">
       <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
         <Link
-          to="/category/mahjong"
+          to="/"
           className="text-muted-foreground hover:text-foreground"
         >
-          ← {t('common.backToCategory')}
+          ← {t('common.backHome')}
         </Link>
       </header>
       <main className="mx-auto max-w-2xl px-4 py-6">
