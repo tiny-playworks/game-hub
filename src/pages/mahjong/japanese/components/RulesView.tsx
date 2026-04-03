@@ -19,10 +19,7 @@ export function RulesView({
   return (
     <div className="min-h-screen bg-background">
       <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
-        <Link
-          to="/"
-          className="text-muted-foreground hover:text-foreground"
-        >
+        <Link to="/" className="text-muted-foreground hover:text-foreground">
           ← {t('common.backHome')}
         </Link>
       </header>

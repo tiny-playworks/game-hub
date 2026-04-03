@@ -169,10 +169,14 @@ const Category = () => {
                       <span
                         className={cn(
                           'rounded-full px-3 py-1 text-xs font-medium',
-                          game.difficulty >= 4 && 'bg-destructive/20 text-destructive',
-                          game.difficulty === 3 && 'bg-amber-500/20 text-amber-700',
-                          game.difficulty === 2 && 'bg-blue-500/20 text-blue-700',
-                          game.difficulty === 1 && 'bg-green-500/20 text-green-700',
+                          game.difficulty >= 4 &&
+                            'bg-destructive/20 text-destructive',
+                          game.difficulty === 3 &&
+                            'bg-amber-500/20 text-amber-700',
+                          game.difficulty === 2 &&
+                            'bg-blue-500/20 text-blue-700',
+                          game.difficulty === 1 &&
+                            'bg-green-500/20 text-green-700',
                         )}
                       >
                         {difficultyLabel(game.difficulty)}
