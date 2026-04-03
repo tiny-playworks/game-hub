@@ -12,9 +12,9 @@ Game Hub（游戏合集）：基于 Rsbuild + React 的纯前端 SPA，**18 款�
 
 ## Docs
 
-- Rsbuild: https://rsbuild.rs/llms.txt
-- Rspack: https://rspack.rs/llms.txt
-- Rstest: https://rstest.rs/llms.txt
+- Rsbuild: [https://rsbuild.rs/llms.txt](https://rsbuild.rs/llms.txt)
+- Rspack: [https://rspack.rs/llms.txt](https://rspack.rs/llms.txt)
+- Rstest: [https://rstest.rs/llms.txt](https://rstest.rs/llms.txt)
 
 ## Tools
 
