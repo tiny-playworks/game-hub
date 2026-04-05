@@ -4,7 +4,8 @@
 
 **权威主线**：当前迭代目标与阶段拆分以 **[player-meta-roadmap.md](player-meta-roadmap.md)** 为准（玩家档案 → 成长 → 音频 → 游戏感 → 角色预研 → 雀士 1.0）。本文做**总览、范围边界与文档索引**，不重复 roadmap 全文。
 
-**近期执行细则**：P0/P1/P2（大厅 2.0、成长闭环 2.0、角色骨架）的**可执行说明书**见 **[player-meta-next-plan.md](player-meta-next-plan.md)**（含验收标准、允许/禁止修改范围、派单方式）。
+**P0～P2 归档**（已完成）：[archive/player-meta-p0-p2-solo-done.md](archive/player-meta-p0-p2-solo-done.md)。历史实施全文仍见 [player-meta-next-plan.md](player-meta-next-plan.md)（文档内已标「已完成」）。  
+**后续待办（唯一清单）**：[player-meta-backlog.md](player-meta-backlog.md)（含近期与暂缓，均为待做）。
 
 ---
 
@@ -36,7 +37,8 @@
 **阶段进度（2026-04-05）**：
 - 阶段 1/2：已落地并持续小迭代
 - 阶段 3：暂缓（音频方案待定）
-- 阶段 4：进行中（已落地“成就解锁全局弹窗 + 日麻结算摘要增强”）
+- 阶段 4：**P0～P2 范围内已结案**（大厅 2.0、成长闭环 2.0、角色骨架等，见归档）；Phase 4 余量（收藏入口等）见 [player-meta-backlog.md](player-meta-backlog.md)
+- 阶段 5：**P2 骨架已落地**；角色主流程与资源量产等待办见 backlog
 
 ---
 
@@ -64,7 +66,8 @@
 | 文档 | 用途 |
 | --- | --- |
 | [player-meta-roadmap.md](player-meta-roadmap.md) | **主线**：分阶段目标、产出、完成标准（权威细节） |
-| [player-meta-next-plan.md](player-meta-next-plan.md) | **近期执行说明书**：P0～P2 交付目标、验收、作用范围、派单方式（可与 AI 协作直接使用） |
+| [player-meta-backlog.md](player-meta-backlog.md) | **待办唯一清单**：近期与暂缓（均为待做） |
+| [player-meta-next-plan.md](player-meta-next-plan.md) | **历史实施规格**：P0～P2 已完成并归档；验收与文件清单仍可查阅 |
 | [PLAN.md](PLAN.md) | 本文：范围边界、阶段速览、索引 |
 | [REPO_WIKI.md](REPO_WIKI.md) | 项目概述、技术架构、测试、评估、计划详表 |
 | [AGENTS.md](AGENTS.md) | 命令、工具、Cursor Cloud、计划摘要 |

@@ -1,8 +1,12 @@
 # 玩家 Meta 下一步落地方案与执行说明书
 
+> **执行状态（2026-04-05）**：P0～P2 已按验收标准完成并**归档**，见 [archive/player-meta-p0-p2-solo-done.md](archive/player-meta-p0-p2-solo-done.md)。  
+> **后续待办**（含暂缓排期项）统一见 **[player-meta-backlog.md](player-meta-backlog.md)**。  
+> 下文保留为**历史实施规格**（文件清单、验收口径仍可查阅）。
+
 ## 文档目的
 
-这份文档不是方向讨论稿，而是可直接交给其他 AI 或协作者执行的**实施说明书**。
+这份文档不是方向讨论稿，而是可据以落地的**实施说明书**（单人维护时也可自洽执行；若交外部助手，以本文 + backlog 为输入即可）。
 
 目标只有一个：
 
@@ -16,11 +20,13 @@
 
 ## 速览
 
-| 优先级 | 方向 | 目的 |
-| --- | --- | --- |
-| **P0** | 大厅 2.0 | 先把首页做成真正的游戏大厅 |
-| **P1** | 成长闭环 2.0 | 让玩家明确看到「玩完后得到了什么」 |
-| **P2** | 角色系统骨架 | 提前把后续重内容的接口和 UI 位立住 |
+
+| 优先级    | 方向       | 目的                  |
+| ------ | -------- | ------------------- |
+| **P0** | 大厅 2.0   | 先把首页做成真正的游戏大厅       |
+| **P1** | 成长闭环 2.0 | 让玩家明确看到「玩完后得到了什么」   |
+| **P2** | 角色系统骨架   | 提前把后续重内容的接口和 UI 位立住 |
+
 
 当前不优先推进完整音频系统 1.0，也不进入重型雀士角色内容生产。
 
@@ -48,15 +54,15 @@
 以下能力已经存在，执行时禁止重复起一套新系统：
 
 - 首页已有「继续游玩 / 今日任务 / 最近成长 / 角色」基础模块  
-  参考：[Home.tsx](../src/pages/Home.tsx)
+参考：[Home.tsx](../src/pages/Home.tsx)
 - 顶部已有快捷档案/签到/成就入口  
-  参考：[QuickAccessPanel.tsx](../src/components/home/QuickAccessPanel.tsx)
+参考：[QuickAccessPanel.tsx](../src/components/home/QuickAccessPanel.tsx)
 - 档案页已有玩家档案、签到、任务、成长、统计、角色聚合  
-  参考：[Profile.tsx](../src/pages/Profile.tsx)
+参考：[Profile.tsx](../src/pages/Profile.tsx)
 - 日麻结算弹层已有成长摘要区  
-  参考：[Modals.tsx](../src/pages/mahjong/japanese/components/Modals.tsx)（约第 80 行起）
+参考：[Modals.tsx](../src/pages/mahjong/japanese/components/Modals.tsx)（约第 80 行起）
 - 成长 / 签到 / 每日任务 / 每周任务 / 最近成长 / 角色亲密度 / 称号都已有本地状态层  
-  参考：`src/lib/*`
+参考：`src/lib/`*
 
 ---
 
@@ -113,7 +119,7 @@
 
 - [Home.tsx](../src/pages/Home.tsx)
 - [QuickAccessPanel.tsx](../src/components/home/QuickAccessPanel.tsx)
-- 必要时新增少量 `src/components/home/*` 展示组件
+- 必要时新增少量 `src/components/home/`* 展示组件
 
 #### 不允许修改
 
@@ -476,7 +482,7 @@ P0 只做轻展示，不做新系统。
 
 #### 允许修改
 
-- `src/lib/playerCharacters*`
+- `src/lib/playerCharacters`*
 - [Profile.tsx](../src/pages/Profile.tsx)
 - 首页中与角色展示相关的轻量 UI
 

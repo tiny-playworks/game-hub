@@ -12,6 +12,7 @@
 | [mahjong-japanese/riichi-ui-revamp-plan.md](mahjong-japanese/riichi-ui-revamp-plan.md) | 日麻 UI 改版计划（已落地，计划本身归档）      |
 | [mahjong-japanese/REFACTOR_TODO.md](mahjong-japanese/REFACTOR_TODO.md)                 | 日麻模块重构记录与待办（阶段性完成，转归档保留）   |
 | [web-to-app-plan.md](web-to-app-plan.md)                                               | Web 转 App 远期专题（非当前主线）      |
+| [player-meta-p0-p2-solo-done.md](player-meta-p0-p2-solo-done.md)                       | 玩家 Meta P0～P2 执行完成记录（单人维护，2026-04-05） |
 
 
 *归档整理：2026-04*

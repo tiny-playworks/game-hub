@@ -21,7 +21,7 @@
 
 ## 2. 当前现状
 
-> 与仓库快照一致；更细的落地清单见 [player-meta-next-plan.md](player-meta-next-plan.md)、总索引见 [PLAN.md](PLAN.md)。
+> 与仓库快照一致；P0～P2 已归档见 [archive/player-meta-p0-p2-solo-done.md](archive/player-meta-p0-p2-solo-done.md)。**当前待办**见 [player-meta-backlog.md](player-meta-backlog.md)；历史规格见 [player-meta-next-plan.md](player-meta-next-plan.md)；总索引见 [PLAN.md](PLAN.md)。
 
 ### 2.1 已有基础
 
@@ -33,9 +33,10 @@
 
 ### 2.2 仍待加强（非「从零缺失」）
 
-- **音频 1.0**：音量分组、完整对局音效 / BGM、通用 UI 音等仍按 [sound-assets.md](sound-assets.md) 与 Phase 3 推进
-- **雀士角色**：仍以预研 / 骨架为主，未产品化立绘与语音包（Phase 5–6）
-- **游戏感 / 大厅**：首页与流程可持续 polish，与 Phase 4 目标对齐
+- **P0～P2（大厅 / 成长闭环 / 角色骨架）**：已在代码侧按 [player-meta-next-plan.md](player-meta-next-plan.md) 收口，**归档**见 [archive/player-meta-p0-p2-solo-done.md](archive/player-meta-p0-p2-solo-done.md)
+- **音频 1.0**：音量分组、完整对局音效 / BGM、通用 UI 音等仍按 [sound-assets.md](sound-assets.md) 与 Phase 3 推进（待办见 [player-meta-backlog.md](player-meta-backlog.md)）
+- **雀士角色**：P2 骨架已立；立绘与语音包量产、角色中心等仍为 Phase 5–6 待办
+- **游戏感 / 大厅**：Phase 4 余量（收藏入口等）可持续 polish，见 backlog
 - **成就与任务**：可继续扩展周任务、更多进度型成就与统计维度
 
 ---
@@ -52,7 +53,7 @@
 
 ## 4. 分阶段计划
 
-下列速览与 [PLAN.md](PLAN.md) 中「主线阶段速览」一致；**执行顺序与代码级清单**以 [player-meta-next-plan.md](player-meta-next-plan.md) 为准，各 Phase 小节为设计说明。
+下列速览与 [PLAN.md](PLAN.md) 中「主线阶段速览」一致；P0～P2 对应规格见 [player-meta-next-plan.md](player-meta-next-plan.md)（已完成）；**当前排期与待办**以 [player-meta-backlog.md](player-meta-backlog.md) 为准，各 Phase 小节为设计说明。
 
 | 阶段 | 目标 | 重点产出 | 重量 |
 | --- | --- | --- | --- |
@@ -311,23 +312,22 @@ AI 资源方向：
 
 ---
 
-## 5. 近期执行建议
+## 5. 近期执行建议（单人维护）
 
-**权威执行输入**为 [player-meta-next-plan.md](player-meta-next-plan.md)（含阶段划分、文件清单与验收）。
+**待办唯一入口**：[player-meta-backlog.md](player-meta-backlog.md)（含「近期可排期」与「暂缓仍是待办」）。
 
-本节仅保留方向提示：
-
-- **继续**：音频 1.0、大厅与结算反馈、角色预研按 Phase 3–6 与 next-plan 迭代
-- **暂不推进**：真登录、云存档、完整雀士立绘 / 语音包量产（与 PLAN 范围一致）
+- **历史规格（P0～P2）**：[player-meta-next-plan.md](player-meta-next-plan.md) + 归档 [archive/player-meta-p0-p2-solo-done.md](archive/player-meta-p0-p2-solo-done.md)
+- **继续推进**：音频 1.0、Phase 4 余量、Phase 5–6 等按 backlog 与 Phase 小节迭代
+- **暂缓排期**（仍记在 backlog，不视为取消）：真登录、云存档、完整雀士立绘 / 语音包量产等（与 PLAN 范围一致）
 
 ---
 
 ## 6. 执行顺序建议
 
-档案 / 成长 / 任务等**基础数据结构与会话内落地**已按 next-plan 多轮完成。后续新增能力请：
+档案 / 成长 / 任务及 **P0～P2** 已按 next-plan 收口并完成归档。后续新增能力请：
 
-1. 先改 [player-meta-next-plan.md](player-meta-next-plan.md) 与相关 `src/lib/playerMeta*` / 页面
-2. 再同步本 roadmap 或 PLAN 中的阶段表述（避免双源不一致）
+1. 先更新 [player-meta-backlog.md](player-meta-backlog.md)（或 PLAN 中阶段表述），再改 `src/lib/playerMeta*` / 页面
+2. 大方向变更时同步本 roadmap，避免双源不一致
 
 ---
 
