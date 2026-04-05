@@ -1,6 +1,7 @@
 import { Compass, ScrollText, Sparkles, UserRound } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
 import { ContinuePlaySection } from '@/components/home/ContinuePlaySection';
 import { MainPlayerCard } from '@/components/home/MainPlayerCard';
 import { QuickAccessPanel } from '@/components/home/QuickAccessPanel';
@@ -241,10 +242,22 @@ const Home = () => {
               <UserRound className="size-4 text-emerald-700" />
             </div>
             <div className="mt-4 rounded-[24px] bg-[linear-gradient(135deg,#13243b,#173226_58%,#234036)] p-4 text-white">
-              <p className="text-2xl font-semibold">{activeCharacter.name}</p>
-              <p className="mt-2 text-sm leading-6 text-slate-200">
-                {activeCharacter.tagline}
-              </p>
+              <div className="flex items-start gap-3">
+                <CharacterPortraitSlot
+                  character={activeCharacter}
+                  size="sm"
+                  label={`${activeCharacter.name} · ${t('character.portrait.placeholder')}`}
+                  className="border-white/20 text-white"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-2xl font-semibold">
+                    {activeCharacter.name}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-slate-200">
+                    {activeCharacter.tagline}
+                  </p>
+                </div>
+              </div>
               <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
                 <div className="rounded-2xl bg-white/10 px-3 py-2">
                   <p className="text-xs text-slate-300">

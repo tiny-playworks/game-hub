@@ -96,6 +96,10 @@ const messages: Record<Locale, Record<string, string>> = {
     'home.characters.unlockedPrefix': '已解锁 ',
     'home.characters.unlockedSuffix': ' 位角色，更多角色会随着对局推进加入。',
     'home.characters.viewProfile': '去档案页查看',
+    'character.portrait.placeholder': '立绘占位',
+    'character.bio.mio': '偏稳健型，习惯先整理一向听再进攻。',
+    'character.bio.rin': '对局越多越兴奋，喜欢保持巡目压力。',
+    'character.bio.sora': '重视巡目与场况，和牌只是过程的一部分。',
     'growth.feed.characterFallback': '角色',
     'growth.feed.characterStageVerb': '升到阶段',
     'growth.feed.checkin.title': '每日签到',
@@ -155,6 +159,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'profile.companion.unlock.default': '默认可用',
     'profile.companion.unlock.riichiRoundsPrefix': '完成局数',
     'profile.companion.unlock.winsPrefix': '和牌次数',
+    'profile.companion.mountsPlaceholder': '语音包与主题：待资源管线接入',
     'profile.recentGrowth.title': '最近成长',
     'profile.recentGrowth.recentPrefix': '最近',
     'profile.recentGrowth.recentSuffix': '条',
@@ -482,6 +487,13 @@ const messages: Record<Locale, Record<string, string>> = {
     'home.characters.unlockedSuffix':
       ' companions. More will join as your matches progress.',
     'home.characters.viewProfile': 'View in Profile',
+    'character.portrait.placeholder': 'Portrait placeholder',
+    'character.bio.mio':
+      'Steady style: prefers fixing waits before pushing tempo.',
+    'character.bio.rin':
+      'Gets sharper with more rounds; likes keeping turn pressure.',
+    'character.bio.sora':
+      'Reads flow and board state; winning is part of the pace.',
     'growth.feed.characterFallback': 'Character',
     'growth.feed.characterStageVerb': 'advanced to stage',
     'growth.feed.checkin.title': 'Daily check-in',
@@ -544,6 +556,8 @@ const messages: Record<Locale, Record<string, string>> = {
     'profile.companion.unlock.default': 'Available by default',
     'profile.companion.unlock.riichiRoundsPrefix': 'Rounds completed',
     'profile.companion.unlock.winsPrefix': 'Wins',
+    'profile.companion.mountsPlaceholder':
+      'Voice pack & theme: pending asset pipeline',
     'profile.recentGrowth.title': 'Recent Growth',
     'profile.recentGrowth.recentPrefix': 'Recent',
     'profile.recentGrowth.recentSuffix': 'items',

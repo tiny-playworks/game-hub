@@ -29,15 +29,16 @@ pnpm run build    # 生产构建
 pnpm run build:analyze  # 构建并打开包体分析（Rsdoctor）
 pnpm run preview  # 预览构建结果
 pnpm run check    # 类型检查 + Biome（提交前建议执行）
-pnpm run test     # 测试（20 文件、123 用例）
+pnpm run test     # 测试（22 文件、130 用例）
 pnpm run format   # 格式化
 ```
 
 ## 文档与计划
 
-- **计划总览与范围**：[PLAN.md](./PLAN.md)
+- **计划总览与范围**：[docs/PLAN.md](./docs/PLAN.md)
 - **产品主线（分阶段）**：[docs/player-meta-roadmap.md](./docs/player-meta-roadmap.md)
-- **详细说明与评估**：[REPO_WIKI.md](./REPO_WIKI.md)（项目结构、测试、计划详表）
+- **玩家 meta 执行细则**（档案 / 签到 / 任务等）：[docs/player-meta-next-plan.md](./docs/player-meta-next-plan.md)
+- **详细说明与评估**：[docs/REPO_WIKI.md](./docs/REPO_WIKI.md)（项目结构、测试、计划详表）
 - **音效与动画说明**：[docs/sound-assets.md](./docs/sound-assets.md)
 - **文档归档**（历史日志与已完成专项）：[docs/archive/README.md](./docs/archive/README.md)
 

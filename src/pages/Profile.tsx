@@ -7,6 +7,7 @@ import {
   useState,
 } from 'react';
 import { Link } from 'react-router-dom';
+import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -485,18 +486,33 @@ const Profile = () => {
               {t('profile.companion.section')}
             </p>
             <div className="mt-4 rounded-[24px] bg-[linear-gradient(135deg,#13243b,#173226_58%,#234036)] p-4 text-white">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-2xl font-semibold">
-                    {activeCharacter.name}
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-slate-200">
-                    {activeCharacter.tagline}
-                  </p>
+              <div className="flex items-start gap-4">
+                <CharacterPortraitSlot
+                  character={activeCharacter}
+                  size="lg"
+                  label={`${activeCharacter.name} · ${t('character.portrait.placeholder')}`}
+                  className="border-white/20 text-white"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-2xl font-semibold">
+                        {activeCharacter.name}
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-slate-200">
+                        {activeCharacter.tagline}
+                      </p>
+                      {activeCharacter.bioKey ? (
+                        <p className="mt-2 text-xs leading-5 text-slate-300/95">
+                          {t(activeCharacter.bioKey)}
+                        </p>
+                      ) : null}
+                    </div>
+                    <span className="shrink-0 rounded-full bg-white/10 px-3 py-1 text-xs text-slate-100">
+                      {t('profile.companion.currentBadge')}
+                    </span>
+                  </div>
                 </div>
-                <span className="rounded-full bg-white/10 px-3 py-1 text-xs text-slate-100">
-                  {t('profile.companion.currentBadge')}
-                </span>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
                 <div className="rounded-2xl bg-white/10 px-3 py-2">
@@ -530,18 +546,39 @@ const Profile = () => {
                     className="rounded-2xl border border-slate-200 bg-white p-3"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-medium text-slate-900">
-                          {character.name}
-                        </p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {character.tagline}
-                        </p>
-                        <p className="mt-2 text-xs text-slate-600">
-                          {unlocked
-                            ? `${t('profile.companion.stageLabel')} ${stage} · ${t('profile.companion.affinityLabel')} ${affinity}`
-                            : getCharacterUnlockText(character, playerStats, t)}
-                        </p>
+                      <div className="flex min-w-0 flex-1 items-start gap-3">
+                        <CharacterPortraitSlot
+                          character={character}
+                          size="md"
+                          label={`${character.name} · ${t('character.portrait.placeholder')}`}
+                        />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-slate-900">
+                            {character.name}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {character.tagline}
+                          </p>
+                          {character.bioKey ? (
+                            <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                              {t(character.bioKey)}
+                            </p>
+                          ) : null}
+                          <p className="mt-2 text-xs text-slate-600">
+                            {unlocked
+                              ? `${t('profile.companion.stageLabel')} ${stage} · ${t('profile.companion.affinityLabel')} ${affinity}`
+                              : getCharacterUnlockText(
+                                  character,
+                                  playerStats,
+                                  t,
+                                )}
+                          </p>
+                          {unlocked ? (
+                            <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
+                              {t('profile.companion.mountsPlaceholder')}
+                            </p>
+                          ) : null}
+                        </div>
                       </div>
                       {unlocked ? (
                         <Button

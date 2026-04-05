@@ -14,6 +14,14 @@ export interface CharacterDef {
   tagline: string;
   accent: string;
   unlockRule: CharacterUnlockRule;
+  /** i18n key，档案卡短介绍；缺省则不展示 bio 行 */
+  bioKey?: string;
+  /** 立绘资源 key，接入美术后使用；null 为渐变占位 */
+  portraitKey: string | null;
+  /** 语音包 id，占位供后续资源管线挂载 */
+  voicePackId: string | null;
+  /** 表现主题 token（UI 主题/特效），占位 */
+  themeToken: string | null;
 }
 
 export interface PlayerCharacterState {
@@ -39,6 +47,10 @@ export const CHARACTER_DEFS: CharacterDef[] = [
     name: '澪',
     tagline: '先把手牌理顺，再谈胜负。',
     accent: 'from-amber-200 via-orange-100 to-rose-100',
+    bioKey: 'character.bio.mio',
+    portraitKey: null,
+    voicePackId: null,
+    themeToken: null,
     unlockRule: {
       type: 'default',
       target: 0,
@@ -49,6 +61,10 @@ export const CHARACTER_DEFS: CharacterDef[] = [
     name: '凛',
     tagline: '对局数上来了，气势也要跟上。',
     accent: 'from-sky-200 via-cyan-100 to-emerald-100',
+    bioKey: 'character.bio.rin',
+    portraitKey: null,
+    voicePackId: null,
+    themeToken: null,
     unlockRule: {
       type: 'riichi-rounds',
       target: 5,
@@ -59,6 +75,10 @@ export const CHARACTER_DEFS: CharacterDef[] = [
     name: '空',
     tagline: '和牌不是终点，节奏才是答案。',
     accent: 'from-violet-200 via-fuchsia-100 to-pink-100',
+    bioKey: 'character.bio.sora',
+    portraitKey: null,
+    voicePackId: null,
+    themeToken: null,
     unlockRule: {
       type: 'riichi-wins',
       target: 3,
