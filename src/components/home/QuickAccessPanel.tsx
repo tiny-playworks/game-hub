@@ -1,6 +1,7 @@
-import { CalendarCheck, Trophy, UserCircle2 } from 'lucide-react';
+import { CalendarCheck, Trophy } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { PlayerAvatar } from '@/components/home/PlayerAvatar';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { getAllAchievementProgresses } from '@/lib/achievements';
@@ -16,16 +17,14 @@ import {
 } from '@/lib/checkin';
 import { getGrowthOverview } from '@/lib/growth';
 import {
-  getAvatarPresetById,
   getPlayerProfile,
   type PlayerProfile,
   updatePlayerProfile,
 } from '@/lib/playerProfile';
-import { getRecentMahjongEntry } from '@/lib/recentMahjong';
-import { getTitleById, resolveActiveTitle } from '@/lib/titles';
+import { resolveActiveTitle } from '@/lib/titles';
 import { cn } from '@/lib/utils';
 
-type QuickPanel = 'achievements' | 'checkin' | 'profile' | null;
+type QuickPanel = 'achievements' | 'checkin' | null;
 
 type Props = {
   withLocaleSwitcher?: boolean;
@@ -60,28 +59,6 @@ function LocaleSwitcher() {
       >
         En
       </button>
-    </div>
-  );
-}
-
-function ProfileAvatar({ profile }: { profile: PlayerProfile }) {
-  if (profile.avatarMode === 'upload' && profile.avatarUploadDataUrl) {
-    return (
-      <img
-        src={profile.avatarUploadDataUrl}
-        alt="avatar"
-        className="h-16 w-16 rounded-2xl border border-slate-200 object-cover"
-      />
-    );
-  }
-  const preset = getAvatarPresetById(profile.avatarPresetId);
-  return (
-    <div
-      className={`flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-200 text-2xl font-semibold ${preset.bgClass} ${preset.fgClass}`}
-      role="img"
-      aria-label={preset.label}
-    >
-      {preset.glyph}
     </div>
   );
 }
@@ -141,21 +118,6 @@ export function QuickAccessPanel({
     () => new Set(checkinState.signedDateKeys),
     [checkinState.signedDateKeys],
   );
-  const recentMahjong = getRecentMahjongEntry();
-  const recentPlayedText = useMemo(() => {
-    if (!recentMahjong) return '';
-    return new Date(recentMahjong.playedAt).toLocaleString(
-      locale === 'zh' ? 'zh-CN' : 'en-US',
-      {
-        month: 'numeric',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      },
-    );
-  }, [locale, recentMahjong]);
-  const recentPlayedLabel = t('home.quick.recentPlayed');
-  const noRecentPlayedText = t('home.quick.noRecentPlayed');
   const weekHeaders = [
     t('home.quick.weekday.mon'),
     t('home.quick.weekday.tue'),
@@ -189,11 +151,6 @@ export function QuickAccessPanel({
     .slice(0, 3);
   const allAchievementsUnlockedText = t('home.quick.achievements.allUnlocked');
   const inProgressLabel = t('home.quick.achievements.inProgress');
-  const resolvedTitleId = resolveActiveTitle(
-    profile.activeTitle,
-    growthOverview.totalPoints,
-  );
-  const activeTitle = getTitleById(resolvedTitleId);
   const checkedInToday = checkinState.dateKey === getBeijingDateKey();
   const weekMilestone = CHECKIN_WEEK_MILESTONES[0];
   const monthMilestone = CHECKIN_MONTH_MILESTONES[0];
@@ -336,58 +293,15 @@ export function QuickAccessPanel({
         <CalendarCheck className={iconClass} />
         {t('home.quick.checkin')}
       </button>
-      <button
-        type="button"
-        className={`${buttonClass} ${
-          quickPanel === 'profile'
-            ? 'border-emerald-400 bg-emerald-50 text-emerald-800'
-            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-        }`}
-        onClick={() =>
-          setQuickPanel((current) => (current === 'profile' ? null : 'profile'))
-        }
+      <Link
+        to="/profile"
+        className={`${buttonClass} border-slate-200 bg-white text-slate-700 hover:bg-slate-50`}
+        aria-label={t('home.quick.profile')}
+        title={t('home.quick.profile')}
       >
-        <UserCircle2 className={iconClass} />
-        {t('home.quick.profile')}
-      </button>
+        <PlayerAvatar profile={profile} size="sm" />
+      </Link>
       {withLocaleSwitcher ? <LocaleSwitcher /> : null}
-
-      {quickPanel === 'profile' && (
-        <div className={`${panelClass} w-72`}>
-          <div className="flex items-center gap-3">
-            <ProfileAvatar profile={profile} />
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-slate-900">
-                {profile.nickname}
-              </p>
-              <div className="mt-1 inline-flex max-w-full items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] text-emerald-700">
-                <span className="mr-1 text-emerald-600">✦</span>
-                <span className="truncate">
-                  {activeTitle
-                    ? t(activeTitle.nameKey)
-                    : t('home.player.noTitle')}
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-slate-500">
-                {t('home.growth.totalPoints')}：{growthOverview.totalPoints}
-              </p>
-            </div>
-          </div>
-          <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-            <p className="text-[11px] text-slate-500">{recentPlayedLabel}</p>
-            <p className="mt-0.5 text-xs text-slate-700">
-              {recentPlayedText || noRecentPlayedText}
-            </p>
-          </div>
-          <Button
-            asChild
-            size="sm"
-            className="mt-3 w-full bg-emerald-800 hover:bg-emerald-700"
-          >
-            <Link to="/profile">{t('home.quick.profileDetail')}</Link>
-          </Button>
-        </div>
-      )}
 
       {quickPanel === 'achievements' && (
         <div className={`${panelClass} w-72`}>

@@ -1,19 +1,17 @@
 import {
   ACHIEVEMENTS,
+  type AchievementRarity,
   checkAndUnlockFromStats,
   getAchievementMeta,
   getUnlockedIds,
-  type AchievementRarity,
 } from '@/lib/achievements';
 import {
   type RecordDailyTaskEventResult,
   type RiichiDailyEvent,
   recordDailyTaskEvent,
 } from '@/lib/dailyTasks';
-import {
-  appendGrowthFeedItem,
-  type GrowthFeedItem,
-} from '@/lib/growthFeed';
+import { getGrowthOverview } from '@/lib/growth';
+import { appendGrowthFeedItem, type GrowthFeedItem } from '@/lib/growthFeed';
 import {
   addActiveCharacterAffinity,
   type CharacterAffinityProgress,
@@ -51,13 +49,14 @@ export interface RiichiCharacterProgressSummary {
 export interface RiichiProgressResult {
   event: RiichiProgressEvent;
   autoClaimedTaskRewards: Array<
-    RecordDailyTaskEventResult['autoClaimedRewards'][number] | {
-      taskId: string;
-      titleKey: string;
-      descKey: string;
-      rewardPoints: number;
-      scope: 'weekly';
-    }
+    | RecordDailyTaskEventResult['autoClaimedRewards'][number]
+    | {
+        taskId: string;
+        titleKey: string;
+        descKey: string;
+        rewardPoints: number;
+        scope: 'weekly';
+      }
   >;
   rewardPoints: number;
   statDelta: RiichiProgressStatDelta;
@@ -67,6 +66,8 @@ export interface RiichiProgressResult {
 }
 
 export interface RiichiRoundProgressSummary {
+  /** Snapshot of total growth points before `enter-game` reset (session baseline). */
+  growthPointsBeforeMatch?: number;
   autoClaimedTaskRewards: RiichiProgressResult['autoClaimedTaskRewards'];
   rewardPoints: number;
   statDelta: RiichiProgressStatDelta;
@@ -96,7 +97,9 @@ function createEmptyRoundSummary(): RiichiRoundProgressSummary {
   };
 }
 
-function getStatDeltaForEvent(event: RiichiProgressEvent): RiichiProgressStatDelta {
+function getStatDeltaForEvent(
+  event: RiichiProgressEvent,
+): RiichiProgressStatDelta {
   return {
     totalPlayCount: event === 'enter-game' ? 1 : 0,
     riichiRounds: event === 'finish-round' ? 1 : 0,
@@ -136,9 +139,7 @@ function getNewlyUnlockedAchievements(): RiichiAchievementRewardSummary[] {
         points: meta.points,
       };
     })
-    .filter(
-      (item): item is RiichiAchievementRewardSummary => item !== null,
-    );
+    .filter((item): item is RiichiAchievementRewardSummary => item !== null);
 }
 
 function buildCharacterProgressSummary(
@@ -186,7 +187,7 @@ function buildAchievementFeedItems(
 function buildCharacterStageFeedItem(
   progress: RiichiCharacterProgressSummary | null,
 ): GrowthFeedItem[] {
-  if (!progress || !progress.stageIncreased) return [];
+  if (!progress?.stageIncreased) return [];
   return [
     appendGrowthFeedItem({
       type: 'character-stage',
@@ -211,7 +212,12 @@ export function recordRiichiProgressEvent(
   event: RiichiProgressEvent,
 ): RiichiProgressResult {
   if (event === 'enter-game') {
+    const growthPointsBeforeMatch = getGrowthOverview().totalPoints;
     resetCurrentRiichiRoundProgressSummary();
+    currentRoundSummary = {
+      ...currentRoundSummary,
+      growthPointsBeforeMatch,
+    };
   }
 
   const dailyResult = recordDailyTaskEvent(event);
@@ -257,7 +263,9 @@ export function recordRiichiProgressEvent(
       ...currentRoundSummary.recordedGrowthItems,
       ...recordedGrowthItems,
     ],
-    characterProgress: characterProgress ?? currentRoundSummary.characterProgress,
+    characterProgress:
+      characterProgress ?? currentRoundSummary.characterProgress,
+    growthPointsBeforeMatch: currentRoundSummary.growthPointsBeforeMatch,
   };
 
   return {

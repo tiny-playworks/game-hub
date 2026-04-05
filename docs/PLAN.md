@@ -4,6 +4,8 @@
 
 **权威主线**：当前迭代目标与阶段拆分以 **[player-meta-roadmap.md](player-meta-roadmap.md)** 为准（玩家档案 → 成长 → 音频 → 游戏感 → 角色预研 → 雀士 1.0）。本文做**总览、范围边界与文档索引**，不重复 roadmap 全文。
 
+**近期执行细则**：P0/P1/P2（大厅 2.0、成长闭环 2.0、角色骨架）的**可执行说明书**见 **[player-meta-next-plan.md](player-meta-next-plan.md)**（含验收标准、允许/禁止修改范围、派单方式）。
+
 ---
 
 ## 1. 范围与原则
@@ -62,7 +64,7 @@
 | 文档 | 用途 |
 | --- | --- |
 | [player-meta-roadmap.md](player-meta-roadmap.md) | **主线**：分阶段目标、产出、完成标准（权威细节） |
-| [player-meta-next-plan.md](player-meta-next-plan.md) | 近期落地方案：大厅 2.0 / 成长闭环 2.0 / 角色骨架 |
+| [player-meta-next-plan.md](player-meta-next-plan.md) | **近期执行说明书**：P0～P2 交付目标、验收、作用范围、派单方式（可与 AI 协作直接使用） |
 | [PLAN.md](PLAN.md) | 本文：范围边界、阶段速览、索引 |
 | [REPO_WIKI.md](REPO_WIKI.md) | 项目概述、技术架构、测试、评估、计划详表 |
 | [AGENTS.md](AGENTS.md) | 命令、工具、Cursor Cloud、计划摘要 |

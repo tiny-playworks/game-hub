@@ -1,5 +1,11 @@
 import { Upload } from 'lucide-react';
-import { type ChangeEventHandler, useEffect, useMemo, useState } from 'react';
+import {
+  type ChangeEventHandler,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -157,7 +163,7 @@ const Profile = () => {
   const [avatarError, setAvatarError] = useState('');
   const [checkinFeedback, setCheckinFeedback] = useState('');
 
-  const refreshDashboard = () => {
+  const refreshDashboard = useCallback(() => {
     const nextDaily = ensureDailyTaskState();
     const nextWeekly = ensureWeeklyTaskState();
     const nextCheckin = ensureCheckinState();
@@ -183,11 +189,11 @@ const Profile = () => {
     setRecentFeed(getRecentGrowthFeed(6));
     setProfile(syncedProfile);
     setNicknameDraft(syncedProfile.nickname);
-  };
+  }, []);
 
   useEffect(() => {
     refreshDashboard();
-  }, []);
+  }, [refreshDashboard]);
 
   const saveNickname = () => {
     const next = updatePlayerProfile({
@@ -283,6 +289,22 @@ const Profile = () => {
       Object.entries(playerStats.gamePlayCounts).sort((a, b) => b[1] - a[1]),
     [playerStats.gamePlayCounts],
   );
+  const riichiRatioStats = useMemo(() => {
+    const r = playerStats.riichiRounds;
+    const w = playerStats.riichiWins;
+    const rc = playerStats.riichiRiichiCount;
+    const tc = playerStats.riichiTsumoCount;
+    return {
+      winRate: r > 0 ? (w / r) * 100 : 0,
+      riichiRate: r > 0 ? (rc / r) * 100 : 0,
+      tsumoShare: w > 0 ? (tc / w) * 100 : 0,
+    };
+  }, [
+    playerStats.riichiRounds,
+    playerStats.riichiWins,
+    playerStats.riichiRiichiCount,
+    playerStats.riichiTsumoCount,
+  ]);
   const checkedInToday = checkinState.dateKey === getBeijingDateKey();
   const unlockedTitles = useMemo(
     () => getUnlockedTitles(growthOverview.totalPoints),
@@ -824,6 +846,39 @@ const Profile = () => {
                   {playerStats.riichiTsumoCount}
                 </p>
               </div>
+            </div>
+
+            <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3">
+              {(
+                [
+                  {
+                    labelKey: 'profile.stats.winRate',
+                    pct: riichiRatioStats.winRate,
+                  },
+                  {
+                    labelKey: 'profile.stats.riichiRate',
+                    pct: riichiRatioStats.riichiRate,
+                  },
+                  {
+                    labelKey: 'profile.stats.tsumoShareOfWins',
+                    pct: riichiRatioStats.tsumoShare,
+                  },
+                ] as const
+              ).map(({ labelKey, pct }) => (
+                <div
+                  key={labelKey}
+                  className="rounded-xl border border-slate-200 bg-white p-3"
+                >
+                  <p className="text-xs text-slate-500">{t(labelKey)}</p>
+                  <p className="mt-1 font-semibold">{pct.toFixed(1)}%</p>
+                  <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className="h-full rounded-full bg-emerald-600/90"
+                      style={{ width: `${Math.min(100, pct)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
 
             <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">

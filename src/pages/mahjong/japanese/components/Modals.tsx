@@ -1,11 +1,22 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
+import { getGrowthOverview } from '@/lib/growth';
+import { formatMessage } from '@/lib/i18n';
 import type { YakuResult } from '@/lib/mahjongRiichi';
 import { getTileLabel } from '@/lib/mahjongRiichi';
 import type { MatchEndReason } from '@/lib/riichiGameEnd';
-import type { RiichiRoundProgressSummary } from '@/lib/riichiProgress';
+import type {
+  RiichiAchievementRewardSummary,
+  RiichiRoundProgressSummary,
+} from '@/lib/riichiProgress';
 import type { PaymentDetail, SettlementResult } from '@/lib/riichiSettlement';
+import {
+  getHighestUnlockedTitle,
+  getNextLockedTitle,
+  getUnlockedTitles,
+} from '@/lib/titles';
 import { SEAT_NAMES } from '../constants';
 import {
   formatPoints,
@@ -82,17 +93,82 @@ function RoundGrowthSummary({
 }: {
   roundProgressSummary: RiichiRoundProgressSummary;
 }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const {
     autoClaimedTaskRewards,
     rewardPoints,
     unlockedAchievements,
     recordedGrowthItems,
     characterProgress,
+    growthPointsBeforeMatch,
   } = roundProgressSummary;
+
+  const growthUi = useMemo(() => {
+    const afterTotal = getGrowthOverview().totalPoints;
+    const mergedMap = new Map<string, RiichiAchievementRewardSummary>();
+    for (const a of unlockedAchievements) {
+      const prev = mergedMap.get(a.id);
+      if (prev) {
+        mergedMap.set(a.id, { ...prev, points: prev.points + a.points });
+      } else {
+        mergedMap.set(a.id, { ...a });
+      }
+    }
+    const mergedAchievements = Array.from(mergedMap.values());
+    const achievementPointsSum = mergedAchievements.reduce(
+      (s, x) => s + x.points,
+      0,
+    );
+    const totalSessionGrowth = rewardPoints + achievementPointsSum;
+    const beforeTotal =
+      typeof growthPointsBeforeMatch === 'number'
+        ? growthPointsBeforeMatch
+        : Math.max(0, afterTotal - totalSessionGrowth);
+    const beforeIds = new Set(getUnlockedTitles(beforeTotal).map((x) => x.id));
+    const newlyUnlockedTitles = getUnlockedTitles(afterTotal).filter(
+      (x) => !beforeIds.has(x.id),
+    );
+    const nextTitle = getNextLockedTitle(afterTotal);
+    const highestTitle = getHighestUnlockedTitle(afterTotal);
+    let nextTitleProgressPct = 0;
+    if (nextTitle) {
+      const floor = highestTitle?.minPoints ?? 0;
+      const ceiling = nextTitle.minPoints;
+      const span = ceiling - floor;
+      nextTitleProgressPct =
+        span > 0
+          ? Math.min(100, Math.max(0, ((afterTotal - floor) / span) * 100))
+          : 100;
+    }
+    return {
+      afterTotal,
+      beforeTotal,
+      mergedAchievements,
+      totalSessionGrowth,
+      achievementPointsSum,
+      newlyUnlockedTitles,
+      nextTitle,
+      nextTitleProgressPct,
+    };
+  }, [growthPointsBeforeMatch, rewardPoints, unlockedAchievements]);
+
+  const {
+    afterTotal,
+    beforeTotal,
+    mergedAchievements,
+    totalSessionGrowth,
+    achievementPointsSum,
+    newlyUnlockedTitles,
+    nextTitle,
+    nextTitleProgressPct,
+  } = growthUi;
+
+  const pointDelta = afterTotal - beforeTotal;
   const hasContent =
+    totalSessionGrowth > 0 ||
+    newlyUnlockedTitles.length > 0 ||
     autoClaimedTaskRewards.length > 0 ||
-    unlockedAchievements.length > 0 ||
+    mergedAchievements.length > 0 ||
     recordedGrowthItems.length > 0 ||
     characterProgress !== null;
 
@@ -111,10 +187,63 @@ function RoundGrowthSummary({
     >
       <p className="text-[11px] font-semibold text-[#ffe082]">
         {t('riichi.modal.growth.title')}
-        {rewardPoints > 0
-          ? ` · ${t('riichi.modal.growth.autoSettlePrefix')}${rewardPoints}`
-          : ''}
       </p>
+      <p className="text-[11px] text-[#f1faee]/90">
+        {formatMessage(locale, 'riichi.modal.growth.beforeAfterPoints', {
+          before: beforeTotal,
+          after: afterTotal,
+          delta: pointDelta,
+        })}
+      </p>
+      <p className="text-[11px] text-[#f1faee]/85">
+        {formatMessage(locale, 'riichi.modal.growth.sessionBreakdown', {
+          total: totalSessionGrowth,
+          task: rewardPoints,
+          ach: achievementPointsSum,
+        })}
+      </p>
+      {newlyUnlockedTitles.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-[11px] text-[#a8dadc]">
+            {t('riichi.modal.growth.newTitles')}
+          </p>
+          <ul className="list-disc list-inside text-[11px] text-[#f1faee]/85">
+            {newlyUnlockedTitles.map((title) => (
+              <li key={title.id}>{t(title.nameKey)}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {nextTitle && (
+        <div className="space-y-1">
+          <p className="text-[11px] text-[#a8dadc]">
+            {formatMessage(locale, 'riichi.modal.growth.nextTitle', {
+              name: t(nextTitle.nameKey),
+            })}
+          </p>
+          <div
+            className="h-2 rounded-full overflow-hidden"
+            style={{
+              backgroundColor:
+                'color-mix(in srgb, var(--riichi-border) 50%, transparent)',
+            }}
+          >
+            <div
+              className="h-full rounded-full transition-[width]"
+              style={{
+                width: `${nextTitleProgressPct}%`,
+                backgroundColor: 'var(--riichi-accent)',
+              }}
+            />
+          </div>
+          <p className="text-[10px] text-[#f1faee]/70">
+            {formatMessage(locale, 'riichi.modal.growth.nextTitlePoints', {
+              current: afterTotal,
+              target: nextTitle.minPoints,
+            })}
+          </p>
+        </div>
+      )}
       {autoClaimedTaskRewards.length > 0 && (
         <div className="space-y-1">
           <p className="text-[11px] text-[#a8dadc]">
@@ -129,13 +258,13 @@ function RoundGrowthSummary({
           </ul>
         </div>
       )}
-      {unlockedAchievements.length > 0 && (
+      {mergedAchievements.length > 0 && (
         <div className="space-y-1">
           <p className="text-[11px] text-[#a8dadc]">
             {t('riichi.modal.growth.newAchievement')}
           </p>
           <ul className="list-disc list-inside text-[11px] text-[#f1faee]/85">
-            {unlockedAchievements.map((achievement) => (
+            {mergedAchievements.map((achievement) => (
               <li key={achievement.id}>
                 {t(achievement.nameKey)} +{achievement.points}
               </li>
@@ -153,7 +282,8 @@ function RoundGrowthSummary({
             {characterProgress.currentAffinity}
           </p>
           <p>
-            {t('riichi.modal.growth.currentStage')} {characterProgress.currentStage}
+            {t('riichi.modal.growth.currentStage')}{' '}
+            {characterProgress.currentStage}
             {characterProgress.stageIncreased
               ? ` · ${t('riichi.modal.growth.stageUp')}`
               : ''}
@@ -266,20 +396,20 @@ export function WinModal({
           >
             <p className="text-[11px] font-semibold text-[#ffe082]">
               {t('riichi.modal.summary.title')}
-              {SEAT_NAMES[winResult.winner]}{' '}
-              {winnerDelta >= 0 ? '+' : ''}
+              {SEAT_NAMES[winResult.winner]} {winnerDelta >= 0 ? '+' : ''}
               {winnerDelta}
               {maxLossSeat != null &&
                 ` · ${SEAT_NAMES[maxLossSeat]} ${maxLossDelta >= 0 ? '+' : ''}${maxLossDelta}`}
             </p>
             {winnerPaymentSummary && (
               <p>
-                {t('riichi.modal.summary.winnerIncome')} {t('riichi.modal.summary.base')}{' '}
-                +{winnerPaymentSummary.base}
+                {t('riichi.modal.summary.winnerIncome')}{' '}
+                {t('riichi.modal.summary.base')} +{winnerPaymentSummary.base}
                 {' / '}
                 {t('riichi.modal.summary.honba')} +{winnerPaymentSummary.honba}
                 {' / '}
-                {t('riichi.modal.summary.riichi')} +{winnerPaymentSummary.riichi}
+                {t('riichi.modal.summary.riichi')} +
+                {winnerPaymentSummary.riichi}
               </p>
             )}
             <p>
@@ -460,12 +590,14 @@ export function RyuukyokuModal({
 
 type MatchEndModalProps = {
   matchEnd: MatchEndState;
+  roundProgressSummary: RiichiRoundProgressSummary;
   onRestart: () => void;
   homeLabel: string;
 };
 
 export function MatchEndModal({
   matchEnd,
+  roundProgressSummary,
   onRestart,
   homeLabel,
 }: MatchEndModalProps) {
@@ -512,11 +644,11 @@ export function MatchEndModal({
             <p key={seat}>
               {i + 1}
               {t('riichi.modal.matchEnd.rankSuffix')}
-              {SEAT_NAMES[seat]}{' '}
-              {formatPoints(matchEnd.finalScores[seat])}
+              {SEAT_NAMES[seat]} {formatPoints(matchEnd.finalScores[seat])}
             </p>
           ))}
         </div>
+        <RoundGrowthSummary roundProgressSummary={roundProgressSummary} />
         <div className="space-y-2">
           <Button
             className="w-full font-semibold"

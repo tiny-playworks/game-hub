@@ -48,9 +48,15 @@ const messages: Record<Locale, Record<string, string>> = {
     'home.recent.active': '当前有未结束的日麻对局，可以直接继续。',
     'home.recent.lastPlayed': '上次进入：',
     'home.continue.title': '继续游玩',
-    'home.continue.activeDescription': '当前有一桌日麻还在进行，可以直接回到牌桌。',
+    'home.continue.activeDescription':
+      '当前有一桌日麻还在进行，可以直接回到牌桌。',
     'home.continue.lastPlayedPrefix': '上次进入时间：',
     'home.continue.emptyDescription': '从主牌桌开始，新一轮成长会自动结算。',
+    'home.mainPlayer.badge': '主玩家',
+    'home.mainPlayer.openProfile': '档案与设置',
+    'home.continue.cta.active': '回到牌桌',
+    'home.continue.cta.resume': '继续上一局',
+    'home.continue.cta.start': '开一局',
     'home.other.shelfLabel': '游戏货架',
     'home.other.sideLabel': '边桌玩法',
     'home.other.title': '其他游戏',
@@ -92,6 +98,12 @@ const messages: Record<Locale, Record<string, string>> = {
     'home.characters.viewProfile': '去档案页查看',
     'growth.feed.characterFallback': '角色',
     'growth.feed.characterStageVerb': '升到阶段',
+    'growth.feed.checkin.title': '每日签到',
+    'growth.feed.checkin.detail': '完成今日签到',
+    'growth.feed.checkin.week.title': '连续签到里程碑',
+    'growth.feed.checkin.week.detail': '达成连续签到天数奖励',
+    'growth.feed.checkin.month.title': '累计签到里程碑',
+    'growth.feed.checkin.month.detail': '达成累计签到天数奖励',
     'profile.title': '玩家档案',
     'profile.subtitle': '管理昵称、头像、称号与每日任务',
     'profile.heroSubtitle': '这里统一查看成长、同行角色和日麻进度。',
@@ -128,6 +140,9 @@ const messages: Record<Locale, Record<string, string>> = {
     'profile.stats.riichiWins': '日麻和牌次数',
     'profile.stats.riichiRiichiCount': '日麻立直次数',
     'profile.stats.riichiTsumoCount': '日麻自摸次数',
+    'profile.stats.winRate': '胜率（和牌/完成局）',
+    'profile.stats.riichiRate': '立直率（立直/完成局）',
+    'profile.stats.tsumoShareOfWins': '自摸占和牌',
     'profile.stats.gamePlayCounts': '各游戏游玩次数',
     'profile.stats.noGameData': '还没有游玩记录',
     'profile.companion.section': '同行角色',
@@ -304,13 +319,15 @@ const messages: Record<Locale, Record<string, string>> = {
     'riichi.drawReason.suukaikan': '四开杠',
     'riichi.drawReason.kyuushuKyuuhai': '九种九牌',
     'riichi.drawReason.default': '荒牌',
-    'riichi.drawDesc.suufonRenda': '四家第一打同风牌，途中流局，本场+1，庄家连庄',
+    'riichi.drawDesc.suufonRenda':
+      '四家第一打同风牌，途中流局，本场+1，庄家连庄',
     'riichi.drawDesc.suuchaRiichi': '四家均已立直，途中流局，本场+1，庄家连庄',
     'riichi.drawDesc.suukaikan':
       '全场四杠成立（非一人四杠），途中流局，本场+1，庄家连庄',
     'riichi.drawDesc.kyuushuKyuuhai':
       '九种九牌宣言成立，途中流局，本场+1，庄家连庄',
-    'riichi.drawDesc.default': '牌墙摸完无人和，本场+1，庄家听牌则连庄，不听换庄',
+    'riichi.drawDesc.default':
+      '牌墙摸完无人和，本场+1，庄家听牌则连庄，不听换庄',
     'riichi.modal.growth.title': '本局成长回报',
     'riichi.modal.growth.autoSettlePrefix': '自动结算 +',
     'riichi.modal.growth.autoTask': '自动结算任务',
@@ -321,6 +338,13 @@ const messages: Record<Locale, Record<string, string>> = {
     'riichi.modal.growth.stageUp': '已提升',
     'riichi.modal.growth.recordedPrefix': '成长流水已写入',
     'riichi.modal.growth.recordedSuffix': '条',
+    'riichi.modal.growth.beforeAfterPoints':
+      '成长点 {before} → {after}（+{delta}）',
+    'riichi.modal.growth.sessionBreakdown':
+      '本场成长 {total}（任务 {task} + 成就 {ach}）',
+    'riichi.modal.growth.newTitles': '本局新称号',
+    'riichi.modal.growth.nextTitle': '下一称号：{name}',
+    'riichi.modal.growth.nextTitlePoints': '{current} / {target} 成长点',
     'riichi.modal.win.tsumo': '自摸！',
     'riichi.modal.win.ron': '荣和！',
     'riichi.modal.unit.fu': '符',
@@ -349,7 +373,8 @@ const messages: Record<Locale, Record<string, string>> = {
     'riichi.modal.draw.abortive': '途中流局',
     'riichi.modal.draw.tenpaiLabel': '听牌：',
     'riichi.modal.none': '无',
-    'riichi.modal.draw.abortiveNote': '途中流局：不执行不听罚符，立直棒保留到下一局',
+    'riichi.modal.draw.abortiveNote':
+      '途中流局：不执行不听罚符，立直棒保留到下一局',
     'riichi.modal.matchEnd.title': '对局结束',
     'riichi.modal.matchEnd.rankSuffix': '位：',
     'riichi.modal.matchEnd.playAgain': '再来一局',
@@ -408,6 +433,11 @@ const messages: Record<Locale, Record<string, string>> = {
     'home.continue.lastPlayedPrefix': 'Last entered:',
     'home.continue.emptyDescription':
       'Start from the main table and the new growth rewards will settle automatically.',
+    'home.mainPlayer.badge': 'Main player',
+    'home.mainPlayer.openProfile': 'Profile & settings',
+    'home.continue.cta.active': 'Back to table',
+    'home.continue.cta.resume': 'Resume last',
+    'home.continue.cta.start': 'Start a game',
     'home.other.shelfLabel': 'Game Shelf',
     'home.other.sideLabel': 'Side Table',
     'home.other.title': 'More Games',
@@ -454,6 +484,13 @@ const messages: Record<Locale, Record<string, string>> = {
     'home.characters.viewProfile': 'View in Profile',
     'growth.feed.characterFallback': 'Character',
     'growth.feed.characterStageVerb': 'advanced to stage',
+    'growth.feed.checkin.title': 'Daily check-in',
+    'growth.feed.checkin.detail': "Completed today's check-in",
+    'growth.feed.checkin.week.title': 'Streak milestone',
+    'growth.feed.checkin.week.detail': 'Reached a streak milestone reward',
+    'growth.feed.checkin.month.title': 'Total check-in milestone',
+    'growth.feed.checkin.month.detail':
+      'Reached a total check-in milestone reward',
     'profile.title': 'Player Profile',
     'profile.subtitle':
       'Manage nickname, avatar, title and daily tasks in one place',
@@ -492,6 +529,9 @@ const messages: Record<Locale, Record<string, string>> = {
     'profile.stats.riichiWins': 'Riichi wins',
     'profile.stats.riichiRiichiCount': 'Riichi declarations',
     'profile.stats.riichiTsumoCount': 'Tsumo wins',
+    'profile.stats.winRate': 'Win rate (wins / rounds)',
+    'profile.stats.riichiRate': 'Riichi rate (riichi / rounds)',
+    'profile.stats.tsumoShareOfWins': 'Tsumo share of wins',
     'profile.stats.gamePlayCounts': 'Plays by game',
     'profile.stats.noGameData': 'No play records yet',
     'profile.companion.section': 'Companions',
@@ -690,6 +730,13 @@ const messages: Record<Locale, Record<string, string>> = {
     'riichi.modal.growth.stageUp': 'Stage up',
     'riichi.modal.growth.recordedPrefix': 'Growth logs saved: ',
     'riichi.modal.growth.recordedSuffix': ' entries',
+    'riichi.modal.growth.beforeAfterPoints':
+      'Growth points {before} → {after} (+{delta})',
+    'riichi.modal.growth.sessionBreakdown':
+      'This session +{total} (tasks {task} + achievements {ach})',
+    'riichi.modal.growth.newTitles': 'New titles this round',
+    'riichi.modal.growth.nextTitle': 'Next title: {name}',
+    'riichi.modal.growth.nextTitlePoints': '{current} / {target} growth points',
     'riichi.modal.win.tsumo': 'Tsumo!',
     'riichi.modal.win.ron': 'Ron!',
     'riichi.modal.unit.fu': 'fu',
@@ -728,6 +775,19 @@ const messages: Record<Locale, Record<string, string>> = {
 
 export function getMessage(locale: Locale, key: string): string {
   return messages[locale]?.[key] ?? messages.zh[key] ?? key;
+}
+
+/** 替换文案中的 `{var}` 占位符（与 `t(key)` 不同，后者不支持变量）。 */
+export function formatMessage(
+  locale: Locale,
+  key: string,
+  vars: Record<string, string | number>,
+): string {
+  let template = getMessage(locale, key);
+  for (const [k, v] of Object.entries(vars)) {
+    template = template.split(`{${k}}`).join(String(v));
+  }
+  return template;
 }
 
 export const LOCALE_STORAGE_KEY = 'game-hub-locale';

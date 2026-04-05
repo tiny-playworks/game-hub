@@ -1,17 +1,14 @@
-import {
-  ArrowRight,
-  Compass,
-  ScrollText,
-  Sparkles,
-  UserRound,
-} from 'lucide-react';
+import { Compass, ScrollText, Sparkles, UserRound } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ContinuePlaySection } from '@/components/home/ContinuePlaySection';
+import { MainPlayerCard } from '@/components/home/MainPlayerCard';
 import { QuickAccessPanel } from '@/components/home/QuickAccessPanel';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { categories } from '@/data/categories';
 import { games } from '@/data/games';
+import { type DailyTaskState, ensureDailyTaskState } from '@/lib/dailyTasks';
 import { getGrowthOverview } from '@/lib/growth';
 import { type GrowthFeedItem, getRecentGrowthFeed } from '@/lib/growthFeed';
 import {
@@ -20,8 +17,13 @@ import {
   type PlayerCharacterState,
   syncPlayerCharacterUnlocks,
 } from '@/lib/playerCharacters';
-import { ensureDailyTaskState, type DailyTaskState } from '@/lib/dailyTasks';
+import {
+  getPlayerProfile,
+  type PlayerProfile,
+  updatePlayerProfile,
+} from '@/lib/playerProfile';
 import { getRecentMahjongEntry } from '@/lib/recentMahjong';
+import { getTitleById, resolveActiveTitle } from '@/lib/titles';
 import { useRiichiGameStore } from '@/pages/mahjong/japanese/store/riichiGameStore';
 
 function formatGrowthFeedLine(
@@ -52,10 +54,15 @@ const Home = () => {
   const view = useRiichiGameStore((state) => state.view);
   const game = useRiichiGameStore((state) => state.game);
   const matchEnd = useRiichiGameStore((state) => state.matchEnd);
+  const [playerProfile, setPlayerProfile] = useState<PlayerProfile>(() =>
+    getPlayerProfile(),
+  );
   const [dailyTaskState, setDailyTaskState] = useState<DailyTaskState>(() =>
     ensureDailyTaskState(),
   );
-  const [growthOverview, setGrowthOverview] = useState(() => getGrowthOverview());
+  const [growthOverview, setGrowthOverview] = useState(() =>
+    getGrowthOverview(),
+  );
   const [recentFeed, setRecentFeed] = useState(() => getRecentGrowthFeed(4));
   const [characterState, setCharacterState] = useState<PlayerCharacterState>(
     () => syncPlayerCharacterUnlocks().state,
@@ -69,11 +76,41 @@ const Home = () => {
     characterState.affinityByCharacter[activeCharacter.id] ?? 0;
   const activeStage = getCharacterAffinityStage(activeAffinity);
 
+  const titleLabel = useMemo(() => {
+    const resolvedId = resolveActiveTitle(
+      playerProfile.activeTitle,
+      growthOverview.totalPoints,
+    );
+    const def = getTitleById(resolvedId);
+    return def ? t(def.nameKey) : t('profile.titles.none');
+  }, [growthOverview.totalPoints, playerProfile.activeTitle, t]);
+
+  const dailyTasksDisplay = useMemo(() => {
+    const items = [...dailyTaskState.items];
+    items.sort((a, b) => {
+      if (a.completed === b.completed) return 0;
+      return a.completed ? 1 : -1;
+    });
+    return items.slice(0, 3);
+  }, [dailyTaskState.items]);
+
   useEffect(() => {
     setDailyTaskState(ensureDailyTaskState());
-    setGrowthOverview(getGrowthOverview());
+    const nextGrowth = getGrowthOverview();
+    setGrowthOverview(nextGrowth);
     setRecentFeed(getRecentGrowthFeed(4));
     setCharacterState(syncPlayerCharacterUnlocks().state);
+
+    const currentProfile = getPlayerProfile();
+    const nextTitleId = resolveActiveTitle(
+      currentProfile.activeTitle,
+      nextGrowth.totalPoints,
+    );
+    const syncedProfile =
+      nextTitleId === currentProfile.activeTitle
+        ? currentProfile
+        : updatePlayerProfile({ activeTitle: nextTitleId });
+    setPlayerProfile(syncedProfile);
   }, []);
 
   const recentPlayedText = useMemo(() => {
@@ -111,94 +148,24 @@ const Home = () => {
       </header>
 
       <main className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-8 md:py-10">
-        <section className="rounded-[32px] border border-emerald-200/80 bg-[linear-gradient(135deg,#f7efda,#edf6ed_50%,#deeadf)] p-6 shadow-[0_24px_56px_rgba(15,23,42,0.12)] md:p-8">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-3">
-              <div className="inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-white/78 px-3 py-1 text-xs font-medium text-amber-700">
-                <Sparkles className="size-3.5" />
-                {t('home.hero.mainlineBadge')}
-              </div>
-              <div>
-                <h2 className="text-4xl font-semibold tracking-tight text-slate-900 md:text-5xl md:leading-[0.98]">
-                  {t('home.mahjong.title')}
-                </h2>
-                <p className="mt-3 max-w-3xl text-base leading-7 text-slate-700 md:text-lg">
-                  {t('home.mahjong.subtitle')}
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-2xl border border-white/80 bg-white/78 px-4 py-3">
-                <p className="text-xs text-slate-500">
-                  {t('home.hero.totalGrowthLabel')}
-                </p>
-                <p className="mt-1 text-xl font-semibold text-slate-900">
-                  {growthOverview.totalPoints}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-white/80 bg-white/78 px-4 py-3">
-                <p className="text-xs text-slate-500">
-                  {t('home.hero.unlockedAchievementsLabel')}
-                </p>
-                <p className="mt-1 text-xl font-semibold text-slate-900">
-                  {growthOverview.unlockedAchievements}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-white/80 bg-white/78 px-4 py-3">
-                <p className="text-xs text-slate-500">
-                  {t('home.hero.unlockedCharactersLabel')}
-                </p>
-                <p className="mt-1 text-xl font-semibold text-slate-900">
-                  {characterState.unlockedCharacterIds.length}
-                </p>
-              </div>
-            </div>
-          </div>
+        <section className="grid gap-4 md:grid-cols-2">
+          <MainPlayerCard
+            className="order-2 md:order-1"
+            profile={playerProfile}
+            titleLabel={titleLabel}
+            totalPoints={growthOverview.totalPoints}
+            unlockedAchievements={growthOverview.unlockedAchievements}
+            unlockedCharacterCount={characterState.unlockedCharacterIds.length}
+          />
+          <ContinuePlaySection
+            className="order-1 md:order-2"
+            isRiichiActive={isRiichiActive}
+            hasRecentMahjong={Boolean(recentMahjong)}
+            recentPlayedText={recentPlayedText}
+          />
         </section>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <article className="rounded-[26px] border border-white/80 bg-white/88 p-5 shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-slate-900">
-                {t('home.continue.title')}
-              </p>
-              <ArrowRight className="size-4 text-emerald-700" />
-            </div>
-            <p className="mt-3 text-sm leading-6 text-slate-600">
-              {isRiichiActive
-                ? t('home.continue.activeDescription')
-                : recentMahjong
-                  ? `${t('home.continue.lastPlayedPrefix')}${recentPlayedText}`
-                  : t('home.continue.emptyDescription')}
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Button
-                asChild
-                className="bg-emerald-900 text-white hover:bg-emerald-800"
-              >
-                <Link
-                  to={
-                    isRiichiActive
-                      ? '/game/mahjong-japanese'
-                      : '/game/mahjong-japanese?start=1'
-                  }
-                >
-                  {isRiichiActive
-                    ? t('common.continueGame')
-                    : t('common.quickStart')}
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="border-slate-200">
-                <Link to="/game/mahjong-japanese">{t('common.viewRules')}</Link>
-              </Button>
-              <Button asChild variant="ghost" className="px-0 text-slate-600">
-                <Link to="/game/mahjong-japanese?start=1&guide=1">
-                  {t('common.beginnerGuide')}
-                </Link>
-              </Button>
-            </div>
-          </article>
-
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <article className="rounded-[26px] border border-white/80 bg-white/88 p-5 shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-slate-900">
@@ -209,7 +176,7 @@ const Home = () => {
               </span>
             </div>
             <div className="mt-4 space-y-3">
-              {dailyTaskState.items.slice(0, 3).map((task) => (
+              {dailyTasksDisplay.map((task) => (
                 <div
                   key={task.id}
                   className="rounded-2xl border border-slate-100 bg-slate-50/80 p-3"
@@ -266,7 +233,7 @@ const Home = () => {
             </div>
           </article>
 
-          <article className="rounded-[26px] border border-white/80 bg-white/88 p-5 shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
+          <article className="rounded-[26px] border border-white/80 bg-white/88 p-5 shadow-[0_12px_30px_rgba(15,23,42,0.07)] md:col-span-2 xl:col-span-1">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-slate-900">
                 {t('home.characters.title')}

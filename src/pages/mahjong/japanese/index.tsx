@@ -574,6 +574,7 @@ const GameMahjongJapanese = () => {
         {matchEnd && (
           <MatchEndModal
             matchEnd={matchEnd}
+            roundProgressSummary={roundProgressSummary}
             onRestart={startGame}
             homeLabel={t('common.backHome')}
           />

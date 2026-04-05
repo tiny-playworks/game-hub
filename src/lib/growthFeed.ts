@@ -39,7 +39,8 @@ function normalizeGrowthFeedItem(raw: unknown): GrowthFeedItem | null {
     id: parsed.id,
     type: parsed.type as GrowthFeedItemType,
     titleKey: parsed.titleKey,
-    detailKey: typeof parsed.detailKey === 'string' ? parsed.detailKey : undefined,
+    detailKey:
+      typeof parsed.detailKey === 'string' ? parsed.detailKey : undefined,
     points:
       typeof parsed.points === 'number' && Number.isFinite(parsed.points)
         ? Math.max(0, Math.floor(parsed.points))
@@ -53,7 +54,9 @@ function normalizeGrowthFeedItem(raw: unknown): GrowthFeedItem | null {
         : undefined,
     taskId: typeof parsed.taskId === 'string' ? parsed.taskId : undefined,
     achievementId:
-      typeof parsed.achievementId === 'string' ? parsed.achievementId : undefined,
+      typeof parsed.achievementId === 'string'
+        ? parsed.achievementId
+        : undefined,
     characterId:
       typeof parsed.characterId === 'string' ? parsed.characterId : undefined,
     stage:
@@ -110,7 +113,9 @@ export function appendGrowthFeedItem(
   return nextItem;
 }
 
-export function getRecentGrowthFeed(limit = GROWTH_FEED_MAX_ITEMS): GrowthFeedItem[] {
+export function getRecentGrowthFeed(
+  limit = GROWTH_FEED_MAX_ITEMS,
+): GrowthFeedItem[] {
   const safeLimit = Number.isFinite(limit)
     ? Math.max(1, Math.min(GROWTH_FEED_MAX_ITEMS, Math.floor(limit)))
     : GROWTH_FEED_MAX_ITEMS;

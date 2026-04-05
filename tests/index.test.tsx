@@ -12,7 +12,7 @@ test('renders the main page', () => {
 
 test('home page shows category links', () => {
   render(<App />);
-  expect(screen.getAllByText('日本麻将').length).toBeGreaterThanOrEqual(1);
   expect(screen.getAllByText('小游戏').length).toBeGreaterThanOrEqual(1);
   expect(screen.getAllByText('棋类').length).toBeGreaterThanOrEqual(1);
+  expect(screen.getAllByText('扑克').length).toBeGreaterThanOrEqual(1);
 });

@@ -18,12 +18,12 @@ import {
   shouldAiDeclareRiichi,
 } from '@/lib/riichiAi';
 import { consumeTimeBankSeconds } from '@/lib/riichiClock';
+import { recordRiichiProgressEvent } from '@/lib/riichiProgress';
 import {
   buildRiichiInput,
   calcWithRiichiRs,
   type GameStateForRs,
 } from '@/lib/riichiRsAdapter';
-import { recordRiichiProgressEvent } from '@/lib/riichiProgress';
 import { SEAT_NAMES } from '../constants';
 import { enrichWinResultWithUra } from '../gameLogic/winResult';
 import { clearSeatDoujunStates } from '../helpers';

@@ -21,12 +21,12 @@ import {
   shouldAiFoldClaimAgainstRiichi,
 } from '@/lib/riichiAi';
 import { resolveClaimPass } from '@/lib/riichiClaimFlow';
+import { recordRiichiProgressEvent } from '@/lib/riichiProgress';
 import {
   buildRiichiInput,
   calcWithRiichiRs,
   type GameStateForRs,
 } from '@/lib/riichiRsAdapter';
-import { recordRiichiProgressEvent } from '@/lib/riichiProgress';
 import { SEAT_NAMES } from '../constants';
 import { enrichWinResultWithUra } from '../gameLogic/winResult';
 import { clearSeatDoujunStates, getSeatWind } from '../helpers';

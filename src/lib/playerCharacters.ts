@@ -101,18 +101,26 @@ function normalizePlayerCharacterState(raw: unknown): PlayerCharacterState {
     new Set([getDefaultCharacter().id, ...unlockedCharacterIds]),
   );
   const affinityByCharacter: Record<string, number> = {};
-  if (parsed.affinityByCharacter && typeof parsed.affinityByCharacter === 'object') {
-    for (const [characterId, value] of Object.entries(parsed.affinityByCharacter)) {
-      if (!CHARACTER_DEFS.some((character) => character.id === characterId)) continue;
+  if (
+    parsed.affinityByCharacter &&
+    typeof parsed.affinityByCharacter === 'object'
+  ) {
+    for (const [characterId, value] of Object.entries(
+      parsed.affinityByCharacter,
+    )) {
+      if (!CHARACTER_DEFS.some((character) => character.id === characterId))
+        continue;
       affinityByCharacter[characterId] = safeAffinity(value);
     }
   }
   for (const characterId of mergedUnlockedIds) {
     affinityByCharacter[characterId] = affinityByCharacter[characterId] ?? 0;
   }
-  const activeCharacterId = mergedUnlockedIds.includes(parsed.activeCharacterId ?? '')
+  const activeCharacterId = mergedUnlockedIds.includes(
+    parsed.activeCharacterId ?? '',
+  )
     ? (parsed.activeCharacterId as string)
-    : mergedUnlockedIds[0] ?? defaults.activeCharacterId;
+    : (mergedUnlockedIds[0] ?? defaults.activeCharacterId);
   return {
     activeCharacterId,
     unlockedCharacterIds: mergedUnlockedIds,
@@ -124,7 +132,9 @@ function normalizePlayerCharacterState(raw: unknown): PlayerCharacterState {
   };
 }
 
-function savePlayerCharacterState(state: PlayerCharacterState): PlayerCharacterState {
+function savePlayerCharacterState(
+  state: PlayerCharacterState,
+): PlayerCharacterState {
   const normalized = normalizePlayerCharacterState({
     ...state,
     updatedAt: Date.now(),
@@ -138,7 +148,8 @@ function savePlayerCharacterState(state: PlayerCharacterState): PlayerCharacterS
 }
 
 export function getPlayerCharacterState(): PlayerCharacterState {
-  if (typeof localStorage === 'undefined') return createDefaultPlayerCharacterState();
+  if (typeof localStorage === 'undefined')
+    return createDefaultPlayerCharacterState();
   try {
     const raw = localStorage.getItem(PLAYER_CHARACTER_STORAGE_KEY);
     if (!raw) return createDefaultPlayerCharacterState();
@@ -225,7 +236,9 @@ export function setActiveCharacter(characterId: string): PlayerCharacterState {
   return updatePlayerCharacterState({ activeCharacterId: characterId });
 }
 
-export function addActiveCharacterAffinity(amount = 1): CharacterAffinityProgress {
+export function addActiveCharacterAffinity(
+  amount = 1,
+): CharacterAffinityProgress {
   const unlockedResult = syncPlayerCharacterUnlocks();
   const character = getCharacterById(unlockedResult.state.activeCharacterId);
   const previousAffinity =

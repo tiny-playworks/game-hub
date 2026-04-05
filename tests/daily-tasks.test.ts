@@ -35,14 +35,22 @@ test('dailyTasks：进度推进与领取奖励闭环', () => {
   expect(firstTask).toBeTruthy();
 
   const progressed = recordDailyTaskEvent(firstTask.eventType, now);
-  const progressedTask = progressed.items.find(
+  const progressedTask = progressed.state.items.find(
     (item) => item.id === firstTask.id,
   );
   expect(progressedTask?.completed).toBe(true);
+  expect(progressedTask?.claimed).toBe(true);
+  expect(
+    progressed.autoClaimedRewards.some((r) => r.taskId === firstTask.id),
+  ).toBe(true);
 
+  const growthAfterProgress = getGrowthState();
+  expect(growthAfterProgress.taskPoints).toBe(firstTask.rewardPoints);
+
+  // 完成时已自动发奖，再次 claim 不应重复加分
   const claimed = claimDailyTask(firstTask.id, now);
-  expect(claimed.ok).toBe(true);
-  expect(claimed.awardedPoints).toBe(firstTask.rewardPoints);
+  expect(claimed.ok).toBe(false);
+  expect(claimed.awardedPoints).toBe(0);
 
   const growth = getGrowthState();
   expect(growth.taskPoints).toBe(firstTask.rewardPoints);
