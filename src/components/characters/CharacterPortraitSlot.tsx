@@ -30,10 +30,12 @@ export function CharacterPortraitSlot({
       role="img"
       aria-label={label}
       className={cn(
-        'flex shrink-0 items-center justify-center rounded-2xl border border-slate-200/80 bg-gradient-to-br font-semibold text-slate-800 shadow-inner',
+        'flex shrink-0 items-center justify-center rounded-2xl border border-slate-200/80 bg-gradient-to-br font-semibold shadow-inner',
         character.accent,
         sizeClass[size],
         className,
+        // 占位为浅色渐变，文字必须深色；放在最后以免被外层 text-white 等覆盖
+        'text-slate-900',
       )}
     >
       {initial}

@@ -202,48 +202,6 @@ function RoundGrowthSummary({
           ach: achievementPointsSum,
         })}
       </p>
-      {newlyUnlockedTitles.length > 0 && (
-        <div className="space-y-1">
-          <p className="text-[11px] text-[#a8dadc]">
-            {t('riichi.modal.growth.newTitles')}
-          </p>
-          <ul className="list-disc list-inside text-[11px] text-[#f1faee]/85">
-            {newlyUnlockedTitles.map((title) => (
-              <li key={title.id}>{t(title.nameKey)}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {nextTitle && (
-        <div className="space-y-1">
-          <p className="text-[11px] text-[#a8dadc]">
-            {formatMessage(locale, 'riichi.modal.growth.nextTitle', {
-              name: t(nextTitle.nameKey),
-            })}
-          </p>
-          <div
-            className="h-2 rounded-full overflow-hidden"
-            style={{
-              backgroundColor:
-                'color-mix(in srgb, var(--riichi-border) 50%, transparent)',
-            }}
-          >
-            <div
-              className="h-full rounded-full transition-[width]"
-              style={{
-                width: `${nextTitleProgressPct}%`,
-                backgroundColor: 'var(--riichi-accent)',
-              }}
-            />
-          </div>
-          <p className="text-[10px] text-[#f1faee]/70">
-            {formatMessage(locale, 'riichi.modal.growth.nextTitlePoints', {
-              current: afterTotal,
-              target: nextTitle.minPoints,
-            })}
-          </p>
-        </div>
-      )}
       {autoClaimedTaskRewards.length > 0 && (
         <div className="space-y-1">
           <p className="text-[11px] text-[#a8dadc]">
@@ -287,6 +245,48 @@ function RoundGrowthSummary({
             {characterProgress.stageIncreased
               ? ` · ${t('riichi.modal.growth.stageUp')}`
               : ''}
+          </p>
+        </div>
+      )}
+      {newlyUnlockedTitles.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-[11px] text-[#a8dadc]">
+            {t('riichi.modal.growth.newTitles')}
+          </p>
+          <ul className="list-disc list-inside text-[11px] text-[#f1faee]/85">
+            {newlyUnlockedTitles.map((title) => (
+              <li key={title.id}>{t(title.nameKey)}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {nextTitle && (
+        <div className="space-y-1">
+          <p className="text-[11px] text-[#a8dadc]">
+            {formatMessage(locale, 'riichi.modal.growth.nextTitle', {
+              name: t(nextTitle.nameKey),
+            })}
+          </p>
+          <div
+            className="h-2 rounded-full overflow-hidden"
+            style={{
+              backgroundColor:
+                'color-mix(in srgb, var(--riichi-border) 50%, transparent)',
+            }}
+          >
+            <div
+              className="h-full rounded-full transition-[width]"
+              style={{
+                width: `${nextTitleProgressPct}%`,
+                backgroundColor: 'var(--riichi-accent)',
+              }}
+            />
+          </div>
+          <p className="text-[10px] text-[#f1faee]/70">
+            {formatMessage(locale, 'riichi.modal.growth.nextTitlePoints', {
+              current: afterTotal,
+              target: nextTitle.minPoints,
+            })}
           </p>
         </div>
       )}

@@ -1,4 +1,4 @@
-import { Upload } from 'lucide-react';
+import { Check, Upload } from 'lucide-react';
 import {
   type ChangeEventHandler,
   useCallback,
@@ -49,6 +49,7 @@ import {
   getUnlockedTitles,
   resolveActiveTitle,
 } from '@/lib/titles';
+import { cn } from '@/lib/utils';
 import { ensureWeeklyTaskState, type WeeklyTaskState } from '@/lib/weeklyTasks';
 
 function LocaleSwitcher() {
@@ -499,7 +500,7 @@ const Profile = () => {
                   character={activeCharacter}
                   size="lg"
                   label={`${activeCharacter.name} · ${t('character.portrait.placeholder')}`}
-                  className="border-white/20 text-white"
+                  className="border-white/25"
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-3">
@@ -762,38 +763,73 @@ const Profile = () => {
               {t('profile.task.completedPrefix')} {completedTaskCount}/
               {dailyTaskState.items.length}
             </p>
-            <ul className="mt-3 space-y-2">
+            <ul className="mt-3 space-y-3">
               {dailyTaskState.items.map((task) => (
                 <li
                   key={task.id}
-                  className="rounded-xl border border-slate-200 bg-white p-3"
+                  className={cn(
+                    'rounded-2xl border p-3 transition-colors',
+                    task.completed
+                      ? 'border-emerald-200/90 bg-emerald-50/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]'
+                      : 'border-slate-100 bg-slate-50/80',
+                  )}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-900">
-                        {t(task.titleKey)}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">
+                      <div className="flex items-center gap-2">
+                        {task.completed ? (
+                          <span
+                            className="flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm"
+                            title={t('home.daily.claimed')}
+                          >
+                            <Check className="size-3.5" strokeWidth={2.5} />
+                          </span>
+                        ) : null}
+                        <p
+                          className={cn(
+                            'text-sm font-medium',
+                            task.completed
+                              ? 'text-emerald-950'
+                              : 'text-slate-900',
+                          )}
+                        >
+                          {t(task.titleKey)}
+                        </p>
+                      </div>
+                      <p
+                        className={cn(
+                          'mt-1 text-xs',
+                          task.completed
+                            ? 'text-emerald-800/80'
+                            : 'text-slate-500',
+                        )}
+                      >
                         {t(task.descKey)}
-                      </p>
-                      <p className="mt-2 text-xs text-slate-600">
-                        {t('profile.task.progressPrefix')} {task.progress}/
-                        {task.target} · {t('profile.task.rewardPrefix')}{' '}
-                        {task.rewardPoints}
                       </p>
                     </div>
                     <span
-                      className={`rounded-full px-2 py-1 text-xs ${
+                      className={cn(
+                        'shrink-0 rounded-full px-2 py-1 text-xs tabular-nums',
                         task.completed
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-amber-50 text-amber-700'
-                      }`}
+                          ? 'bg-white/90 text-emerald-800 ring-1 ring-emerald-200/80'
+                          : 'bg-white text-slate-600',
+                      )}
                     >
-                      {task.completed
-                        ? t('profile.task.status.settled')
-                        : t('profile.task.status.pending')}
+                      {task.progress}/{task.target}
                     </span>
                   </div>
+                  <p
+                    className={cn(
+                      'mt-2 text-xs',
+                      task.completed
+                        ? 'font-medium text-emerald-800'
+                        : 'text-slate-600',
+                    )}
+                  >
+                    {task.completed
+                      ? `${t('home.daily.settledPrefix')}${task.rewardPoints}`
+                      : `${t('home.daily.pendingRewardPrefix')}${task.rewardPoints}`}
+                  </p>
                 </li>
               ))}
             </ul>
