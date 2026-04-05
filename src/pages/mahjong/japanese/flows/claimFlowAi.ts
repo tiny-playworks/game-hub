@@ -26,6 +26,7 @@ import {
   calcWithRiichiRs,
   type GameStateForRs,
 } from '@/lib/riichiRsAdapter';
+import { recordRiichiProgressEvent } from '@/lib/riichiProgress';
 import { SEAT_NAMES } from '../constants';
 import { enrichWinResultWithUra } from '../gameLogic/winResult';
 import { clearSeatDoujunStates, getSeatWind } from '../helpers';
@@ -136,6 +137,8 @@ export function runAiClaimPhase(
           han: rs.han,
           ten: rs.ten,
         });
+        recordRiichiProgressEvent('win-hand');
+        recordRiichiProgressEvent('finish-round');
         setWinResult({
           winner: seat,
           isTsumo: false,
@@ -171,6 +174,8 @@ export function runAiClaimPhase(
         fu,
         ten,
       });
+      recordRiichiProgressEvent('win-hand');
+      recordRiichiProgressEvent('finish-round');
       setWinResult({
         winner: seat,
         isTsumo: false,
@@ -346,6 +351,7 @@ export function runAiClaimPhase(
         ) {
           addLogRef.current('流局（四开杠）');
           sounds.playRyuukyoku();
+          recordRiichiProgressEvent('finish-round');
           setGame(afterAbortive);
           return;
         }
@@ -383,6 +389,7 @@ export function runAiClaimPhase(
           : applyClaimPassToState(g, passResult);
       if (next.ryuukyoku && next.ryuukyokuReason === '荒牌') {
         addLogRef.current('流局（荒牌）');
+        recordRiichiProgressEvent('finish-round');
       }
       return next;
     });

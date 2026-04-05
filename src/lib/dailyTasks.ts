@@ -30,6 +30,19 @@ export interface DailyTaskState {
   items: DailyTaskProgress[];
 }
 
+export interface TaskRewardSummary {
+  taskId: string;
+  titleKey: string;
+  descKey: string;
+  rewardPoints: number;
+  scope: 'daily';
+}
+
+export interface RecordDailyTaskEventResult {
+  state: DailyTaskState;
+  autoClaimedRewards: TaskRewardSummary[];
+}
+
 const RIICHI_DAILY_TEMPLATES: DailyTask[] = [
   {
     id: 'riichi-finish-round',
@@ -155,7 +168,7 @@ function normalizeState(raw: unknown): DailyTaskState | null {
       ...template,
       progress: Math.min(progress, template.target),
       completed,
-      claimed: Boolean(candidate.claimed) && completed,
+      claimed: completed || Boolean(candidate.claimed),
     });
   }
   if (items.length === 0) return null;
@@ -198,21 +211,44 @@ export function ensureDailyTaskState(now = Date.now()): DailyTaskState {
 export function recordDailyTaskEvent(
   event: RiichiDailyEvent,
   now = Date.now(),
-): DailyTaskState {
+): RecordDailyTaskEventResult {
   const state = ensureDailyTaskState(now);
+  const autoClaimedRewards: TaskRewardSummary[] = [];
   const next: DailyTaskState = {
     ...state,
     items: state.items.map((item) => {
       if (item.eventType !== event || item.completed) return item;
       const progress = Math.min(item.target, item.progress + 1);
+      const completed = progress >= item.target;
+      if (completed) {
+        autoClaimedRewards.push({
+          taskId: item.id,
+          titleKey: item.titleKey,
+          descKey: item.descKey,
+          rewardPoints: item.rewardPoints,
+          scope: 'daily',
+        });
+      }
       return {
         ...item,
         progress,
-        completed: progress >= item.target,
+        completed,
+        claimed: completed ? true : item.claimed,
       };
     }),
   };
-  return saveDailyTaskState(next);
+  const savedState = saveDailyTaskState(next);
+  const awardedPoints = autoClaimedRewards.reduce(
+    (total, reward) => total + reward.rewardPoints,
+    0,
+  );
+  if (awardedPoints > 0) {
+    addGrowthPoints(awardedPoints);
+  }
+  return {
+    state: savedState,
+    autoClaimedRewards,
+  };
 }
 
 export function claimDailyTask(

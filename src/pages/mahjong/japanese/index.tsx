@@ -5,6 +5,7 @@ import { useLocale } from '@/contexts/LocaleContext';
 import { getTileLabel } from '@/lib/mahjongRiichi';
 import { markRecentMahjongPlayed } from '@/lib/recentMahjong';
 import { getTurnTotalSeconds } from '@/lib/riichiClock';
+import { getCurrentRiichiRoundProgressSummary } from '@/lib/riichiProgress';
 import { cn } from '@/lib/utils';
 import { CenterArea } from './components/CenterArea';
 import { GameHeader } from './components/GameHeader';
@@ -133,6 +134,7 @@ const GameMahjongJapanese = () => {
       isTsumo: false,
       treatAsRiichi: true,
     }).length > 0;
+  const roundProgressSummary = getCurrentRiichiRoundProgressSummary();
   const claimActionsAvailable =
     !!canRon ||
     (!!isMyClaim && (chiOptions.length > 0 || !!canPeng || !!canMingang));
@@ -553,6 +555,7 @@ const GameMahjongJapanese = () => {
             winResult={winResult}
             winSettlementPreview={winSettlementPreview}
             winnerPaymentSummary={winnerPaymentSummary}
+            roundProgressSummary={roundProgressSummary}
             timeoutEvents={game.timeoutEvents}
             onNext={proceedToNextRound}
           />
@@ -562,6 +565,7 @@ const GameMahjongJapanese = () => {
           <RyuukyokuModal
             ryuukyokuReason={game.ryuukyokuReason}
             drawSettlementPreview={drawSettlementPreview}
+            roundProgressSummary={roundProgressSummary}
             timeoutEvents={game.timeoutEvents}
             onNext={proceedAfterRyuukyoku}
           />

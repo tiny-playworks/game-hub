@@ -80,7 +80,25 @@ export function getKakanOptions(
   return indices;
 }
 
-export function getMatchEndReasonText(reason?: MatchEndReason): string {
+export function getMatchEndReasonText(
+  reason?: MatchEndReason,
+  translate?: (key: string) => string,
+): string {
+  if (translate) {
+    switch (reason) {
+      case 'tobi':
+        return translate('riichi.matchEndReason.tobi');
+      case 'east4_end':
+        return translate('riichi.matchEndReason.east4');
+      case 'agari_yame':
+        return translate('riichi.matchEndReason.agariYame');
+      case 'south4_end':
+        return translate('riichi.matchEndReason.south4');
+      default:
+        return translate('riichi.matchEndReason.default');
+    }
+  }
+
   switch (reason) {
     case 'tobi':
       return '有人被击飞（负分）';
@@ -97,13 +115,51 @@ export function getMatchEndReasonText(reason?: MatchEndReason): string {
 
 export function getRyuukyokuReasonText(
   reason?: RiichiGameState['ryuukyokuReason'],
+  translate?: (key: string) => string,
 ): string {
+  if (translate) {
+    switch (reason) {
+      case '四风连打':
+        return translate('riichi.drawReason.suufonRenda');
+      case '四家立直':
+        return translate('riichi.drawReason.suuchaRiichi');
+      case '四开杠':
+        return translate('riichi.drawReason.suukaikan');
+      case '九种九牌':
+        return translate('riichi.drawReason.kyuushuKyuuhai');
+      default:
+        return translate('riichi.drawReason.default');
+    }
+  }
+
   return reason ?? '荒牌';
+}
+
+export function isExhaustiveRyuukyoku(
+  reason?: RiichiGameState['ryuukyokuReason'],
+): boolean {
+  return reason == null || reason === '荒牌';
 }
 
 export function getRyuukyokuDescription(
   reason?: RiichiGameState['ryuukyokuReason'],
+  translate?: (key: string) => string,
 ): string {
+  if (translate) {
+    switch (reason) {
+      case '四风连打':
+        return translate('riichi.drawDesc.suufonRenda');
+      case '四家立直':
+        return translate('riichi.drawDesc.suuchaRiichi');
+      case '四开杠':
+        return translate('riichi.drawDesc.suukaikan');
+      case '九种九牌':
+        return translate('riichi.drawDesc.kyuushuKyuuhai');
+      default:
+        return translate('riichi.drawDesc.default');
+    }
+  }
+
   switch (reason) {
     case '四风连打':
       return '四家第一打同风牌，途中流局，本场+1，庄家连庄';

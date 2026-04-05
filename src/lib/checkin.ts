@@ -1,4 +1,5 @@
 import { addGrowthPoints } from '@/lib/growth';
+import { appendGrowthFeedItem } from '@/lib/growthFeed';
 
 export const CHECKIN_STORAGE_KEY = 'game-hub-checkin-state';
 export const CHECKIN_DAILY_REWARD_POINTS = 10;
@@ -179,6 +180,13 @@ export function checkinToday(now = Date.now()): {
     signedDateKeys,
   });
   addGrowthPoints(CHECKIN_DAILY_REWARD_POINTS);
+  appendGrowthFeedItem({
+    type: 'check-in',
+    titleKey: 'growth.feed.checkin.title',
+    detailKey: 'growth.feed.checkin.detail',
+    points: CHECKIN_DAILY_REWARD_POINTS,
+    value: streakDays,
+  });
   return { ok: true, awardedPoints: CHECKIN_DAILY_REWARD_POINTS, state: next };
 }
 
@@ -201,7 +209,17 @@ export function claimWeekMilestone(
     ...current,
     weekClaimedAt: [...current.weekClaimedAt, milestoneDays],
   });
-  if (awardedPoints > 0) addGrowthPoints(awardedPoints);
+  if (awardedPoints > 0) {
+    addGrowthPoints(awardedPoints);
+    appendGrowthFeedItem({
+      type: 'check-in-milestone',
+      titleKey: 'growth.feed.checkin.week.title',
+      detailKey: 'growth.feed.checkin.week.detail',
+      points: awardedPoints,
+      value: milestoneDays,
+      scope: 'week',
+    });
+  }
   return { ok: awardedPoints > 0, awardedPoints, state: next };
 }
 
@@ -224,6 +242,16 @@ export function claimMonthMilestone(
     ...current,
     monthClaimedAt: [...current.monthClaimedAt, milestoneDays],
   });
-  if (awardedPoints > 0) addGrowthPoints(awardedPoints);
+  if (awardedPoints > 0) {
+    addGrowthPoints(awardedPoints);
+    appendGrowthFeedItem({
+      type: 'check-in-milestone',
+      titleKey: 'growth.feed.checkin.month.title',
+      detailKey: 'growth.feed.checkin.month.detail',
+      points: awardedPoints,
+      value: milestoneDays,
+      scope: 'month',
+    });
+  }
   return { ok: awardedPoints > 0, awardedPoints, state: next };
 }

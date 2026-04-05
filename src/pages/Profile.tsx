@@ -14,8 +14,18 @@ import {
   ensureCheckinState,
   getBeijingDateKey,
 } from '@/lib/checkin';
-import { claimDailyTask, ensureDailyTaskState } from '@/lib/dailyTasks';
+import { type DailyTaskState, ensureDailyTaskState } from '@/lib/dailyTasks';
 import { getGrowthOverview } from '@/lib/growth';
+import { type GrowthFeedItem, getRecentGrowthFeed } from '@/lib/growthFeed';
+import {
+  CHARACTER_DEFS,
+  type CharacterDef,
+  getCharacterAffinityStage,
+  getCharacterById,
+  type PlayerCharacterState,
+  setActiveCharacter,
+  syncPlayerCharacterUnlocks,
+} from '@/lib/playerCharacters';
 import {
   cropImageFileToSquareDataUrl,
   getAvatarPresetById,
@@ -32,7 +42,7 @@ import {
   getUnlockedTitles,
   resolveActiveTitle,
 } from '@/lib/titles';
-import { claimWeeklyTask, ensureWeeklyTaskState } from '@/lib/weeklyTasks';
+import { ensureWeeklyTaskState, type WeeklyTaskState } from '@/lib/weeklyTasks';
 
 function LocaleSwitcher() {
   const { locale, setLocale } = useLocale();
@@ -47,7 +57,7 @@ function LocaleSwitcher() {
             : 'text-muted-foreground hover:text-foreground'
         }
       >
-        中
+        Zh
       </button>
       <span className="text-muted-foreground">|</span>
       <button
@@ -87,16 +97,47 @@ function ProfileAvatar({ profile }: { profile: PlayerProfile }) {
   );
 }
 
+function formatGrowthFeedLine(
+  item: GrowthFeedItem,
+  t: (key: string) => string,
+): string {
+  if (item.type === 'character-stage') {
+    const character = item.characterId
+      ? getCharacterById(item.characterId)
+      : null;
+    return `${character?.name ?? t('growth.feed.characterFallback')} ${t('growth.feed.characterStageVerb')} ${item.stage ?? 0}`;
+  }
+  const title = t(item.titleKey);
+  if (item.points && item.points > 0) {
+    return `${title} +${item.points}`;
+  }
+  return title;
+}
+
+function getCharacterUnlockText(
+  character: CharacterDef,
+  stats: PlayerStatsState,
+  t: (key: string) => string,
+): string {
+  if (character.unlockRule.type === 'default') {
+    return t('profile.companion.unlock.default');
+  }
+  if (character.unlockRule.type === 'riichi-rounds') {
+    return `${t('profile.companion.unlock.riichiRoundsPrefix')} ${stats.riichiRounds}/${character.unlockRule.target}`;
+  }
+  return `${t('profile.companion.unlock.winsPrefix')} ${stats.riichiWins}/${character.unlockRule.target}`;
+}
+
 const Profile = () => {
   const { t } = useLocale();
   const [profile, setProfile] = useState<PlayerProfile>(() =>
     getPlayerProfile(),
   );
   const [nicknameDraft, setNicknameDraft] = useState(profile.nickname);
-  const [dailyTaskState, setDailyTaskState] = useState(() =>
+  const [dailyTaskState, setDailyTaskState] = useState<DailyTaskState>(() =>
     ensureDailyTaskState(),
   );
-  const [weeklyTaskState, setWeeklyTaskState] = useState(() =>
+  const [weeklyTaskState, setWeeklyTaskState] = useState<WeeklyTaskState>(() =>
     ensureWeeklyTaskState(),
   );
   const [checkinState, setCheckinState] = useState<CheckinState>(() =>
@@ -108,41 +149,21 @@ const Profile = () => {
   const [playerStats, setPlayerStats] = useState<PlayerStatsState>(() =>
     getPlayerStats(),
   );
+  const [characterState, setCharacterState] = useState<PlayerCharacterState>(
+    () => syncPlayerCharacterUnlocks().state,
+  );
+  const [recentFeed, setRecentFeed] = useState(() => getRecentGrowthFeed(6));
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState('');
-  const [claimFeedback, setClaimFeedback] = useState('');
-  const [weeklyClaimFeedback, setWeeklyClaimFeedback] = useState('');
   const [checkinFeedback, setCheckinFeedback] = useState('');
 
-  const completedTaskCount = useMemo(
-    () => dailyTaskState.items.filter((task) => task.completed).length,
-    [dailyTaskState.items],
-  );
-  const completedWeeklyTaskCount = useMemo(
-    () => weeklyTaskState.items.filter((task) => task.completed).length,
-    [weeklyTaskState.items],
-  );
-  const sortedGamePlayCounts = useMemo(
-    () =>
-      Object.entries(playerStats.gamePlayCounts).sort((a, b) => b[1] - a[1]),
-    [playerStats.gamePlayCounts],
-  );
-  const checkedInToday = checkinState.dateKey === getBeijingDateKey();
-  const unlockedTitles = useMemo(
-    () => getUnlockedTitles(growthOverview.totalPoints),
-    [growthOverview.totalPoints],
-  );
-  const nextLockedTitle = useMemo(
-    () => getNextLockedTitle(growthOverview.totalPoints),
-    [growthOverview.totalPoints],
-  );
-
-  useEffect(() => {
+  const refreshDashboard = () => {
     const nextDaily = ensureDailyTaskState();
     const nextWeekly = ensureWeeklyTaskState();
     const nextCheckin = ensureCheckinState();
     const nextGrowth = getGrowthOverview();
     const nextStats = getPlayerStats();
+    const nextCharacterState = syncPlayerCharacterUnlocks().state;
     const currentProfile = getPlayerProfile();
     const resolvedTitleId = resolveActiveTitle(
       currentProfile.activeTitle,
@@ -152,24 +173,21 @@ const Profile = () => {
       resolvedTitleId === currentProfile.activeTitle
         ? currentProfile
         : updatePlayerProfile({ activeTitle: resolvedTitleId });
+
     setDailyTaskState(nextDaily);
     setWeeklyTaskState(nextWeekly);
     setCheckinState(nextCheckin);
     setGrowthOverview(nextGrowth);
     setPlayerStats(nextStats);
+    setCharacterState(nextCharacterState);
+    setRecentFeed(getRecentGrowthFeed(6));
     setProfile(syncedProfile);
     setNicknameDraft(syncedProfile.nickname);
-  }, []);
+  };
 
   useEffect(() => {
-    const resolvedTitleId = resolveActiveTitle(
-      profile.activeTitle,
-      growthOverview.totalPoints,
-    );
-    if (resolvedTitleId === profile.activeTitle) return;
-    const nextProfile = updatePlayerProfile({ activeTitle: resolvedTitleId });
-    setProfile(nextProfile);
-  }, [growthOverview.totalPoints, profile.activeTitle]);
+    refreshDashboard();
+  }, []);
 
   const saveNickname = () => {
     const next = updatePlayerProfile({
@@ -211,51 +229,18 @@ const Profile = () => {
   };
 
   const switchTitle = (titleId: string) => {
-    const unlockedIds = new Set(unlockedTitles.map((title) => title.id));
-    if (!unlockedIds.has(titleId)) return;
     const next = updatePlayerProfile({ activeTitle: titleId });
     setProfile(next);
   };
 
-  const claimTaskReward = (taskId: string) => {
-    const result = claimDailyTask(taskId);
-    const nextGrowth = getGrowthOverview();
-    const currentProfile = getPlayerProfile();
-    const resolvedTitleId = resolveActiveTitle(
-      currentProfile.activeTitle,
-      nextGrowth.totalPoints,
-    );
-    const syncedProfile =
-      resolvedTitleId === currentProfile.activeTitle
-        ? currentProfile
-        : updatePlayerProfile({ activeTitle: resolvedTitleId });
-    setDailyTaskState(result.state);
-    setGrowthOverview(nextGrowth);
-    setPlayerStats(getPlayerStats());
-    setProfile(syncedProfile);
-    setClaimFeedback(
-      result.ok
-        ? `${t('profile.daily.claimFeedback')}${result.awardedPoints}`
-        : '',
-    );
+  const switchCharacter = (characterId: string) => {
+    const next = setActiveCharacter(characterId);
+    setCharacterState(next);
   };
 
   const checkinTodayAction = () => {
     const result = checkinToday();
-    const nextGrowth = getGrowthOverview();
-    const currentProfile = getPlayerProfile();
-    const resolvedTitleId = resolveActiveTitle(
-      currentProfile.activeTitle,
-      nextGrowth.totalPoints,
-    );
-    const syncedProfile =
-      resolvedTitleId === currentProfile.activeTitle
-        ? currentProfile
-        : updatePlayerProfile({ activeTitle: resolvedTitleId });
-    setCheckinState(result.state);
-    setGrowthOverview(nextGrowth);
-    setPlayerStats(getPlayerStats());
-    setProfile(syncedProfile);
+    refreshDashboard();
     setCheckinFeedback(
       result.ok
         ? `${t('profile.checkin.feedback.daily')}${result.awardedPoints}`
@@ -266,20 +251,7 @@ const Profile = () => {
   const claimWeekRewardAction = () => {
     const milestone = CHECKIN_WEEK_MILESTONES[0];
     const result = claimWeekMilestone(milestone);
-    const nextGrowth = getGrowthOverview();
-    const currentProfile = getPlayerProfile();
-    const resolvedTitleId = resolveActiveTitle(
-      currentProfile.activeTitle,
-      nextGrowth.totalPoints,
-    );
-    const syncedProfile =
-      resolvedTitleId === currentProfile.activeTitle
-        ? currentProfile
-        : updatePlayerProfile({ activeTitle: resolvedTitleId });
-    setCheckinState(result.state);
-    setGrowthOverview(nextGrowth);
-    setPlayerStats(getPlayerStats());
-    setProfile(syncedProfile);
+    refreshDashboard();
     if (result.ok) {
       setCheckinFeedback(
         `${t('profile.checkin.feedback.week')}${result.awardedPoints}`,
@@ -290,20 +262,7 @@ const Profile = () => {
   const claimMonthRewardAction = () => {
     const milestone = CHECKIN_MONTH_MILESTONES[0];
     const result = claimMonthMilestone(milestone);
-    const nextGrowth = getGrowthOverview();
-    const currentProfile = getPlayerProfile();
-    const resolvedTitleId = resolveActiveTitle(
-      currentProfile.activeTitle,
-      nextGrowth.totalPoints,
-    );
-    const syncedProfile =
-      resolvedTitleId === currentProfile.activeTitle
-        ? currentProfile
-        : updatePlayerProfile({ activeTitle: resolvedTitleId });
-    setCheckinState(result.state);
-    setGrowthOverview(nextGrowth);
-    setPlayerStats(getPlayerStats());
-    setProfile(syncedProfile);
+    refreshDashboard();
     if (result.ok) {
       setCheckinFeedback(
         `${t('profile.checkin.feedback.month')}${result.awardedPoints}`,
@@ -311,30 +270,33 @@ const Profile = () => {
     }
   };
 
-  const claimWeeklyTaskReward = (taskId: string) => {
-    const result = claimWeeklyTask(taskId);
-    const nextGrowth = getGrowthOverview();
-    const currentProfile = getPlayerProfile();
-    const resolvedTitleId = resolveActiveTitle(
-      currentProfile.activeTitle,
-      nextGrowth.totalPoints,
-    );
-    const syncedProfile =
-      resolvedTitleId === currentProfile.activeTitle
-        ? currentProfile
-        : updatePlayerProfile({ activeTitle: resolvedTitleId });
-    setWeeklyTaskState(result.state);
-    setGrowthOverview(nextGrowth);
-    setPlayerStats(getPlayerStats());
-    setProfile(syncedProfile);
-    setWeeklyClaimFeedback(
-      result.ok
-        ? `${t('profile.weekly.claimFeedback')}${result.awardedPoints}`
-        : '',
-    );
-  };
-
+  const completedTaskCount = useMemo(
+    () => dailyTaskState.items.filter((task) => task.completed).length,
+    [dailyTaskState.items],
+  );
+  const completedWeeklyTaskCount = useMemo(
+    () => weeklyTaskState.items.filter((task) => task.completed).length,
+    [weeklyTaskState.items],
+  );
+  const sortedGamePlayCounts = useMemo(
+    () =>
+      Object.entries(playerStats.gamePlayCounts).sort((a, b) => b[1] - a[1]),
+    [playerStats.gamePlayCounts],
+  );
+  const checkedInToday = checkinState.dateKey === getBeijingDateKey();
+  const unlockedTitles = useMemo(
+    () => getUnlockedTitles(growthOverview.totalPoints),
+    [growthOverview.totalPoints],
+  );
+  const nextLockedTitle = useMemo(
+    () => getNextLockedTitle(growthOverview.totalPoints),
+    [growthOverview.totalPoints],
+  );
   const activeTitle = getTitleById(profile.activeTitle);
+  const activeCharacter = getCharacterById(characterState.activeCharacterId);
+  const activeAffinity =
+    characterState.affinityByCharacter[activeCharacter.id] ?? 0;
+  const activeStage = getCharacterAffinityStage(activeAffinity);
   const weekMilestone = CHECKIN_WEEK_MILESTONES[0];
   const monthMilestone = CHECKIN_MONTH_MILESTONES[0];
   const weekClaimed = checkinState.weekClaimedAt.includes(weekMilestone);
@@ -358,156 +320,117 @@ const Profile = () => {
               {t('profile.title')}
             </h1>
             <p className="mt-1 max-w-2xl text-sm text-slate-600">
-              {t('profile.subtitle')}
+              {t('profile.heroSubtitle')}
             </p>
           </div>
           <LocaleSwitcher />
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-6xl gap-4 px-4 py-8 md:grid-cols-2 md:py-10">
-        <section className="rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
-          <p className="text-xs font-medium tracking-[0.2em] text-emerald-700/70 uppercase">
-            {t('home.player.title')}
-          </p>
-          <div className="mt-3 flex items-start gap-4">
-            <ProfileAvatar profile={profile} />
-            <div className="min-w-0 flex-1 space-y-2">
-              <label
-                className="text-xs text-slate-500"
-                htmlFor="nickname-input"
-              >
-                {t('home.player.nickname')}
-              </label>
-              <div className="flex gap-2">
-                <Input
-                  id="nickname-input"
-                  maxLength={16}
-                  value={nicknameDraft}
-                  onChange={(event) => setNicknameDraft(event.target.value)}
-                  onBlur={saveNickname}
-                  className="h-10 border-slate-200 bg-white"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="border-slate-200"
-                  onClick={saveNickname}
+      <main className="mx-auto grid max-w-6xl gap-4 px-4 py-8 md:grid-cols-[0.92fr_1.08fr] md:py-10">
+        <div className="space-y-4">
+          <section className="rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+            <p className="text-xs font-medium tracking-[0.2em] text-emerald-700/70 uppercase">
+              {t('home.player.title')}
+            </p>
+            <div className="mt-3 flex items-start gap-4">
+              <ProfileAvatar profile={profile} />
+              <div className="min-w-0 flex-1 space-y-2">
+                <label
+                  className="text-xs text-slate-500"
+                  htmlFor="nickname-input"
                 >
-                  {t('home.player.save')}
-                </Button>
+                  {t('home.player.nickname')}
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    id="nickname-input"
+                    maxLength={16}
+                    value={nicknameDraft}
+                    onChange={(event) => setNicknameDraft(event.target.value)}
+                    onBlur={saveNickname}
+                    className="h-10 border-slate-200 bg-white"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-slate-200"
+                    onClick={saveNickname}
+                  >
+                    {t('home.player.save')}
+                  </Button>
+                </div>
+                <p className="text-xs text-slate-500">
+                  {t('home.player.currentTitle')}：
+                  <span className="ml-1 font-medium text-slate-900">
+                    {activeTitle
+                      ? t(activeTitle.nameKey)
+                      : t('profile.titles.none')}
+                  </span>
+                </p>
               </div>
             </div>
-          </div>
 
-          <div className="mt-4 space-y-2">
-            <p className="text-xs text-slate-500">
-              {t('home.player.avatarPreset')}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {PLAYER_AVATAR_PRESETS.map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  onClick={() => applyPresetAvatar(preset.id)}
-                  className={`flex h-10 w-10 items-center justify-center rounded-lg text-sm font-semibold transition ${
-                    profile.avatarMode === 'preset' &&
-                    profile.avatarPresetId === preset.id
-                      ? 'ring-2 ring-emerald-500'
-                      : 'ring-1 ring-slate-200'
-                  } ${preset.bgClass} ${preset.fgClass}`}
-                  aria-label={preset.label}
-                >
-                  {preset.glyph}
-                </button>
-              ))}
+            <div className="mt-4 space-y-2">
+              <p className="text-xs text-slate-500">
+                {t('home.player.avatarPreset')}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {PLAYER_AVATAR_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => applyPresetAvatar(preset.id)}
+                    className={`flex h-10 w-10 items-center justify-center rounded-lg text-sm font-semibold transition ${
+                      profile.avatarMode === 'preset' &&
+                      profile.avatarPresetId === preset.id
+                        ? 'ring-2 ring-emerald-500'
+                        : 'ring-1 ring-slate-200'
+                    } ${preset.bgClass} ${preset.fgClass}`}
+                    aria-label={preset.label}
+                  >
+                    {preset.glyph}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
 
-          <div className="mt-4 space-y-2">
-            <p className="text-xs text-slate-500">
-              {t('home.player.avatarUpload')}
-            </p>
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
-              <Upload className="size-4" />
-              {avatarUploading
-                ? t('home.player.avatarUploading')
-                : t('home.player.avatarUploadAction')}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={onUploadAvatar}
-                disabled={avatarUploading}
-              />
-            </label>
-            {avatarError && (
-              <p className="text-xs text-rose-600" role="status">
-                {avatarError}
+            <div className="mt-4 space-y-2">
+              <p className="text-xs text-slate-500">
+                {t('home.player.avatarUpload')}
               </p>
-            )}
-          </div>
-        </section>
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                <Upload className="size-4" />
+                {avatarUploading
+                  ? t('home.player.avatarUploading')
+                  : t('home.player.avatarUploadAction')}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={onUploadAvatar}
+                  disabled={avatarUploading}
+                />
+              </label>
+              {avatarError && (
+                <p className="text-xs text-rose-600" role="status">
+                  {avatarError}
+                </p>
+              )}
+            </div>
 
-        <section className="rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
-          <p className="text-xs font-medium tracking-[0.2em] text-emerald-700/70 uppercase">
-            {t('home.growth.title')}
-          </p>
-          <div className="mt-3 grid grid-cols-3 gap-3">
-            <div className="rounded-xl border border-slate-200 bg-white p-3">
-              <p className="text-xs text-slate-500">
-                {t('home.growth.totalPoints')}
+            <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">
+              <p className="text-sm font-medium text-slate-900">
+                {t('profile.titles.section')}
               </p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">
-                {growthOverview.totalPoints}
-              </p>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-3">
-              <p className="text-xs text-slate-500">
-                {t('home.growth.achievementPoints')}
-              </p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">
-                {growthOverview.achievementPoints}
-              </p>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-3">
-              <p className="text-xs text-slate-500">
-                {t('home.growth.taskPoints')}
-              </p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">
-                {growthOverview.taskPoints}
-              </p>
-            </div>
-          </div>
-          <p className="mt-3 text-xs text-slate-500">
-            {t('home.growth.achievementProgress')}
-            {growthOverview.unlockedAchievements}/
-            {growthOverview.totalAchievements}
-          </p>
-
-          <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">
-            <p className="text-sm font-medium text-slate-900">
-              {t('profile.titles.section')}
-            </p>
-            <p className="mt-1 text-xs text-slate-600">
-              {t('profile.titles.current')}：
-              <span className="font-medium text-slate-900">
-                {activeTitle
-                  ? t(activeTitle.nameKey)
-                  : t('profile.titles.none')}
-              </span>
-            </p>
-            {nextLockedTitle && (
-              <p className="mt-1 text-xs text-slate-500">
-                {t('profile.titles.next')} {t(nextLockedTitle.nameKey)} ·{' '}
-                {t('profile.titles.unlockAt')} {nextLockedTitle.minPoints}
-              </p>
-            )}
-            <div className="mt-2">
-              <p className="text-xs text-slate-500">
-                {t('profile.titles.manualSwitch')}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
+              {nextLockedTitle && (
+                <p className="mt-1 text-xs text-slate-500">
+                  {t('profile.nextTitlePrefix')}
+                  {t(nextLockedTitle.nameKey)} · {t('profile.nextTitleNeed')}{' '}
+                  {nextLockedTitle.minPoints}
+                </p>
+              )}
+              <div className="mt-3 flex flex-wrap gap-2">
                 {unlockedTitles.length > 0 ? (
                   unlockedTitles.map((title) => {
                     const selected = profile.activeTitle === title.id;
@@ -533,24 +456,121 @@ const Profile = () => {
                 )}
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">
-            <p className="text-sm font-medium text-slate-900">
+          <section className="rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+            <p className="text-xs font-medium tracking-[0.2em] text-emerald-700/70 uppercase">
+              {t('profile.companion.section')}
+            </p>
+            <div className="mt-4 rounded-[24px] bg-[linear-gradient(135deg,#13243b,#173226_58%,#234036)] p-4 text-white">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-2xl font-semibold">
+                    {activeCharacter.name}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-slate-200">
+                    {activeCharacter.tagline}
+                  </p>
+                </div>
+                <span className="rounded-full bg-white/10 px-3 py-1 text-xs text-slate-100">
+                  {t('profile.companion.currentBadge')}
+                </span>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                <div className="rounded-2xl bg-white/10 px-3 py-2">
+                  <p className="text-xs text-slate-300">
+                    {t('profile.companion.stageLabel')}
+                  </p>
+                  <p className="mt-1 font-semibold">{activeStage}</p>
+                </div>
+                <div className="rounded-2xl bg-white/10 px-3 py-2">
+                  <p className="text-xs text-slate-300">
+                    {t('profile.companion.affinityLabel')}
+                  </p>
+                  <p className="mt-1 font-semibold">{activeAffinity}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {CHARACTER_DEFS.map((character) => {
+                const unlocked = characterState.unlockedCharacterIds.includes(
+                  character.id,
+                );
+                const affinity =
+                  characterState.affinityByCharacter[character.id] ?? 0;
+                const stage = getCharacterAffinityStage(affinity);
+                const isActive =
+                  character.id === characterState.activeCharacterId;
+                return (
+                  <div
+                    key={character.id}
+                    className="rounded-2xl border border-slate-200 bg-white p-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">
+                          {character.name}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {character.tagline}
+                        </p>
+                        <p className="mt-2 text-xs text-slate-600">
+                          {unlocked
+                            ? `${t('profile.companion.stageLabel')} ${stage} · ${t('profile.companion.affinityLabel')} ${affinity}`
+                            : getCharacterUnlockText(character, playerStats, t)}
+                        </p>
+                      </div>
+                      {unlocked ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={isActive ? 'default' : 'outline'}
+                          className={
+                            isActive
+                              ? 'bg-emerald-700 text-white hover:bg-emerald-600'
+                              : 'border-slate-200'
+                          }
+                          onClick={() => switchCharacter(character.id)}
+                        >
+                          {isActive
+                            ? t('profile.companion.active')
+                            : t('profile.companion.setActive')}
+                        </Button>
+                      ) : (
+                        <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-500">
+                          {t('profile.companion.locked')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+            <p className="text-xs font-medium tracking-[0.2em] text-emerald-700/70 uppercase">
               {t('profile.checkin.title')}
             </p>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-slate-500">
               {t('profile.checkin.date')} {checkinState.dateKey || '-'}
             </p>
-            <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-700">
-              <p>
-                {t('profile.checkin.streak')}：{checkinState.streakDays}
-              </p>
-              <p>
-                {t('profile.checkin.total')}：{checkinState.totalDays}
-              </p>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-slate-700">
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs text-slate-500">
+                  {t('profile.checkin.streak')}
+                </p>
+                <p className="mt-1 font-semibold">{checkinState.streakDays}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs text-slate-500">
+                  {t('profile.checkin.total')}
+                </p>
+                <p className="mt-1 font-semibold">{checkinState.totalDays}</p>
+              </div>
             </div>
-            <div className="mt-3">
+            <div className="mt-3 flex flex-wrap gap-2">
               <Button
                 type="button"
                 size="sm"
@@ -562,83 +582,251 @@ const Profile = () => {
                   ? t('profile.checkin.checkedIn')
                   : t('profile.checkin.action')}
               </Button>
-            </div>
-            <div className="mt-3 space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs text-slate-600">
-                  {t('profile.checkin.weekMilestone')} {weekMilestone}
-                </p>
-                {weekClaimed ? (
-                  <span className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600">
-                    {t('profile.checkin.claimed')}
-                  </span>
-                ) : (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="h-7 border-slate-200 px-2 text-xs"
-                    onClick={claimWeekRewardAction}
-                    disabled={!canClaimWeek}
-                  >
-                    {t('profile.checkin.claim')}
-                  </Button>
-                )}
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs text-slate-600">
-                  {t('profile.checkin.monthMilestone')} {monthMilestone}
-                </p>
-                {monthClaimed ? (
-                  <span className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600">
-                    {t('profile.checkin.claimed')}
-                  </span>
-                ) : (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="h-7 border-slate-200 px-2 text-xs"
-                    onClick={claimMonthRewardAction}
-                    disabled={!canClaimMonth}
-                  >
-                    {t('profile.checkin.claim')}
-                  </Button>
-                )}
-              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="border-slate-200"
+                onClick={claimWeekRewardAction}
+                disabled={!canClaimWeek || weekClaimed}
+              >
+                {weekClaimed
+                  ? `${t('profile.checkin.weekMilestone')} ${t('profile.checkin.claimed')}`
+                  : `${t('profile.checkin.weekMilestone')} ${weekMilestone}`}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="border-slate-200"
+                onClick={claimMonthRewardAction}
+                disabled={!canClaimMonth || monthClaimed}
+              >
+                {monthClaimed
+                  ? `${t('profile.checkin.monthMilestone')} ${t('profile.checkin.claimed')}`
+                  : `${t('profile.checkin.monthMilestone')} ${monthMilestone}`}
+              </Button>
             </div>
             {checkinFeedback && (
               <p className="mt-2 text-xs text-emerald-700" role="status">
                 {checkinFeedback}
               </p>
             )}
-          </div>
+          </section>
+        </div>
 
-          <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">
+        <div className="space-y-4">
+          <section className="rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+            <p className="text-xs font-medium tracking-[0.2em] text-emerald-700/70 uppercase">
+              {t('home.growth.title')}
+            </p>
+            <div className="mt-3 grid grid-cols-3 gap-3">
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs text-slate-500">
+                  {t('home.growth.totalPoints')}
+                </p>
+                <p className="mt-1 text-xl font-semibold text-slate-900">
+                  {growthOverview.totalPoints}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs text-slate-500">
+                  {t('home.growth.achievementPoints')}
+                </p>
+                <p className="mt-1 text-xl font-semibold text-slate-900">
+                  {growthOverview.achievementPoints}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs text-slate-500">
+                  {t('home.growth.taskPoints')}
+                </p>
+                <p className="mt-1 text-xl font-semibold text-slate-900">
+                  {growthOverview.taskPoints}
+                </p>
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-slate-500">
+              {t('home.growth.achievementProgress')}
+              {growthOverview.unlockedAchievements}/
+              {growthOverview.totalAchievements}
+            </p>
+
+            <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-slate-900">
+                  {t('profile.recentGrowth.title')}
+                </p>
+                <span className="text-xs text-slate-500">
+                  {t('profile.recentGrowth.recentPrefix')} {recentFeed.length}{' '}
+                  {t('profile.recentGrowth.recentSuffix')}
+                </span>
+              </div>
+              <div className="mt-3 space-y-2">
+                {recentFeed.length > 0 ? (
+                  recentFeed.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-xl border border-slate-100 bg-slate-50/80 p-3"
+                    >
+                      <p className="text-sm text-slate-900">
+                        {formatGrowthFeedLine(item, t)}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-slate-500">
+                    {t('profile.recentGrowth.empty')}
+                  </p>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-slate-900">
+                {t('home.daily.title')}
+              </p>
+              <span className="text-xs text-slate-500">
+                {dailyTaskState.dateKey}
+              </span>
+            </div>
+            <p className="mt-2 text-xs text-slate-600">
+              {t('profile.task.completedPrefix')} {completedTaskCount}/
+              {dailyTaskState.items.length}
+            </p>
+            <ul className="mt-3 space-y-2">
+              {dailyTaskState.items.map((task) => (
+                <li
+                  key={task.id}
+                  className="rounded-xl border border-slate-200 bg-white p-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-900">
+                        {t(task.titleKey)}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {t(task.descKey)}
+                      </p>
+                      <p className="mt-2 text-xs text-slate-600">
+                        {t('profile.task.progressPrefix')} {task.progress}/
+                        {task.target} · {t('profile.task.rewardPrefix')}{' '}
+                        {task.rewardPoints}
+                      </p>
+                    </div>
+                    <span
+                      className={`rounded-full px-2 py-1 text-xs ${
+                        task.completed
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-amber-50 text-amber-700'
+                      }`}
+                    >
+                      {task.completed
+                        ? t('profile.task.status.settled')
+                        : t('profile.task.status.pending')}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-slate-900">
+                {t('profile.weekly.title')}
+              </p>
+              <span className="text-xs text-slate-500">
+                {weeklyTaskState.weekKey}
+              </span>
+            </div>
+            <p className="mt-2 text-xs text-slate-600">
+              {t('profile.task.completedPrefix')} {completedWeeklyTaskCount}/
+              {weeklyTaskState.items.length}
+            </p>
+            <ul className="mt-3 space-y-2">
+              {weeklyTaskState.items.map((task) => (
+                <li
+                  key={task.id}
+                  className="rounded-xl border border-slate-200 bg-white p-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-900">
+                        {t(task.titleKey)}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {t(task.descKey)}
+                      </p>
+                      <p className="mt-2 text-xs text-slate-600">
+                        {t('profile.task.progressPrefix')} {task.progress}/
+                        {task.target} · {t('profile.task.rewardPrefix')}{' '}
+                        {task.rewardPoints}
+                      </p>
+                    </div>
+                    <span
+                      className={`rounded-full px-2 py-1 text-xs ${
+                        task.completed
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-amber-50 text-amber-700'
+                      }`}
+                    >
+                      {task.completed
+                        ? t('profile.task.status.settled')
+                        : t('profile.task.status.pending')}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
             <p className="text-sm font-medium text-slate-900">
               {t('profile.stats.title')}
             </p>
-            <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-700">
-              <p>
-                {t('profile.stats.totalPlayCount')}：
-                {playerStats.totalPlayCount}
-              </p>
-              <p>
-                {t('profile.stats.riichiRounds')}：{playerStats.riichiRounds}
-              </p>
-              <p>
-                {t('profile.stats.riichiWins')}：{playerStats.riichiWins}
-              </p>
-              <p>
-                {t('profile.stats.riichiRiichiCount')}：
-                {playerStats.riichiRiichiCount}
-              </p>
-              <p>
-                {t('profile.stats.riichiTsumoCount')}：
-                {playerStats.riichiTsumoCount}
-              </p>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-slate-700">
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs text-slate-500">
+                  {t('profile.stats.totalPlayCount')}
+                </p>
+                <p className="mt-1 font-semibold">
+                  {playerStats.totalPlayCount}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs text-slate-500">
+                  {t('profile.stats.riichiRounds')}
+                </p>
+                <p className="mt-1 font-semibold">{playerStats.riichiRounds}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs text-slate-500">
+                  {t('profile.stats.riichiWins')}
+                </p>
+                <p className="mt-1 font-semibold">{playerStats.riichiWins}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-xs text-slate-500">
+                  {t('profile.stats.riichiRiichiCount')}
+                </p>
+                <p className="mt-1 font-semibold">
+                  {playerStats.riichiRiichiCount}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-3 md:col-span-2">
+                <p className="text-xs text-slate-500">
+                  {t('profile.stats.riichiTsumoCount')}
+                </p>
+                <p className="mt-1 font-semibold">
+                  {playerStats.riichiTsumoCount}
+                </p>
+              </div>
             </div>
-            <div className="mt-3 border-t border-slate-100 pt-2">
+
+            <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">
               <p className="text-xs text-slate-600">
                 {t('profile.stats.gamePlayCounts')}
               </p>
@@ -660,136 +848,8 @@ const Profile = () => {
                 </p>
               )}
             </div>
-          </div>
-
-          <div className="mt-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-slate-800">
-                {t('home.daily.title')}
-              </p>
-              <span className="text-xs text-slate-500">
-                {dailyTaskState.dateKey}
-              </span>
-            </div>
-            <p className="text-xs text-slate-600">
-              {t('profile.daily.completed')} {completedTaskCount}/
-              {dailyTaskState.items.length}
-            </p>
-            {claimFeedback && (
-              <p className="text-xs text-emerald-700" role="status">
-                {claimFeedback}
-              </p>
-            )}
-            <ul className="space-y-2">
-              {dailyTaskState.items.map((task) => (
-                <li
-                  key={task.id}
-                  className="rounded-xl border border-slate-200 bg-white p-3"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-900">
-                        {t(task.titleKey)}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {t(task.descKey)}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-600">
-                        {t('home.daily.progress')}
-                        {task.progress}/{task.target}
-                        {' · '}
-                        {t('home.daily.reward')}
-                        {task.rewardPoints}
-                      </p>
-                    </div>
-                    {task.claimed ? (
-                      <span className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600">
-                        {t('home.daily.claimed')}
-                      </span>
-                    ) : task.completed ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="bg-emerald-700 text-white hover:bg-emerald-600"
-                        onClick={() => claimTaskReward(task.id)}
-                      >
-                        {t('home.daily.claim')}
-                      </Button>
-                    ) : (
-                      <span className="rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-700">
-                        {t('home.daily.pending')}
-                      </span>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="mt-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-slate-800">
-                {t('profile.weekly.title')}
-              </p>
-              <span className="text-xs text-slate-500">
-                {weeklyTaskState.weekKey}
-              </span>
-            </div>
-            <p className="text-xs text-slate-600">
-              {t('profile.weekly.completed')} {completedWeeklyTaskCount}/
-              {weeklyTaskState.items.length}
-            </p>
-            {weeklyClaimFeedback && (
-              <p className="text-xs text-emerald-700" role="status">
-                {weeklyClaimFeedback}
-              </p>
-            )}
-            <ul className="space-y-2">
-              {weeklyTaskState.items.map((task) => (
-                <li
-                  key={task.id}
-                  className="rounded-xl border border-slate-200 bg-white p-3"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-900">
-                        {t(task.titleKey)}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {t(task.descKey)}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-600">
-                        {t('home.daily.progress')}
-                        {task.progress}/{task.target}
-                        {' · '}
-                        {t('home.daily.reward')}
-                        {task.rewardPoints}
-                      </p>
-                    </div>
-                    {task.claimed ? (
-                      <span className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600">
-                        {t('home.daily.claimed')}
-                      </span>
-                    ) : task.completed ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="bg-emerald-700 text-white hover:bg-emerald-600"
-                        onClick={() => claimWeeklyTaskReward(task.id)}
-                      >
-                        {t('home.daily.claim')}
-                      </Button>
-                    ) : (
-                      <span className="rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-700">
-                        {t('home.daily.pending')}
-                      </span>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
+          </section>
+        </div>
       </main>
     </div>
   );

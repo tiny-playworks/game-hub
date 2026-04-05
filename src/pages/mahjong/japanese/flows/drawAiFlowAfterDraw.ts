@@ -23,6 +23,7 @@ import {
   calcWithRiichiRs,
   type GameStateForRs,
 } from '@/lib/riichiRsAdapter';
+import { recordRiichiProgressEvent } from '@/lib/riichiProgress';
 import { SEAT_NAMES } from '../constants';
 import { enrichWinResultWithUra } from '../gameLogic/winResult';
 import { clearSeatDoujunStates } from '../helpers';
@@ -94,6 +95,9 @@ export function runAiAfterDraw(
           fu,
           ten,
         });
+        recordRiichiProgressEvent('win-hand');
+        recordRiichiProgressEvent('tsumo-win');
+        recordRiichiProgressEvent('finish-round');
         setWinResult({
           winner: p,
           isTsumo: true,
@@ -165,6 +169,7 @@ export function runAiAfterDraw(
         if (afterAbortive.ryuukyoku && afterAbortive.ryuukyokuReason) {
           addLogRef.current(`流局（${afterAbortive.ryuukyokuReason}）`);
           sounds.playRyuukyoku();
+          recordRiichiProgressEvent('finish-round');
           return afterAbortive;
         }
         return nextState;
@@ -234,6 +239,7 @@ export function runAiAfterDraw(
       if (afterAbortive.ryuukyoku && afterAbortive.ryuukyokuReason) {
         addLogRef.current(`流局（${afterAbortive.ryuukyokuReason}）`);
         sounds.playRyuukyoku();
+        recordRiichiProgressEvent('finish-round');
         return afterAbortive;
       }
       return nextState;

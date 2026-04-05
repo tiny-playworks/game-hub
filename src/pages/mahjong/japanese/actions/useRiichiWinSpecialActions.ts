@@ -106,6 +106,7 @@ export function useRiichiWinSpecialActions(
       if (shouldAbortOnSuukaikan(melds)) {
         addLog('流局（四开杠）');
         sounds.playRyuukyoku();
+        recordRiichiProgressEvent('finish-round');
         setGame({
           ...game,
           hands: game.hands.map((h, i) => (i === 0 ? handAfterKan : h)),
@@ -202,6 +203,7 @@ export function useRiichiWinSpecialActions(
     if (!canKyuushuKyuuhai) return;
     addLog('自家 九种九牌，途中流局');
     sounds.playRyuukyoku();
+    recordRiichiProgressEvent('finish-round');
     setGame({
       ...game,
       ryuukyoku: true,
@@ -246,6 +248,9 @@ export function useRiichiWinSpecialActions(
         han: rs.han,
         ten: rs.ten,
       });
+      recordRiichiProgressEvent('win-hand');
+      recordRiichiProgressEvent('tsumo-win');
+      recordRiichiProgressEvent('finish-round');
       setWinResult({
         winner: 0,
         isTsumo: true,
@@ -256,8 +261,6 @@ export function useRiichiWinSpecialActions(
         uraHan: enriched.uraHan,
         uraDoraIndicators: enriched.uraDoraIndicators,
       });
-      recordRiichiProgressEvent('win-hand');
-      recordRiichiProgressEvent('tsumo-win');
       setGame((g) => (g ? { ...g, timeBanks: timedBanks } : g));
       return;
     }
@@ -285,6 +288,9 @@ export function useRiichiWinSpecialActions(
       han,
       ten,
     });
+    recordRiichiProgressEvent('win-hand');
+    recordRiichiProgressEvent('tsumo-win');
+    recordRiichiProgressEvent('finish-round');
     setWinResult({
       winner: 0,
       isTsumo: true,
@@ -295,8 +301,6 @@ export function useRiichiWinSpecialActions(
       uraHan: enriched.uraHan,
       uraDoraIndicators: enriched.uraDoraIndicators,
     });
-    recordRiichiProgressEvent('win-hand');
-    recordRiichiProgressEvent('tsumo-win');
     setGame((g) => (g ? { ...g, timeBanks: timedBanks } : g));
   }, [
     game,
@@ -345,6 +349,8 @@ export function useRiichiWinSpecialActions(
         han: rs.han,
         ten: rs.ten,
       });
+      recordRiichiProgressEvent('win-hand');
+      recordRiichiProgressEvent('finish-round');
       setWinResult({
         winner: 0,
         isTsumo: false,
@@ -355,7 +361,6 @@ export function useRiichiWinSpecialActions(
         uraHan: enriched.uraHan,
         uraDoraIndicators: enriched.uraDoraIndicators,
       });
-      recordRiichiProgressEvent('win-hand');
       setGame((g) => (g ? { ...g, timeBanks: timedBanks } : g));
       return;
     }
@@ -385,6 +390,8 @@ export function useRiichiWinSpecialActions(
       han,
       ten,
     });
+    recordRiichiProgressEvent('win-hand');
+    recordRiichiProgressEvent('finish-round');
     setWinResult({
       winner: 0,
       isTsumo: false,
@@ -395,7 +402,6 @@ export function useRiichiWinSpecialActions(
       uraHan: enriched.uraHan,
       uraDoraIndicators: enriched.uraDoraIndicators,
     });
-    recordRiichiProgressEvent('win-hand');
     setGame((g) => (g ? { ...g, timeBanks: timedBanks } : g));
   }, [
     game,

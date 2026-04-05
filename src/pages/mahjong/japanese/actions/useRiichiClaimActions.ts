@@ -6,6 +6,7 @@ import {
   applyRonDeclinedFuriten,
   createInitialFuritenState,
 } from '@/lib/riichiFuriten';
+import { recordRiichiProgressEvent } from '@/lib/riichiProgress';
 import { canSeatRonByRules, clearSeatDoujunStates } from '../helpers';
 import { applyAbortiveDrawChecks } from '../shared/abortiveDrawChecks';
 import {
@@ -47,6 +48,7 @@ export function useRiichiClaimActions(ctx: RiichiRuntimeContext) {
       if (afterAbortive.ryuukyoku && afterAbortive.ryuukyokuReason) {
         addLog(`流局（${afterAbortive.ryuukyokuReason}）`);
         sounds.playRyuukyoku();
+        recordRiichiProgressEvent('finish-round');
         setGame(afterAbortive);
         return;
       }
@@ -86,6 +88,7 @@ export function useRiichiClaimActions(ctx: RiichiRuntimeContext) {
           });
     if (next.ryuukyoku && next.ryuukyokuReason === '荒牌') {
       addLog('流局（荒牌）');
+      recordRiichiProgressEvent('finish-round');
     } else {
       addLog('自家 过');
     }
@@ -265,6 +268,7 @@ export function useRiichiClaimActions(ctx: RiichiRuntimeContext) {
     if (shouldAbortOnSuukaikan(melds)) {
       addLog('流局（四开杠）');
       sounds.playRyuukyoku();
+      recordRiichiProgressEvent('finish-round');
       setGame({
         ...game,
         timeBanks: timedBanks,

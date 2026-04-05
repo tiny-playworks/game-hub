@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { consumeTimeBankSeconds } from '@/lib/riichiClock';
+import { recordRiichiProgressEvent } from '@/lib/riichiProgress';
 import { applyDrawOneTile } from '../shared/drawFlowTransitions';
 import { getRng, getScheduler } from '../shared/flowDeps';
 import type { RiichiRuntimeContext } from '../shared/riichiRuntimeContext';
@@ -39,6 +40,7 @@ export function useRiichiDrawAiFlow(
       return;
     addLog('流局（荒牌）');
     sounds.playRyuukyoku();
+    recordRiichiProgressEvent('finish-round');
     setGame((g) =>
       !g ? g : { ...g, ryuukyoku: true, ryuukyokuReason: '荒牌' },
     );

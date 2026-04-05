@@ -1,4 +1,4 @@
-import type { RiichiDailyEvent } from '@/lib/dailyTasks';
+import type { RiichiDailyEvent, TaskRewardSummary } from '@/lib/dailyTasks';
 import { addGrowthPoints } from '@/lib/growth';
 
 export const WEEKLY_TASK_STORAGE_KEY = 'game-hub-weekly-tasks';
@@ -21,6 +21,13 @@ export interface WeeklyTaskProgress extends WeeklyTask {
 export interface WeeklyTaskState {
   weekKey: string;
   items: WeeklyTaskProgress[];
+}
+
+export interface RecordWeeklyTaskEventResult {
+  state: WeeklyTaskState;
+  autoClaimedRewards: Array<
+    Omit<TaskRewardSummary, 'scope'> & { scope: 'weekly' }
+  >;
 }
 
 const WEEKLY_TEMPLATES: WeeklyTask[] = [
@@ -127,7 +134,7 @@ function normalizeState(raw: unknown): WeeklyTaskState | null {
       ...template,
       progress: Math.min(progress, template.target),
       completed,
-      claimed: Boolean(candidate.claimed) && completed,
+      claimed: completed || Boolean(candidate.claimed),
     });
   }
   if (items.length === 0) return null;
@@ -163,21 +170,46 @@ export function ensureWeeklyTaskState(now = Date.now()): WeeklyTaskState {
 export function recordWeeklyTaskEvent(
   event: RiichiDailyEvent,
   now = Date.now(),
-): WeeklyTaskState {
+): RecordWeeklyTaskEventResult {
   const state = ensureWeeklyTaskState(now);
+  const autoClaimedRewards: Array<
+    Omit<TaskRewardSummary, 'scope'> & { scope: 'weekly' }
+  > = [];
   const next: WeeklyTaskState = {
     ...state,
     items: state.items.map((item) => {
       if (item.eventType !== event || item.completed) return item;
       const progress = Math.min(item.target, item.progress + 1);
+      const completed = progress >= item.target;
+      if (completed) {
+        autoClaimedRewards.push({
+          taskId: item.id,
+          titleKey: item.titleKey,
+          descKey: item.descKey,
+          rewardPoints: item.rewardPoints,
+          scope: 'weekly',
+        });
+      }
       return {
         ...item,
         progress,
-        completed: progress >= item.target,
+        completed,
+        claimed: completed ? true : item.claimed,
       };
     }),
   };
-  return saveWeeklyTaskState(next);
+  const savedState = saveWeeklyTaskState(next);
+  const awardedPoints = autoClaimedRewards.reduce(
+    (total, reward) => total + reward.rewardPoints,
+    0,
+  );
+  if (awardedPoints > 0) {
+    addGrowthPoints(awardedPoints);
+  }
+  return {
+    state: savedState,
+    autoClaimedRewards,
+  };
 }
 
 export function claimWeeklyTask(
