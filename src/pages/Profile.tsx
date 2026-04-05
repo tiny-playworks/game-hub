@@ -25,12 +25,14 @@ import {
   sanitizeNickname,
   updatePlayerProfile,
 } from '@/lib/playerProfile';
+import { getPlayerStats, type PlayerStatsState } from '@/lib/playerStats';
 import {
   getNextLockedTitle,
   getTitleById,
   getUnlockedTitles,
   resolveActiveTitle,
 } from '@/lib/titles';
+import { claimWeeklyTask, ensureWeeklyTaskState } from '@/lib/weeklyTasks';
 
 function LocaleSwitcher() {
   const { locale, setLocale } = useLocale();
@@ -94,20 +96,36 @@ const Profile = () => {
   const [dailyTaskState, setDailyTaskState] = useState(() =>
     ensureDailyTaskState(),
   );
+  const [weeklyTaskState, setWeeklyTaskState] = useState(() =>
+    ensureWeeklyTaskState(),
+  );
   const [checkinState, setCheckinState] = useState<CheckinState>(() =>
     ensureCheckinState(),
   );
   const [growthOverview, setGrowthOverview] = useState(() =>
     getGrowthOverview(),
   );
+  const [playerStats, setPlayerStats] = useState<PlayerStatsState>(() =>
+    getPlayerStats(),
+  );
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState('');
   const [claimFeedback, setClaimFeedback] = useState('');
+  const [weeklyClaimFeedback, setWeeklyClaimFeedback] = useState('');
   const [checkinFeedback, setCheckinFeedback] = useState('');
 
   const completedTaskCount = useMemo(
     () => dailyTaskState.items.filter((task) => task.completed).length,
     [dailyTaskState.items],
+  );
+  const completedWeeklyTaskCount = useMemo(
+    () => weeklyTaskState.items.filter((task) => task.completed).length,
+    [weeklyTaskState.items],
+  );
+  const sortedGamePlayCounts = useMemo(
+    () =>
+      Object.entries(playerStats.gamePlayCounts).sort((a, b) => b[1] - a[1]),
+    [playerStats.gamePlayCounts],
   );
   const checkedInToday = checkinState.dateKey === getBeijingDateKey();
   const unlockedTitles = useMemo(
@@ -121,8 +139,10 @@ const Profile = () => {
 
   useEffect(() => {
     const nextDaily = ensureDailyTaskState();
+    const nextWeekly = ensureWeeklyTaskState();
     const nextCheckin = ensureCheckinState();
     const nextGrowth = getGrowthOverview();
+    const nextStats = getPlayerStats();
     const currentProfile = getPlayerProfile();
     const resolvedTitleId = resolveActiveTitle(
       currentProfile.activeTitle,
@@ -133,8 +153,10 @@ const Profile = () => {
         ? currentProfile
         : updatePlayerProfile({ activeTitle: resolvedTitleId });
     setDailyTaskState(nextDaily);
+    setWeeklyTaskState(nextWeekly);
     setCheckinState(nextCheckin);
     setGrowthOverview(nextGrowth);
+    setPlayerStats(nextStats);
     setProfile(syncedProfile);
     setNicknameDraft(syncedProfile.nickname);
   }, []);
@@ -209,6 +231,7 @@ const Profile = () => {
         : updatePlayerProfile({ activeTitle: resolvedTitleId });
     setDailyTaskState(result.state);
     setGrowthOverview(nextGrowth);
+    setPlayerStats(getPlayerStats());
     setProfile(syncedProfile);
     setClaimFeedback(
       result.ok
@@ -231,6 +254,7 @@ const Profile = () => {
         : updatePlayerProfile({ activeTitle: resolvedTitleId });
     setCheckinState(result.state);
     setGrowthOverview(nextGrowth);
+    setPlayerStats(getPlayerStats());
     setProfile(syncedProfile);
     setCheckinFeedback(
       result.ok
@@ -254,6 +278,7 @@ const Profile = () => {
         : updatePlayerProfile({ activeTitle: resolvedTitleId });
     setCheckinState(result.state);
     setGrowthOverview(nextGrowth);
+    setPlayerStats(getPlayerStats());
     setProfile(syncedProfile);
     if (result.ok) {
       setCheckinFeedback(
@@ -277,12 +302,36 @@ const Profile = () => {
         : updatePlayerProfile({ activeTitle: resolvedTitleId });
     setCheckinState(result.state);
     setGrowthOverview(nextGrowth);
+    setPlayerStats(getPlayerStats());
     setProfile(syncedProfile);
     if (result.ok) {
       setCheckinFeedback(
         `${t('profile.checkin.feedback.month')}${result.awardedPoints}`,
       );
     }
+  };
+
+  const claimWeeklyTaskReward = (taskId: string) => {
+    const result = claimWeeklyTask(taskId);
+    const nextGrowth = getGrowthOverview();
+    const currentProfile = getPlayerProfile();
+    const resolvedTitleId = resolveActiveTitle(
+      currentProfile.activeTitle,
+      nextGrowth.totalPoints,
+    );
+    const syncedProfile =
+      resolvedTitleId === currentProfile.activeTitle
+        ? currentProfile
+        : updatePlayerProfile({ activeTitle: resolvedTitleId });
+    setWeeklyTaskState(result.state);
+    setGrowthOverview(nextGrowth);
+    setPlayerStats(getPlayerStats());
+    setProfile(syncedProfile);
+    setWeeklyClaimFeedback(
+      result.ok
+        ? `${t('profile.weekly.claimFeedback')}${result.awardedPoints}`
+        : '',
+    );
   };
 
   const activeTitle = getTitleById(profile.activeTitle);
@@ -565,6 +614,54 @@ const Profile = () => {
             )}
           </div>
 
+          <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">
+            <p className="text-sm font-medium text-slate-900">
+              {t('profile.stats.title')}
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-700">
+              <p>
+                {t('profile.stats.totalPlayCount')}：
+                {playerStats.totalPlayCount}
+              </p>
+              <p>
+                {t('profile.stats.riichiRounds')}：{playerStats.riichiRounds}
+              </p>
+              <p>
+                {t('profile.stats.riichiWins')}：{playerStats.riichiWins}
+              </p>
+              <p>
+                {t('profile.stats.riichiRiichiCount')}：
+                {playerStats.riichiRiichiCount}
+              </p>
+              <p>
+                {t('profile.stats.riichiTsumoCount')}：
+                {playerStats.riichiTsumoCount}
+              </p>
+            </div>
+            <div className="mt-3 border-t border-slate-100 pt-2">
+              <p className="text-xs text-slate-600">
+                {t('profile.stats.gamePlayCounts')}
+              </p>
+              {sortedGamePlayCounts.length > 0 ? (
+                <ul className="mt-2 space-y-1 text-xs text-slate-700">
+                  {sortedGamePlayCounts.map(([gameId, count]) => (
+                    <li
+                      key={gameId}
+                      className="flex items-center justify-between"
+                    >
+                      <span>{t(`game.${gameId}.name`)}</span>
+                      <span>{count}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-2 text-xs text-slate-500">
+                  {t('profile.stats.noGameData')}
+                </p>
+              )}
+            </div>
+          </div>
+
           <div className="mt-4 space-y-2">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium text-slate-800">
@@ -615,6 +712,70 @@ const Profile = () => {
                         size="sm"
                         className="bg-emerald-700 text-white hover:bg-emerald-600"
                         onClick={() => claimTaskReward(task.id)}
+                      >
+                        {t('home.daily.claim')}
+                      </Button>
+                    ) : (
+                      <span className="rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-700">
+                        {t('home.daily.pending')}
+                      </span>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-slate-800">
+                {t('profile.weekly.title')}
+              </p>
+              <span className="text-xs text-slate-500">
+                {weeklyTaskState.weekKey}
+              </span>
+            </div>
+            <p className="text-xs text-slate-600">
+              {t('profile.weekly.completed')} {completedWeeklyTaskCount}/
+              {weeklyTaskState.items.length}
+            </p>
+            {weeklyClaimFeedback && (
+              <p className="text-xs text-emerald-700" role="status">
+                {weeklyClaimFeedback}
+              </p>
+            )}
+            <ul className="space-y-2">
+              {weeklyTaskState.items.map((task) => (
+                <li
+                  key={task.id}
+                  className="rounded-xl border border-slate-200 bg-white p-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-900">
+                        {t(task.titleKey)}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {t(task.descKey)}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-600">
+                        {t('home.daily.progress')}
+                        {task.progress}/{task.target}
+                        {' · '}
+                        {t('home.daily.reward')}
+                        {task.rewardPoints}
+                      </p>
+                    </div>
+                    {task.claimed ? (
+                      <span className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600">
+                        {t('home.daily.claimed')}
+                      </span>
+                    ) : task.completed ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="bg-emerald-700 text-white hover:bg-emerald-600"
+                        onClick={() => claimWeeklyTaskReward(task.id)}
                       >
                         {t('home.daily.claim')}
                       </Button>

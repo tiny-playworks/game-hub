@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { QuickAccessPanel } from '@/components/home/QuickAccessPanel';
 import { cn } from '@/lib/utils';
 import {
   RIICHI_THEMES,
@@ -76,6 +77,7 @@ export function GameHeader({
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
+        <QuickAccessPanel compact className="hidden md:flex" />
         <div className="hidden md:flex items-center gap-1">
           <span className="text-[10px] opacity-80">宝牌</span>
           {game.doraIndicators.map((ind, i) => (
@@ -155,6 +157,11 @@ export function GameHeader({
               >
                 新手引导
               </button>
+            </div>
+
+            <div className="mb-4 md:hidden">
+              <p className="text-xs opacity-75 mb-2">快捷入口</p>
+              <QuickAccessPanel compact className="w-full" />
             </div>
 
             <div className="mb-4">

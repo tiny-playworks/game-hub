@@ -4,6 +4,7 @@ import {
 } from '@/lib/achievements';
 
 export const GROWTH_STORAGE_KEY = 'game-hub-growth-state';
+export const GROWTH_POINTS_GAINED_EVENT = 'game-hub:growth-points-gained';
 
 export interface GrowthState {
   taskPoints: number;
@@ -77,10 +78,18 @@ export function addGrowthPoints(points: number): GrowthState {
     ? Math.max(0, Math.floor(points))
     : 0;
   const current = getGrowthState();
-  return saveGrowthState({
+  const nextState = saveGrowthState({
     ...current,
     taskPoints: current.taskPoints + safePoints,
   });
+  if (safePoints > 0 && typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent<{ points: number }>(GROWTH_POINTS_GAINED_EVENT, {
+        detail: { points: safePoints },
+      }),
+    );
+  }
+  return nextState;
 }
 
 export function getGrowthOverview(): GrowthOverview {

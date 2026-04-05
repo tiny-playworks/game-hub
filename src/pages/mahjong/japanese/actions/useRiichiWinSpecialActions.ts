@@ -1,5 +1,4 @@
 import { useCallback } from 'react';
-import { recordDailyTaskEvent } from '@/lib/dailyTasks';
 import {
   calcFu,
   calcScore,
@@ -9,6 +8,7 @@ import {
   getTotalHan,
 } from '@/lib/mahjongRiichi';
 import { shouldAbortOnSuukaikan } from '@/lib/riichiAbortiveDraw';
+import { recordRiichiProgressEvent } from '@/lib/riichiProgress';
 import {
   buildRiichiInput,
   calcWithRiichiRs,
@@ -80,7 +80,7 @@ export function useRiichiWinSpecialActions(
       ippatsuPossible: game.ippatsuPossible.map((v, i) => (i === 0 ? true : v)),
       lastClaimMsg: '立直宣言！听牌固定，不能换牌',
     });
-    recordDailyTaskEvent('declare-riichi');
+    recordRiichiProgressEvent('declare-riichi');
   }, [game, addLog, getWaitingTilesRiichi, sounds, setGame]);
 
   const doAngang = useCallback(
@@ -256,8 +256,8 @@ export function useRiichiWinSpecialActions(
         uraHan: enriched.uraHan,
         uraDoraIndicators: enriched.uraDoraIndicators,
       });
-      recordDailyTaskEvent('win-hand');
-      recordDailyTaskEvent('tsumo-win');
+      recordRiichiProgressEvent('win-hand');
+      recordRiichiProgressEvent('tsumo-win');
       setGame((g) => (g ? { ...g, timeBanks: timedBanks } : g));
       return;
     }
@@ -295,8 +295,8 @@ export function useRiichiWinSpecialActions(
       uraHan: enriched.uraHan,
       uraDoraIndicators: enriched.uraDoraIndicators,
     });
-    recordDailyTaskEvent('win-hand');
-    recordDailyTaskEvent('tsumo-win');
+    recordRiichiProgressEvent('win-hand');
+    recordRiichiProgressEvent('tsumo-win');
     setGame((g) => (g ? { ...g, timeBanks: timedBanks } : g));
   }, [
     game,
@@ -355,7 +355,7 @@ export function useRiichiWinSpecialActions(
         uraHan: enriched.uraHan,
         uraDoraIndicators: enriched.uraDoraIndicators,
       });
-      recordDailyTaskEvent('win-hand');
+      recordRiichiProgressEvent('win-hand');
       setGame((g) => (g ? { ...g, timeBanks: timedBanks } : g));
       return;
     }
@@ -395,7 +395,7 @@ export function useRiichiWinSpecialActions(
       uraHan: enriched.uraHan,
       uraDoraIndicators: enriched.uraDoraIndicators,
     });
-    recordDailyTaskEvent('win-hand');
+    recordRiichiProgressEvent('win-hand');
     setGame((g) => (g ? { ...g, timeBanks: timedBanks } : g));
   }, [
     game,

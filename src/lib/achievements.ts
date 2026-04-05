@@ -39,6 +39,15 @@ export interface AchievementSummary {
   rarityCounts: Record<AchievementRarity, number>;
 }
 
+export const ACHIEVEMENT_UNLOCKED_EVENT = 'game-hub:achievement-unlocked';
+
+export interface AchievementUnlockedEventDetail {
+  id: string;
+  nameKey?: string;
+  rarity?: AchievementRarity;
+  points?: number;
+}
+
 export const ACHIEVEMENTS: AchievementDef[] = [
   {
     id: '2048-256',
@@ -193,6 +202,23 @@ export function unlock(id: string): void {
     localStorage?.setItem(STORAGE_KEY, JSON.stringify([...ids]));
   } catch {
     // ignore
+  }
+  if (typeof window !== 'undefined') {
+    const def = ACHIEVEMENTS.find((item) => item.id === id);
+    const meta = def ? getAchievementMeta(def) : null;
+    window.dispatchEvent(
+      new CustomEvent<AchievementUnlockedEventDetail>(
+        ACHIEVEMENT_UNLOCKED_EVENT,
+        {
+          detail: {
+            id,
+            nameKey: def?.nameKey,
+            rarity: meta?.rarity,
+            points: meta?.points,
+          },
+        },
+      ),
+    );
   }
 }
 

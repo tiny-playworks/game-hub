@@ -41,6 +41,30 @@ type DrawSettlementPreview = {
   };
 };
 
+function getMaxGainSeat(deltas: number[]): number {
+  let bestSeat = 0;
+  let bestDelta = Number.NEGATIVE_INFINITY;
+  deltas.forEach((delta, seat) => {
+    if (delta > bestDelta) {
+      bestDelta = delta;
+      bestSeat = seat;
+    }
+  });
+  return bestSeat;
+}
+
+function getMaxLossSeat(deltas: number[]): number {
+  let worstSeat = 0;
+  let worstDelta = Number.POSITIVE_INFINITY;
+  deltas.forEach((delta, seat) => {
+    if (delta < worstDelta) {
+      worstDelta = delta;
+      worstSeat = seat;
+    }
+  });
+  return worstSeat;
+}
+
 type WinModalProps = {
   winResult: WinResultState;
   winSettlementPreview: WinSettlementPreview | null;
@@ -56,6 +80,15 @@ export function WinModal({
   timeoutEvents,
   onNext,
 }: WinModalProps) {
+  const winnerDelta = winSettlementPreview?.deltas[winResult.winner] ?? 0;
+  const maxLossSeat = winSettlementPreview
+    ? getMaxLossSeat(winSettlementPreview.deltas)
+    : null;
+  const maxLossDelta =
+    maxLossSeat != null && winSettlementPreview
+      ? winSettlementPreview.deltas[maxLossSeat]
+      : 0;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-riichi-overlay-in"
@@ -128,6 +161,13 @@ export function WinModal({
               color: 'var(--riichi-text)',
             }}
           >
+            <p className="text-[11px] font-semibold text-[#ffe082]">
+              本局摘要：{SEAT_NAMES[winResult.winner]}{' '}
+              {winnerDelta >= 0 ? '+' : ''}
+              {winnerDelta}
+              {maxLossSeat != null &&
+                ` · ${SEAT_NAMES[maxLossSeat]} ${maxLossDelta >= 0 ? '+' : ''}${maxLossDelta}`}
+            </p>
             {winnerPaymentSummary && (
               <p>
                 本局收入： 和牌基础 +{winnerPaymentSummary.base}
@@ -204,6 +244,14 @@ export function RyuukyokuModal({
   onNext,
 }: RyuukyokuModalProps) {
   const reasonText = ryuukyokuReason ?? '荒牌';
+  const maxGainSeat = drawSettlementPreview
+    ? getMaxGainSeat(drawSettlementPreview.settlement.deltas)
+    : null;
+  const maxGainDelta =
+    maxGainSeat != null && drawSettlementPreview
+      ? drawSettlementPreview.settlement.deltas[maxGainSeat]
+      : 0;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-riichi-overlay-in"
@@ -243,6 +291,14 @@ export function RyuukyokuModal({
               color: 'var(--riichi-text)',
             }}
           >
+            <p className="text-[11px] font-semibold text-[#ffe082]">
+              本局摘要：
+              {reasonText === '荒牌'
+                ? ` 听牌 ${drawSettlementPreview.tenpaiSeats.length} 家`
+                : ' 途中流局'}
+              {maxGainSeat != null &&
+                ` · ${SEAT_NAMES[maxGainSeat]} ${maxGainDelta >= 0 ? '+' : ''}${maxGainDelta}`}
+            </p>
             {reasonText === '荒牌' ? (
               <p>
                 听牌：

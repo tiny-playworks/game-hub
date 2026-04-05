@@ -1,6 +1,9 @@
-import { lazy, Suspense } from 'react';
+import { lazy, type ReactElement, Suspense, useEffect } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import AchievementUnlockToast from '@/components/AchievementUnlockToast';
+import GrowthPointToast from '@/components/GrowthPointToast';
 import { LocaleProvider } from '@/contexts/LocaleContext';
+import { recordGameStart } from '@/lib/playerStats';
 import Home from '@/pages/Home';
 import './App.css';
 
@@ -32,10 +35,25 @@ function PageFallback() {
   );
 }
 
+function TrackedPage({
+  gameId,
+  children,
+}: {
+  gameId: string;
+  children: ReactElement;
+}) {
+  useEffect(() => {
+    recordGameStart(gameId);
+  }, [gameId]);
+  return children;
+}
+
 const App = () => {
   return (
     <BrowserRouter>
       <LocaleProvider>
+        <AchievementUnlockToast />
+        <GrowthPointToast />
         <Suspense fallback={<PageFallback />}>
           <Routes>
             <Route path="/" element={<Home />} />
@@ -46,21 +64,126 @@ const App = () => {
               path="/game/mahjong-japanese"
               element={<GameMahjongJapanese />}
             />
-            <Route path="/game/guess-number" element={<GameGuessNumber />} />
-            <Route path="/game/tictactoe" element={<GameTictactoe />} />
-            <Route path="/game/memory" element={<GameMemory />} />
-            <Route path="/game/2048" element={<Game2048 />} />
-            <Route path="/game/snake" element={<GameSnake />} />
-            <Route path="/game/breakout" element={<GameBreakout />} />
-            <Route path="/game/shooter" element={<GameShooter />} />
-            <Route path="/game/tank" element={<GameTank />} />
-            <Route path="/game/tetris" element={<GameTetris />} />
-            <Route path="/game/go" element={<GameGo />} />
-            <Route path="/game/gomoku" element={<GameGomoku />} />
-            <Route path="/game/xiangqi" element={<GameXiangqi />} />
-            <Route path="/game/chess" element={<GameChess />} />
-            <Route path="/game/doudizhu" element={<GameDoudizhu />} />
-            <Route path="/game/shengji" element={<GameShengji />} />
+            <Route
+              path="/game/guess-number"
+              element={
+                <TrackedPage gameId="guess-number">
+                  <GameGuessNumber />
+                </TrackedPage>
+              }
+            />
+            <Route
+              path="/game/tictactoe"
+              element={
+                <TrackedPage gameId="tictactoe">
+                  <GameTictactoe />
+                </TrackedPage>
+              }
+            />
+            <Route
+              path="/game/memory"
+              element={
+                <TrackedPage gameId="memory">
+                  <GameMemory />
+                </TrackedPage>
+              }
+            />
+            <Route
+              path="/game/2048"
+              element={
+                <TrackedPage gameId="2048">
+                  <Game2048 />
+                </TrackedPage>
+              }
+            />
+            <Route
+              path="/game/snake"
+              element={
+                <TrackedPage gameId="snake">
+                  <GameSnake />
+                </TrackedPage>
+              }
+            />
+            <Route
+              path="/game/breakout"
+              element={
+                <TrackedPage gameId="breakout">
+                  <GameBreakout />
+                </TrackedPage>
+              }
+            />
+            <Route
+              path="/game/shooter"
+              element={
+                <TrackedPage gameId="shooter">
+                  <GameShooter />
+                </TrackedPage>
+              }
+            />
+            <Route
+              path="/game/tank"
+              element={
+                <TrackedPage gameId="tank">
+                  <GameTank />
+                </TrackedPage>
+              }
+            />
+            <Route
+              path="/game/tetris"
+              element={
+                <TrackedPage gameId="tetris">
+                  <GameTetris />
+                </TrackedPage>
+              }
+            />
+            <Route
+              path="/game/go"
+              element={
+                <TrackedPage gameId="go">
+                  <GameGo />
+                </TrackedPage>
+              }
+            />
+            <Route
+              path="/game/gomoku"
+              element={
+                <TrackedPage gameId="gomoku">
+                  <GameGomoku />
+                </TrackedPage>
+              }
+            />
+            <Route
+              path="/game/xiangqi"
+              element={
+                <TrackedPage gameId="xiangqi">
+                  <GameXiangqi />
+                </TrackedPage>
+              }
+            />
+            <Route
+              path="/game/chess"
+              element={
+                <TrackedPage gameId="chess">
+                  <GameChess />
+                </TrackedPage>
+              }
+            />
+            <Route
+              path="/game/doudizhu"
+              element={
+                <TrackedPage gameId="doudizhu">
+                  <GameDoudizhu />
+                </TrackedPage>
+              }
+            />
+            <Route
+              path="/game/shengji"
+              element={
+                <TrackedPage gameId="shengji">
+                  <GameShengji />
+                </TrackedPage>
+              }
+            />
           </Routes>
         </Suspense>
       </LocaleProvider>
