@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
-import { getTileLabel } from '@/lib/mahjongRiichi';
+import { getBaseTile, getTileLabel, isMenzhen } from '@/lib/mahjongRiichi';
 import { markRecentMahjongPlayed } from '@/lib/recentMahjong';
 import { getTurnTotalSeconds } from '@/lib/riichiClock';
 import { getCurrentRiichiRoundProgressSummary } from '@/lib/riichiProgress';
@@ -21,6 +21,20 @@ import { useRiichiGame } from './useRiichiGame';
 import { useRiichiTheme } from './useRiichiTheme';
 
 export { getNextRound } from './helpers';
+
+/** 吃牌：手牌两张 + 舍牌，排序后与提示一致 */
+function formatChiTripleLabel(
+  opt: [number, number],
+  lastDiscard: number | null,
+): string {
+  if (lastDiscard === null) {
+    return `${getTileLabel(opt[0])}${getTileLabel(opt[1])}`;
+  }
+  const tiles = [opt[0], opt[1], lastDiscard].sort(
+    (x, y) => getBaseTile(x) - getBaseTile(y) || x - y,
+  );
+  return tiles.map(getTileLabel).join('');
+}
 
 const GameMahjongJapanese = () => {
   const { t, locale } = useLocale();
@@ -128,7 +142,7 @@ const GameMahjongJapanese = () => {
 
   const canDeclareRiichi =
     !game.riichiDeclared[0] &&
-    game.melds[0].every((m) => m.type === 'angang') &&
+    isMenzhen(game.melds[0]) &&
     getWaitingTilesRiichi(game.hands[0], game.melds[0], game, {
       seat: 0,
       isTsumo: false,
@@ -307,13 +321,39 @@ const GameMahjongJapanese = () => {
             </div>
             {showActionBar && (
               <div className="rounded-lg border border-[#d4b886]/25 bg-[#1a2e25]/55 p-2 md:p-3 space-y-2">
+                {claimActionsAvailable &&
+                  game.lastDiscard != null &&
+                  game.lastDiscardFrom != null && (
+                    <p className="text-center text-xs font-medium text-amber-100/95 leading-snug">
+                      对方打出{' '}
+                      <span className="text-white">
+                        {getTileLabel(game.lastDiscard)}
+                      </span>
+                      <span className="text-[#a8dadc]/90">
+                        （{SEAT_NAMES[game.lastDiscardFrom]}）
+                      </span>
+                    </p>
+                  )}
                 <p className="text-center text-xs text-[#a8dadc]/90">
                   可执行操作
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-2">
                   {claimActionsAvailable && (
                     <>
-                      {canRon && (
+                      {canRon && game.lastDiscard != null && (
+                        <Button
+                          size="sm"
+                          className="bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2.5"
+                          onClick={doRon}
+                          aria-label={`${t('riichi.ron')} 舍牌${getTileLabel(game.lastDiscard)}`}
+                        >
+                          {t('riichi.ron')}
+                          <span className="ml-1 text-[11px] font-normal opacity-90">
+                            (舍{getTileLabel(game.lastDiscard)})
+                          </span>
+                        </Button>
+                      )}
+                      {canRon && game.lastDiscard === null && (
                         <Button
                           size="sm"
                           className="bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2.5"
@@ -324,19 +364,39 @@ const GameMahjongJapanese = () => {
                         </Button>
                       )}
                       {isMyClaim &&
-                        chiOptions.map((opt, i) => (
-                          <Button
-                            key={i}
-                            size="sm"
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5"
-                            onClick={() => doChi(opt)}
-                            aria-label={`${t('riichi.chi')} ${getTileLabel(opt[0])} ${getTileLabel(opt[1])}`}
-                          >
-                            {t('riichi.chi')}({getTileLabel(opt[0])}
-                            {getTileLabel(opt[1])})
-                          </Button>
-                        ))}
-                      {isMyClaim && canPeng && (
+                        chiOptions.map((opt, i) => {
+                          const ld = game.lastDiscard;
+                          const triple = formatChiTripleLabel(opt, ld ?? null);
+                          const chiDetail =
+                            ld != null
+                              ? `舍${getTileLabel(ld)}→${triple}`
+                              : triple;
+                          return (
+                            <Button
+                              key={i}
+                              size="sm"
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5"
+                              onClick={() => doChi(opt)}
+                              aria-label={`${t('riichi.chi')} ${chiDetail}`}
+                            >
+                              {t('riichi.chi')}({chiDetail})
+                            </Button>
+                          );
+                        })}
+                      {isMyClaim && canPeng && game.lastDiscard != null && (
+                        <Button
+                          size="sm"
+                          className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5"
+                          onClick={doPeng}
+                          aria-label={`${t('riichi.peng')} 舍牌${getTileLabel(game.lastDiscard)}`}
+                        >
+                          {t('riichi.peng')}
+                          <span className="ml-1 text-[11px] font-normal opacity-90">
+                            (舍{getTileLabel(game.lastDiscard)})
+                          </span>
+                        </Button>
+                      )}
+                      {isMyClaim && canPeng && game.lastDiscard === null && (
                         <Button
                           size="sm"
                           className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5"
@@ -346,7 +406,20 @@ const GameMahjongJapanese = () => {
                           {t('riichi.peng')}
                         </Button>
                       )}
-                      {isMyClaim && canMingang && (
+                      {isMyClaim && canMingang && game.lastDiscard != null && (
+                        <Button
+                          size="sm"
+                          className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2.5"
+                          onClick={doMingang}
+                          aria-label={`${t('riichi.mingang')} 舍牌${getTileLabel(game.lastDiscard)}`}
+                        >
+                          {t('riichi.mingang')}
+                          <span className="ml-1 text-[11px] font-normal opacity-90">
+                            (舍{getTileLabel(game.lastDiscard)})
+                          </span>
+                        </Button>
+                      )}
+                      {isMyClaim && canMingang && game.lastDiscard === null && (
                         <Button
                           size="sm"
                           className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2.5"

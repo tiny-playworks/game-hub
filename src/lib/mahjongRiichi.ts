@@ -4,6 +4,8 @@
  * 规则以 .cursor/skills/mahjong-japanese-riichi/ 为准
  */
 
+import type { RiichiMeld } from '@/pages/mahjong/japanese/types';
+
 /** 34 种基础牌型：0-8万 9-17条 18-26筒 27-33字牌 */
 export const TILE_LABELS_RIICHI: string[] = [
   '一万',
@@ -199,7 +201,7 @@ export function getAngangOptionsRiichi(hand: number[]): number[][] {
 }
 
 /** 是否算副露（吃/碰/明杠算副露，暗杠不算） */
-export function isOpenMeld(meld: { type: string }): boolean {
+export function isOpenMeld(meld: RiichiMeld): boolean {
   return (
     meld.type === 'chi' ||
     meld.type === 'peng' ||
@@ -209,7 +211,7 @@ export function isOpenMeld(meld: { type: string }): boolean {
 }
 
 /** 是否门前清：无副露（暗杠不计入） */
-export function isMenzhen(melds: { type: string }[]): boolean {
+export function isMenzhen(melds: RiichiMeld[]): boolean {
   return melds.every((m) => !isOpenMeld(m));
 }
 
@@ -346,6 +348,16 @@ export function checkTanyao(tiles: number[]): boolean {
   return true;
 }
 
+/**
+ * 场风/自风：业务里常用 0–3（东南西北序）；役牌判定需字牌索引 27–30。
+ * 若已是 27–30 则原样返回。
+ */
+export function windIndexToYakuhaiTile(wind: number): number {
+  if (wind >= 27 && wind <= 30) return wind;
+  if (wind >= 0 && wind <= 3) return 27 + wind;
+  return wind;
+}
+
 /** 役牌：白(31)发(32)中(33)、自风、场风 的刻子。返回组数（每组 1 番） */
 export function countYakuhai(
   hand: number[],
@@ -360,7 +372,9 @@ export function countYakuhai(
     const b = getBaseTile(t);
     counts.set(b, (counts.get(b) ?? 0) + 1);
   }
-  const yakuhaiTypes = [31, 32, 33, seatWind, roundWind];
+  const seatTile = windIndexToYakuhaiTile(seatWind);
+  const roundTile = windIndexToYakuhaiTile(roundWind);
+  const yakuhaiTypes = [31, 32, 33, seatTile, roundTile];
   for (const t of yakuhaiTypes) {
     if ((counts.get(t) ?? 0) >= 3) triplets.add(t);
   }

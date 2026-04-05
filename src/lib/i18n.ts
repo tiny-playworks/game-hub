@@ -114,6 +114,12 @@ const messages: Record<Locale, Record<string, string>> = {
     'profile.title': '玩家档案',
     'profile.subtitle': '管理昵称、头像、称号与每日任务',
     'profile.heroSubtitle': '这里统一查看成长、同行角色和日麻进度。',
+    'profile.audio.section': '音量',
+    'profile.audio.hint':
+      '调节背景音乐、音效与语音（立直 TTS）相对音量。0% 为静音。',
+    'profile.audio.bgm': '背景音乐',
+    'profile.audio.sfx': '音效',
+    'profile.audio.voice': '语音',
     'profile.titles.section': '称号系统',
     'profile.titles.current': '当前称号',
     'profile.titles.none': '暂无称号',
@@ -516,6 +522,12 @@ const messages: Record<Locale, Record<string, string>> = {
       'Manage nickname, avatar, title and daily tasks in one place',
     'profile.heroSubtitle':
       'This page centralizes growth, companions, and Riichi progress.',
+    'profile.audio.section': 'Volume',
+    'profile.audio.hint':
+      'Adjust BGM, SFX, and voice (riichi TTS) levels. 0% is mute.',
+    'profile.audio.bgm': 'BGM',
+    'profile.audio.sfx': 'SFX',
+    'profile.audio.voice': 'Voice',
     'profile.titles.section': 'Title System',
     'profile.titles.current': 'Current Title',
     'profile.titles.none': 'No title yet',

@@ -11,6 +11,7 @@ import {
   getTileLabel,
   getTotalHan,
   hasYaku,
+  isMenzhen,
   isWinShapeRiichi,
 } from '@/lib/mahjongRiichi';
 import { canDeclareKyuushuKyuuhai } from '@/lib/riichiAbortiveDraw';
@@ -25,6 +26,11 @@ import {
   settleRyuukyoku,
   settleWin,
 } from '@/lib/riichiSettlement';
+import {
+  afterDrawConcealedCount,
+  enumerateTenpaiConcealedStates,
+  tenpaiConcealedCount,
+} from '@/lib/riichiTenpaiHelpers';
 import { resolveWinBaseTen } from './gameLogic/winResult';
 import {
   countVisibleTilesByBase,
@@ -65,6 +71,7 @@ export function useRiichiDerived({
   turnClockRef,
 }: UseRiichiDerivedParams) {
   const tenpaiHint = useMemo(() => {
+    if (winResult) return null;
     if (!game || game.ryuukyoku) return null;
     const hand = game.hands[0];
     const melds = game.melds[0];
@@ -72,15 +79,13 @@ export function useRiichiDerived({
     const remaining = (baseTile: number) =>
       Math.max(0, 4 - (visibleCounts[baseTile] ?? 0));
     const doraTypes = game.doraIndicators.map(getDoraFromIndicator);
+    const tc = tenpaiConcealedCount(melds);
 
-    const getWaitingTilesShapeOnly = (
-      hand13: number[],
-      meldList: RiichiMeld[],
-    ): number[] => {
-      if (hand13.length !== 13) return [];
+    const getWaitingTilesShapeOnly = (handTc: number[]): number[] => {
+      if (handTc.length !== tc) return [];
       const out: number[] = [];
       for (let t = 0; t < 34; t++) {
-        if (isWinShapeRiichi([...hand13, t], meldList)) out.push(t);
+        if (isWinShapeRiichi([...handTc, t], melds)) out.push(t);
       }
       return out;
     };
@@ -94,7 +99,7 @@ export function useRiichiDerived({
         hand: handWithWin,
         melds: melds.map((m) => ({ tiles: m.tiles })),
         meldsTyped: melds,
-        isMenzhen: melds.every((m) => m.type === 'angang'),
+        isMenzhen: isMenzhen(melds),
         isTsumo: true,
         isRiichi: game.riichiDeclared[0],
         ippatsuPossible: false,
@@ -107,24 +112,34 @@ export function useRiichiDerived({
       return getTotalHan(yaku) + doraHan;
     };
 
-    const formatWait = (hand13: number[], baseTile: number): string => {
-      const han = getHanForWaitingTile(hand13, baseTile);
+    const formatWait = (handTc: number[], waitTile: number): string => {
+      const han = getHanForWaitingTile(handTc, waitTile);
       const hanStr = han > 0 ? `${han}番` : '无役';
-      return `${getTileLabel(baseTile)}(剩${remaining(baseTile)}, ${hanStr})`;
+      return `${getTileLabel(waitTile)}(剩${remaining(waitTile)}, ${hanStr})`;
     };
 
-    if (hand.length === 13) {
-      const waitingShape = getWaitingTilesShapeOnly(hand, melds);
+    const extra = hand.length - tc;
+    if (extra < 0) return null;
+
+    if (extra === 0) {
+      const waitingShape = getWaitingTilesShapeOnly(hand);
       if (waitingShape.length === 0) return null;
       const uniqueBase = [...new Set(waitingShape.map(getBaseTile))];
       return {
         kind: 'current' as const,
-        line: `听牌：${uniqueBase.map((b) => formatWait(hand, b)).join(' ')}`,
+        line: `听牌：${uniqueBase
+          .map((b) => {
+            const w =
+              waitingShape.find((x) => getBaseTile(x) === b) ?? waitingShape[0];
+            return formatWait(hand, w);
+          })
+          .join(' ')}`,
         waiting: uniqueBase,
         remaining,
       };
     }
-    if (hand.length === 14) {
+
+    if (extra === 1) {
       const options: {
         discardTile: number;
         discardLabel: string;
@@ -133,33 +148,66 @@ export function useRiichiDerived({
       }[] = [];
       for (let i = 0; i < hand.length; i++) {
         const handWithout = hand.filter((_, j) => j !== i);
-        const waitingShape = getWaitingTilesShapeOnly(handWithout, melds);
+        const waitingShape = getWaitingTilesShapeOnly(handWithout);
         if (waitingShape.length === 0) continue;
         const uniqueBase = [...new Set(waitingShape.map(getBaseTile))];
         options.push({
           discardTile: hand[i],
           discardLabel: getTileLabel(hand[i]),
           waiting: uniqueBase,
-          line: `打 ${getTileLabel(hand[i])} 听 ${uniqueBase.map((b) => formatWait(handWithout, b)).join(' ')}`,
+          line: `打 ${getTileLabel(hand[i])} 听 ${uniqueBase
+            .map((b) => {
+              const w =
+                waitingShape.find((x) => getBaseTile(x) === b) ??
+                waitingShape[0];
+              return formatWait(handWithout, w);
+            })
+            .join(' ')}`,
         });
       }
       if (options.length === 0) return null;
       return { kind: 'choices' as const, options, remaining };
     }
-    return null;
-  }, [game]);
+
+    const states = enumerateTenpaiConcealedStates(hand, melds);
+    const unionWaits = new Set<number>();
+    for (const st of states) {
+      for (const w of getWaitingTilesShapeOnly(st)) unionWaits.add(w);
+    }
+    if (unionWaits.size === 0) return null;
+    const sortedWaits = Array.from(unionWaits).sort((a, b) => a - b);
+    const uniqueBase = [...new Set(sortedWaits.map(getBaseTile))];
+    const line = `需打出 ${extra} 张牌；听牌：${uniqueBase
+      .map((b) => {
+        const waitTile =
+          sortedWaits.find((w) => getBaseTile(w) === b) ?? sortedWaits[0];
+        const repHand = states.find((s) =>
+          getWaitingTilesShapeOnly(s).includes(waitTile),
+        );
+        return repHand
+          ? formatWait(repHand, waitTile)
+          : `${getTileLabel(waitTile)}(剩${remaining(waitTile)})`;
+      })
+      .join(' ')}`;
+    return {
+      kind: 'current' as const,
+      line,
+      waiting: uniqueBase,
+      remaining,
+    };
+  }, [game, winResult]);
 
   const angangOptions =
     game?.phase === 'discard' &&
     game.currentPlayer === 0 &&
-    game.hands[0].length === 14
+    game.hands[0].length === afterDrawConcealedCount(game.melds[0])
       ? getAngangOptionsRiichi(game.hands[0])
       : [];
   const kakanOptions = game ? getKakanOptions(game, 0) : [];
   const canKyuushuKyuuhai =
     game?.phase === 'discard' &&
     game.currentPlayer === 0 &&
-    game.hands[0].length === 14 &&
+    game.hands[0].length === afterDrawConcealedCount(game.melds[0]) &&
     game.discardPiles[0].length === 0 &&
     canDeclareKyuushuKyuuhai(game.hands[0]);
 
@@ -208,7 +256,7 @@ export function useRiichiDerived({
     (seat: number, hand: number[], isTsumo: boolean) => {
       if (!game) return null;
       const melds = game.melds[seat];
-      const menzen = melds.every((m) => m.type === 'angang');
+      const menzen = isMenzhen(melds);
       return {
         hand,
         melds: melds.map((m) => ({ tiles: m.tiles })),
@@ -247,7 +295,7 @@ export function useRiichiDerived({
     game &&
     game.phase === 'discard' &&
     game.currentPlayer === 0 &&
-    game.hands[0].length === 14 &&
+    game.hands[0].length === afterDrawConcealedCount(game.melds[0]) &&
     isWinShapeRiichi(game.hands[0], game.melds[0]) &&
     (() => {
       const ctx = buildYakuCtx(0, game.hands[0], true);

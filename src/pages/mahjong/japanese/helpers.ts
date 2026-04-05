@@ -3,6 +3,7 @@ import {
   getBaseTile,
   getDoraFromIndicator,
   hasYaku,
+  isMenzhen,
   isWinShapeRiichi,
 } from '@/lib/mahjongRiichi';
 import {
@@ -12,6 +13,7 @@ import {
 } from '@/lib/riichiFuriten';
 import type { MatchEndReason } from '@/lib/riichiGameEnd';
 import type { PaymentDetail } from '@/lib/riichiSettlement';
+import { computeWaitingTilesRiichi } from '@/lib/riichiWaitingTiles';
 import type { RiichiGameState, RiichiMeld } from './types';
 
 export function getSeatWind(
@@ -195,24 +197,10 @@ export function getRonWaitingTilesForSeatInState(
   const hand = state.hands[seat];
   const melds = state.melds[seat];
   if (hand.length !== 13) return [];
-  const waiting: number[] = [];
-  for (let t = 0; t < 34; t++) {
-    const testHand = [...hand, t];
-    if (!isWinShapeRiichi(testHand, melds)) continue;
-    const ctx = {
-      hand: testHand,
-      melds: melds.map((m) => ({ tiles: m.tiles })),
-      meldsTyped: melds,
-      isMenzhen: melds.every((m) => m.type === 'angang'),
-      isTsumo: false,
-      isRiichi: state.riichiDeclared[seat],
-      ippatsuPossible: false,
-      seatWind: getSeatWind(state.roundWind, seat, state.dealer),
-      roundWind: state.roundWind,
-    };
-    if (hasYaku(ctx)) waiting.push(t);
-  }
-  return waiting;
+  return computeWaitingTilesRiichi(hand, melds, state, {
+    seat,
+    isTsumo: false,
+  });
 }
 
 export function canSeatRonByRules(
@@ -233,7 +221,7 @@ export function canSeatRonByRules(
     hand: handWithClaim,
     melds: melds.map((m) => ({ tiles: m.tiles })),
     meldsTyped: melds,
-    isMenzhen: melds.every((m) => m.type === 'angang'),
+    isMenzhen: isMenzhen(melds),
     isTsumo: false,
     isRiichi: state.riichiDeclared[seat],
     ippatsuPossible: false,
@@ -296,10 +284,24 @@ export function clearSeatDoujunStates(
   );
 }
 
+/** 门前手牌张数 + 副露中所有牌张数（每张牌只计一次）。 */
+export function countTotalTilesHeld(
+  state: RiichiGameState,
+  seat: number,
+): number {
+  const inMelds = state.melds[seat].reduce((sum, m) => sum + m.tiles.length, 0);
+  return state.hands[seat].length + inMelds;
+}
+
+/**
+ * 当前行牌家是否需要「打牌」决策：已摸牌（drawnTile 有值），或吃/碰后合计 14 张待打出一张。
+ * 不能再用门前 === 11：多副露时吃后门前可为 8、9、10… 张。
+ */
 export function needsDiscardDecision(state: RiichiGameState): boolean {
   if (state.phase !== 'discard') return false;
   const p = state.currentPlayer;
-  return state.drawnTile !== null || state.hands[p].length === 11;
+  if (state.drawnTile !== null) return true;
+  return countTotalTilesHeld(state, p) === 14;
 }
 
 export function getClaimPlayerFromState(state: RiichiGameState): number | null {

@@ -31,6 +31,7 @@ export function useRiichiTurnClockFlow(
 ) {
   const {
     game,
+    winResult,
     setGame,
     clockNowMs,
     setClockNowMs,
@@ -46,6 +47,10 @@ export function useRiichiTurnClockFlow(
   }, [setClockNowMs]);
 
   useEffect(() => {
+    if (winResult) {
+      turnClockRef.current = null;
+      return;
+    }
     if (!game || !needsTimedDecision(game)) {
       turnClockRef.current = null;
       return;
@@ -67,11 +72,12 @@ export function useRiichiTurnClockFlow(
     game?.drawnTile,
     game?.hands?.[game?.currentPlayer ?? 0]?.length,
     game,
+    winResult,
     turnClockRef,
   ]);
 
   useEffect(() => {
-    if (!game || !needsTimedDecision(game)) return;
+    if (winResult || !game || !needsTimedDecision(game)) return;
     const player = getDecisionSeat(game);
     const c = turnClockRef.current;
     if (!c || c.player !== player) return;
@@ -137,7 +143,7 @@ export function useRiichiTurnClockFlow(
       }
       return afterAbortive;
     });
-  }, [clockNowMs, game, setGame, turnClockRef, addLogRef]);
+  }, [clockNowMs, game, winResult, setGame, turnClockRef, addLogRef]);
 
   const decisionTurnKey =
     game && decisionSeat !== null
@@ -146,6 +152,7 @@ export function useRiichiTurnClockFlow(
 
   const lowTimeWarnedTurnRef = useRef<string | null>(null);
   useEffect(() => {
+    if (winResult) return;
     if (!game || decisionSeat !== 0 || currentTurnRemainSeconds == null) return;
     if (currentTurnRemainSeconds > 3 || currentTurnRemainSeconds <= 0) return;
     if (!decisionTurnKey) return;
@@ -153,6 +160,7 @@ export function useRiichiTurnClockFlow(
     playTimeWarning();
     lowTimeWarnedTurnRef.current = decisionTurnKey;
   }, [
+    winResult,
     game,
     decisionSeat,
     currentTurnRemainSeconds,

@@ -22,13 +22,14 @@ export function useRiichiClaimFlow(
   ctx: RiichiRuntimeContext,
   extra: ClaimFlowExtra,
 ) {
-  const { game, setGame, addLogRef } = ctx;
+  const { game, winResult, setGame, addLogRef } = ctx;
   const { claimPlayer, hasAnyClaimOption, canRon, flowDeps } = extra;
   const rng = getRng(flowDeps);
   const schedule = getScheduler(flowDeps);
 
   // 人类（seat 0）无任何可选项时自动过
   useEffect(() => {
+    if (winResult) return;
     if (
       !game ||
       game.phase !== 'claim' ||
@@ -73,11 +74,13 @@ export function useRiichiClaimFlow(
     game,
     setGame,
     addLogRef,
+    winResult,
   ]);
 
   // AI（claimPlayer 1/2/3）要牌：延迟后执行决策
   // biome-ignore lint/correctness/useExhaustiveDependencies: granular deps to avoid redundant effect runs
   useEffect(() => {
+    if (winResult) return;
     if (
       !game ||
       game.phase !== 'claim' ||
@@ -102,5 +105,6 @@ export function useRiichiClaimFlow(
     game?.wall?.[0],
     game?.hands?.[claimPlayer ?? 0],
     game,
+    winResult,
   ]);
 }

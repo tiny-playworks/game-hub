@@ -6,6 +6,7 @@ import {
   applyClaimPassToState,
   applyKakanRinshanAfterPass,
 } from '../src/pages/mahjong/japanese/shared/claimTransitions';
+import { stripLastSettlementWhenRoundVisible } from '../src/pages/mahjong/japanese/shared/lastSettlementStrip';
 import {
   appendTimeoutEvent,
   buildStateAfterTimeoutDiscard,
@@ -222,6 +223,73 @@ describe('日麻 shared/abortiveDrawChecks', () => {
     const { state: next, ryuukyokuReason } = applyAbortiveDrawChecks(state);
     expect(ryuukyokuReason).toBe('四开杠');
     expect(next.ryuukyokuReason).toBe('四开杠');
+  });
+});
+
+describe('日麻 shared/lastSettlementStrip', () => {
+  const dummySettlement: RiichiGameState['lastSettlement'] = {
+    payments: [],
+    deltas: [3000, -1000, -1000, -1000],
+    newScores: [31700, 23000, 23000, 22300],
+  };
+
+  test('before 无 lastSettlement 时原样返回 after', () => {
+    const base = initRiichiGame();
+    const before = { ...base, lastSettlement: undefined };
+    const after = { ...base, discardPiles: [[0], [], [], []] };
+    expect(stripLastSettlementWhenRoundVisible(before, after)).toBe(after);
+  });
+
+  test('首牌下河时清除 lastSettlement', () => {
+    const base = initRiichiGame();
+    const before: RiichiGameState = {
+      ...base,
+      lastSettlement: dummySettlement,
+      discardPiles: [[], [], [], []],
+    };
+    const after: RiichiGameState = {
+      ...base,
+      lastSettlement: dummySettlement,
+      discardPiles: [[0], [], [], []],
+    };
+    const out = stripLastSettlementWhenRoundVisible(before, after);
+    expect(out.lastSettlement).toBeUndefined();
+    expect(out.discardPiles[0]).toEqual([0]);
+  });
+
+  test('河仍为 0 但进入 claim 且 lastDiscard 非空时清除（如暗杠后进要牌）', () => {
+    const base = initRiichiGame();
+    const before: RiichiGameState = {
+      ...base,
+      lastSettlement: dummySettlement,
+      discardPiles: [[], [], [], []],
+    };
+    const after: RiichiGameState = {
+      ...base,
+      lastSettlement: dummySettlement,
+      phase: 'claim',
+      lastDiscard: 4,
+      discardPiles: [[], [], [], []],
+    };
+    const out = stripLastSettlementWhenRoundVisible(before, after);
+    expect(out.lastSettlement).toBeUndefined();
+    expect(out.phase).toBe('claim');
+  });
+
+  test('本巡河牌已有牌时不因仅更新状态而误清（totalBefore>0）', () => {
+    const base = initRiichiGame();
+    const before: RiichiGameState = {
+      ...base,
+      lastSettlement: dummySettlement,
+      discardPiles: [[0], [], [], []],
+    };
+    const after: RiichiGameState = {
+      ...base,
+      lastSettlement: dummySettlement,
+      discardPiles: [[0, 1], [], [], []],
+    };
+    const out = stripLastSettlementWhenRoundVisible(before, after);
+    expect(out.lastSettlement).toEqual(dummySettlement);
   });
 });
 

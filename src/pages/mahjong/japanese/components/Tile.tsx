@@ -1,17 +1,23 @@
 import { getBaseTile, isAkaFive } from '@/lib/mahjongRiichi';
 import { cn } from '@/lib/utils';
 
+/** 数牌三色：万 / 条 / 筒 用底色与边框区分，避免「全白底看花」 */
 export function getTileColorClass(tile: number): string {
   const t = getBaseTile(tile);
   if (t >= 27) {
-    if (t === 31) return 'text-slate-400';
-    if (t === 32) return 'text-emerald-700';
-    if (t === 33) return 'text-red-700';
-    return 'text-stone-900';
+    if (t === 31) return 'text-slate-400 border-slate-300/70 !bg-slate-50';
+    if (t === 32)
+      return 'text-emerald-700 border-emerald-400/60 !bg-emerald-50/95';
+    if (t === 33) return 'text-red-700 border-rose-400/60 !bg-rose-50/95';
+    return 'text-stone-900 border-stone-300/70 !bg-stone-50/95';
   }
-  if (t < 9) return 'text-red-800';
-  if (t < 18) return 'text-emerald-800';
-  return 'text-sky-800';
+  if (t < 9) {
+    return 'text-red-900 border-rose-400/75 !bg-gradient-to-br from-rose-50 to-amber-50/90';
+  }
+  if (t < 18) {
+    return 'text-emerald-950 border-emerald-500/55 !bg-gradient-to-br from-emerald-50 to-teal-50/85';
+  }
+  return 'text-sky-950 border-sky-500/55 !bg-gradient-to-br from-sky-50 to-cyan-50/85';
 }
 
 export function RiichiTileFace({
@@ -38,9 +44,9 @@ export function RiichiTileFace({
   const suitIndex = Math.floor(base / 9);
 
   const MANZU = ['一', '二', '三', '四', '五', '六', '七', '八', '九'];
-  // For Pinzu and Souzu, we use numbers for clarity, combined with character.
+  // 条、筒用数字 + 花色字；花色顺序须与 mahjongRiichi 一致：0–8 万、9–17 条、18–26 筒
   const NUMS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
-  const suits = ['萬', '筒', '索'];
+  const suits = ['万', '条', '筒'];
 
   const topChar = suitIndex === 0 ? MANZU[numIndex] : NUMS[numIndex];
 

@@ -1,4 +1,5 @@
 import type { RiichiGameState } from '../types';
+import { stripLastSettlementWhenRoundVisible } from './lastSettlementStrip';
 
 /**
  * 纯函数：某家超时自动出牌后的下一状态（不含流局检查）。
@@ -20,7 +21,7 @@ export function buildStateAfterTimeoutDiscard(
   const piles = g.discardPiles.map((q) => [...q]);
   piles[player].push(tileToDiscard);
   const nextPlayer = (player + 1) % 4;
-  return {
+  const next: RiichiGameState = {
     ...g,
     timeoutEvents: [...g.timeoutEvents, timeoutEvent].slice(-20),
     timeBanks: nextBanks,
@@ -34,6 +35,7 @@ export function buildStateAfterTimeoutDiscard(
     claimIndex: 0,
     lastClaimMsg,
   };
+  return stripLastSettlementWhenRoundVisible(g, next);
 }
 
 /**

@@ -34,7 +34,7 @@ export function RulesView({
             核心规则摘要
           </h2>
           <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-muted-foreground">
-            <li>4 人 · 136 张 + 红宝牌 3 枚（赤 5 万/筒/索）</li>
+            <li>4 人 · 136 张 + 红宝牌 3 枚（赤 5 万/条/筒）</li>
             <li>无役不能和了；振听只能自摸，不能荣和</li>
             <li>
               立直：门前清听牌宣告，放 1000

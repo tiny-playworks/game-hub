@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useRiichiSounds } from '@/hooks/useRiichiSounds';
-import { hasYaku, isWinShapeRiichi } from '@/lib/mahjongRiichi';
 import { consumeTimeBankSeconds } from '@/lib/riichiClock';
 import {
   applyRonDeclinedFuriten,
   createInitialFuritenState,
 } from '@/lib/riichiFuriten';
+import { computeWaitingTilesRiichi } from '@/lib/riichiWaitingTiles';
 import { useRiichiClaimActions } from './actions/useRiichiClaimActions';
 import { useRiichiRoundActions } from './actions/useRiichiRoundActions';
 import { useRiichiWinSpecialActions } from './actions/useRiichiWinSpecialActions';
@@ -13,7 +13,6 @@ import { MAX_HISTORY, MAX_LOG } from './constants';
 import { useRiichiClaimFlow } from './flows/useRiichiClaimFlow';
 import { useRiichiDrawAiFlow } from './flows/useRiichiDrawAiFlow';
 import { useRiichiTurnClockFlow } from './flows/useRiichiTurnClockFlow';
-import { getSeatWind } from './helpers';
 import type { RiichiRoundContext } from './shared/riichiRoundContext';
 import type { RiichiRuntimeContext } from './shared/riichiRuntimeContext';
 import { useRiichiGameStore } from './store/riichiGameStore';
@@ -152,35 +151,14 @@ export function useRiichiGame() {
       gameState?: RiichiGameState | null,
       options?: { seat?: number; isTsumo?: boolean; treatAsRiichi?: boolean },
     ): number[] => {
-      if (hand.length !== 13) return [];
-      const seat = options?.seat ?? 0;
-      const waiting: number[] = [];
-      for (let t = 0; t < 34; t++) {
-        const testHand = [...hand, t];
-        if (isWinShapeRiichi(testHand, melds)) {
-          const ctx = {
-            hand: testHand,
-            melds: melds.map((m) => ({ tiles: m.tiles })),
-            isMenzhen: melds.every((m) => m.type === 'angang'),
-            isTsumo: options?.isTsumo ?? true,
-            isRiichi:
-              options?.treatAsRiichi ??
-              gameState?.riichiDeclared[seat] ??
-              false,
-            ippatsuPossible: false,
-            seatWind: getSeatWind(
-              gameState?.roundWind ?? 0,
-              seat,
-              gameState?.dealer ?? 0,
-            ),
-            roundWind: gameState?.roundWind ?? 0,
-          };
-          if (hasYaku(ctx)) {
-            waiting.push(t);
+      const slice = gameState
+        ? {
+            roundWind: gameState.roundWind,
+            dealer: gameState.dealer,
+            riichiDeclared: gameState.riichiDeclared,
           }
-        }
-      }
-      return waiting;
+        : undefined;
+      return computeWaitingTilesRiichi(hand, melds, slice, options);
     },
     [],
   );
@@ -223,6 +201,7 @@ export function useRiichiGame() {
 
   const riichiContext: RiichiRuntimeContext = {
     game,
+    winResult,
     setGame,
     addLog,
     addLogRef,

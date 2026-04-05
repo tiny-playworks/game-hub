@@ -65,6 +65,7 @@ function TestHarness({
 
   const ctx: RiichiRuntimeContext = {
     game,
+    winResult: null,
     setGame,
     addLog: noop,
     addLogRef: addLogRef as RefObject<(msg: string) => void>,

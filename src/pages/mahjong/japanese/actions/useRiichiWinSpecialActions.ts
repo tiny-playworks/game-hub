@@ -6,6 +6,7 @@ import {
   getBaseTile,
   getTileLabel,
   getTotalHan,
+  isMenzhen,
 } from '@/lib/mahjongRiichi';
 import { shouldAbortOnSuukaikan } from '@/lib/riichiAbortiveDraw';
 import { recordRiichiProgressEvent } from '@/lib/riichiProgress';
@@ -53,8 +54,7 @@ export function useRiichiWinSpecialActions(
       return;
 
     const melds = game.melds[0];
-    const isMenzen = melds.every((m) => m.type === 'angang');
-    if (!isMenzen) return;
+    if (!isMenzhen(melds)) return;
 
     const waitingTiles = getWaitingTilesRiichi(game.hands[0], melds, game, {
       seat: 0,
@@ -273,7 +273,7 @@ export function useRiichiWinSpecialActions(
     const han = getTotalHan(yaku);
     const fu = calcFu({
       isTsumo: true,
-      isMenzhen: game.melds[0].every((m) => m.type === 'angang'),
+      isMenzhen: isMenzhen(game.melds[0]),
       hasPinfu: yaku.some((yy) => yy.id === 'pinfu'),
       isChiitoitsu: yaku.some((yy) => yy.id === 'chiitoitsu'),
     });
@@ -375,7 +375,7 @@ export function useRiichiWinSpecialActions(
     const han = getTotalHan(yaku);
     const fu = calcFu({
       isTsumo: false,
-      isMenzhen: game.melds[0].every((m) => m.type === 'angang'),
+      isMenzhen: isMenzhen(game.melds[0]),
       hasPinfu: yaku.some((yy) => yy.id === 'pinfu'),
       isChiitoitsu: yaku.some((yy) => yy.id === 'chiitoitsu'),
     });

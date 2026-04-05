@@ -13,6 +13,7 @@ import {
   applyClaimPassToState,
   applyKakanRinshanAfterPass,
 } from '../shared/claimTransitions';
+import { stripLastSettlementWhenRoundVisible } from '../shared/lastSettlementStrip';
 import type { RiichiRuntimeContext } from '../shared/riichiRuntimeContext';
 import type { RiichiGameState } from '../types';
 
@@ -44,7 +45,8 @@ export function useRiichiClaimActions(ctx: RiichiRuntimeContext) {
         claimIndex: 0,
         lastClaimMsg: null,
       };
-      const { state: afterAbortive } = applyAbortiveDrawChecks(nextState);
+      const cleared = stripLastSettlementWhenRoundVisible(game, nextState);
+      const { state: afterAbortive } = applyAbortiveDrawChecks(cleared);
       if (afterAbortive.ryuukyoku && afterAbortive.ryuukyokuReason) {
         addLog(`流局（${afterAbortive.ryuukyokuReason}）`);
         sounds.playRyuukyoku();
@@ -52,7 +54,7 @@ export function useRiichiClaimActions(ctx: RiichiRuntimeContext) {
         setGame(afterAbortive);
         return;
       }
-      setGame(nextState);
+      setGame(cleared);
     },
     [game, addLog, sounds, consumeSeatTimeBank, setGame, turnClockRef],
   );
@@ -122,24 +124,27 @@ export function useRiichiClaimActions(ctx: RiichiRuntimeContext) {
       const melds = game.melds.map((m) => [...m]);
       const h0 = hands[0];
       const ia = h0.indexOf(a);
-      const ib = h0.indexOf(b);
+      const ib = h0.findIndex((x, i) => i !== ia && x === b);
       if (ia === -1 || ib === -1) return;
-      h0.splice(Math.max(ia, ib), 1);
-      h0.splice(Math.min(ia, ib), 1);
+      const hi = Math.max(ia, ib);
+      const lo = Math.min(ia, ib);
+      h0.splice(hi, 1);
+      h0.splice(lo, 1);
+      const meldTiles = [a, b, game.lastDiscard].sort(
+        (x, y) => getBaseTile(x) - getBaseTile(y) || x - y,
+      );
       melds[0] = [
         ...melds[0],
         {
           type: 'chi' as const,
-          tiles: [a, b, game.lastDiscard].sort(
-            (x, y) => getBaseTile(x) - getBaseTile(y) || x - y,
-          ),
+          tiles: meldTiles,
           fromPlayer: game.lastDiscardFrom,
         },
       ];
       const piles = game.discardPiles.map((q) => [...q]);
       if (piles[game.lastDiscardFrom].length > 0)
         piles[game.lastDiscardFrom].pop();
-      addLog(`自家 吃 ${getTileLabel(a)}${getTileLabel(b)}`);
+      addLog(`自家 吃 ${meldTiles.map(getTileLabel).join('')}`);
       sounds.playChi();
       setGame({
         ...game,

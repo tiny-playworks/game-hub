@@ -13,8 +13,8 @@
 
 | ID | 项 | 说明 / 入口文档 |
 | --- | --- | --- |
-| B-A1 | **音频系统 1.0** | [sound-assets.md](sound-assets.md)、[player-meta-roadmap.md](player-meta-roadmap.md) Phase 3；音量分组、BGM、UI 音、日麻系统语音包等 |
-| B-A2 | **游戏感 / 大厅 polish** | 收藏入口、解锁弹窗体验、首页/结算细调等非 P0 已写死的条目；对照 roadmap Phase 4 余量 |
+| B-A1 | **音频系统 1.0** | [sound-assets.md](sound-assets.md)、[player-meta-roadmap.md](player-meta-roadmap.md) Phase 3。**状态（2026-04-05）**：已落地档案三档音量（`playerProfile.audioVolumes`）+ 档案页滑杆；对局 `useRiichiSounds` / `useMahjongSounds` 已按 SFX/语音分组；高优先 `discard.wav` / `draw.wav` 已引用，缺失时 beep 兜底。**待扩**：大厅/对局 BGM 接 `bgm`、全局 UI 点击音、roadmap 所列其余层级。 |
+| B-A2 | **游戏感 / 大厅 polish** | 收藏入口、解锁弹窗体验、首页/结算细调等非 P0 已写死的条目；对照 roadmap Phase 4 余量。**具体改动清单（便于排期）**：① **首页/大厅** [`src/pages/Home.tsx`](../src/pages/Home.tsx) + [`ContinuePlaySection`](../src/components/home/ContinuePlaySection.tsx) / [`QuickAccessPanel`](../src/components/home/QuickAccessPanel.tsx) / [`MainPlayerCard`](../src/components/home/MainPlayerCard.tsx) — 收藏入口、信息层级与动效细调；② **日麻结算与成长反馈** [`src/pages/mahjong/japanese/components/Modals.tsx`](../src/pages/mahjong/japanese/components/Modals.tsx) — 解锁称号/成就展示强度与节奏；③ 需时再看 **全局导航** [`src/App.tsx`](../src/App.tsx) 与共用 Toast/Dialog 模式。 |
 | B-A3 | **成就与任务扩展** | 更多进度型成就、周任务维度、统计维度（[roadmap](player-meta-roadmap.md) §2.2） |
 | B-A4 | **成长 / 档案一致性** | 需要时对照 [growth-profile-plan-alignment.md](growth-profile-plan-alignment.md) 做小步修正 |
 

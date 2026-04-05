@@ -2,6 +2,7 @@ import {
   calcFu,
   calcScore,
   getTotalHan,
+  isMenzhen,
   type YakuResult,
 } from '@/lib/mahjongRiichi';
 import { appendUraDoraYaku, countUraDoraHan } from '../helpers';
@@ -104,14 +105,12 @@ export function resolveWinBaseTen(
   if (han <= 0) return 1000;
   const hasPinfu = result.yaku.some((y) => y.id === 'pinfu');
   const isChiitoitsu = result.yaku.some((y) => y.id === 'chiitoitsu');
-  const isMenzhen = state.melds[result.winner].every(
-    (m) => m.type === 'angang',
-  );
+  const menzen = isMenzhen(state.melds[result.winner]);
   const fu =
     result.fu ??
     calcFu({
       isTsumo: result.isTsumo,
-      isMenzhen,
+      isMenzhen: menzen,
       hasPinfu,
       isChiitoitsu,
     });

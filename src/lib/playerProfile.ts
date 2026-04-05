@@ -4,12 +4,27 @@ export const PLAYER_NICKNAME_FALLBACK = '牌友';
 
 export type PlayerAvatarMode = 'preset' | 'upload';
 
+/** 音量分组 0–1：BGM / 音效 / 语音（TTS 与立直等语音向） */
+export interface AudioVolumes {
+  bgm: number;
+  sfx: number;
+  voice: number;
+}
+
+export const DEFAULT_AUDIO_VOLUMES: AudioVolumes = {
+  bgm: 1,
+  sfx: 1,
+  voice: 1,
+};
+
 export interface PlayerProfile {
   nickname: string;
   avatarMode: PlayerAvatarMode;
   avatarPresetId: string;
   avatarUploadDataUrl: string | null;
   activeTitle: string | null;
+  /** 音量分组，缺失或非法字段在归一化时回退为 1 */
+  audioVolumes: AudioVolumes;
   updatedAt: number;
 }
 
@@ -90,8 +105,48 @@ export function createDefaultPlayerProfile(): PlayerProfile {
     avatarPresetId: getDefaultPresetId(),
     avatarUploadDataUrl: null,
     activeTitle: null,
+    audioVolumes: { ...DEFAULT_AUDIO_VOLUMES },
     updatedAt: Date.now(),
   };
+}
+
+function clampUnitVolume(v: unknown, fallback: number): number {
+  if (typeof v !== 'number' || !Number.isFinite(v)) return fallback;
+  return Math.min(1, Math.max(0, v));
+}
+
+export function normalizeAudioVolumes(raw: unknown): AudioVolumes {
+  const d = DEFAULT_AUDIO_VOLUMES;
+  if (!raw || typeof raw !== 'object') return { ...d };
+  const o = raw as Partial<AudioVolumes>;
+  return {
+    bgm: clampUnitVolume(o.bgm, d.bgm),
+    sfx: clampUnitVolume(o.sfx, d.sfx),
+    voice: clampUnitVolume(o.voice, d.voice),
+  };
+}
+
+const profileListeners = new Set<() => void>();
+
+/** 与 localStorage 原始串对齐，保证 getPlayerProfile 引用稳定（useSyncExternalStore 要求） */
+let profileSnapshotRaw: string | null = null;
+let profileSnapshot: PlayerProfile | null = null;
+
+const emptyProfileSnapshot: PlayerProfile = createDefaultPlayerProfile();
+
+export function subscribePlayerProfile(onStoreChange: () => void): () => void {
+  profileListeners.add(onStoreChange);
+  return () => profileListeners.delete(onStoreChange);
+}
+
+function notifyPlayerProfile(): void {
+  for (const listener of profileListeners) listener();
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key === PLAYER_PROFILE_STORAGE_KEY) notifyPlayerProfile();
+  });
 }
 
 function normalizePlayerProfile(raw: unknown): PlayerProfile {
@@ -121,6 +176,7 @@ function normalizePlayerProfile(raw: unknown): PlayerProfile {
     avatarUploadDataUrl,
     activeTitle:
       typeof parsed.activeTitle === 'string' ? parsed.activeTitle : null,
+    audioVolumes: normalizeAudioVolumes(parsed.audioVolumes),
     updatedAt:
       typeof parsed.updatedAt === 'number' && Number.isFinite(parsed.updatedAt)
         ? parsed.updatedAt
@@ -129,13 +185,23 @@ function normalizePlayerProfile(raw: unknown): PlayerProfile {
 }
 
 export function getPlayerProfile(): PlayerProfile {
-  if (typeof localStorage === 'undefined') return createDefaultPlayerProfile();
+  if (typeof localStorage === 'undefined') return emptyProfileSnapshot;
   try {
     const raw = localStorage.getItem(PLAYER_PROFILE_STORAGE_KEY);
-    if (!raw) return createDefaultPlayerProfile();
-    return normalizePlayerProfile(JSON.parse(raw));
+    if (raw === profileSnapshotRaw && profileSnapshot !== null) {
+      return profileSnapshot;
+    }
+    const next =
+      raw === null
+        ? emptyProfileSnapshot
+        : normalizePlayerProfile(JSON.parse(raw));
+    profileSnapshotRaw = raw;
+    profileSnapshot = next;
+    return next;
   } catch {
-    return createDefaultPlayerProfile();
+    profileSnapshotRaw = null;
+    profileSnapshot = emptyProfileSnapshot;
+    return emptyProfileSnapshot;
   }
 }
 
@@ -145,7 +211,11 @@ export function savePlayerProfile(profile: PlayerProfile): PlayerProfile {
     updatedAt: Date.now(),
   });
   if (typeof localStorage === 'undefined') return normalized;
-  localStorage.setItem(PLAYER_PROFILE_STORAGE_KEY, JSON.stringify(normalized));
+  const serialized = JSON.stringify(normalized);
+  localStorage.setItem(PLAYER_PROFILE_STORAGE_KEY, serialized);
+  profileSnapshotRaw = serialized;
+  profileSnapshot = normalized;
+  notifyPlayerProfile();
   return normalized;
 }
 
@@ -153,10 +223,19 @@ export function updatePlayerProfile(
   patch: Partial<Omit<PlayerProfile, 'updatedAt'>>,
 ): PlayerProfile {
   const current = getPlayerProfile();
-  return savePlayerProfile({
+  const { audioVolumes: patchAudio, ...rest } = patch;
+  const merged: PlayerProfile = {
     ...current,
-    ...patch,
-  });
+    ...rest,
+    audioVolumes:
+      patchAudio !== undefined
+        ? normalizeAudioVolumes({
+            ...current.audioVolumes,
+            ...patchAudio,
+          })
+        : current.audioVolumes,
+  };
+  return savePlayerProfile(merged);
 }
 
 export function getAvatarPresetById(id: string): AvatarPreset {

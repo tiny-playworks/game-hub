@@ -1,9 +1,14 @@
 import { useEffect } from 'react';
+import { getTileLabel } from '@/lib/mahjongRiichi';
 import { consumeTimeBankSeconds } from '@/lib/riichiClock';
 import { recordRiichiProgressEvent } from '@/lib/riichiProgress';
+import { SEAT_NAMES } from '../constants';
+import { countTotalTilesHeld } from '../helpers';
 import { applyDrawOneTile } from '../shared/drawFlowTransitions';
 import { getRng, getScheduler } from '../shared/flowDeps';
+import { stripLastSettlementWhenRoundVisible } from '../shared/lastSettlementStrip';
 import type { RiichiRuntimeContext } from '../shared/riichiRuntimeContext';
+import type { RiichiGameState } from '../types';
 import { runAiAfterDraw } from './drawAiFlowAfterDraw';
 
 interface DrawAiFlowOpts {
@@ -17,6 +22,7 @@ export function useRiichiDrawAiFlow(
 ) {
   const {
     game,
+    winResult,
     setGame,
     addLog,
     sounds,
@@ -28,6 +34,7 @@ export function useRiichiDrawAiFlow(
 
   // 荒牌：人类第一巡摸牌前牌墙已空
   useEffect(() => {
+    if (winResult) return;
     if (
       !game ||
       game.ryuukyoku ||
@@ -55,10 +62,12 @@ export function useRiichiDrawAiFlow(
     addLog,
     sounds,
     setGame,
+    winResult,
   ]);
 
   // 人类摸牌（从牌墙摸一张）
   useEffect(() => {
+    if (winResult) return;
     if (
       !game ||
       game.phase !== 'discard' ||
@@ -78,10 +87,12 @@ export function useRiichiDrawAiFlow(
     game,
     sounds,
     setGame,
+    winResult,
   ]);
 
   // AI 摸牌（从牌墙摸一张）
   useEffect(() => {
+    if (winResult) return;
     if (
       !game ||
       game.phase !== 'discard' ||
@@ -93,16 +104,24 @@ export function useRiichiDrawAiFlow(
       return;
     const p = game.currentPlayer;
     setGame((g) => (!g ? g : applyDrawOneTile(g, p)));
-  }, [game?.currentPlayer, game?.drawnTile, game?.wall.length, game, setGame]);
+  }, [
+    game?.currentPlayer,
+    game?.drawnTile,
+    game?.wall.length,
+    game,
+    setGame,
+    winResult,
+  ]);
 
-  // AI 要牌后打出（11 张时立即打一张）
+  // AI 吃/碰后打出：门前+副露合计 14 张且未标记摸牌（与 needsDiscardDecision 一致）
   useEffect(() => {
+    if (winResult) return;
     if (
       !game ||
       game.phase !== 'discard' ||
       game.currentPlayer === 0 ||
       game.drawnTile !== null ||
-      game.hands[game.currentPlayer].length !== 11
+      countTotalTilesHeld(game, game.currentPlayer) !== 14
     )
       return;
     const p = game.currentPlayer;
@@ -115,10 +134,12 @@ export function useRiichiDrawAiFlow(
       )
         return g;
       const hp = g.hands[p];
-      if (hp.length !== 11) return g;
+      if (countTotalTilesHeld(g, p) !== 14) return g;
       const hand = [...hp];
       const toDiscard = hand[0];
       hand.shift();
+      addLog(`${SEAT_NAMES[p]} 打出 ${getTileLabel(toDiscard)}`);
+      sounds.playDiscard();
       const piles = g.discardPiles.map((q) => [...q]);
       piles[p].push(toDiscard);
       const elapsed = getElapsedSecondsForSeat(p);
@@ -126,7 +147,7 @@ export function useRiichiDrawAiFlow(
         i === p ? consumeTimeBankSeconds(tb, elapsed) : tb,
       );
       turnClockRef.current = null;
-      return {
+      const nextState: RiichiGameState = {
         ...g,
         timeBanks: nextTimeBanks,
         hands: g.hands.map((h, i) => (i === p ? hand : h)),
@@ -138,6 +159,7 @@ export function useRiichiDrawAiFlow(
         currentPlayer: (p + 1) % 4,
         lastClaimMsg: null,
       };
+      return stripLastSettlementWhenRoundVisible(g, nextState);
     });
   }, [
     game?.phase,
@@ -145,14 +167,18 @@ export function useRiichiDrawAiFlow(
     game?.drawnTile,
     game?.hands,
     game,
+    addLog,
+    sounds,
     getElapsedSecondsForSeat,
     setGame,
     turnClockRef,
+    winResult,
   ]);
 
   // AI 摸牌后：自摸 / 暗杠 / 立直 / 打牌（延迟执行）
   // biome-ignore lint/correctness/useExhaustiveDependencies: granular deps to avoid redundant effect runs
   useEffect(() => {
+    if (winResult) return;
     if (
       !game ||
       game.phase !== 'discard' ||
@@ -162,5 +188,6 @@ export function useRiichiDrawAiFlow(
       return;
     const cancel = runAiAfterDraw(ctx, game, schedule, rng);
     return () => cancel();
-  }, [game?.currentPlayer, game?.drawnTile, game]);
+    // winResult：结算弹窗期间不得继续 AI 摸打；deps 刻意不含 ctx/schedule/rng，与既有粒度一致
+  }, [game?.currentPlayer, game?.drawnTile, game, winResult]);
 }

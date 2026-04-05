@@ -8,14 +8,20 @@ function isSpeechSupported(): boolean {
   return 'speechSynthesis' in window;
 }
 
-/** 使用浏览器 TTS 朗读文本；无权限或未支持则不执行 */
-export function speak(text: string, lang: 'ja' | 'zh' = 'ja'): void {
+/** 使用浏览器 TTS 朗读文本；无权限或未支持则不执行。`volumeScale` 为 0–1，与档案「语音」音量相乘。 */
+export function speak(
+  text: string,
+  lang: 'ja' | 'zh' = 'ja',
+  volumeScale = 1,
+): void {
   if (!text.trim() || !isSpeechSupported()) return;
+  const scale = Math.min(1, Math.max(0, volumeScale));
+  if (scale <= 0) return;
   try {
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = lang === 'ja' ? 'ja-JP' : 'zh-CN';
-    u.volume = 0.9;
+    u.volume = 0.9 * scale;
     u.rate = 1;
     window.speechSynthesis.speak(u);
   } catch {

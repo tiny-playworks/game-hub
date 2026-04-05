@@ -11,6 +11,7 @@ import { CharacterPortraitSlot } from '@/components/characters/CharacterPortrait
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLocale } from '@/contexts/LocaleContext';
+import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import {
   CHECKIN_MONTH_MILESTONES,
   CHECKIN_WEEK_MILESTONES,
@@ -138,10 +139,10 @@ function getCharacterUnlockText(
 
 const Profile = () => {
   const { t } = useLocale();
-  const [profile, setProfile] = useState<PlayerProfile>(() =>
-    getPlayerProfile(),
+  const profile = usePlayerProfile();
+  const [nicknameDraft, setNicknameDraft] = useState(
+    () => getPlayerProfile().nickname,
   );
-  const [nicknameDraft, setNicknameDraft] = useState(profile.nickname);
   const [dailyTaskState, setDailyTaskState] = useState<DailyTaskState>(() =>
     ensureDailyTaskState(),
   );
@@ -185,10 +186,9 @@ const Profile = () => {
       currentProfile.activeTitle,
       nextGrowth.totalPoints,
     );
-    const syncedProfile =
-      resolvedTitleId === currentProfile.activeTitle
-        ? currentProfile
-        : updatePlayerProfile({ activeTitle: resolvedTitleId });
+    if (resolvedTitleId !== currentProfile.activeTitle) {
+      updatePlayerProfile({ activeTitle: resolvedTitleId });
+    }
 
     setDailyTaskState(nextDaily);
     setWeeklyTaskState(nextWeekly);
@@ -197,8 +197,7 @@ const Profile = () => {
     setPlayerStats(nextStats);
     setCharacterState(nextCharacterState);
     setRecentFeed(getFullGrowthFeed());
-    setProfile(syncedProfile);
-    setNicknameDraft(syncedProfile.nickname);
+    setNicknameDraft(getPlayerProfile().nickname);
   }, []);
 
   useEffect(() => {
@@ -209,16 +208,14 @@ const Profile = () => {
     const next = updatePlayerProfile({
       nickname: sanitizeNickname(nicknameDraft),
     });
-    setProfile(next);
     setNicknameDraft(next.nickname);
   };
 
   const applyPresetAvatar = (presetId: string) => {
-    const next = updatePlayerProfile({
+    updatePlayerProfile({
       avatarMode: 'preset',
       avatarPresetId: presetId,
     });
-    setProfile(next);
     setAvatarError('');
   };
 
@@ -231,11 +228,10 @@ const Profile = () => {
     setAvatarError('');
     try {
       const dataUrl = await cropImageFileToSquareDataUrl(file);
-      const next = updatePlayerProfile({
+      updatePlayerProfile({
         avatarMode: 'upload',
         avatarUploadDataUrl: dataUrl,
       });
-      setProfile(next);
     } catch {
       setAvatarError(t('home.player.avatarUploadFailed'));
     } finally {
@@ -245,8 +241,7 @@ const Profile = () => {
   };
 
   const switchTitle = (titleId: string) => {
-    const next = updatePlayerProfile({ activeTitle: titleId });
-    setProfile(next);
+    updatePlayerProfile({ activeTitle: titleId });
   };
 
   const switchCharacter = (characterId: string) => {
@@ -449,6 +444,51 @@ const Profile = () => {
                   {avatarError}
                 </p>
               )}
+            </div>
+
+            <div className="mt-4 space-y-3 rounded-xl border border-slate-200 bg-white p-3">
+              <p className="text-sm font-medium text-slate-900">
+                {t('profile.audio.section')}
+              </p>
+              <p className="text-xs text-slate-500">
+                {t('profile.audio.hint')}
+              </p>
+              {(
+                [
+                  { key: 'bgm' as const, labelKey: 'profile.audio.bgm' },
+                  { key: 'sfx' as const, labelKey: 'profile.audio.sfx' },
+                  { key: 'voice' as const, labelKey: 'profile.audio.voice' },
+                ] as const
+              ).map(({ key, labelKey }) => (
+                <div
+                  key={key}
+                  className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3"
+                >
+                  <label
+                    className="shrink-0 text-xs text-slate-600 sm:w-28"
+                    htmlFor={`audio-${key}`}
+                  >
+                    {t(labelKey)}
+                  </label>
+                  <input
+                    id={`audio-${key}`}
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={Math.round(profile.audioVolumes[key] * 100)}
+                    onChange={(event) => {
+                      const v = Number(event.target.value) / 100;
+                      updatePlayerProfile({
+                        audioVolumes: { ...profile.audioVolumes, [key]: v },
+                      });
+                    }}
+                    className="h-2 w-full flex-1 cursor-pointer accent-emerald-600"
+                  />
+                  <span className="shrink-0 text-right text-xs tabular-nums text-slate-500 sm:w-10">
+                    {Math.round(profile.audioVolumes[key] * 100)}%
+                  </span>
+                </div>
+              ))}
             </div>
 
             <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">

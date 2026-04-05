@@ -10,6 +10,7 @@ import {
   getTileLabel,
   getTotalHan,
   hasYaku,
+  isMenzhen,
   isWinShapeRiichi,
 } from '@/lib/mahjongRiichi';
 import {
@@ -28,6 +29,7 @@ import { SEAT_NAMES } from '../constants';
 import { enrichWinResultWithUra } from '../gameLogic/winResult';
 import { clearSeatDoujunStates } from '../helpers';
 import { applyAbortiveDrawChecks } from '../shared/abortiveDrawChecks';
+import { stripLastSettlementWhenRoundVisible } from '../shared/lastSettlementStrip';
 import type { RiichiRuntimeContext } from '../shared/riichiRuntimeContext';
 import type { RiichiGameState } from '../types';
 
@@ -75,7 +77,7 @@ export function runAiAfterDraw(
             ? rs.fu
             : calcFu({
                 isTsumo: true,
-                isMenzhen: g.melds[p].every((m) => m.type === 'angang'),
+                isMenzhen: isMenzhen(g.melds[p]),
                 hasPinfu: yaku.some((y) => y.id === 'pinfu'),
                 isChiitoitsu: yaku.some((y) => y.id === 'chiitoitsu'),
               });
@@ -113,7 +115,7 @@ export function runAiAfterDraw(
 
       const doAiRiichi = shouldAiDeclareRiichi({
         alreadyRiichi: g.riichiDeclared[p],
-        isMenzen: g.melds[p].every((m) => m.type === 'angang'),
+        isMenzen: isMenzhen(g.melds[p]),
         score: g.scores[p],
         waitingCount: getWaitingTilesRiichi(hand, g.melds[p], g, {
           seat: p,
@@ -165,14 +167,15 @@ export function runAiAfterDraw(
           lastClaimMsg: `${SEAT_NAMES[p]} 暗杠 ${getTileLabel(fourTiles[0])}`,
           lastClaimWasKakan: true,
         };
-        const { state: afterAbortive } = applyAbortiveDrawChecks(nextState);
+        const cleared = stripLastSettlementWhenRoundVisible(g, nextState);
+        const { state: afterAbortive } = applyAbortiveDrawChecks(cleared);
         if (afterAbortive.ryuukyoku && afterAbortive.ryuukyokuReason) {
           addLogRef.current(`流局（${afterAbortive.ryuukyokuReason}）`);
           sounds.playRyuukyoku();
           recordRiichiProgressEvent('finish-round');
           return afterAbortive;
         }
-        return nextState;
+        return cleared;
       }
       const aiRiichiLocked = g.riichiDeclared[p];
       const defensiveChoice = !aiRiichiLocked
@@ -235,14 +238,15 @@ export function runAiAfterDraw(
           ? `${SEAT_NAMES[p]} 立直宣言！（-1000 点）`
           : null,
       };
-      const { state: afterAbortive } = applyAbortiveDrawChecks(nextState);
+      const cleared = stripLastSettlementWhenRoundVisible(g, nextState);
+      const { state: afterAbortive } = applyAbortiveDrawChecks(cleared);
       if (afterAbortive.ryuukyoku && afterAbortive.ryuukyokuReason) {
         addLogRef.current(`流局（${afterAbortive.ryuukyokuReason}）`);
         sounds.playRyuukyoku();
         recordRiichiProgressEvent('finish-round');
         return afterAbortive;
       }
-      return nextState;
+      return cleared;
     });
   }, 500);
   return cancel;

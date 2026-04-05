@@ -60,6 +60,8 @@ export type RiichiSounds = ReturnType<
  */
 export interface RiichiRuntimeContext {
   game: RiichiGameState | null;
+  /** 和牌/流局结算弹窗展示中：为 true 时 flows 不得再推进局面 */
+  winResult: RiichiWinResult | null;
   setGame: SetGameUpdater;
   addLog: (msg: string) => void;
   addLogRef: AddLogRef;

@@ -13,6 +13,7 @@ import {
   getTileLabel,
   getTotalHan,
   hasYaku,
+  isMenzhen,
   isWinShapeRiichi,
 } from '@/lib/mahjongRiichi';
 import {
@@ -155,9 +156,7 @@ export function runAiClaimPhase(
       const han = getTotalHan(yaku);
       const fu = calcFu({
         isTsumo: false,
-        isMenzhen: game.melds[seat].every(
-          (m: { type: string }) => m.type === 'angang',
-        ),
+        isMenzhen: isMenzhen(game.melds[seat]),
         hasPinfu: yaku.some((y) => y.id === 'pinfu'),
         isChiitoitsu: yaku.some((y) => y.id === 'chiitoitsu'),
       });
@@ -197,35 +196,30 @@ export function runAiClaimPhase(
       const melds = game.melds.map((m) => [...m]);
       const hp = hands[seat];
       const ia = hp.indexOf(a);
-      const ib = hp.indexOf(b);
+      const ib = hp.findIndex((x, i) => i !== ia && x === b);
       if (ia !== -1 && ib !== -1) {
-        hp.splice(Math.max(ia, ib), 1);
-        hp.splice(Math.min(ia, ib), 1);
+        const hi = Math.max(ia, ib);
+        const lo = Math.min(ia, ib);
+        hp.splice(hi, 1);
+        hp.splice(lo, 1);
+        const meldTiles = [a, b, last].sort(
+          (x, y) => getBaseTile(x) - getBaseTile(y) || x - y,
+        );
         melds[seat] = [
           ...melds[seat],
           {
             type: 'chi' as const,
-            tiles: [a, b, last].sort(
-              (x, y) => getBaseTile(x) - getBaseTile(y) || x - y,
-            ),
+            tiles: meldTiles,
             fromPlayer: from,
           },
         ];
         const pilesChi = game.discardPiles.map((q) => [...q]);
         if (pilesChi[from].length > 0) pilesChi[from].pop();
-        const plannedDiscard =
-          claimDefensePlan?.action === 'chi'
-            ? claimDefensePlan.discardTile
-            : null;
-        const discardIdx =
-          plannedDiscard !== null ? hp.indexOf(plannedDiscard) : -1;
-        const toDiscard = discardIdx >= 0 ? hp[discardIdx] : hp[0];
-        if (discardIdx >= 0) hp.splice(discardIdx, 1);
-        else hp.shift();
-        pilesChi[seat].push(toDiscard);
+        // 与人类 doChi 一致：只完成副露，手牌 11 张；打牌由 useRiichiDrawAiFlow 的 11 张分支处理。
         addLogRef.current(
-          `${SEAT_NAMES[seat]} 吃了 ${getTileLabel(last)} 并打出 ${getTileLabel(toDiscard)}`,
+          `${SEAT_NAMES[seat]} 吃 ${meldTiles.map(getTileLabel).join('')}`,
         );
+        sounds.playChi();
         if (claimDefensePlan?.action === 'chi' && claimDefensePlan.reason) {
           addLogRef.current(`${SEAT_NAMES[seat]} ${claimDefensePlan.reason}`);
         }
@@ -270,15 +264,9 @@ export function runAiClaimPhase(
         );
         const pilesPeng = game.discardPiles.map((q) => [...q]);
         if (pilesPeng[from].length > 0) pilesPeng[from].pop();
-        const discardIdx =
-          forcedPengDiscard !== null ? h.indexOf(forcedPengDiscard) : -1;
-        const toDiscard = discardIdx >= 0 ? h[discardIdx] : h[0];
-        if (discardIdx >= 0) h.splice(discardIdx, 1);
-        else h.shift();
-        pilesPeng[seat].push(toDiscard);
-        addLogRef.current(
-          `${SEAT_NAMES[seat]} 碰了 ${getTileLabel(last)} 并打出 ${getTileLabel(toDiscard)}`,
-        );
+        // 与人类 doPeng 一致：只完成副露，手牌 11 张；打牌由 useRiichiDrawAiFlow 的 11 张分支处理。
+        addLogRef.current(`${SEAT_NAMES[seat]} 碰`);
+        sounds.playPon();
         if (claimDefensePlan?.action === 'peng' && claimDefensePlan.reason) {
           addLogRef.current(`${SEAT_NAMES[seat]} ${claimDefensePlan.reason}`);
         }

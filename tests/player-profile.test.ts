@@ -1,8 +1,10 @@
 import { expect, test } from '@rstest/core';
 import {
   createDefaultPlayerProfile,
+  DEFAULT_AUDIO_VOLUMES,
   getCenterSquareCrop,
   getPlayerProfile,
+  normalizeAudioVolumes,
   PLAYER_NICKNAME_FALLBACK,
   PLAYER_NICKNAME_MAX_LENGTH,
   PLAYER_PROFILE_STORAGE_KEY,
@@ -41,6 +43,25 @@ test('playerProfile：保存与更新本地档案', () => {
   });
   expect(updated.nickname).toBe(PLAYER_NICKNAME_FALLBACK);
   expect(getPlayerProfile().nickname).toBe(PLAYER_NICKNAME_FALLBACK);
+});
+
+test('playerProfile：audioVolumes 默认与归一化', () => {
+  localStorage.clear();
+  expect(getPlayerProfile().audioVolumes).toEqual(DEFAULT_AUDIO_VOLUMES);
+  expect(normalizeAudioVolumes({ bgm: 2, sfx: -0.5, voice: 0.25 })).toEqual({
+    bgm: 1,
+    sfx: 0,
+    voice: 0.25,
+  });
+});
+
+test('playerProfile：updatePlayerProfile 部分合并 audioVolumes', () => {
+  localStorage.clear();
+  updatePlayerProfile({ audioVolumes: { sfx: 0.5 } });
+  const p = getPlayerProfile();
+  expect(p.audioVolumes.sfx).toBe(0.5);
+  expect(p.audioVolumes.bgm).toBe(1);
+  expect(p.audioVolumes.voice).toBe(1);
 });
 
 test('playerProfile：中心裁剪框始终为方形', () => {

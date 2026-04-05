@@ -4,6 +4,8 @@
 
 ## 已接入（public/sounds/riichi/）
 
+**音量与档案（2026-04-05）**：对局 wav / beep 使用 `playerProfile.audioVolumes.sfx`（0～1）；立直 TTS 等使用 `audioVolumes.voice`；档案页可设 BGM/SFX/语音三档，`bgm` 待接大厅与对局 BGM。
+
 以下文件由 `iroha/` 复制到 `public/sounds/riichi/`，经 **use-sound** 播放：
 
 | 文件         | 用途   | 触发时机（日麻）        |
