@@ -16,6 +16,7 @@ const GameGomoku = lazy(() => import('@/pages/GameGomoku'));
 const GameGuessNumber = lazy(() => import('@/pages/GameGuessNumber'));
 const GameMahjongJapanese = lazy(() => import('@/pages/mahjong/japanese'));
 const GameMemory = lazy(() => import('@/pages/GameMemory'));
+const Profile = lazy(() => import('@/pages/Profile'));
 const GameShooter = lazy(() => import('@/pages/GameShooter'));
 const GameSnake = lazy(() => import('@/pages/GameSnake'));
 const GameTank = lazy(() => import('@/pages/GameTank'));
@@ -38,6 +39,7 @@ const App = () => {
         <Suspense fallback={<PageFallback />}>
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/achievements" element={<Achievements />} />
             <Route path="/category/:categoryId" element={<Category />} />
             <Route
