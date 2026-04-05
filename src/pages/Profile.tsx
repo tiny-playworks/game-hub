@@ -4,6 +4,16 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLocale } from '@/contexts/LocaleContext';
+import {
+  CHECKIN_MONTH_MILESTONES,
+  CHECKIN_WEEK_MILESTONES,
+  type CheckinState,
+  checkinToday,
+  claimMonthMilestone,
+  claimWeekMilestone,
+  ensureCheckinState,
+  getBeijingDateKey,
+} from '@/lib/checkin';
 import { claimDailyTask, ensureDailyTaskState } from '@/lib/dailyTasks';
 import { getGrowthOverview } from '@/lib/growth';
 import {
@@ -84,17 +94,22 @@ const Profile = () => {
   const [dailyTaskState, setDailyTaskState] = useState(() =>
     ensureDailyTaskState(),
   );
+  const [checkinState, setCheckinState] = useState<CheckinState>(() =>
+    ensureCheckinState(),
+  );
   const [growthOverview, setGrowthOverview] = useState(() =>
     getGrowthOverview(),
   );
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState('');
   const [claimFeedback, setClaimFeedback] = useState('');
+  const [checkinFeedback, setCheckinFeedback] = useState('');
 
   const completedTaskCount = useMemo(
     () => dailyTaskState.items.filter((task) => task.completed).length,
     [dailyTaskState.items],
   );
+  const checkedInToday = checkinState.dateKey === getBeijingDateKey();
   const unlockedTitles = useMemo(
     () => getUnlockedTitles(growthOverview.totalPoints),
     [growthOverview.totalPoints],
@@ -106,6 +121,7 @@ const Profile = () => {
 
   useEffect(() => {
     const nextDaily = ensureDailyTaskState();
+    const nextCheckin = ensureCheckinState();
     const nextGrowth = getGrowthOverview();
     const currentProfile = getPlayerProfile();
     const resolvedTitleId = resolveActiveTitle(
@@ -117,6 +133,7 @@ const Profile = () => {
         ? currentProfile
         : updatePlayerProfile({ activeTitle: resolvedTitleId });
     setDailyTaskState(nextDaily);
+    setCheckinState(nextCheckin);
     setGrowthOverview(nextGrowth);
     setProfile(syncedProfile);
     setNicknameDraft(syncedProfile.nickname);
@@ -200,7 +217,82 @@ const Profile = () => {
     );
   };
 
+  const checkinTodayAction = () => {
+    const result = checkinToday();
+    const nextGrowth = getGrowthOverview();
+    const currentProfile = getPlayerProfile();
+    const resolvedTitleId = resolveActiveTitle(
+      currentProfile.activeTitle,
+      nextGrowth.totalPoints,
+    );
+    const syncedProfile =
+      resolvedTitleId === currentProfile.activeTitle
+        ? currentProfile
+        : updatePlayerProfile({ activeTitle: resolvedTitleId });
+    setCheckinState(result.state);
+    setGrowthOverview(nextGrowth);
+    setProfile(syncedProfile);
+    setCheckinFeedback(
+      result.ok
+        ? `${t('profile.checkin.feedback.daily')}${result.awardedPoints}`
+        : t('profile.checkin.feedback.already'),
+    );
+  };
+
+  const claimWeekRewardAction = () => {
+    const milestone = CHECKIN_WEEK_MILESTONES[0];
+    const result = claimWeekMilestone(milestone);
+    const nextGrowth = getGrowthOverview();
+    const currentProfile = getPlayerProfile();
+    const resolvedTitleId = resolveActiveTitle(
+      currentProfile.activeTitle,
+      nextGrowth.totalPoints,
+    );
+    const syncedProfile =
+      resolvedTitleId === currentProfile.activeTitle
+        ? currentProfile
+        : updatePlayerProfile({ activeTitle: resolvedTitleId });
+    setCheckinState(result.state);
+    setGrowthOverview(nextGrowth);
+    setProfile(syncedProfile);
+    if (result.ok) {
+      setCheckinFeedback(
+        `${t('profile.checkin.feedback.week')}${result.awardedPoints}`,
+      );
+    }
+  };
+
+  const claimMonthRewardAction = () => {
+    const milestone = CHECKIN_MONTH_MILESTONES[0];
+    const result = claimMonthMilestone(milestone);
+    const nextGrowth = getGrowthOverview();
+    const currentProfile = getPlayerProfile();
+    const resolvedTitleId = resolveActiveTitle(
+      currentProfile.activeTitle,
+      nextGrowth.totalPoints,
+    );
+    const syncedProfile =
+      resolvedTitleId === currentProfile.activeTitle
+        ? currentProfile
+        : updatePlayerProfile({ activeTitle: resolvedTitleId });
+    setCheckinState(result.state);
+    setGrowthOverview(nextGrowth);
+    setProfile(syncedProfile);
+    if (result.ok) {
+      setCheckinFeedback(
+        `${t('profile.checkin.feedback.month')}${result.awardedPoints}`,
+      );
+    }
+  };
+
   const activeTitle = getTitleById(profile.activeTitle);
+  const weekMilestone = CHECKIN_WEEK_MILESTONES[0];
+  const monthMilestone = CHECKIN_MONTH_MILESTONES[0];
+  const weekClaimed = checkinState.weekClaimedAt.includes(weekMilestone);
+  const monthClaimed = checkinState.monthClaimedAt.includes(monthMilestone);
+  const canClaimWeek = checkinState.streakDays >= weekMilestone && !weekClaimed;
+  const canClaimMonth =
+    checkinState.totalDays >= monthMilestone && !monthClaimed;
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,#f7f2e4_0,#edf4e8_46%,#dce8dd_100%)] font-['Avenir_Next','PingFang_SC','Hiragino_Sans_GB','Microsoft_YaHei',sans-serif] text-slate-900">
@@ -392,6 +484,85 @@ const Profile = () => {
                 )}
               </div>
             </div>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">
+            <p className="text-sm font-medium text-slate-900">
+              {t('profile.checkin.title')}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              {t('profile.checkin.date')} {checkinState.dateKey || '-'}
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-700">
+              <p>
+                {t('profile.checkin.streak')}：{checkinState.streakDays}
+              </p>
+              <p>
+                {t('profile.checkin.total')}：{checkinState.totalDays}
+              </p>
+            </div>
+            <div className="mt-3">
+              <Button
+                type="button"
+                size="sm"
+                className="bg-emerald-700 text-white hover:bg-emerald-600"
+                onClick={checkinTodayAction}
+                disabled={checkedInToday}
+              >
+                {checkedInToday
+                  ? t('profile.checkin.checkedIn')
+                  : t('profile.checkin.action')}
+              </Button>
+            </div>
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-slate-600">
+                  {t('profile.checkin.weekMilestone')} {weekMilestone}
+                </p>
+                {weekClaimed ? (
+                  <span className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600">
+                    {t('profile.checkin.claimed')}
+                  </span>
+                ) : (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 border-slate-200 px-2 text-xs"
+                    onClick={claimWeekRewardAction}
+                    disabled={!canClaimWeek}
+                  >
+                    {t('profile.checkin.claim')}
+                  </Button>
+                )}
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-slate-600">
+                  {t('profile.checkin.monthMilestone')} {monthMilestone}
+                </p>
+                {monthClaimed ? (
+                  <span className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600">
+                    {t('profile.checkin.claimed')}
+                  </span>
+                ) : (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 border-slate-200 px-2 text-xs"
+                    onClick={claimMonthRewardAction}
+                    disabled={!canClaimMonth}
+                  >
+                    {t('profile.checkin.claim')}
+                  </Button>
+                )}
+              </div>
+            </div>
+            {checkinFeedback && (
+              <p className="mt-2 text-xs text-emerald-700" role="status">
+                {checkinFeedback}
+              </p>
+            )}
           </div>
 
           <div className="mt-4 space-y-2">

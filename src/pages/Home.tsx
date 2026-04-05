@@ -1,11 +1,29 @@
-import { ArrowRight, Castle, Club, Gamepad2, Sparkles } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import {
+  ArrowRight,
+  CalendarCheck,
+  Castle,
+  Club,
+  Gamepad2,
+  Sparkles,
+  Trophy,
+  UserCircle2,
+} from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { categories } from '@/data/categories';
 import { games } from '@/data/games';
-import { ensureDailyTaskState } from '@/lib/dailyTasks';
+import {
+  CHECKIN_MONTH_MILESTONES,
+  CHECKIN_WEEK_MILESTONES,
+  type CheckinState,
+  checkinToday,
+  claimMonthMilestone,
+  claimWeekMilestone,
+  ensureCheckinState,
+  getBeijingDateKey,
+} from '@/lib/checkin';
 import { getGrowthOverview } from '@/lib/growth';
 import {
   getAvatarPresetById,
@@ -83,17 +101,43 @@ function ProfileAvatar({ profile }: { profile: PlayerProfile }) {
   );
 }
 
+type QuickPanel = 'achievements' | 'checkin' | 'profile' | null;
+
+function getCurrentMonthCalendarDays(now = Date.now()): string[] {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+  });
+  const parts = formatter.formatToParts(new Date(now));
+  const year = Number(
+    parts.find((part) => part.type === 'year')?.value ?? '1970',
+  );
+  const month = Number(
+    parts.find((part) => part.type === 'month')?.value ?? '01',
+  );
+  const maxDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const monthPrefix = `${year}-${String(month).padStart(2, '0')}`;
+  return Array.from({ length: maxDay }, (_, index) => {
+    const day = String(index + 1).padStart(2, '0');
+    return `${monthPrefix}-${day}`;
+  });
+}
+
 const Home = () => {
   const { t, locale } = useLocale();
   const [profile, setProfile] = useState<PlayerProfile>(() =>
     getPlayerProfile(),
   );
-  const [dailyTaskState, setDailyTaskState] = useState(() =>
-    ensureDailyTaskState(),
+  const [checkinState, setCheckinState] = useState<CheckinState>(() =>
+    ensureCheckinState(),
   );
   const [growthOverview, setGrowthOverview] = useState(() =>
     getGrowthOverview(),
   );
+  const [quickPanel, setQuickPanel] = useState<QuickPanel>(null);
+  const [checkinFeedback, setCheckinFeedback] = useState('');
+  const quickPanelRef = useRef<HTMLDivElement | null>(null);
   const view = useRiichiGameStore((state) => state.view);
   const game = useRiichiGameStore((state) => state.game);
   const matchEnd = useRiichiGameStore((state) => state.matchEnd);
@@ -112,14 +156,24 @@ const Home = () => {
   const recentMahjong = getRecentMahjongEntry();
   const isRiichiActive = Boolean(view === 'game' && game && !matchEnd);
   const mainMahjongGame = featuredMahjongGames[0];
-  const completedTaskCount = dailyTaskState.items.filter(
-    (task) => task.completed,
-  ).length;
   const resolvedTitleId = resolveActiveTitle(
     profile.activeTitle,
     growthOverview.totalPoints,
   );
   const activeTitle = getTitleById(resolvedTitleId);
+  const checkedInToday = checkinState.dateKey === getBeijingDateKey();
+  const weekMilestone = CHECKIN_WEEK_MILESTONES[0];
+  const monthMilestone = CHECKIN_MONTH_MILESTONES[0];
+  const weekClaimed = checkinState.weekClaimedAt.includes(weekMilestone);
+  const monthClaimed = checkinState.monthClaimedAt.includes(monthMilestone);
+  const canClaimWeek = checkinState.streakDays >= weekMilestone && !weekClaimed;
+  const canClaimMonth =
+    checkinState.totalDays >= monthMilestone && !monthClaimed;
+  const monthDays = useMemo(() => getCurrentMonthCalendarDays(), []);
+  const signedDaySet = useMemo(
+    () => new Set(checkinState.signedDateKeys),
+    [checkinState.signedDateKeys],
+  );
   const recentPlayedText = useMemo(() => {
     if (!recentMahjong) return '';
     return new Date(recentMahjong.playedAt).toLocaleString(
@@ -134,7 +188,7 @@ const Home = () => {
   }, [locale, recentMahjong]);
 
   useEffect(() => {
-    const nextDaily = ensureDailyTaskState();
+    const nextCheckin = ensureCheckinState();
     const nextGrowth = getGrowthOverview();
     const currentProfile = getPlayerProfile();
     const nextTitleId = resolveActiveTitle(
@@ -145,14 +199,88 @@ const Home = () => {
       nextTitleId === currentProfile.activeTitle
         ? currentProfile
         : updatePlayerProfile({ activeTitle: nextTitleId });
-    setDailyTaskState(nextDaily);
+    setCheckinState(nextCheckin);
     setGrowthOverview(nextGrowth);
     setProfile(syncedProfile);
   }, []);
 
+  useEffect(() => {
+    const onPointerDown = (event: MouseEvent) => {
+      if (!quickPanelRef.current) return;
+      if (quickPanelRef.current.contains(event.target as Node)) return;
+      setQuickPanel(null);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, []);
+
+  const checkinTodayAction = () => {
+    const result = checkinToday();
+    const nextGrowth = getGrowthOverview();
+    const currentProfile = getPlayerProfile();
+    const nextTitleId = resolveActiveTitle(
+      currentProfile.activeTitle,
+      nextGrowth.totalPoints,
+    );
+    const syncedProfile =
+      nextTitleId === currentProfile.activeTitle
+        ? currentProfile
+        : updatePlayerProfile({ activeTitle: nextTitleId });
+    setCheckinState(result.state);
+    setGrowthOverview(nextGrowth);
+    setProfile(syncedProfile);
+    setCheckinFeedback(
+      result.ok
+        ? `${t('home.quick.checkin.feedback.daily')}${result.awardedPoints}`
+        : t('home.quick.checkin.feedback.already'),
+    );
+  };
+
+  const claimWeekRewardAction = () => {
+    const result = claimWeekMilestone(weekMilestone);
+    if (!result.ok) return;
+    const nextGrowth = getGrowthOverview();
+    const currentProfile = getPlayerProfile();
+    const nextTitleId = resolveActiveTitle(
+      currentProfile.activeTitle,
+      nextGrowth.totalPoints,
+    );
+    const syncedProfile =
+      nextTitleId === currentProfile.activeTitle
+        ? currentProfile
+        : updatePlayerProfile({ activeTitle: nextTitleId });
+    setCheckinState(result.state);
+    setGrowthOverview(nextGrowth);
+    setProfile(syncedProfile);
+    setCheckinFeedback(
+      `${t('home.quick.checkin.feedback.week')}${result.awardedPoints}`,
+    );
+  };
+
+  const claimMonthRewardAction = () => {
+    const result = claimMonthMilestone(monthMilestone);
+    if (!result.ok) return;
+    const nextGrowth = getGrowthOverview();
+    const currentProfile = getPlayerProfile();
+    const nextTitleId = resolveActiveTitle(
+      currentProfile.activeTitle,
+      nextGrowth.totalPoints,
+    );
+    const syncedProfile =
+      nextTitleId === currentProfile.activeTitle
+        ? currentProfile
+        : updatePlayerProfile({ activeTitle: nextTitleId });
+    setCheckinState(result.state);
+    setGrowthOverview(nextGrowth);
+    setProfile(syncedProfile);
+    setCheckinFeedback(
+      `${t('home.quick.checkin.feedback.month')}${result.awardedPoints}`,
+    );
+  };
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,#f7f2e4_0,#edf4e8_46%,#dce8dd_100%)] font-['Avenir_Next','PingFang_SC','Hiragino_Sans_GB','Microsoft_YaHei',sans-serif] text-slate-900">
-      <header className="border-b border-emerald-100/80 bg-white/78 px-4 py-4 backdrop-blur">
+      <header className="relative z-50 border-b border-emerald-100/80 bg-white/78 px-4 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-start justify-between gap-4">
           <div>
             <p className="text-xs font-medium tracking-[0.24em] text-emerald-700/70 uppercase">
@@ -165,91 +293,240 @@ const Home = () => {
               {t('home.subtitle')}
             </p>
           </div>
-          <div className="flex items-center gap-4">
-            <Link
-              to="/achievements"
-              className="text-sm text-slate-600 hover:text-slate-900"
+          <div className="relative flex items-center gap-3" ref={quickPanelRef}>
+            <button
+              type="button"
+              className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs transition ${
+                quickPanel === 'achievements'
+                  ? 'border-emerald-400 bg-emerald-50 text-emerald-800'
+                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+              }`}
+              onClick={() =>
+                setQuickPanel((current) =>
+                  current === 'achievements' ? null : 'achievements',
+                )
+              }
             >
-              {t('achievements.title')}
-            </Link>
+              <Trophy className="size-3.5" />
+              {t('home.quick.achievements')}
+            </button>
+            <button
+              type="button"
+              className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs transition ${
+                quickPanel === 'checkin'
+                  ? 'border-emerald-400 bg-emerald-50 text-emerald-800'
+                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+              }`}
+              onClick={() =>
+                setQuickPanel((current) =>
+                  current === 'checkin' ? null : 'checkin',
+                )
+              }
+            >
+              <CalendarCheck className="size-3.5" />
+              {t('home.quick.checkin')}
+            </button>
+            <button
+              type="button"
+              className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs transition ${
+                quickPanel === 'profile'
+                  ? 'border-emerald-400 bg-emerald-50 text-emerald-800'
+                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+              }`}
+              onClick={() =>
+                setQuickPanel((current) =>
+                  current === 'profile' ? null : 'profile',
+                )
+              }
+            >
+              <UserCircle2 className="size-3.5" />
+              {t('home.quick.profile')}
+            </button>
             <LocaleSwitcher />
+
+            {quickPanel === 'profile' && (
+              <div className="absolute right-0 top-full z-40 mt-2 w-72 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+                <div className="flex items-center gap-3">
+                  <ProfileAvatar profile={profile} />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-slate-900">
+                      {profile.nickname}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {t('home.player.currentTitle')}：
+                      <span className="text-slate-700">
+                        {activeTitle
+                          ? t(activeTitle.nameKey)
+                          : t('home.player.noTitle')}
+                      </span>
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {t('home.growth.totalPoints')}：
+                      {growthOverview.totalPoints}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  asChild
+                  size="sm"
+                  className="mt-3 w-full bg-emerald-800 hover:bg-emerald-700"
+                >
+                  <Link to="/profile">{t('home.quick.profileDetail')}</Link>
+                </Button>
+              </div>
+            )}
+
+            {quickPanel === 'achievements' && (
+              <div className="absolute right-0 top-full z-40 mt-2 w-72 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+                <p className="text-sm font-semibold text-slate-900">
+                  {t('achievements.title')}
+                </p>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded-lg border border-slate-200 p-2">
+                    <p className="text-slate-500">
+                      {t('achievements.unlockedCount')}
+                    </p>
+                    <p className="mt-1 font-semibold text-slate-900">
+                      {growthOverview.unlockedAchievements}/
+                      {growthOverview.totalAchievements}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 p-2">
+                    <p className="text-slate-500">
+                      {t('achievements.totalPoints')}
+                    </p>
+                    <p className="mt-1 font-semibold text-slate-900">
+                      {growthOverview.achievementPoints}
+                    </p>
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  {t('achievements.taskPoints')}：{growthOverview.taskPoints}
+                </p>
+                <Button
+                  asChild
+                  size="sm"
+                  variant="outline"
+                  className="mt-3 w-full border-slate-200"
+                >
+                  <Link to="/achievements">
+                    {t('home.quick.achievementsDetail')}
+                  </Link>
+                </Button>
+              </div>
+            )}
+
+            {quickPanel === 'checkin' && (
+              <div className="absolute right-0 top-full z-40 mt-2 w-[320px] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-slate-900">
+                    {t('profile.checkin.title')}
+                  </p>
+                  <span className="text-xs text-slate-500">
+                    {checkinState.dateKey || '-'}
+                  </span>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-700">
+                  <p>
+                    {t('profile.checkin.streak')}：{checkinState.streakDays}
+                  </p>
+                  <p>
+                    {t('profile.checkin.total')}：{checkinState.totalDays}
+                  </p>
+                </div>
+
+                <div className="mt-3 grid grid-cols-7 gap-1">
+                  {monthDays.map((dateKey) => {
+                    const dayLabel = dateKey.slice(-2);
+                    const signed = signedDaySet.has(dateKey);
+                    const isToday = dateKey === getBeijingDateKey();
+                    return (
+                      <div
+                        key={dateKey}
+                        className={`flex h-8 items-center justify-center rounded text-xs ${
+                          signed
+                            ? 'bg-emerald-600 text-white'
+                            : isToday
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-slate-100 text-slate-600'
+                        }`}
+                        title={dateKey}
+                      >
+                        {dayLabel}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <Button
+                  type="button"
+                  size="sm"
+                  className="mt-3 w-full bg-emerald-800 text-white hover:bg-emerald-700"
+                  onClick={checkinTodayAction}
+                  disabled={checkedInToday}
+                >
+                  {checkedInToday
+                    ? t('profile.checkin.checkedIn')
+                    : t('profile.checkin.action')}
+                </Button>
+
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <p className="text-slate-600">
+                      {t('profile.checkin.weekMilestone')} {weekMilestone}
+                    </p>
+                    {weekClaimed ? (
+                      <span className="rounded-md bg-slate-100 px-2 py-1 text-slate-600">
+                        {t('profile.checkin.claimed')}
+                      </span>
+                    ) : (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 border-slate-200 px-2 text-xs"
+                        onClick={claimWeekRewardAction}
+                        disabled={!canClaimWeek}
+                      >
+                        {t('profile.checkin.claim')}
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <p className="text-slate-600">
+                      {t('profile.checkin.monthMilestone')} {monthMilestone}
+                    </p>
+                    {monthClaimed ? (
+                      <span className="rounded-md bg-slate-100 px-2 py-1 text-slate-600">
+                        {t('profile.checkin.claimed')}
+                      </span>
+                    ) : (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 border-slate-200 px-2 text-xs"
+                        onClick={claimMonthRewardAction}
+                        disabled={!canClaimMonth}
+                      >
+                        {t('profile.checkin.claim')}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {checkinFeedback && (
+                  <p className="mt-2 text-xs text-emerald-700">
+                    {checkinFeedback}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </header>
 
       <main className="mx-auto flex max-w-6xl flex-col gap-10 px-4 py-8 md:py-10">
-        <section className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
-            <p className="text-xs font-medium tracking-[0.2em] text-emerald-700/70 uppercase">
-              {t('home.player.title')}
-            </p>
-            <div className="mt-3 flex items-start gap-4">
-              <ProfileAvatar profile={profile} />
-              <div className="min-w-0 flex-1">
-                <p className="text-lg font-semibold text-slate-900">
-                  {profile.nickname}
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  {t('home.player.currentTitle')}：
-                  <span className="font-medium text-slate-700">
-                    {activeTitle
-                      ? t(activeTitle.nameKey)
-                      : t('home.player.noTitle')}
-                  </span>
-                </p>
-              </div>
-            </div>
-            <Button
-              asChild
-              className="mt-4 bg-emerald-800 text-white hover:bg-emerald-700"
-            >
-              <Link to="/profile">
-                {t('home.player.title')}
-                <ArrowRight className="size-4" />
-              </Link>
-            </Button>
-          </div>
-
-          <div className="rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
-            <p className="text-xs font-medium tracking-[0.2em] text-emerald-700/70 uppercase">
-              {t('home.growth.title')}
-            </p>
-            <div className="mt-3 grid grid-cols-3 gap-3">
-              <div className="rounded-xl border border-slate-200 bg-white p-3">
-                <p className="text-xs text-slate-500">
-                  {t('home.growth.totalPoints')}
-                </p>
-                <p className="mt-1 text-xl font-semibold text-slate-900">
-                  {growthOverview.totalPoints}
-                </p>
-              </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-3">
-                <p className="text-xs text-slate-500">
-                  {t('home.growth.achievementPoints')}
-                </p>
-                <p className="mt-1 text-xl font-semibold text-slate-900">
-                  {growthOverview.achievementPoints}
-                </p>
-              </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-3">
-                <p className="text-xs text-slate-500">
-                  {t('home.growth.taskPoints')}
-                </p>
-                <p className="mt-1 text-xl font-semibold text-slate-900">
-                  {growthOverview.taskPoints}
-                </p>
-              </div>
-            </div>
-            <p className="mt-3 text-xs text-slate-500">
-              {t('home.daily.completed')} {completedTaskCount}/
-              {dailyTaskState.items.length}
-            </p>
-            <p className="mt-1 text-xs text-slate-500">
-              {dailyTaskState.dateKey}
-            </p>
-          </div>
-        </section>
-
         <section className="relative overflow-hidden rounded-[36px] border border-emerald-200/80 bg-[linear-gradient(135deg,#f7efda,#edf6ed_50%,#deeadf)] p-6 shadow-[0_24px_56px_rgba(15,23,42,0.12)] animate-in fade-in duration-500 md:p-8">
           <div className="pointer-events-none absolute -left-20 top-[-90px] size-64 rounded-full bg-amber-200/45 blur-3xl" />
           <div className="pointer-events-none absolute -right-16 bottom-[-90px] size-72 rounded-full bg-emerald-300/32 blur-3xl" />
