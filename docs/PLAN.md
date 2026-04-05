@@ -44,7 +44,7 @@
 | --- | --- |
 | 已上线游戏 | **16 款**（含斗地主、升级、日麻），占位 0 |
 | 成就 | 14 项，本地解锁 |
-| 测试 | 18 文件、126 用例 |
+| 测试 | 22 文件、130 用例 |
 | 日麻算分 | riichi-rs-bundlers（Rust/WASM），适配层 `src/lib/riichiRsAdapter.ts` |
 | 日麻音画 | 见 [sound-assets.md](sound-assets.md)；后续随「音频系统 1.0」与主线强化 |
 
@@ -62,9 +62,10 @@
 | 文档 | 用途 |
 | --- | --- |
 | [player-meta-roadmap.md](player-meta-roadmap.md) | **主线**：分阶段目标、产出、完成标准（权威细节） |
+| [player-meta-next-plan.md](player-meta-next-plan.md) | 近期落地方案：大厅 2.0 / 成长闭环 2.0 / 角色骨架 |
 | [PLAN.md](PLAN.md) | 本文：范围边界、阶段速览、索引 |
 | [REPO_WIKI.md](REPO_WIKI.md) | 项目概述、技术架构、测试、评估、计划详表 |
 | [AGENTS.md](AGENTS.md) | 命令、工具、Cursor Cloud、计划摘要 |
 | [README.md](../README.md) | 功能概览、快速开始 |
 | [sound-assets.md](sound-assets.md) | 日麻音效与动画资源说明 |
-| [docs/archive/](archive/) | 历史工作日志与已完成的专项计划 |
+| [archive/](archive/) | 历史工作日志、已完成专项计划、远期专题归档 |

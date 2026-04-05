@@ -53,7 +53,7 @@ src/
 ├── App.tsx          # 路由 + LocaleProvider + Suspense 懒加载
 └── App.css          # 主题与 Tailwind @theme
 
-tests/               # 20 文件，123 用例
+tests/               # 22 个测试文件，130 个用例
 ```
 
 ### 2.3 配置与命令
@@ -67,7 +67,7 @@ tests/               # 20 文件，123 用例
 
 ## 3. 测试与质量
 
-- **规模**：20 个测试文件，**123 个用例**，全部通过。  
+- **规模**：22 个测试文件，**130 个用例**，全部通过。  
 - **覆盖**：数据与工具、首页与分类、成就页、已上线游戏页冒烟、五子棋胜负、日麻流程与算分适配。  
 - **运行**：`pnpm run test`；`pnpm run test:watch` 监听。  
 - **CI**：typecheck → biome → test → build。
