@@ -89,6 +89,9 @@ const messages: Record<Locale, Record<string, string>> = {
     'home.daily.settledPrefix': '已结算 +',
     'home.daily.pendingRewardPrefix': '进行中 · 奖励 ',
     'home.recentGrowth.title': '最近成长',
+    'home.recentGrowth.cardMeta': '{{count}} 条 · 流水 +{{points}}',
+    'home.recentGrowth.cardMetaHint':
+      '仅统计本卡片所列成长流水，与累计任务点无关',
     'home.recentGrowth.empty': '先打几局日麻，这里会开始记录成长回报。',
     'home.characters.title': '同行角色',
     'home.characters.currentStage': '当前阶段',
@@ -163,6 +166,8 @@ const messages: Record<Locale, Record<string, string>> = {
     'profile.recentGrowth.title': '最近成长',
     'profile.recentGrowth.recentPrefix': '最近',
     'profile.recentGrowth.recentSuffix': '条',
+    'profile.growthHistory.title': '成长历史',
+    'profile.growthHistory.meta': '本机长期保存 · 共 {{count}} 条',
     'profile.recentGrowth.empty': '还没有成长记录，先打一局日麻试试。',
     'profile.task.completedPrefix': '已完成',
     'profile.task.progressPrefix': '进度',
@@ -478,6 +483,9 @@ const messages: Record<Locale, Record<string, string>> = {
     'home.daily.settledPrefix': 'Settled +',
     'home.daily.pendingRewardPrefix': 'In progress · Reward ',
     'home.recentGrowth.title': 'Recent Growth',
+    'home.recentGrowth.cardMeta': '{{count}} items · +{{points}} in list',
+    'home.recentGrowth.cardMetaHint':
+      'Sum of points in this list only; not cumulative task points',
     'home.recentGrowth.empty':
       'Play a few Riichi rounds and growth rewards will appear here.',
     'home.characters.title': 'Companions',
@@ -561,6 +569,8 @@ const messages: Record<Locale, Record<string, string>> = {
     'profile.recentGrowth.title': 'Recent Growth',
     'profile.recentGrowth.recentPrefix': 'Recent',
     'profile.recentGrowth.recentSuffix': 'items',
+    'profile.growthHistory.title': 'Growth history',
+    'profile.growthHistory.meta': 'Local archive · {{count}} entries',
     'profile.recentGrowth.empty':
       'No growth records yet. Play a Riichi round to start.',
     'profile.task.completedPrefix': 'Completed',

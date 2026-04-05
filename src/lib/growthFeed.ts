@@ -1,5 +1,7 @@
 export const GROWTH_FEED_STORAGE_KEY = 'game-hub-growth-feed';
-export const GROWTH_FEED_MAX_ITEMS = 20;
+
+/** 单设备 localStorage 可承受的长期成长流水上限（超出则丢弃最旧记录）。非「最近 N 条」语义。 */
+export const GROWTH_FEED_MAX_ITEMS = 2000;
 
 export type GrowthFeedItemType =
   | 'task-reward'
@@ -120,4 +122,9 @@ export function getRecentGrowthFeed(
     ? Math.max(1, Math.min(GROWTH_FEED_MAX_ITEMS, Math.floor(limit)))
     : GROWTH_FEED_MAX_ITEMS;
   return getStoredGrowthFeed().slice(0, safeLimit);
+}
+
+/** 档案页：返回本机已保存的全部成长流水（受 {@link GROWTH_FEED_MAX_ITEMS} 保护）。 */
+export function getFullGrowthFeed(): GrowthFeedItem[] {
+  return getRecentGrowthFeed(GROWTH_FEED_MAX_ITEMS);
 }

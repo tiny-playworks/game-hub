@@ -30,6 +30,8 @@ type Props = {
   withLocaleSwitcher?: boolean;
   compact?: boolean;
   className?: string;
+  /** 签到/领取后刷新首页大厅（成长、任务、主卡等） */
+  onHallRefresh?: () => void;
 };
 
 function LocaleSwitcher() {
@@ -96,6 +98,7 @@ export function QuickAccessPanel({
   withLocaleSwitcher = false,
   compact = false,
   className,
+  onHallRefresh,
 }: Props) {
   const { t, locale } = useLocale();
   const [profile, setProfile] = useState<PlayerProfile>(() =>
@@ -215,6 +218,7 @@ export function QuickAccessPanel({
     const result = checkinToday();
     setCheckinState(result.state);
     syncGrowthAndTitle();
+    onHallRefresh?.();
     if (result.ok) {
       setCheckinButtonFlashText(`+${result.awardedPoints}`);
       if (checkinFlashTimerRef.current) {
@@ -236,6 +240,7 @@ export function QuickAccessPanel({
     if (!result.ok) return;
     setCheckinState(result.state);
     syncGrowthAndTitle();
+    onHallRefresh?.();
     setCheckinFeedback(
       `${t('home.quick.checkin.feedback.week')}${result.awardedPoints}`,
     );
@@ -246,6 +251,7 @@ export function QuickAccessPanel({
     if (!result.ok) return;
     setCheckinState(result.state);
     syncGrowthAndTitle();
+    onHallRefresh?.();
     setCheckinFeedback(
       `${t('home.quick.checkin.feedback.month')}${result.awardedPoints}`,
     );

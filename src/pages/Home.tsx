@@ -1,5 +1,5 @@
 import { Compass, ScrollText, Sparkles, UserRound } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
 import { ContinuePlaySection } from '@/components/home/ContinuePlaySection';
@@ -95,7 +95,20 @@ const Home = () => {
     return items.slice(0, 3);
   }, [dailyTaskState.items]);
 
-  useEffect(() => {
+  const recentGrowthListPoints = useMemo(
+    () => recentFeed.reduce((sum, item) => sum + (item.points ?? 0), 0),
+    [recentFeed],
+  );
+
+  const recentGrowthCardMeta = useMemo(
+    () =>
+      t('home.recentGrowth.cardMeta')
+        .replace('{{count}}', String(recentFeed.length))
+        .replace('{{points}}', String(recentGrowthListPoints)),
+    [recentFeed.length, recentGrowthListPoints, t],
+  );
+
+  const refreshHallState = useCallback(() => {
     setDailyTaskState(ensureDailyTaskState());
     const nextGrowth = getGrowthOverview();
     setGrowthOverview(nextGrowth);
@@ -113,6 +126,10 @@ const Home = () => {
         : updatePlayerProfile({ activeTitle: nextTitleId });
     setPlayerProfile(syncedProfile);
   }, []);
+
+  useEffect(() => {
+    refreshHallState();
+  }, [refreshHallState]);
 
   const recentPlayedText = useMemo(() => {
     if (!recentMahjong) return '';
@@ -144,7 +161,10 @@ const Home = () => {
               {t('home.subtitle')}
             </p>
           </div>
-          <QuickAccessPanel withLocaleSwitcher />
+          <QuickAccessPanel
+            withLocaleSwitcher
+            onHallRefresh={refreshHallState}
+          />
         </div>
       </header>
 
@@ -210,8 +230,11 @@ const Home = () => {
               <p className="text-sm font-semibold text-slate-900">
                 {t('home.recentGrowth.title')}
               </p>
-              <span className="text-xs text-slate-500">
-                +{growthOverview.taskPoints}
+              <span
+                className="text-xs text-slate-500"
+                title={t('home.recentGrowth.cardMetaHint')}
+              >
+                {recentGrowthCardMeta}
               </span>
             </div>
             <div className="mt-4 space-y-3">

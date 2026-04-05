@@ -23,7 +23,7 @@ import {
 } from '@/lib/checkin';
 import { type DailyTaskState, ensureDailyTaskState } from '@/lib/dailyTasks';
 import { getGrowthOverview } from '@/lib/growth';
-import { type GrowthFeedItem, getRecentGrowthFeed } from '@/lib/growthFeed';
+import { type GrowthFeedItem, getFullGrowthFeed } from '@/lib/growthFeed';
 import {
   CHARACTER_DEFS,
   type CharacterDef,
@@ -159,7 +159,15 @@ const Profile = () => {
   const [characterState, setCharacterState] = useState<PlayerCharacterState>(
     () => syncPlayerCharacterUnlocks().state,
   );
-  const [recentFeed, setRecentFeed] = useState(() => getRecentGrowthFeed(6));
+  const [recentFeed, setRecentFeed] = useState(() => getFullGrowthFeed());
+  const growthHistoryMeta = useMemo(
+    () =>
+      t('profile.growthHistory.meta').replace(
+        '{{count}}',
+        String(recentFeed.length),
+      ),
+    [recentFeed.length, t],
+  );
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState('');
   const [checkinFeedback, setCheckinFeedback] = useState('');
@@ -187,7 +195,7 @@ const Profile = () => {
     setGrowthOverview(nextGrowth);
     setPlayerStats(nextStats);
     setCharacterState(nextCharacterState);
-    setRecentFeed(getRecentGrowthFeed(6));
+    setRecentFeed(getFullGrowthFeed());
     setProfile(syncedProfile);
     setNicknameDraft(syncedProfile.nickname);
   }, []);
@@ -714,11 +722,10 @@ const Profile = () => {
             <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-slate-900">
-                  {t('profile.recentGrowth.title')}
+                  {t('profile.growthHistory.title')}
                 </p>
                 <span className="text-xs text-slate-500">
-                  {t('profile.recentGrowth.recentPrefix')} {recentFeed.length}{' '}
-                  {t('profile.recentGrowth.recentSuffix')}
+                  {growthHistoryMeta}
                 </span>
               </div>
               <div className="mt-3 space-y-2">

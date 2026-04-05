@@ -10,6 +10,8 @@
 
 方向总览仍见 [player-meta-roadmap.md](player-meta-roadmap.md)；仓库级范围与索引见 [PLAN.md](PLAN.md)。本文合并了原「下一步方案」与执行级细则，作为**单一执行输入**。
 
+**延伸阅读**：成长流水、档案历史与大厅刷新的**计划—代码对照与数据边界**见 [growth-profile-plan-alignment.md](growth-profile-plan-alignment.md)。
+
 ---
 
 ## 速览
