@@ -38,6 +38,7 @@ export function useRiichiClaimActions(ctx: RiichiRuntimeContext) {
         timeBanks: nextTimeBanks,
         hands,
         discardPiles: piles,
+        currentPlayer: (player + 1) % 4,
         drawnTile: null,
         phase: 'claim',
         lastDiscard: tile,

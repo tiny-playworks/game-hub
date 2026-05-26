@@ -4,21 +4,11 @@ import { formatPoints, getSeatWind } from '../helpers';
 import type { RiichiGameState } from '../types';
 import { getTileColorClass, RiichiTileFace, TileBack } from './Tile';
 
-/** 对家与自家一致（横排）；上下两家宽高互换、牌竖排成一条（红框） */
-/** 与 .riichi-tile-discard 视觉尺度一致（约 26×37） */
-const HAND_TILE_W = 26;
-const HAND_TILE_H = 37;
-const MELD_TILE_W = 26;
-const MELD_TILE_H = 37;
-
-function slotSize(
-  seat: 1 | 2 | 3,
-  w: number,
-  h: number,
-): { width: number; height: number } {
-  if (seat === 2) return { width: w, height: h };
-  return { width: h, height: w }; // 下家、上家：宽高互换
-}
+const TOP_HAND_SLOT = { width: 22, height: 31 };
+const SIDE_HAND_SLOT = { width: 26, height: 18 };
+const TOP_TILE_BACK_CLASS = 'w-[22px] h-[31px]';
+const SIDE_TILE_BACK_CLASS = 'w-[18px] h-[26px]';
+const SIDE_VISIBLE_BACKS = 7;
 
 function tileRotation(seat: 1 | 2 | 3): number {
   if (seat === 2) return 0;
@@ -42,28 +32,41 @@ export function OpponentSeat({
 }: Props) {
   const rot = tileRotation(seat);
   const tileStyle = { transform: `rotate(${rot}deg)` };
-  const handSlot = slotSize(seat, HAND_TILE_W, HAND_TILE_H);
-  const meldSlot = slotSize(seat, MELD_TILE_W, MELD_TILE_H);
   const isVertical = seat !== 2;
+  const handSlot = isVertical ? SIDE_HAND_SLOT : TOP_HAND_SLOT;
+  const tileBackClassName = isVertical
+    ? SIDE_TILE_BACK_CLASS
+    : TOP_TILE_BACK_CLASS;
+  const visibleBacks = isVertical
+    ? Math.min(game.hands[seat].length, SIDE_VISIBLE_BACKS)
+    : game.hands[seat].length;
   return (
-    <div
+    <button
+      type="button"
       className={cn(
-        'rounded-lg px-2 py-1.5 flex flex-col items-center justify-center min-h-0 overflow-visible',
+        'riichi-opponent-seat rounded-lg px-2 py-1.5 flex flex-col items-center justify-center min-h-0 overflow-visible',
         isVertical && 'px-1.5 md:px-2',
-        isCurrentTurn && 'bg-[#ffc107]/10 border border-[#ffc107]/40',
+        isCurrentTurn && 'riichi-opponent-seat-active border',
       )}
+      aria-label={`${SEAT_NAMES[seat]} ${WIND_NAMES[getSeatWind(game.roundWind, seat, game.dealer)]} ${game.hands[seat].length}张 ${formatPoints(game.scores[seat])} ${timerLabel}`}
     >
-      <p className="text-[10px] font-semibold text-[#f1faee] leading-tight">
-        {SEAT_NAMES[seat]} (
-        {WIND_NAMES[getSeatWind(game.roundWind, seat, game.dealer)]})
-      </p>
-      <p className="text-[10px] text-[#ffd700]">{game.hands[seat].length} 张</p>
-      <p className="text-[10px] text-amber-200">
-        {formatPoints(game.scores[seat])}
-      </p>
-      <p className="text-[10px] text-[#a8dadc]">
-        <span className={timerClassName}>{timerLabel}</span>
-      </p>
+      <div className="riichi-opponent-chip">
+        <span className="font-semibold">{SEAT_NAMES[seat]}</span>
+        <span className="opacity-70">
+          {WIND_NAMES[getSeatWind(game.roundWind, seat, game.dealer)]}
+        </span>
+      </div>
+      <div className="riichi-opponent-float" role="tooltip">
+        <p className="font-semibold">
+          {SEAT_NAMES[seat]} ·{' '}
+          {WIND_NAMES[getSeatWind(game.roundWind, seat, game.dealer)]}
+        </p>
+        <p>{game.hands[seat].length} 张</p>
+        <p>{formatPoints(game.scores[seat])}</p>
+        <p>
+          <span className={timerClassName}>{timerLabel}</span>
+        </p>
+      </div>
       {game.hands[seat].length > 0 && (
         <div
           className={cn(
@@ -71,14 +74,14 @@ export function OpponentSeat({
             isVertical ? 'flex-col items-center' : 'flex-wrap',
           )}
         >
-          {game.hands[seat].map((_, i) => (
+          {Array.from({ length: visibleBacks }, (_, i) => (
             <span
               key={i}
               className="inline-flex items-center justify-center flex-shrink-0"
               style={{ width: handSlot.width, height: handSlot.height }}
             >
               <span style={tileStyle} className="inline-flex">
-                <TileBack className="w-[26px] h-[37px] text-[5px]" />
+                <TileBack className={tileBackClassName} />
               </span>
             </span>
           ))}
@@ -103,7 +106,7 @@ export function OpponentSeat({
                 <span
                   key={j}
                   className="inline-flex items-center justify-center rounded font-bold text-[10px] flex-shrink-0"
-                  style={{ width: meldSlot.width, height: meldSlot.height }}
+                  style={{ width: handSlot.width, height: handSlot.height }}
                 >
                   <span
                     style={tileStyle}
@@ -117,6 +120,6 @@ export function OpponentSeat({
           ))}
         </div>
       )}
-    </div>
+    </button>
   );
 }

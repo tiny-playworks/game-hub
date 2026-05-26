@@ -10,7 +10,7 @@ export function GameInfoBar({ game }: Props) {
   return (
     <>
       <div
-        className="mb-3 rounded-lg border px-3 py-2 text-xs opacity-90"
+        className="riichi-score-strip mb-1.5 rounded-lg border px-2.5 py-1.5 text-xs opacity-90"
         style={{
           borderColor:
             'color-mix(in srgb, var(--riichi-border) 30%, transparent)',

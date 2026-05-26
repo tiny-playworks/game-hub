@@ -4,7 +4,7 @@
   "description": "小游戏与日本立直麻将合集：日麻、2048、贪吃蛇、俄罗斯方块等（纯前端）",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#18181b",
+  "background_color": "#102218",
+  "theme_color": "#102218",
   "icons": []
 }
