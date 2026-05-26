@@ -129,6 +129,7 @@ describe('日麻 shared/timeoutTransitions', () => {
     );
     expect(next.currentPlayer).toBe(1);
     expect(next.phase).toBe('claim');
+    expect(next.currentPlayer).toBe(1);
     expect(next.lastDiscard).toBe(tile);
     expect(next.lastDiscardFrom).toBe(0);
     expect(next.drawnTile).toBeNull();

@@ -33,7 +33,7 @@ type Props = {
 export function CenterArea({ game }: Props) {
   return (
     <div
-      className="rounded-2xl border shadow-inner overflow-hidden min-h-0 grid gap-0.5 p-1.5"
+      className="riichi-center-board rounded-2xl border shadow-inner overflow-hidden min-h-0 grid gap-0.5 p-1.5"
       style={{
         gridTemplateAreas: `
           "top    top    top"
@@ -44,16 +44,13 @@ export function CenterArea({ game }: Props) {
         gridTemplateColumns: 'minmax(0,1fr) auto minmax(0,1fr)',
         borderColor:
           'color-mix(in srgb, var(--riichi-border) 40%, transparent)',
-        backgroundColor: 'var(--riichi-table-inner)',
       }}
     >
       {/* 中心：牌山 + 宝牌 */}
       <div
-        className="rounded-xl border flex flex-col items-center justify-center gap-1 p-2 min-w-[80px] min-h-[64px]"
+        className="riichi-dora-well rounded-xl border flex flex-col items-center justify-center gap-1 p-2 min-w-[80px] min-h-[64px]"
         style={{
           gridArea: 'center',
-          backgroundColor:
-            'color-mix(in srgb, var(--riichi-bg-to) 90%, transparent)',
           borderColor:
             'color-mix(in srgb, var(--riichi-border) 20%, transparent)',
         }}
@@ -88,7 +85,7 @@ export function CenterArea({ game }: Props) {
         return (
           <div
             key={seat}
-            className="rounded-lg border min-h-0 overflow-hidden flex flex-wrap gap-0.5 p-1"
+            className="riichi-discard-zone rounded-lg border min-h-0 overflow-hidden flex flex-wrap gap-0.5 p-1"
             style={{
               gridArea,
               flexDirection: flexDir,
@@ -97,9 +94,6 @@ export function CenterArea({ game }: Props) {
               borderColor: isSelf
                 ? 'color-mix(in srgb, var(--riichi-text-muted) 30%, transparent)'
                 : 'color-mix(in srgb, var(--riichi-border) 20%, transparent)',
-              backgroundColor: isSelf
-                ? 'color-mix(in srgb, var(--riichi-table) 25%, transparent)'
-                : 'color-mix(in srgb, var(--riichi-table-inner) 60%, transparent)',
             }}
           >
             <span

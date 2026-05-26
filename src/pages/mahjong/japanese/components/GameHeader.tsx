@@ -45,14 +45,7 @@ export function GameHeader({
   const roundText = `${WIND_NAMES[game.roundWind]}${game.roundNumber}局 ${WIND_NAMES[game.roundWind]}${game.honba}场 · 庄 ${SEAT_NAMES[game.dealer]}`;
 
   return (
-    <header
-      className="flex items-center justify-between border-b px-3 py-2 md:px-4 md:py-3 gap-3"
-      style={{
-        backgroundColor: 'var(--riichi-bg)',
-        borderColor: 'var(--riichi-table)',
-        color: 'var(--riichi-text)',
-      }}
-    >
+    <header className="riichi-app-header flex items-center justify-between border-b px-3 py-2 gap-2">
       <div className="flex items-center gap-2 md:gap-3 min-w-0">
         <Link to="/" className="opacity-80 hover:opacity-100 text-sm shrink-0">
           ← {homeLabel}

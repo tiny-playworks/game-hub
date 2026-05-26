@@ -26,6 +26,12 @@ const withRouter = (children: React.ReactElement) => (
   </MemoryRouter>
 );
 
+const withRouterAt = (children: React.ReactElement, initialEntry: string) => (
+  <MemoryRouter initialEntries={[initialEntry]}>
+    <LocaleProvider>{children}</LocaleProvider>
+  </MemoryRouter>
+);
+
 test('成就页：渲染标题与成就列表', () => {
   render(
     <MemoryRouter>
@@ -128,6 +134,16 @@ test('日本立直麻将：渲染标题与开始游戏', () => {
   render(withRouter(<GameMahjongJapanese />));
   expect(screen.getByText('日本立直麻将')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '开始游戏' })).toBeInTheDocument();
+});
+
+test('日本立直麻将：自动开局后进入手机游戏舞台', async () => {
+  render(
+    withRouterAt(<GameMahjongJapanese />, '/game/mahjong-japanese?start=1'),
+  );
+  expect(await screen.findByTestId('riichi-mobile-stage')).toHaveAttribute(
+    'aria-label',
+    '日本立直麻将游戏舞台',
+  );
 });
 
 test('斗地主：渲染说明与重开按钮', () => {
