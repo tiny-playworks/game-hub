@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 import { SEAT_NAMES, TILE_DISCARD, WIND_NAMES } from '../constants';
-import { getSeatWind } from '../helpers';
+import { getSeatWind, toTileKeyedItems } from '../helpers';
 import type { RiichiGameState } from '../types';
 import { getTileColorClass, RiichiTileFace } from './Tile';
 
@@ -63,15 +63,17 @@ export function CenterArea({ game }: Props) {
         </p>
         {game.doraIndicators.length > 0 && (
           <div className="flex flex-wrap justify-center gap-0.5">
-            {game.doraIndicators.map((ind, i) => (
-              <span
-                key={i}
-                className={cn(TILE_DISCARD, getTileColorClass(ind))}
-                title="宝牌"
-              >
-                <RiichiTileFace tile={ind} />
-              </span>
-            ))}
+            {toTileKeyedItems(game.doraIndicators, 'center-dora').map(
+              ({ tile, key }) => (
+                <span
+                  key={key}
+                  className={cn(TILE_DISCARD, getTileColorClass(tile))}
+                  title="宝牌"
+                >
+                  <RiichiTileFace tile={tile} />
+                </span>
+              ),
+            )}
           </div>
         )}
       </div>
@@ -80,7 +82,10 @@ export function CenterArea({ game }: Props) {
       {([2, 1, 0, 3] as const).map((seat) => {
         const rot = DISCARD_ROTATION[seat];
         const { gridArea, flexDir, justify } = DISCARD_LAYOUT[seat];
-        const tiles = game.discardPiles[seat].slice(-DISCARD_SLICE);
+        const tiles = toTileKeyedItems(
+          game.discardPiles[seat],
+          `discard-${seat}`,
+        ).slice(-DISCARD_SLICE);
         const isSelf = seat === 0;
         return (
           <div
@@ -117,13 +122,13 @@ export function CenterArea({ game }: Props) {
                 justifyContent: 'flex-end',
               }}
             >
-              {tiles.map((t, i) => (
+              {tiles.map(({ tile, key }) => (
                 <span
-                  key={`${seat}-${i}`}
-                  className={cn(TILE_DISCARD, getTileColorClass(t))}
+                  key={key}
+                  className={cn(TILE_DISCARD, getTileColorClass(tile))}
                   style={{ transform: `rotate(${rot}deg)` }}
                 >
-                  <RiichiTileFace tile={t} />
+                  <RiichiTileFace tile={tile} />
                 </span>
               ))}
             </div>

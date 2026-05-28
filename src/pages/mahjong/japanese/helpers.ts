@@ -16,6 +16,34 @@ import type { PaymentDetail } from '@/lib/riichiSettlement';
 import { computeWaitingTilesRiichi } from '@/lib/riichiWaitingTiles';
 import type { RiichiGameState, RiichiMeld } from './types';
 
+function getOccurrenceKey(baseKey: string, seen: Map<string, number>): string {
+  const occurrence = (seen.get(baseKey) ?? 0) + 1;
+  seen.set(baseKey, occurrence);
+  return `${baseKey}-${occurrence}`;
+}
+
+export function toTileKeyedItems(
+  tiles: readonly number[],
+  scope: string,
+): { tile: number; key: string }[] {
+  const seen = new Map<string, number>();
+  return tiles.map((tile) => {
+    const baseKey = `${scope}-${tile}`;
+    return { tile, key: getOccurrenceKey(baseKey, seen) };
+  });
+}
+
+export function toMeldKeyedItems(
+  melds: readonly RiichiMeld[],
+  scope: string,
+): { meld: RiichiMeld; key: string }[] {
+  const seen = new Map<string, number>();
+  return melds.map((meld) => {
+    const baseKey = `${scope}-${meld.type}-${meld.fromPlayer ?? 'self'}-${meld.tiles.join('.')}`;
+    return { meld, key: getOccurrenceKey(baseKey, seen) };
+  });
+}
+
 export function getSeatWind(
   roundWind: number,
   seat: number,

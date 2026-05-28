@@ -1,6 +1,11 @@
 import { cn } from '@/lib/utils';
 import { SEAT_NAMES, TILE_DISCARD, WIND_NAMES } from '../constants';
-import { formatPoints, getSeatWind } from '../helpers';
+import {
+  formatPoints,
+  getSeatWind,
+  toMeldKeyedItems,
+  toTileKeyedItems,
+} from '../helpers';
 import type { RiichiGameState } from '../types';
 import { getTileColorClass, RiichiTileFace, TileBack } from './Tile';
 
@@ -94,30 +99,34 @@ export function OpponentSeat({
             isVertical ? 'flex-col items-center' : 'flex-wrap',
           )}
         >
-          {game.melds[seat].map((m, i) => (
-            <span
-              key={i}
-              className={cn(
-                'flex gap-0.5',
-                isVertical && 'flex-col items-center',
-              )}
-            >
-              {m.tiles.map((t, j) => (
-                <span
-                  key={j}
-                  className="inline-flex items-center justify-center rounded font-bold text-[10px] flex-shrink-0"
-                  style={{ width: handSlot.width, height: handSlot.height }}
-                >
-                  <span
-                    style={tileStyle}
-                    className={cn(TILE_DISCARD, getTileColorClass(t))}
-                  >
-                    <RiichiTileFace tile={t} />
-                  </span>
-                </span>
-              ))}
-            </span>
-          ))}
+          {toMeldKeyedItems(game.melds[seat], `opponent-${seat}-meld`).map(
+            ({ meld: m, key }) => (
+              <span
+                key={key}
+                className={cn(
+                  'flex gap-0.5',
+                  isVertical && 'flex-col items-center',
+                )}
+              >
+                {toTileKeyedItems(m.tiles, `${key}-tile`).map(
+                  ({ tile, key }) => (
+                    <span
+                      key={key}
+                      className="inline-flex items-center justify-center rounded font-bold text-[10px] flex-shrink-0"
+                      style={{ width: handSlot.width, height: handSlot.height }}
+                    >
+                      <span
+                        style={tileStyle}
+                        className={cn(TILE_DISCARD, getTileColorClass(tile))}
+                      >
+                        <RiichiTileFace tile={tile} />
+                      </span>
+                    </span>
+                  ),
+                )}
+              </span>
+            ),
+          )}
         </div>
       )}
     </button>
