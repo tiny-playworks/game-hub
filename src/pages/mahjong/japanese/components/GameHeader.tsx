@@ -8,7 +8,7 @@ import {
   SEAT_NAMES,
   WIND_NAMES,
 } from '../constants';
-import { formatPoints } from '../helpers';
+import { formatPoints, toTileKeyedItems } from '../helpers';
 import type { RiichiGameState } from '../types';
 import { getTileColorClass, RiichiTileFace } from './Tile';
 
@@ -73,17 +73,19 @@ export function GameHeader({
         <QuickAccessPanel compact className="hidden md:flex" />
         <div className="hidden md:flex items-center gap-1">
           <span className="text-[10px] opacity-80">宝牌</span>
-          {game.doraIndicators.map((ind, i) => (
-            <span
-              key={i}
-              className={cn(
-                'w-8 h-11 rounded-[4px] border-2 bg-[#fff9e6] flex items-center justify-center font-black text-xs shrink-0',
-                getTileColorClass(ind),
-              )}
-            >
-              <RiichiTileFace tile={ind} />
-            </span>
-          ))}
+          {toTileKeyedItems(game.doraIndicators, 'header-dora').map(
+            ({ tile, key }) => (
+              <span
+                key={key}
+                className={cn(
+                  'w-8 h-11 rounded-[4px] border-2 bg-[#fff9e6] flex items-center justify-center font-black text-xs shrink-0',
+                  getTileColorClass(tile),
+                )}
+              >
+                <RiichiTileFace tile={tile} />
+              </span>
+            ),
+          )}
         </div>
         <button
           type="button"
