@@ -297,6 +297,9 @@ const messages: Record<Locale, Record<string, string>> = {
     'game.tank.description': '俯视角坦克，保护黄色基地，消灭所有敌方坦克。',
     'game.tetris.name': '俄罗斯方块',
     'game.tetris.description': '经典下落方块，消行得分，等级越高下落越快。',
+    'game.rubiks.name': '3D 魔方',
+    'game.rubiks.description':
+      '自然手势转动真实三阶魔方，支持打乱、复原与自由观察。',
     'game.go.name': '围棋',
     'game.go.description': '9×9 入门，黑白对弈，围地吃子。',
     'game.xiangqi.name': '中国象棋（开发中）',
@@ -706,6 +709,9 @@ const messages: Record<Locale, Record<string, string>> = {
     'game.tank.description': 'Protect the base and destroy enemy tanks.',
     'game.tetris.name': 'Tetris',
     'game.tetris.description': 'Clear lines with falling blocks.',
+    'game.rubiks.name': '3D Rubik’s Cube',
+    'game.rubiks.description':
+      'Turn a realistic 3×3 cube with natural gestures, scramble it, reset it, and inspect it freely.',
     'game.go.name': 'Go',
     'game.go.description': '9×9 beginner; black vs white, surround territory.',
     'game.xiangqi.name': 'Xiangqi (Coming soon)',
