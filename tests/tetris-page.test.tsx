@@ -23,6 +23,10 @@ test('3D 俄罗斯方块页面显示 DOM HUD 并同步渲染引擎', () => {
   expect(screen.getByText(/消行:/)).toBeInTheDocument();
   expect(screen.getByText(/最高纪录:/)).toBeInTheDocument();
   expect(screen.getByText('下一个方块')).toBeInTheDocument();
+  expect(screen.getByText(/技能能量:/)).toBeInTheDocument();
+  expect(screen.getByText(/暂存:/)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '释放技能' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '切换主题' })).toBeInTheDocument();
   expect(engine.sync).toHaveBeenCalled();
 
   fireEvent.click(screen.getByRole('button', { name: '按空格或点击舞台开始' }));
@@ -53,6 +57,9 @@ test('3D 俄罗斯方块保留空格开始与 P 暂停键盘操作', () => {
   ).toBeInTheDocument();
   fireEvent.keyDown(window, { code: 'Space' });
   expect(screen.getByText('游戏进行中')).toBeInTheDocument();
+  fireEvent.keyDown(window, { code: 'ShiftLeft' });
+  expect(screen.getByText(/暂存:/)).toBeInTheDocument();
+  fireEvent.keyDown(window, { code: 'KeyE' });
   fireEvent.keyDown(window, { code: 'KeyP' });
   expect(screen.getByText('已暂停')).toBeInTheDocument();
 });

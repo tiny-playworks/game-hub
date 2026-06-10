@@ -9,11 +9,14 @@ import {
   DirectionalLight,
   Float32BufferAttribute,
   Group,
+  LineBasicMaterial,
+  LineSegments,
   Mesh,
   MeshBasicMaterial,
-  PCFShadowMap,
-  PerspectiveCamera,
+  OrthographicCamera,
+  PCFSoftShadowMap,
   PlaneGeometry,
+  PointLight,
   Points,
   PointsMaterial,
   Scene,
@@ -27,6 +30,7 @@ import {
   getPieceCells,
   ROWS,
   type TetrisEvent,
+  type TetrisSpecial,
   type TetrisState,
 } from '@/lib/tetris';
 import {
@@ -37,6 +41,7 @@ import {
 
 export interface TetrisEngineController {
   dispose(): void;
+  setTheme?(theme: 'glass' | 'neon'): void;
   sync(state: TetrisState, events?: TetrisEvent[]): void;
 }
 
@@ -58,7 +63,7 @@ type BlockMesh = Mesh<RoundedBoxGeometry>;
 
 export class Tetris3DEngine implements TetrisEngineController {
   private readonly scene = new Scene();
-  private readonly camera = new PerspectiveCamera(34, 1, 0.1, 120);
+  private readonly camera = new OrthographicCamera(-8, 8, 12, -12, 0.1, 120);
   private readonly renderer = new WebGLRenderer({
     antialias: true,
     alpha: false,
@@ -80,6 +85,14 @@ export class Tetris3DEngine implements TetrisEngineController {
     new BoxGeometry(FRAME_THICKNESS, BOARD_HEIGHT + 0.9, 0.42),
     new BoxGeometry(BOARD_WIDTH + 1.0, FRAME_THICKNESS, 0.42),
   ];
+  private readonly gridGeometry = this.createGridGeometry();
+  private readonly gridMaterial = new LineBasicMaterial({
+    color: '#38bdf8',
+    transparent: true,
+    opacity: 0.18,
+    blending: AdditiveBlending,
+  });
+  private readonly backgroundParticles = this.createBackgroundParticles();
   private readonly materials: TetrisMaterialLibrary =
     createTetrisMaterialLibrary();
   private readonly boardGroup = new Group();
@@ -145,6 +158,10 @@ export class Tetris3DEngine implements TetrisEngineController {
     this.floorGeometry.dispose();
     for (const geometry of this.frameGeometries) geometry.dispose();
     this.lineGlowMaterial.dispose();
+    this.gridGeometry.dispose();
+    this.gridMaterial.dispose();
+    this.backgroundParticles.geometry.dispose();
+    (this.backgroundParticles.material as PointsMaterial).dispose();
     disposeTetrisMaterialLibrary(this.materials);
     this.renderer.dispose();
     this.renderer.domElement.remove();
@@ -154,7 +171,7 @@ export class Tetris3DEngine implements TetrisEngineController {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setClearColor(new Color('#020617'));
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = PCFShadowMap;
+    this.renderer.shadowMap.type = PCFSoftShadowMap;
     this.renderer.toneMapping = ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.08;
     this.renderer.domElement.className = 'tetris-canvas';
@@ -164,12 +181,12 @@ export class Tetris3DEngine implements TetrisEngineController {
 
   private configureScene(): void {
     this.scene.background = new Color('#020617');
-    this.camera.position.set(6.2, 6.8, 24);
+    this.camera.position.set(0, -18, 18);
     this.camera.lookAt(0, 0, 0);
 
-    const ambient = new AmbientLight('#dbeafe', 1.35);
-    const keyLight = new DirectionalLight('#f8fafc', 2.25);
-    keyLight.position.set(5.5, 9, 13);
+    const ambient = new AmbientLight('#dbeafe', 1.2);
+    const keyLight = new DirectionalLight('#f8fafc', 2.15);
+    keyLight.position.set(4.8, -8, 14);
     keyLight.castShadow = true;
     keyLight.shadow.mapSize.set(2048, 2048);
     keyLight.shadow.camera.left = -9;
@@ -180,10 +197,12 @@ export class Tetris3DEngine implements TetrisEngineController {
     keyLight.shadow.camera.far = 42;
     keyLight.shadow.bias = -0.00028;
 
-    const fillLight = new DirectionalLight('#67e8f9', 0.9);
-    fillLight.position.set(-8, 3.5, 10);
+    const fillLight = new DirectionalLight('#67e8f9', 0.95);
+    fillLight.position.set(-7, 4, 9);
+    const energyLight = new PointLight('#22d3ee', 1.4, 26, 2);
+    energyLight.position.set(0, -3.5, 6);
 
-    this.scene.add(ambient, keyLight, keyLight.target, fillLight);
+    this.scene.add(ambient, keyLight, keyLight.target, fillLight, energyLight);
   }
 
   private buildArena(): void {
@@ -207,6 +226,56 @@ export class Tetris3DEngine implements TetrisEngineController {
       frame.receiveShadow = true;
       this.arenaGroup.add(frame);
     }
+
+    const grid = new LineSegments(this.gridGeometry, this.gridMaterial);
+    grid.position.z = -0.36;
+    this.arenaGroup.add(grid, this.backgroundParticles);
+  }
+
+  private createGridGeometry(): BufferGeometry {
+    const points: number[] = [];
+    const left = -BOARD_WIDTH / 2;
+    const right = BOARD_WIDTH / 2;
+    const top = BOARD_HEIGHT / 2;
+    const bottom = -BOARD_HEIGHT / 2;
+
+    for (let col = 0; col <= COLS; col++) {
+      const x = left + col * CELL_STEP;
+      points.push(x, bottom, 0, x, top, 0);
+    }
+    for (let row = 0; row <= ROWS; row++) {
+      const y = top - row * CELL_STEP;
+      points.push(left, y, 0, right, y, 0);
+    }
+
+    const geometry = new BufferGeometry();
+    geometry.setAttribute('position', new Float32BufferAttribute(points, 3));
+    return geometry;
+  }
+
+  private createBackgroundParticles(): Points {
+    const count = 120;
+    const positions: number[] = [];
+    for (let i = 0; i < count; i++) {
+      positions.push(
+        (Math.random() - 0.5) * (BOARD_WIDTH + 8),
+        (Math.random() - 0.5) * (BOARD_HEIGHT + 8),
+        -1.8 - Math.random() * 4,
+      );
+    }
+    const geometry = new BufferGeometry();
+    geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
+    return new Points(
+      geometry,
+      new PointsMaterial({
+        color: '#38bdf8',
+        size: 0.045,
+        transparent: true,
+        opacity: 0.38,
+        blending: AdditiveBlending,
+        depthWrite: false,
+      }),
+    );
   }
 
   private rebuildBoard(state: TetrisState): void {
@@ -215,7 +284,7 @@ export class Tetris3DEngine implements TetrisEngineController {
       for (let col = 0; col < COLS; col++) {
         const value = state.board[row][col];
         if (!value) continue;
-        const block = this.createBlock(value, false);
+        const block = this.createBlock(value, false, null);
         block.position.copy(gridToWorld(col, row, BOARD_Z));
         this.boardGroup.add(block);
       }
@@ -233,7 +302,11 @@ export class Tetris3DEngine implements TetrisEngineController {
       state.py,
     )) {
       if (y < 0) continue;
-      const block = this.createBlock(state.piece + 1, false);
+      const block = this.createBlock(
+        state.piece + 1,
+        false,
+        state.activeSpecial,
+      );
       block.position.copy(gridToWorld(x, y, ACTIVE_Z));
       this.activeGroup.add(block);
     }
@@ -251,17 +324,30 @@ export class Tetris3DEngine implements TetrisEngineController {
       ghostY,
     )) {
       if (y < 0) continue;
-      const block = this.createBlock(1, true);
+      const block = this.createBlock(1, true, null);
       block.position.copy(gridToWorld(x, y, GHOST_Z));
       block.scale.setScalar(0.96);
       this.ghostGroup.add(block);
     }
   }
 
-  private createBlock(colorIndex: number, ghost: boolean): BlockMesh {
+  setTheme(theme: 'glass' | 'neon'): void {
+    const neon = theme === 'neon';
+    this.scene.background = new Color(neon ? '#050314' : '#020617');
+    this.gridMaterial.color.set(neon ? '#a78bfa' : '#38bdf8');
+    this.gridMaterial.opacity = neon ? 0.26 : 0.18;
+  }
+
+  private createBlock(
+    colorIndex: number,
+    ghost: boolean,
+    special: TetrisSpecial | null,
+  ): BlockMesh {
     const material = ghost
       ? this.materials.ghost
-      : (this.materials.blocks[colorIndex - 1] ?? this.materials.blocks[0]);
+      : special
+        ? this.materials.specials[special]
+        : (this.materials.blocks[colorIndex - 1] ?? this.materials.blocks[0]);
     const block = new Mesh(this.blockGeometry, material);
     block.castShadow = !ghost;
     block.receiveShadow = true;
@@ -503,8 +589,14 @@ export class Tetris3DEngine implements TetrisEngineController {
   private readonly resize = (): void => {
     const width = Math.max(1, this.host.clientWidth);
     const height = Math.max(1, this.host.clientHeight);
-    this.camera.aspect = width / height;
-    this.camera.position.z = width < 720 ? 28 : 24;
+    const aspect = width / height;
+    const verticalSize = BOARD_HEIGHT + 4.2;
+    const horizontalSize = verticalSize * aspect;
+    this.camera.left = -horizontalSize / 2;
+    this.camera.right = horizontalSize / 2;
+    this.camera.top = verticalSize / 2;
+    this.camera.bottom = -verticalSize / 2;
+    this.camera.zoom = width < 720 ? 0.86 : 1;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height, false);
   };
@@ -514,15 +606,16 @@ export class Tetris3DEngine implements TetrisEngineController {
     this.tweens.update(time);
     this.updateParticles(this.lastRenderTime ? time - this.lastRenderTime : 16);
     this.lastRenderTime = time;
+    this.backgroundParticles.rotation.z = Math.sin(time * 0.00018) * 0.04;
 
     if (this.shake > 0.001) {
-      this.camera.position.x = 6.2 + Math.sin(time * 0.05) * this.shake;
-      this.camera.position.y = 6.8 + Math.cos(time * 0.045) * this.shake;
+      this.camera.position.x = Math.sin(time * 0.05) * this.shake;
+      this.camera.position.y = -18 + Math.cos(time * 0.045) * this.shake;
       this.shake *= 0.86;
       this.camera.lookAt(0, 0, 0);
     } else {
-      this.camera.position.x = 6.2;
-      this.camera.position.y = 6.8;
+      this.camera.position.x = 0;
+      this.camera.position.y = -18;
       this.camera.lookAt(0, 0, 0);
     }
 

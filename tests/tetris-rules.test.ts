@@ -135,3 +135,128 @@ test('生成位置被占用时游戏结束', () => {
   expect(result.state.status).toBe('over');
   expect(result.events.some((event) => event.type === 'game_over')).toBe(true);
 });
+
+test('暂存方块只能在每个落块周期使用一次', () => {
+  let state = createInitialTetrisState(rngSequence(0, 0.2, 0.28));
+  state = applyTetrisAction(state, { type: 'start' }).state;
+
+  const held = applyTetrisAction(state, {
+    type: 'hold',
+    rng: rngSequence(0.42),
+  }).state;
+  expect(held.heldPiece).toBe(0);
+  expect(held.piece).toBe(1);
+  expect(held.holdUsed).toBe(true);
+
+  const ignored = applyTetrisAction(held, {
+    type: 'hold',
+    rng: rngSequence(0.56),
+  }).state;
+  expect(ignored).toEqual(held);
+});
+
+test('技能槽满后释放主动技能清除底部一行', () => {
+  const state = createInitialTetrisState(rngSequence(0, 0.14));
+  state.status = 'playing';
+  state.skillEnergy = state.skillMax;
+  state.board[ROWS - 1] = Array(COLS).fill(3);
+  state.board[ROWS - 2][0] = 4;
+
+  const result = applyTetrisAction(state, { type: 'useSkill' });
+
+  expect(result.state.skillEnergy).toBe(0);
+  expect(result.state.board[ROWS - 1][0]).toBe(4);
+  expect(result.state.lines).toBe(1);
+  expect(result.events).toContainEqual({
+    type: 'skill_used',
+    skill: 'clear_bottom',
+    rows: [ROWS - 1],
+  });
+});
+
+test('消行会获得技能能量并触发局内强化选择', () => {
+  const state = createInitialTetrisState(rngSequence(0, 0.14, 0.28));
+  state.status = 'playing';
+  state.lines = 8;
+  state.px = 3;
+  state.rot = 1;
+  state.py = ROWS - 2;
+  for (let r = ROWS - 2; r < ROWS; r++) {
+    state.board[r] = Array(COLS).fill(7);
+    state.board[r][5] = 0;
+  }
+
+  const result = applyTetrisAction(state, { type: 'hardDrop' });
+
+  expect(result.state.lines).toBe(10);
+  expect(result.state.skillEnergy).toBe(50);
+  expect(result.state.pendingUpgradeChoices).toHaveLength(3);
+  expect(
+    result.events.some((event) => event.type === 'upgrade_choices_ready'),
+  ).toBe(true);
+});
+
+test('选择强化会修改局内能力并关闭三选一面板', () => {
+  const state = createInitialTetrisState(rngSequence(0, 0.14));
+  state.status = 'playing';
+  state.pendingUpgradeChoices = ['score_boost', 'slow_fall', 'skill_boost'];
+
+  const result = applyTetrisAction(state, {
+    type: 'chooseUpgrade',
+    upgrade: 'score_boost',
+  });
+
+  expect(result.state.scoreMultiplier).toBe(1.2);
+  expect(result.state.pendingUpgradeChoices).toEqual([]);
+  expect(result.events).toContainEqual({
+    type: 'upgrade_selected',
+    upgrade: 'score_boost',
+  });
+});
+
+test('炸弹块落地后清除周围 3×3 区域', () => {
+  const state = createInitialTetrisState(rngSequence(1, 0.14, 0.28));
+  state.status = 'playing';
+  state.activeSpecial = 'bomb';
+  state.px = 4;
+  state.py = 10;
+  for (let r = 10; r <= 12; r++) {
+    for (let c = 4; c <= 6; c++) state.board[r][c] = 6;
+  }
+
+  const result = applyTetrisAction(state, { type: 'hardDrop' });
+
+  expect(result.state.board[ROWS - 1][4]).toBe(0);
+  expect(
+    result.events.some((event) => event.type === 'special_triggered'),
+  ).toBe(true);
+});
+
+test('冰冻块落地后临时放慢下落速度', () => {
+  const state = createInitialTetrisState(rngSequence(1, 0.14, 0.28));
+  state.status = 'playing';
+  state.activeSpecial = 'ice';
+
+  const result = applyTetrisAction(state, { type: 'hardDrop' });
+
+  expect(result.state.slowTicks).toBeGreaterThan(0);
+  expect(result.state.dropInterval).toBeGreaterThan(44);
+});
+
+test('万能块落地后会填补锁定列的最低空位', () => {
+  const state = createInitialTetrisState(rngSequence(0, 0.14, 0.28));
+  state.status = 'playing';
+  state.activeSpecial = 'wildcard';
+  state.rot = 1;
+  state.px = 3;
+  state.py = ROWS - 4;
+  state.board[ROWS - 1] = Array(COLS).fill(2);
+  state.board[ROWS - 1][5] = 0;
+
+  const result = applyTetrisAction(state, { type: 'hardDrop' });
+
+  expect(result.state.board[ROWS - 1][5]).not.toBe(0);
+  expect(
+    result.events.some((event) => event.type === 'special_triggered'),
+  ).toBe(true);
+});

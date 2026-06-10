@@ -10,6 +10,16 @@
   color: #e5f3ff;
 }
 
+.tetris-theme-neon {
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(168, 85, 247, 0.22),
+      transparent 34rem
+    ),
+    linear-gradient(135deg, #050314 0%, #111827 48%, #020617 100%);
+}
+
 .tetris-toolbar {
   display: flex;
   align-items: center;
@@ -121,6 +131,28 @@
   font-weight: 700;
 }
 
+.tetris-skill-card {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.tetris-energy-bar {
+  height: 0.7rem;
+  overflow: hidden;
+  border: 1px solid rgba(125, 211, 252, 0.35);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.tetris-energy-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #22d3ee, #a78bfa, #facc15);
+  box-shadow: 0 0 1rem rgba(34, 211, 238, 0.72);
+  transition: width 180ms ease;
+}
+
 .tetris-next-grid {
   display: grid;
   width: 6.5rem;
@@ -136,6 +168,68 @@
 
 .tetris-next-cell.is-filled {
   box-shadow: inset 0 0.18rem 0.3rem rgba(255, 255, 255, 0.32);
+}
+
+.tetris-upgrade-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(12px);
+}
+
+.tetris-upgrade-panel {
+  width: min(42rem, calc(100vw - 2rem));
+  border: 1px solid rgba(125, 211, 252, 0.32);
+  border-radius: 1.5rem;
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(34, 211, 238, 0.18),
+      transparent 20rem
+    ),
+    rgba(15, 23, 42, 0.94);
+  padding: 1.25rem;
+  box-shadow: 0 2rem 6rem rgba(0, 0, 0, 0.56);
+}
+
+.tetris-upgrade-panel h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.tetris-upgrade-panel p {
+  margin: 0.45rem 0 1rem;
+  color: #94a3b8;
+}
+
+.tetris-upgrade-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.tetris-upgrade-options button {
+  display: grid;
+  gap: 0.4rem;
+  border: 1px solid rgba(125, 211, 252, 0.28);
+  border-radius: 1rem;
+  background: rgba(8, 17, 31, 0.86);
+  padding: 1rem;
+  color: #e0f2fe;
+  text-align: left;
+}
+
+.tetris-upgrade-options button:hover {
+  border-color: rgba(34, 211, 238, 0.72);
+  box-shadow: 0 0 1.4rem rgba(34, 211, 238, 0.22);
+}
+
+.tetris-upgrade-options span {
+  color: #94a3b8;
+  font-size: 0.82rem;
 }
 
 @media (max-width: 900px) {
@@ -155,5 +249,9 @@
 
   .tetris-stage {
     min-height: 62vh;
+  }
+
+  .tetris-upgrade-options {
+    grid-template-columns: 1fr;
   }
 }

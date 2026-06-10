@@ -4,10 +4,11 @@ import {
   MeshPhysicalMaterial,
   MeshStandardMaterial,
 } from 'three';
-import { TETRIS_COLORS } from '@/lib/tetris';
+import { TETRIS_COLORS, type TetrisSpecial } from '@/lib/tetris';
 
 export interface TetrisMaterialLibrary {
   blocks: MeshPhysicalMaterial[];
+  specials: Record<TetrisSpecial, MeshPhysicalMaterial>;
   ghost: MeshPhysicalMaterial;
   glass: MeshPhysicalMaterial;
   floor: MeshStandardMaterial;
@@ -28,6 +29,35 @@ export function createTetrisMaterialLibrary(): TetrisMaterialLibrary {
 
   return {
     blocks,
+    specials: {
+      bomb: new MeshPhysicalMaterial({
+        color: '#f97316',
+        emissive: '#fb7185',
+        emissiveIntensity: 0.48,
+        roughness: 0.32,
+        metalness: 0.18,
+        clearcoat: 0.8,
+      }),
+      ice: new MeshPhysicalMaterial({
+        color: '#bae6fd',
+        emissive: '#38bdf8',
+        emissiveIntensity: 0.35,
+        transparent: true,
+        opacity: 0.88,
+        roughness: 0.18,
+        metalness: 0.04,
+        transmission: 0.18,
+        thickness: 0.45,
+      }),
+      wildcard: new MeshPhysicalMaterial({
+        color: '#fef3c7',
+        emissive: '#a78bfa',
+        emissiveIntensity: 0.42,
+        roughness: 0.24,
+        metalness: 0.22,
+        clearcoat: 0.9,
+      }),
+    },
     ghost: new MeshPhysicalMaterial({
       color: '#dbeafe',
       emissive: '#38bdf8',
@@ -63,6 +93,7 @@ export function disposeTetrisMaterialLibrary(
 ): void {
   const owned: Material[] = [
     ...materials.blocks,
+    ...Object.values(materials.specials),
     materials.ghost,
     materials.glass,
     materials.floor,

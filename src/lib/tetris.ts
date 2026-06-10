@@ -7,6 +7,13 @@ export const MIN_DROP_INTERVAL = 8;
 export type ShapeGrid = number[][];
 export type TetrisStatus = 'idle' | 'playing' | 'paused' | 'over';
 export type TetrisBoard = number[][];
+export type TetrisSpecial = 'bomb' | 'ice' | 'wildcard';
+export type TetrisUpgrade =
+  | 'score_boost'
+  | 'slow_fall'
+  | 'skill_boost'
+  | 'bomb_rate'
+  | 'combo_boost';
 
 export interface TetrisState {
   board: TetrisBoard;
@@ -21,6 +28,23 @@ export interface TetrisState {
   status: TetrisStatus;
   dropCounter: number;
   dropInterval: number;
+  heldPiece: number | null;
+  holdUsed: boolean;
+  activeSpecial: TetrisSpecial | null;
+  nextSpecial: TetrisSpecial | null;
+  piecesLocked: number;
+  specialInterval: number;
+  skillEnergy: number;
+  skillMax: number;
+  skillGainMultiplier: number;
+  scoreMultiplier: number;
+  combo: number;
+  comboBonus: number;
+  fallIntervalBonus: number;
+  slowTicks: number;
+  nextUpgradeAt: number;
+  pendingUpgradeChoices: TetrisUpgrade[];
+  upgrades: Partial<Record<TetrisUpgrade, number>>;
 }
 
 export type TetrisAction =
@@ -31,7 +55,10 @@ export type TetrisAction =
   | { type: 'move'; dx: number }
   | { type: 'rotate'; direction: 'cw' | 'ccw' }
   | { type: 'softDrop'; rng?: () => number }
-  | { type: 'hardDrop'; rng?: () => number };
+  | { type: 'hardDrop'; rng?: () => number }
+  | { type: 'hold'; rng?: () => number }
+  | { type: 'useSkill' }
+  | { type: 'chooseUpgrade'; upgrade: TetrisUpgrade };
 
 export type TetrisEvent =
   | { type: 'piece_moved'; from: PiecePose; to: PiecePose; fast?: boolean }
@@ -45,6 +72,15 @@ export type TetrisEvent =
     }
   | { type: 'soft_drop_score'; delta: number }
   | { type: 'hard_drop_score'; delta: number; distance: number }
+  | { type: 'skill_used'; skill: 'clear_bottom'; rows: number[] }
+  | {
+      type: 'special_triggered';
+      special: TetrisSpecial;
+      cells: Array<{ x: number; y: number }>;
+    }
+  | { type: 'upgrade_choices_ready'; choices: TetrisUpgrade[] }
+  | { type: 'upgrade_selected'; upgrade: TetrisUpgrade }
+  | { type: 'piece_held'; heldPiece: number; piece: number }
   | { type: 'game_over' }
   | { type: 'reset' };
 
@@ -278,6 +314,23 @@ export function createInitialTetrisState(
     status: 'idle',
     dropCounter: 0,
     dropInterval: INITIAL_DROP_INTERVAL,
+    heldPiece: null,
+    holdUsed: false,
+    activeSpecial: null,
+    nextSpecial: null,
+    piecesLocked: 0,
+    specialInterval: 12,
+    skillEnergy: 0,
+    skillMax: 100,
+    skillGainMultiplier: 1,
+    scoreMultiplier: 1,
+    combo: 0,
+    comboBonus: 0.25,
+    fallIntervalBonus: 0,
+    slowTicks: 0,
+    nextUpgradeAt: 10,
+    pendingUpgradeChoices: [],
+    upgrades: {},
   };
 }
 
@@ -356,7 +409,19 @@ export function applyTetrisAction(
     return unchanged(state);
   }
 
+  if (action.type === 'chooseUpgrade') {
+    return chooseUpgrade(state, action.upgrade);
+  }
+
   if (state.status !== 'playing') return unchanged(state);
+
+  if (action.type === 'hold') {
+    return holdPiece(state, action.rng);
+  }
+
+  if (action.type === 'useSkill') {
+    return activateClearBottomSkill(state);
+  }
 
   if (action.type === 'move') {
     return movePiece(state, action.dx, 0);
@@ -418,6 +483,12 @@ export function applyTetrisAction(
 
   if (action.type === 'tick') {
     const next = cloneState(state);
+    if (next.slowTicks > 0) next.slowTicks -= 1;
+    next.dropInterval = getDropInterval(
+      getLevel(next.lines),
+      next.fallIntervalBonus,
+      next.slowTicks,
+    );
     next.dropCounter += 1;
     if (next.dropCounter < next.dropInterval) {
       return { state: next, events: [] };
@@ -466,6 +537,110 @@ function movePiece(
   };
 }
 
+function holdPiece(
+  state: TetrisState,
+  rng: () => number = Math.random,
+): TetrisStepResult {
+  if (state.holdUsed) return unchanged(state);
+
+  const next = cloneState(state);
+  const currentPiece = next.piece;
+  if (next.heldPiece === null) {
+    next.heldPiece = currentPiece;
+    next.piece = next.nextPiece;
+    next.activeSpecial = next.nextSpecial;
+    next.nextPiece = randomPiece(rng);
+    next.nextSpecial = rollNextSpecial(next, rng);
+  } else {
+    next.piece = next.heldPiece;
+    next.heldPiece = currentPiece;
+    next.activeSpecial = null;
+  }
+  next.rot = 0;
+  next.px = SPAWN_X;
+  next.py = 0;
+  next.holdUsed = true;
+
+  if (hasCollision(next.board, next.piece, next.rot, next.px, next.py)) {
+    next.status = 'over';
+    return { state: next, events: [{ type: 'game_over' }] };
+  }
+
+  return {
+    state: next,
+    events: [
+      {
+        type: 'piece_held',
+        heldPiece: next.heldPiece,
+        piece: next.piece,
+      },
+    ],
+  };
+}
+
+function activateClearBottomSkill(state: TetrisState): TetrisStepResult {
+  if (state.skillEnergy < state.skillMax) return unchanged(state);
+  const next = cloneState(state);
+  const bottomRow = ROWS - 1;
+  next.board = [Array(COLS).fill(0), ...next.board.slice(0, bottomRow)];
+  next.skillEnergy = 0;
+  next.lines += 1;
+  next.score += 50 * next.level;
+  next.level = getLevel(next.lines);
+  next.dropInterval = getDropInterval(
+    next.level,
+    next.fallIntervalBonus,
+    next.slowTicks,
+  );
+  maybeOfferUpgrade(next, []);
+
+  return {
+    state: next,
+    events: [
+      {
+        type: 'skill_used',
+        skill: 'clear_bottom',
+        rows: [bottomRow],
+      },
+    ],
+  };
+}
+
+function chooseUpgrade(
+  state: TetrisState,
+  upgrade: TetrisUpgrade,
+): TetrisStepResult {
+  if (!state.pendingUpgradeChoices.includes(upgrade)) return unchanged(state);
+
+  const next = cloneState(state);
+  next.upgrades[upgrade] = (next.upgrades[upgrade] ?? 0) + 1;
+  next.pendingUpgradeChoices = [];
+
+  if (upgrade === 'score_boost') {
+    next.scoreMultiplier = roundOneDecimal(next.scoreMultiplier + 0.2);
+  } else if (upgrade === 'slow_fall') {
+    next.fallIntervalBonus += 4;
+    next.dropInterval = getDropInterval(
+      next.level,
+      next.fallIntervalBonus,
+      next.slowTicks,
+    );
+  } else if (upgrade === 'skill_boost') {
+    next.skillGainMultiplier = roundTwoDecimals(
+      next.skillGainMultiplier + 0.25,
+    );
+  } else if (upgrade === 'bomb_rate') {
+    next.specialInterval = Math.max(8, next.specialInterval - 2);
+  } else if (upgrade === 'combo_boost') {
+    next.comboBonus = roundTwoDecimals(next.comboBonus + 0.15);
+  }
+
+  return {
+    state: next,
+    events: [{ type: 'upgrade_selected', upgrade }],
+  };
+}
+
 function lockPiece(
   state: TetrisState,
   rng: () => number = Math.random,
@@ -474,6 +649,7 @@ function lockPiece(
   const next = cloneState(state);
   const events: TetrisEvent[] = [];
   const lockedRows = new Set<number>();
+  const lockedCells: Array<{ x: number; y: number }> = [];
 
   for (const { x, y } of getPieceCells(
     next.piece,
@@ -484,7 +660,17 @@ function lockPiece(
     if (y >= 0 && y < ROWS && x >= 0 && x < COLS) {
       next.board[y][x] = next.piece + 1;
       lockedRows.add(y);
+      lockedCells.push({ x, y });
     }
+  }
+
+  if (next.activeSpecial) {
+    const affected = applySpecialEffect(next, next.activeSpecial, lockedCells);
+    events.push({
+      type: 'special_triggered',
+      special: next.activeSpecial,
+      cells: affected,
+    });
   }
 
   events.push({
@@ -499,26 +685,53 @@ function lockPiece(
   if (cleared.rows.length > 0) {
     const totalLines = next.lines + cleared.rows.length;
     const scoreLevel = Math.min(10, 1 + Math.floor(totalLines / 10));
-    const scoreDelta = LINE_SCORES[cleared.rows.length] * scoreLevel;
+    next.combo += 1;
+    const comboMultiplier =
+      next.combo > 1 ? 1 + (next.combo - 1) * next.comboBonus : 1;
+    const scoreDelta = Math.round(
+      LINE_SCORES[cleared.rows.length] *
+        scoreLevel *
+        next.scoreMultiplier *
+        comboMultiplier,
+    );
     next.lines = totalLines;
     next.score += scoreDelta;
     next.level = getLevel(next.lines);
-    next.dropInterval = getDropInterval(next.level);
+    next.dropInterval = getDropInterval(
+      next.level,
+      next.fallIntervalBonus,
+      next.slowTicks,
+    );
+    next.skillEnergy = Math.min(
+      next.skillMax,
+      next.skillEnergy +
+        Math.round(cleared.rows.length * 25 * next.skillGainMultiplier),
+    );
     events.push({
       type: 'lines_cleared',
       rows: cleared.rows,
       count: cleared.rows.length,
       scoreDelta,
     });
+    maybeOfferUpgrade(next, events);
   } else {
-    next.dropInterval = getDropInterval(getLevel(next.lines));
+    next.combo = 0;
+    next.dropInterval = getDropInterval(
+      getLevel(next.lines),
+      next.fallIntervalBonus,
+      next.slowTicks,
+    );
   }
 
+  next.piecesLocked += 1;
   next.piece = next.nextPiece;
+  next.activeSpecial = next.nextSpecial;
   next.rot = 0;
   next.px = SPAWN_X;
   next.py = 0;
   next.nextPiece = randomPiece(rng);
+  next.nextSpecial = rollNextSpecial(next, rng);
+  next.holdUsed = false;
   next.dropCounter = 0;
 
   if (hasCollision(next.board, next.piece, next.rot, next.px, next.py)) {
@@ -553,10 +766,104 @@ function clearFullLines(board: TetrisBoard): {
   };
 }
 
+function applySpecialEffect(
+  state: TetrisState,
+  special: TetrisSpecial,
+  lockedCells: Array<{ x: number; y: number }>,
+): Array<{ x: number; y: number }> {
+  if (special === 'bomb') {
+    return applyBombEffect(state.board, lockedCells);
+  }
+  if (special === 'ice') {
+    state.slowTicks = 180;
+    state.dropInterval = getDropInterval(
+      getLevel(state.lines),
+      state.fallIntervalBonus,
+      state.slowTicks,
+    );
+    return lockedCells;
+  }
+  return applyWildcardEffect(state.board, lockedCells, state.piece + 1);
+}
+
+function applyBombEffect(
+  board: TetrisBoard,
+  lockedCells: Array<{ x: number; y: number }>,
+): Array<{ x: number; y: number }> {
+  const affected = new Map<string, { x: number; y: number }>();
+  for (const { x, y } of lockedCells) {
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) continue;
+        board[ny][nx] = 0;
+        affected.set(`${nx},${ny}`, { x: nx, y: ny });
+      }
+    }
+  }
+  return [...affected.values()];
+}
+
+function applyWildcardEffect(
+  board: TetrisBoard,
+  lockedCells: Array<{ x: number; y: number }>,
+  color: number,
+): Array<{ x: number; y: number }> {
+  const affected: Array<{ x: number; y: number }> = [];
+  const columns = [...new Set(lockedCells.map((cell) => cell.x))];
+  for (const col of columns) {
+    for (let row = ROWS - 1; row >= 0; row--) {
+      if (board[row][col] === 0) {
+        board[row][col] = color;
+        affected.push({ x: col, y: row });
+        break;
+      }
+    }
+  }
+  return affected;
+}
+
+function maybeOfferUpgrade(state: TetrisState, events: TetrisEvent[]): void {
+  if (
+    state.lines < state.nextUpgradeAt ||
+    state.pendingUpgradeChoices.length > 0
+  )
+    return;
+
+  const choices: TetrisUpgrade[] = ['score_boost', 'slow_fall', 'skill_boost'];
+  if ((state.upgrades.bomb_rate ?? 0) === 0) choices[2] = 'bomb_rate';
+  if ((state.upgrades.combo_boost ?? 0) === 0 && state.lines >= 20)
+    choices[1] = 'combo_boost';
+
+  state.pendingUpgradeChoices = choices;
+  state.nextUpgradeAt += 10;
+  events.push({ type: 'upgrade_choices_ready', choices });
+}
+
+function rollNextSpecial(
+  state: TetrisState,
+  rng: () => number,
+): TetrisSpecial | null {
+  if (
+    state.piecesLocked <= 0 ||
+    state.piecesLocked % state.specialInterval !== 0
+  ) {
+    return null;
+  }
+
+  const roll = rng();
+  if (roll < 0.4) return 'bomb';
+  if (roll < 0.7) return 'ice';
+  return 'wildcard';
+}
+
 function cloneState(state: TetrisState): TetrisState {
   return {
     ...state,
     board: state.board.map((row) => [...row]),
+    pendingUpgradeChoices: [...state.pendingUpgradeChoices],
+    upgrades: { ...state.upgrades },
   };
 }
 
@@ -568,8 +875,16 @@ function getLevel(lines: number): number {
   return Math.min(10, 1 + Math.floor(lines / 10));
 }
 
-function getDropInterval(level: number): number {
-  return Math.max(MIN_DROP_INTERVAL, INITIAL_DROP_INTERVAL - level * 4);
+function getDropInterval(
+  level: number,
+  fallIntervalBonus = 0,
+  slowTicks = 0,
+): number {
+  const slowBonus = slowTicks > 0 ? 16 : 0;
+  return Math.max(
+    MIN_DROP_INTERVAL,
+    INITIAL_DROP_INTERVAL - level * 4 + fallIntervalBonus + slowBonus,
+  );
 }
 
 function normalizeRot(rot: number): number {
@@ -578,4 +893,12 @@ function normalizeRot(rot: number): number {
 
 function randomPiece(rng: () => number): number {
   return Math.max(0, Math.min(6, Math.floor(rng() * 7)));
+}
+
+function roundOneDecimal(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+function roundTwoDecimals(value: number): number {
+  return Math.round(value * 100) / 100;
 }
