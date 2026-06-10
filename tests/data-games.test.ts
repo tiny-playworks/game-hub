@@ -3,7 +3,7 @@ import { games, getGameByPath, getGamesByCategory } from '../src/data/games';
 
 test('games 中每项均有 id、categoryId、name、path、difficulty、tags', () => {
   const categoryIds = new Set(['mini', 'board', 'mahjong', 'poker']);
-  expect(games).toHaveLength(16);
+  expect(games).toHaveLength(17);
 
   for (const g of games) {
     expect(g.id).toBeDefined();
@@ -50,6 +50,11 @@ test('getGameByPath 能根据 path 找到游戏', () => {
   expect(riichi).toBeDefined();
   expect(riichi?.categoryId).toBe('mahjong');
   expect(riichi?.id).toBe('mahjong-japanese');
+
+  const rubiks = getGameByPath('/game/rubiks');
+  expect(rubiks).toBeDefined();
+  expect(rubiks?.categoryId).toBe('mini');
+  expect(rubiks?.id).toBe('rubiks');
 });
 
 test('getGameByPath 不存在的 path 返回 undefined', () => {

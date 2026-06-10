@@ -94,6 +94,15 @@ export const games: GameItem[] = [
     difficulty: 4,
     tags: ['经典', '益智', '动作'],
   },
+  {
+    id: 'rubiks',
+    categoryId: 'mini',
+    name: '3D 魔方',
+    description: '自然手势转动真实三阶魔方，支持打乱、复原与自由观察。',
+    path: '/game/rubiks',
+    difficulty: 4,
+    tags: ['三维', '益智', '经典'],
+  },
   // 棋类
   {
     id: 'go',
