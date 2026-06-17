@@ -16,9 +16,9 @@ export function cardRank(c: Card): number {
 }
 
 /** 牌面名，用于显示 */
-export function cardLabel(c: Card): string {
-  if (c === CARD_JOKER_SMALL) return '小王';
-  if (c === CARD_JOKER_BIG) return '大王';
+export function cardLabel(c: Card, locale?: 'zh' | 'en'): string {
+  if (c === CARD_JOKER_SMALL) return locale === 'en' ? 'Black Joker' : '小王';
+  if (c === CARD_JOKER_BIG) return locale === 'en' ? 'Red Joker' : '大王';
   const r = c % 13;
   const labels = [
     '3',

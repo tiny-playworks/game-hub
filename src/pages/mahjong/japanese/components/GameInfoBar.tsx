@@ -1,4 +1,4 @@
-import { SEAT_NAMES } from '../constants';
+import { useLocale } from '@/contexts/LocaleContext';
 import { formatPoints } from '../helpers';
 import type { RiichiGameState } from '../types';
 
@@ -7,6 +7,10 @@ type Props = {
 };
 
 export function GameInfoBar({ game }: Props) {
+  const { locale, t } = useLocale();
+  const listSeparator = locale === 'en' ? ', ' : '、';
+  const semicolonSeparator = locale === 'en' ? '; ' : '；';
+
   return (
     <>
       <div
@@ -19,10 +23,10 @@ export function GameInfoBar({ game }: Props) {
           color: 'var(--riichi-text)',
         }}
       >
-        {SEAT_NAMES.map((name, i) => (
-          <span key={name}>
+        {[0, 1, 2, 3].map((i) => (
+          <span key={i}>
             {i > 0 && ' · '}
-            {name}{' '}
+            {t(`game.mahjong.seats.${i}`)}{' '}
             <span className="font-semibold text-[#ffd700]">
               {formatPoints(game.scores[i])}
             </span>
@@ -31,25 +35,31 @@ export function GameInfoBar({ game }: Props) {
       </div>
       {game.lastSettlement && (
         <div className="mb-3 rounded-lg border border-[#457b9d]/40 bg-[#1d3557]/35 px-3 py-2">
-          <p className="text-xs font-medium text-[#a8dadc]">上一局结算</p>
+          <p className="text-xs font-medium text-[#a8dadc]">
+            {t('game.mahjong.lastRoundSettlement')}
+          </p>
           {game.lastSettlement.tenpaiSeats && (
             <p className="mt-1 text-[11px] text-[#f1faee]/80">
-              听牌：
+              {t('riichi.modal.draw.tenpaiLabel')}
               {game.lastSettlement.tenpaiSeats.length === 0
-                ? ' 无'
-                : ` ${game.lastSettlement.tenpaiSeats.map((i) => SEAT_NAMES[i]).join('、')}`}
+                ? ` ${t('riichi.modal.none')}`
+                : ` ${game.lastSettlement.tenpaiSeats.map((i) => t(`game.mahjong.seats.${i}`)).join(listSeparator)}`}
             </p>
           )}
           <p className="mt-1 text-[11px] text-[#f1faee]/80">
-            分差：{' '}
+            {t('riichi.modal.summary.delta')}
             {game.lastSettlement.deltas
-              .map((d, i) => `${SEAT_NAMES[i]} ${d >= 0 ? '+' : ''}${d}`)
+              .map(
+                (d, i) =>
+                  `${t(`game.mahjong.seats.${i}`)} ${d >= 0 ? '+' : ''}${d}`,
+              )
               .join(' · ')}
           </p>
           {game.lastSettlement.timeoutEvents &&
             game.lastSettlement.timeoutEvents.length > 0 && (
               <p className="mt-1 text-[11px] text-[#f1faee]/80">
-                超时：{game.lastSettlement.timeoutEvents.join('；')}
+                {t('riichi.modal.summary.timeout')}
+                {game.lastSettlement.timeoutEvents.join(semicolonSeparator)}
               </p>
             )}
         </div>

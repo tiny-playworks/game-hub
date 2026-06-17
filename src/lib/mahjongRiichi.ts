@@ -49,12 +49,52 @@ export const AKA_5_MAN = 34;
 export const AKA_5_PIN = 35;
 export const AKA_5_SOU = 36;
 
+export const TILE_LABELS_RIICHI_EN: string[] = [
+  '1m',
+  '2m',
+  '3m',
+  '4m',
+  '5m',
+  '6m',
+  '7m',
+  '8m',
+  '9m',
+  '1s',
+  '2s',
+  '3s',
+  '4s',
+  '5s',
+  '6s',
+  '7s',
+  '8s',
+  '9s',
+  '1p',
+  '2p',
+  '3p',
+  '4p',
+  '5p',
+  '6p',
+  '7p',
+  '8p',
+  '9p',
+  'East',
+  'South',
+  'West',
+  'North',
+  'Chun',
+  'Hatsu',
+  'Haku',
+];
+
 /** 牌面显示文字（红宝牌与普通 5 同文，不写「赤」） */
-export function getTileLabel(tile: number): string {
-  if (tile === AKA_5_MAN) return '五万';
-  if (tile === AKA_5_PIN) return '五筒';
-  if (tile === AKA_5_SOU) return '五条';
-  return TILE_LABELS_RIICHI[tile] ?? '';
+export function getTileLabel(tile: number, locale?: 'zh' | 'en'): string {
+  const isEn = locale === 'en';
+  if (tile === AKA_5_MAN) return isEn ? '5m' : '五万';
+  if (tile === AKA_5_PIN) return isEn ? '5p' : '五筒';
+  if (tile === AKA_5_SOU) return isEn ? '5s' : '五条';
+  return isEn
+    ? (TILE_LABELS_RIICHI_EN[tile] ?? '')
+    : (TILE_LABELS_RIICHI[tile] ?? '');
 }
 
 /** 基础牌型数量（不含赤牌） */

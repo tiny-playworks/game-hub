@@ -34,36 +34,7 @@ type Props = {
   onHallRefresh?: () => void;
 };
 
-function LocaleSwitcher() {
-  const { locale, setLocale } = useLocale();
-  return (
-    <div className="flex gap-1 text-sm">
-      <button
-        type="button"
-        onClick={() => setLocale('zh')}
-        className={
-          locale === 'zh'
-            ? 'font-semibold text-foreground'
-            : 'text-muted-foreground hover:text-foreground'
-        }
-      >
-        中
-      </button>
-      <span className="text-muted-foreground">|</span>
-      <button
-        type="button"
-        onClick={() => setLocale('en')}
-        className={
-          locale === 'en'
-            ? 'font-semibold text-foreground'
-            : 'text-muted-foreground hover:text-foreground'
-        }
-      >
-        En
-      </button>
-    </div>
-  );
-}
+import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
 
 function getCurrentMonthCalendar(now = Date.now()): {
   days: string[];
@@ -307,7 +278,7 @@ export function QuickAccessPanel({
       >
         <PlayerAvatar profile={profile} size="sm" />
       </Link>
-      {withLocaleSwitcher ? <LocaleSwitcher /> : null}
+      {withLocaleSwitcher ? <LanguageSwitcher /> : null}
 
       {quickPanel === 'achievements' && (
         <div className={`${panelClass} w-72`}>

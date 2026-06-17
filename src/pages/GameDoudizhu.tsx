@@ -14,10 +14,11 @@ import {
   playHand,
   runAIUntilMyTurn,
 } from '@/lib/doudizhu';
+import { formatMessage } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 const GameDoudizhu = () => {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const [state, setState] = useState<DoudizhuState>(createInitialState);
   const [selected, setSelected] = useState<number[]>([]);
 
@@ -62,11 +63,11 @@ const GameDoudizhu = () => {
 
   const statusText = state.gameOver
     ? state.winner === 0
-      ? '地主胜'
-      : '农民胜'
+      ? t('game.doudizhu.status.landlordWin')
+      : t('game.doudizhu.status.peasantWin')
     : isMyTurn(state)
-      ? '轮到你出牌'
-      : '对方出牌中…';
+      ? t('game.doudizhu.status.yourTurn')
+      : t('game.doudizhu.status.otherTurn');
 
   const selectedCards = selected.map((i) => myHand[i]);
 
@@ -81,18 +82,30 @@ const GameDoudizhu = () => {
 
       <main className="flex flex-col p-4">
         <p className="mb-2 text-sm text-muted-foreground">
-          三人斗地主简化版：单牌、对子、三张、三带一、炸弹、火箭。地主先出，轮到你时选牌后点「出牌」或「要不起」。
-          {isLandlord(state) && ' （你是地主）'}
+          {t('game.doudizhu.rules')}
+          {isLandlord(state) && ` (${t('game.doudizhu.isLandlord')})`}
         </p>
 
         <div className="mb-4 flex justify-around text-sm">
-          <span>下家: {state.hands[0].length} 张</span>
-          <span>上家: {state.hands[2].length} 张</span>
+          <span>
+            {formatMessage(locale, 'game.doudizhu.nextPlayer', {
+              count: state.hands[0].length,
+            })}
+          </span>
+          <span>
+            {formatMessage(locale, 'game.doudizhu.prevPlayer', {
+              count: state.hands[2].length,
+            })}
+          </span>
         </div>
 
         {state.lastPlay && (
           <div className="mb-2 text-center text-sm">
-            上一手: {state.lastPlay.hand.cards.map(cardLabel).join(' ')}
+            {formatMessage(locale, 'game.doudizhu.lastPlay', {
+              cards: state.lastPlay.hand.cards
+                .map((c) => cardLabel(c, locale))
+                .join(' '),
+            })}
           </div>
         )}
 
@@ -115,7 +128,7 @@ const GameDoudizhu = () => {
                     : 'border-border bg-card hover:bg-muted',
                 )}
               >
-                {cardLabel(card)}
+                {cardLabel(card, locale)}
               </button>
             );
           })}
@@ -133,7 +146,7 @@ const GameDoudizhu = () => {
               !canPlay(state, selectedCards)
             }
           >
-            出牌
+            {t('game.doudizhu.play')}
           </Button>
           <Button
             variant="outline"
@@ -141,7 +154,7 @@ const GameDoudizhu = () => {
             onClick={handlePass}
             disabled={!canPass(state)}
           >
-            要不起
+            {t('game.doudizhu.pass')}
           </Button>
           <Button variant="outline" size="sm" onClick={restart}>
             {t('common.restart')}

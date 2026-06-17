@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
+import { formatMessage } from '@/lib/i18n';
 import {
   cardLabel,
   createInitialState,
@@ -13,10 +14,8 @@ import {
 } from '@/lib/shengji';
 import { cn } from '@/lib/utils';
 
-const SUIT_NAMES = ['黑桃', '红桃', '梅花', '方片'];
-
 const GameShengji = () => {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const [state, setState] = useState<ShengjiState>(createInitialState);
 
   useEffect(() => {
@@ -26,13 +25,18 @@ const GameShengji = () => {
 
   const myHand = state.hands[0];
   const validPlays = getValidPlays(state, 0);
+
   const statusText = state.roundOver
     ? state.defenderUpgrade
-      ? `闲家得分 ${state.teamScores[1]}，升级`
-      : `庄家守庄，闲家 ${state.teamScores[1]} 分`
+      ? formatMessage(locale, 'game.shengji.status.upgrade', {
+          score: state.teamScores[1],
+        })
+      : formatMessage(locale, 'game.shengji.status.defended', {
+          score: state.teamScores[1],
+        })
     : isMyTurn(state)
-      ? '轮到你出牌'
-      : '对方出牌中…';
+      ? t('game.shengji.status.yourTurn')
+      : t('game.shengji.status.otherTurn');
 
   const sortedHand = [...myHand].sort((a, b) => {
     const sa = a >= 52 ? 4 : Math.floor(a / 13);
@@ -53,6 +57,17 @@ const GameShengji = () => {
     setState(createInitialState());
   };
 
+  const getTrumpSuitLabel = () => {
+    if (state.trumpSuit < 0) return '—';
+    const suitKeys = [
+      'game.shengji.spade',
+      'game.shengji.heart',
+      'game.shengji.club',
+      'game.shengji.diamond',
+    ];
+    return t(suitKeys[state.trumpSuit]);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
@@ -64,25 +79,36 @@ const GameShengji = () => {
 
       <main className="flex flex-col p-4">
         <p className="mb-2 text-sm text-muted-foreground">
-          升级入门：四人两对（你与对家一队），单副牌单张跟牌。庄家扣底，主牌可毙副牌，闲家得分≥40
-          升级。主花色：
-          {state.trumpSuit >= 0 ? SUIT_NAMES[state.trumpSuit] : '—'}
+          {t('game.shengji.rules')}
+          {getTrumpSuitLabel()}
         </p>
 
         <div className="mb-2 flex justify-around text-sm">
           <span>
-            庄家队: {state.teamScores[0]} 分
-            {state.dealer === 0 || state.dealer === 2 ? '（你方）' : ''}
+            {formatMessage(locale, 'game.shengji.landlordTeam', {
+              score: state.teamScores[0],
+            })}
+            {state.dealer === 0 || state.dealer === 2
+              ? t('game.shengji.yourTeam')
+              : ''}
           </span>
           <span>
-            闲家队: {state.teamScores[1]} 分
-            {state.dealer === 1 || state.dealer === 3 ? '（你方）' : ''}
+            {formatMessage(locale, 'game.shengji.peasantTeam', {
+              score: state.teamScores[1],
+            })}
+            {state.dealer === 1 || state.dealer === 3
+              ? t('game.shengji.yourTeam')
+              : ''}
           </span>
         </div>
 
         {state.currentTrick.length > 0 && (
           <div className="mb-2 rounded border border-border bg-muted/30 p-2 text-sm">
-            当前墩: {state.currentTrick.map(cardLabel).join(' ')}
+            {formatMessage(locale, 'game.shengji.currentTrick', {
+              cards: state.currentTrick
+                .map((c) => cardLabel(c, locale))
+                .join(' '),
+            })}
           </div>
         )}
 
@@ -104,7 +130,7 @@ const GameShengji = () => {
                     : 'border-border bg-card text-muted-foreground',
                 )}
               >
-                {cardLabel(card)}
+                {cardLabel(card, locale)}
               </button>
             );
           })}

@@ -7,6 +7,7 @@ import {
 } from '@/components/common/VirtualController';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
+import { formatMessage } from '@/lib/i18n';
 import { useGameStore } from '../store/gameStore';
 
 const TILE = 32;
@@ -64,7 +65,7 @@ function mapClone(): number[][] {
 }
 
 const GameTank = () => {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { stats, incrementPlayCount } = useGameStore();
   const gameStats = stats.tank || { playCount: 0 };
@@ -187,9 +188,9 @@ const GameTank = () => {
         ctx.fillStyle = '#fff';
         ctx.font = '18px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('按 空格 开始', W / 2, H / 2);
-        ctx.fillText('方向键移动 · 空格射击', W / 2, H / 2 + 24);
-        ctx.fillText('保护黄色基地，消灭所有敌方坦克', W / 2, H / 2 + 48);
+        ctx.fillText(t('tank.startPrompt'), W / 2, H / 2);
+        ctx.fillText(t('tank.controlsPrompt'), W / 2, H / 2 + 24);
+        ctx.fillText(t('tank.descriptionPrompt'), W / 2, H / 2 + 48);
       }
 
       if (status === 'playing') {
@@ -391,8 +392,8 @@ const GameTank = () => {
         ctx.fillStyle = '#ef4444';
         ctx.font = '24px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('游戏结束', W / 2, H / 2 - 12);
-        ctx.fillText('基地被毁或你被击中', W / 2, H / 2 + 20);
+        ctx.fillText(t('2048.gameOver'), W / 2, H / 2 - 12);
+        ctx.fillText(t('tank.losePrompt'), W / 2, H / 2 + 20);
       }
       if (status === 'win') {
         ctx.fillStyle = 'rgba(0,0,0,0.7)';
@@ -400,7 +401,7 @@ const GameTank = () => {
         ctx.fillStyle = '#22c55e';
         ctx.font = '24px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('胜利！', W / 2, H / 2);
+        ctx.fillText(t('tank.winPrompt'), W / 2, H / 2);
       }
 
       rafId = requestAnimationFrame(loop);
@@ -408,7 +409,7 @@ const GameTank = () => {
 
     rafId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafId);
-  }, [status]);
+  }, [status, t]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -471,10 +472,14 @@ const GameTank = () => {
         </Link>
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">
-            游玩次数: {gameStats.playCount}
+            {formatMessage(locale, 'tank.playCount', {
+              count: gameStats.playCount,
+            })}
           </span>
           <span className="text-sm text-red-500 font-bold">
-            剩余敌人: {remainingEnemies}
+            {formatMessage(locale, 'tank.remainingEnemies', {
+              count: remainingEnemies,
+            })}
           </span>
           <Button variant="outline" size="sm" onClick={reset}>
             {t('common.restart')}
@@ -497,7 +502,7 @@ const GameTank = () => {
           />
         </button>
         <p className="mt-4 text-center text-sm text-muted-foreground">
-          方向键移动 · 空格射击 · 保护黄色基地 · 消灭全部敌坦
+          {t('tank.footerControls')}
         </p>
         <VirtualController
           tone="dark"

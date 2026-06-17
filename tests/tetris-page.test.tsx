@@ -1,6 +1,7 @@
 import { expect, rs, test } from '@rstest/core';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { LocaleProvider } from '../src/contexts/LocaleContext';
 import GameTetris3D from '../src/pages/tetris/index';
 
 test('3D 俄罗斯方块页面显示 DOM HUD 并同步渲染引擎', () => {
@@ -11,12 +12,14 @@ test('3D 俄罗斯方块页面显示 DOM HUD 并同步渲染引擎', () => {
 
   const { unmount } = render(
     <MemoryRouter>
-      <GameTetris3D createEngine={() => engine} />
+      <LocaleProvider>
+        <GameTetris3D createEngine={() => engine} />
+      </LocaleProvider>
     </MemoryRouter>,
   );
 
   expect(
-    screen.getByRole('heading', { name: '3D 俄罗斯方块' }),
+    screen.getByRole('heading', { name: /3D 俄罗斯方块|俄罗斯方块|Tetris/ }),
   ).toBeInTheDocument();
   expect(screen.getByText(/得分:/)).toBeInTheDocument();
   expect(screen.getByText(/等级:/)).toBeInTheDocument();
@@ -29,12 +32,24 @@ test('3D 俄罗斯方块页面显示 DOM HUD 并同步渲染引擎', () => {
   expect(screen.getByRole('button', { name: '切换主题' })).toBeInTheDocument();
   expect(engine.sync).toHaveBeenCalled();
 
-  fireEvent.click(screen.getByRole('button', { name: '按空格或点击舞台开始' }));
-  fireEvent.click(screen.getByRole('button', { name: '暂停游戏' }));
-  expect(screen.getByRole('button', { name: '继续游戏' })).toBeInTheDocument();
+  fireEvent.click(
+    screen.getByRole('button', {
+      name: /按空格或点击舞台开始|Press Space or click stage to start/,
+    }),
+  );
+  fireEvent.click(
+    screen.getAllByRole('button', { name: /暂停游戏|暂停|Pause/ })[0],
+  );
+  expect(
+    screen.getAllByRole('button', { name: /继续游戏|继续|Resume/ })[0],
+  ).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: '重新开始' }));
-  expect(screen.getByRole('button', { name: '暂停游戏' })).toBeInTheDocument();
+  fireEvent.click(
+    screen.getAllByRole('button', { name: /重新开始|重开|Restart/ })[0],
+  );
+  expect(
+    screen.getAllByRole('button', { name: /暂停游戏|暂停|Pause/ })[0],
+  ).toBeInTheDocument();
 
   unmount();
   expect(engine.dispose).toHaveBeenCalledOnce();
@@ -48,12 +63,16 @@ test('3D 俄罗斯方块保留空格开始与 P 暂停键盘操作', () => {
 
   render(
     <MemoryRouter>
-      <GameTetris3D createEngine={() => engine} />
+      <LocaleProvider>
+        <GameTetris3D createEngine={() => engine} />
+      </LocaleProvider>
     </MemoryRouter>,
   );
 
   expect(
-    screen.getByRole('button', { name: '按空格或点击舞台开始' }),
+    screen.getByRole('button', {
+      name: /按空格或点击舞台开始|Press Space or click stage to start/,
+    }),
   ).toBeInTheDocument();
   fireEvent.keyDown(window, { code: 'Space' });
   expect(screen.getByText('游戏进行中')).toBeInTheDocument();

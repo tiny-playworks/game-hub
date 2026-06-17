@@ -89,8 +89,16 @@ describe('荣和听牌：getRonWaitingTilesForSeatInState 与 computeWaitingTile
   });
 
   test('带暗杠副露：两路径仍一致', () => {
-    const state = initRiichiGame();
+    const state = initRiichiGame(1);
     state.melds[0] = [{ type: 'angang', tiles: [0, 0, 0, 0] }];
+    const a = getRonWaitingTilesForSeatInState(state, 0);
+    const b = ronWaitingDirect(state, 0);
+    expect(sortNum(a)).toEqual(sortNum(b));
+  });
+
+  test('带明杠副露：两路径仍一致', () => {
+    const state = initRiichiGame(1);
+    state.melds[0] = [{ type: 'mingang', tiles: [12, 13, 14, 15] }];
     const a = getRonWaitingTilesForSeatInState(state, 0);
     const b = ronWaitingDirect(state, 0);
     expect(sortNum(a)).toEqual(sortNum(b));

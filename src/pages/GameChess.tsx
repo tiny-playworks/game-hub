@@ -16,10 +16,11 @@ import {
   movePiece,
   type Side,
 } from '@/lib/chess';
+import { formatMessage } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 const GameChess = () => {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const [board, setBoard] = useState<Board>(createInitialBoard);
   const [whiteTurn, setWhiteTurn] = useState(true);
   const [selected, setSelected] = useState<[number, number] | null>(null);
@@ -81,14 +82,30 @@ const GameChess = () => {
   };
 
   const statusText = winner
-    ? `赢家: ${winner === 'white' ? '白方' : '黑方'}`
+    ? formatMessage(locale, 'game.chess.winner', {
+        winner:
+          winner === 'white' ? t('game.chess.white') : t('game.chess.black'),
+      })
     : checkmate
-      ? `${currentSide === 'white' ? '黑方' : '白方'} 将杀获胜`
+      ? formatMessage(locale, 'game.chess.checkmate', {
+          winner:
+            currentSide === 'white'
+              ? t('game.chess.black')
+              : t('game.chess.white'),
+        })
       : stalemate
-        ? '和棋（无子可动）'
+        ? t('game.chess.stalemate')
         : inCheck
-          ? `将！下一位: ${whiteTurn ? '白' : '黑'}`
-          : `下一位: ${whiteTurn ? '白' : '黑'}`;
+          ? formatMessage(locale, 'game.chess.checkNext', {
+              next: whiteTurn
+                ? t('game.chess.whiteShort')
+                : t('game.chess.blackShort'),
+            })
+          : formatMessage(locale, 'game.chess.next', {
+              next: whiteTurn
+                ? t('game.chess.whiteShort')
+                : t('game.chess.blackShort'),
+            });
 
   return (
     <div className="min-h-screen bg-background">
@@ -101,7 +118,7 @@ const GameChess = () => {
 
       <main className="flex min-h-[calc(100vh-56px)] flex-col items-center justify-center p-4">
         <p className="mb-2 text-sm text-muted-foreground">
-          国际象棋：白先黑后，点击己方棋子选子，再点击合法格走子
+          {t('game.chess.rules')}
         </p>
         <div
           className="inline-grid gap-0 rounded-lg border-2 border-stone-700 overflow-hidden"

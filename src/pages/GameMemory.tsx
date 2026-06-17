@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
+import { formatMessage } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useScreenShake } from '../hooks/useScreenShake';
 import { useGameStore } from '../store/gameStore';
@@ -63,7 +64,7 @@ function generateCards(level: number): CardState[] {
 }
 
 const GameMemory = () => {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const shake = useScreenShake();
   const { stats, updateHighScore } = useGameStore();
   const gameStats = stats.memory || {
@@ -216,13 +217,15 @@ const GameMemory = () => {
         <div className="flex gap-4 font-semibold">
           <span className="text-blue-600 dark:text-blue-400">Lv.{level}</span>
           <span className="text-purple-600 dark:text-purple-400">
-            步数: {moves}
+            {formatMessage(locale, 'memory.moves', { moves })}
           </span>
           <span className="text-green-600 dark:text-green-400">
-            得分: {score}
+            {formatMessage(locale, 'memory.score', { score })}
           </span>
           <span className="text-zinc-400 text-sm font-normal">
-            最高分: {gameStats.highScore}
+            {formatMessage(locale, 'memory.highScore', {
+              score: gameStats.highScore,
+            })}
           </span>
         </div>
       </header>
@@ -255,7 +258,9 @@ const GameMemory = () => {
                   type="button"
                   onClick={() => handleClick(i)}
                   aria-label={
-                    card.flipped || card.matched ? card.emoji : '未翻开的牌'
+                    card.flipped || card.matched
+                      ? card.emoji
+                      : t('memory.faceDown')
                   }
                   className={cn(
                     'memory-card cursor-pointer border-0 bg-transparent p-0',
@@ -282,12 +287,14 @@ const GameMemory = () => {
           {status === 'lost' && (
             <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center p-6 text-center animate-fly-in border border-zinc-200 dark:border-slate-800 shadow-xl z-20">
               <h2 className="text-4xl font-black text-red-500 mb-2">
-                时间到！
+                {t('memory.timeOut')}
               </h2>
-              <p className="text-lg font-medium mb-6">得分: {score} 对</p>
+              <p className="text-lg font-medium mb-6">
+                {formatMessage(locale, 'memory.scorePairs', { score })}
+              </p>
               <div className="flex gap-4">
                 <Button size="lg" onClick={restart} className="font-bold">
-                  再来一局
+                  {t('common.playAgain')}
                 </Button>
                 <Link to="/">
                   <Button variant="outline" size="lg">

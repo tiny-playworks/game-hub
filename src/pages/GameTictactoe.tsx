@@ -167,7 +167,7 @@ const GameTictactoe = () => {
         className="absolute inset-0 w-full h-full pointer-events-none z-10 drop-shadow-[0_0_10px_#fff]"
         viewBox="0 0 300 300"
       >
-        <title>胜利连线</title>
+        <title>{t('tictactoe.winLine')}</title>
         <line
           x1={start.x}
           y1={start.y}
@@ -201,7 +201,7 @@ const GameTictactoe = () => {
             }}
             className="bg-transparent border-purple-900/50 hover:bg-purple-900/20 text-purple-400"
           >
-            {vsAI ? '人机对战' : '双人对战'}
+            {vsAI ? t('tictactoe.vsAI') : t('tictactoe.pvp')}
           </Button>
         </div>
       </header>
@@ -209,12 +209,12 @@ const GameTictactoe = () => {
       <main className="flex flex-col items-center justify-center p-4 min-h-[calc(100vh-64px)] pb-20">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-black tracking-[0.2em] mb-2 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]">
-            无限井字棋
+            {t('tictactoe.title')}
           </h1>
           <p className="text-sm text-zinc-400">
             {winner ? (
               <span>
-                赢家:{' '}
+                {t('tictactoe.winner')}:{' '}
                 <span
                   className={
                     winner === 'X' ? 'neon-x font-bold' : 'neon-o font-bold'
@@ -225,7 +225,7 @@ const GameTictactoe = () => {
               </span>
             ) : (
               <span>
-                下一位:{' '}
+                {t('tictactoe.nextPlayer')}:{' '}
                 <span
                   className={xNext ? 'neon-x font-bold' : 'neon-o font-bold'}
                 >
@@ -259,7 +259,7 @@ const GameTictactoe = () => {
         </div>
 
         <p className="text-xs text-zinc-500 mt-6 max-w-sm text-center px-4 leading-relaxed font-mono">
-          规则：每方最多保留 3 枚棋子，继续落子将移除最早的棋子。
+          {t('tictactoe.rules')}
         </p>
 
         <div className="mt-12 flex gap-4">

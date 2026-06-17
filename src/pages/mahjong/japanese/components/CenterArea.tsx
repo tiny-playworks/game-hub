@@ -1,5 +1,7 @@
+import { useLocale } from '@/contexts/LocaleContext';
+import { formatMessage } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-import { SEAT_NAMES, TILE_DISCARD, WIND_NAMES } from '../constants';
+import { TILE_DISCARD } from '../constants';
 import { getSeatWind, toTileKeyedItems } from '../helpers';
 import type { RiichiGameState } from '../types';
 import { getTileColorClass, RiichiTileFace } from './Tile';
@@ -31,6 +33,8 @@ type Props = {
 
 /** 雀姬式牌桌中央：中心牌山+宝牌，四边各一家舍牌矩形、牌面向中心 */
 export function CenterArea({ game }: Props) {
+  const { locale, t } = useLocale();
+
   return (
     <div
       className="riichi-center-board rounded-2xl border shadow-inner overflow-hidden min-h-0 grid gap-0.5 p-1.5"
@@ -59,7 +63,9 @@ export function CenterArea({ game }: Props) {
           className="text-sm font-bold tabular-nums whitespace-nowrap"
           style={{ color: 'var(--riichi-accent)' }}
         >
-          牌山 · {game.wall.length}
+          {formatMessage(locale, 'game.mahjong.wallLength', {
+            count: game.wall.length,
+          })}
         </p>
         {game.doraIndicators.length > 0 && (
           <div className="flex flex-wrap justify-center gap-0.5">
@@ -68,7 +74,7 @@ export function CenterArea({ game }: Props) {
                 <span
                   key={key}
                   className={cn(TILE_DISCARD, getTileColorClass(tile))}
-                  title="宝牌"
+                  title={t('game.mahjong.dora')}
                 >
                   <RiichiTileFace tile={tile} />
                 </span>
@@ -110,9 +116,11 @@ export function CenterArea({ game }: Props) {
                   : {}),
               }}
             >
-              {SEAT_NAMES[seat]}{' '}
+              {t(`game.mahjong.seats.${seat}`)}{' '}
               <span style={{ color: 'var(--riichi-text-muted)', opacity: 0.8 }}>
-                {WIND_NAMES[getSeatWind(game.roundWind, seat, game.dealer)]}
+                {t(
+                  `game.mahjong.winds.${getSeatWind(game.roundWind, seat, game.dealer)}`,
+                )}
               </span>
             </span>
             <div

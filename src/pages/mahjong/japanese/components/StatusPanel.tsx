@@ -1,5 +1,6 @@
+import { useLocale } from '@/contexts/LocaleContext';
+import { formatMessage } from '@/lib/i18n';
 import { getTileLabel } from '@/lib/mahjongRiichi';
-import { SEAT_NAMES } from '../constants';
 
 type Props = {
   isClaimPhase: boolean;
@@ -28,22 +29,36 @@ export function StatusPanel({
   myFuritenReason,
   riichiDeclared,
 }: Props) {
+  const { locale, t } = useLocale();
   const myClaim = !!isMyClaim;
   const anyClaim = !!hasAnyClaimOption;
+
   const discardLine =
     lastDiscardFrom != null && lastDiscard != null
-      ? `${SEAT_NAMES[lastDiscardFrom]} 打出 ${getTileLabel(lastDiscard)}`
-      : '等待操作';
+      ? formatMessage(locale, 'game.mahjong.discardLine', {
+          seat: t(`game.mahjong.seats.${lastDiscardFrom}`),
+          tile: getTileLabel(lastDiscard, locale),
+        })
+      : t('game.mahjong.waitingForAction');
 
   const mainLine = isClaimPhase
     ? myClaim
       ? anyClaim
-        ? `${discardLine}，请选择操作`
-        : `${discardLine}，等待其他玩家响应`
-      : `${discardLine}，当前轮到 ${SEAT_NAMES[claimPlayer ?? 0]}`
+        ? formatMessage(locale, 'game.mahjong.status.myClaimOptions', {
+            discardLine,
+          })
+        : formatMessage(locale, 'game.mahjong.status.myClaimWait', {
+            discardLine,
+          })
+      : formatMessage(locale, 'game.mahjong.status.otherClaim', {
+          discardLine,
+          seat: t(`game.mahjong.seats.${claimPlayer ?? 0}`),
+        })
     : isMyTurn
-      ? '轮到你出牌'
-      : `等待 ${SEAT_NAMES[currentPlayer]} 行动`;
+      ? t('game.mahjong.status.yourTurn')
+      : formatMessage(locale, 'game.mahjong.status.waitingForSeat', {
+          seat: t(`game.mahjong.seats.${currentPlayer}`),
+        });
 
   return (
     <div className="text-center mb-3">
@@ -76,7 +91,9 @@ export function StatusPanel({
                     key={i}
                     className="text-xs text-red-300 bg-red-900/30 rounded-lg py-1 px-2"
                   >
-                    {SEAT_NAMES[i]} 已立直
+                    {formatMessage(locale, 'game.mahjong.riichiDeclared', {
+                      seat: t(`game.mahjong.seats.${i}`),
+                    })}
                   </span>
                 ),
             )}

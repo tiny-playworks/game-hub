@@ -389,10 +389,10 @@ const GameSnake = () => {
         </Link>
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 text-xs font-mono sm:gap-4 sm:text-sm">
           <span className="text-cyan-400">
-            分数: {score.toString().padStart(4, '0')}
+            {t('snake.score')}: {score.toString().padStart(4, '0')}
           </span>
           <span className="text-zinc-500">
-            最佳: {gameStats.highScore.toString().padStart(4, '0')}
+            {t('snake.best')}: {gameStats.highScore.toString().padStart(4, '0')}
           </span>
           <Button
             variant="outline"
@@ -420,11 +420,11 @@ const GameSnake = () => {
               {status === 'idle' && (
                 <>
                   <h2 className="text-3xl font-black text-cyan-400 mb-2 tracking-widest">
-                    贪吃蛇
+                    {t('game.snake.name')}
                   </h2>
                   <p className="text-zinc-400 font-mono text-sm mb-6 max-w-[250px]">
                     {t('common.pressArrowToStart')} <br />
-                    金色食物 3 秒后消失
+                    {t('snake.goldenFoodTip')}
                   </p>
                   <Button
                     onClick={start}
@@ -437,10 +437,10 @@ const GameSnake = () => {
               {status === 'over' && (
                 <>
                   <h2 className="text-4xl font-black text-red-500 mb-2 tracking-widest animate-pulse">
-                    系统故障
+                    {t('snake.gameOver')}
                   </h2>
                   <p className="text-zinc-300 font-mono text-lg mb-6">
-                    最终分数:{' '}
+                    {t('snake.finalScore')}:{' '}
                     <span className="text-cyan-400 font-bold">{score}</span>
                   </p>
                   <Button

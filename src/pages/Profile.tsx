@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { Link } from 'react-router-dom';
 import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
+import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -52,37 +53,6 @@ import {
 } from '@/lib/titles';
 import { cn } from '@/lib/utils';
 import { ensureWeeklyTaskState, type WeeklyTaskState } from '@/lib/weeklyTasks';
-
-function LocaleSwitcher() {
-  const { locale, setLocale } = useLocale();
-  return (
-    <div className="flex gap-1 text-sm">
-      <button
-        type="button"
-        onClick={() => setLocale('zh')}
-        className={
-          locale === 'zh'
-            ? 'font-semibold text-foreground'
-            : 'text-muted-foreground hover:text-foreground'
-        }
-      >
-        Zh
-      </button>
-      <span className="text-muted-foreground">|</span>
-      <button
-        type="button"
-        onClick={() => setLocale('en')}
-        className={
-          locale === 'en'
-            ? 'font-semibold text-foreground'
-            : 'text-muted-foreground hover:text-foreground'
-        }
-      >
-        En
-      </button>
-    </div>
-  );
-}
 
 function ProfileAvatar({ profile }: { profile: PlayerProfile }) {
   if (profile.avatarMode === 'upload' && profile.avatarUploadDataUrl) {
@@ -350,7 +320,7 @@ const Profile = () => {
               {t('profile.heroSubtitle')}
             </p>
           </div>
-          <LocaleSwitcher />
+          <LanguageSwitcher />
         </div>
       </header>
 

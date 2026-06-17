@@ -1,6 +1,7 @@
 import { expect, rs, test } from '@rstest/core';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { LocaleProvider } from '../src/contexts/LocaleContext';
 import GameRubiks from '../src/pages/rubiks';
 
 test('3D 魔方页面提供打乱与重置控制并调用引擎', () => {
@@ -12,7 +13,9 @@ test('3D 魔方页面提供打乱与重置控制并调用引擎', () => {
 
   render(
     <MemoryRouter>
-      <GameRubiks createEngine={() => engine} />
+      <LocaleProvider>
+        <GameRubiks createEngine={() => engine} />
+      </LocaleProvider>
     </MemoryRouter>,
   );
 

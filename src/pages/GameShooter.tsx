@@ -7,6 +7,7 @@ import {
 } from '@/components/common/VirtualController';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
+import { formatMessage } from '@/lib/i18n';
 import { useGameStore } from '../store/gameStore';
 
 const W = 400;
@@ -20,7 +21,7 @@ const ENEMY_H = 24;
 const SPAWN_INTERVAL = 90;
 
 const GameShooter = () => {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { stats, updateHighScore } = useGameStore();
   const gameStats = stats.shooter || { highScore: 0 };
@@ -68,8 +69,8 @@ const GameShooter = () => {
         ctx.fillStyle = '#64748b';
         ctx.font = '16px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('按 空格 或 点击 开始', W / 2, H / 2);
-        ctx.fillText('方向键移动 · 空格射击 · P暂停', W / 2, H / 2 + 24);
+        ctx.fillText(t('shooter.startPrompt'), W / 2, H / 2);
+        ctx.fillText(t('shooter.controlsPrompt'), W / 2, H / 2 + 24);
         rafId = requestAnimationFrame(loop);
         return;
       }
@@ -167,9 +168,9 @@ const GameShooter = () => {
         ctx.fillStyle = '#fff';
         ctx.font = '24px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('已暂停', W / 2, H / 2);
+        ctx.fillText(t('shooter.paused'), W / 2, H / 2);
         ctx.font = '16px sans-serif';
-        ctx.fillText('按 P 或 空格 继续', W / 2, H / 2 + 30);
+        ctx.fillText(t('shooter.resumePrompt'), W / 2, H / 2 + 30);
       }
 
       if (status === 'over') {
@@ -178,10 +179,14 @@ const GameShooter = () => {
         ctx.fillStyle = '#fff';
         ctx.font = '24px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('游戏结束', W / 2, H / 2 - 12);
-        ctx.fillText(`得分: ${score}`, W / 2, H / 2 + 20);
+        ctx.fillText(t('2048.gameOver'), W / 2, H / 2 - 12);
+        ctx.fillText(
+          formatMessage(locale, 'shooter.scoreDisplay', { score }),
+          W / 2,
+          H / 2 + 20,
+        );
         ctx.font = '16px sans-serif';
-        ctx.fillText('按 R 或 空格 重新开始', W / 2, H / 2 + 50);
+        ctx.fillText(t('shooter.restartPrompt'), W / 2, H / 2 + 50);
       }
 
       rafId = requestAnimationFrame(loop);
@@ -189,7 +194,7 @@ const GameShooter = () => {
 
     rafId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafId);
-  }, [status, score]);
+  }, [status, score, locale, t]);
 
   useEffect(() => {
     if (status === 'over' && score > gameStats.highScore) {
@@ -265,9 +270,13 @@ const GameShooter = () => {
         </Link>
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">
-            最高分: {gameStats.highScore}
+            {formatMessage(locale, 'breakout.highScore', {
+              score: gameStats.highScore,
+            })}
           </span>
-          <span className="text-sm text-muted-foreground">得分: {score}</span>
+          <span className="text-sm text-muted-foreground">
+            {formatMessage(locale, 'breakout.score', { score })}
+          </span>
           <Button
             variant="outline"
             size="sm"
@@ -280,9 +289,9 @@ const GameShooter = () => {
             }
           >
             {status === 'playing'
-              ? '暂停'
+              ? t('shooter.btnPause')
               : status === 'paused'
-                ? '继续'
+                ? t('shooter.btnResume')
                 : t('common.restart')}
           </Button>
         </div>
@@ -303,7 +312,7 @@ const GameShooter = () => {
           />
         </button>
         <p className="mt-4 text-center text-sm text-muted-foreground">
-          方向键移动 · 空格射击 · 击落敌机得分
+          {t('shooter.footerControls')}
         </p>
         <VirtualController
           tone="dark"

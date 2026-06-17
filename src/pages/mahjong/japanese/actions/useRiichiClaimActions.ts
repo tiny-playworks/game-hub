@@ -145,7 +145,7 @@ export function useRiichiClaimActions(ctx: RiichiRuntimeContext) {
       const piles = game.discardPiles.map((q) => [...q]);
       if (piles[game.lastDiscardFrom].length > 0)
         piles[game.lastDiscardFrom].pop();
-      addLog(`自家 吃 ${meldTiles.map(getTileLabel).join('')}`);
+      addLog(`自家 吃 ${meldTiles.map((t) => getTileLabel(t)).join('')}`);
       sounds.playChi();
       setGame({
         ...game,

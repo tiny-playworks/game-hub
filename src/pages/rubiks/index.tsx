@@ -1,8 +1,32 @@
 import { ArrowLeft, RotateCcw, Shuffle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useLocale } from '@/contexts/LocaleContext';
 import { RubiksCubeEngine } from './RubiksCubeEngine';
 import './rubiks.css';
+
+const getStatusLabel = (status: string, t: (k: string) => string): string => {
+  switch (status) {
+    case '正在初始化':
+      return t('rubiks.status.init');
+    case '设备不支持 WebGL，无法渲染 3D 场景':
+      return t('rubiks.webglError');
+    case '可操作':
+      return t('rubiks.status.ready');
+    case '正在打乱':
+      return t('rubiks.status.scrambling');
+    case '已复原':
+      return t('rubiks.status.solved');
+    case '转动中':
+      return t('rubiks.status.turning');
+    case '自动对齐':
+      return t('rubiks.status.aligning');
+    case '打乱完成':
+      return t('rubiks.status.scrambled');
+    default:
+      return status;
+  }
+};
 
 export interface RubiksEngineController {
   dispose(): void;
@@ -30,6 +54,7 @@ const createDefaultEngine: RubiksEngineFactory = (host, options) =>
 const GameRubiks = ({
   createEngine = createDefaultEngine,
 }: GameRubiksProps) => {
+  const { t } = useLocale();
   const stageRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<RubiksEngineController | null>(null);
   const [busy, setBusy] = useState(false);
@@ -62,28 +87,28 @@ const GameRubiks = ({
       <header className="rubiks-toolbar">
         <Link to="/" className="rubiks-back">
           <ArrowLeft aria-hidden="true" />
-          <span>返回游戏列表</span>
+          <span>{t('common.backToList')}</span>
         </Link>
 
-        <h1>3D 魔方</h1>
+        <h1>{t('game.rubiks.name')}</h1>
 
         <div className="rubiks-actions">
           <button
             type="button"
-            aria-label="打乱魔方"
+            aria-label={t('rubiks.scrambleAria')}
             disabled={busy}
             onClick={() => engineRef.current?.scramble()}
           >
             <Shuffle aria-hidden="true" />
-            <span>打乱</span>
+            <span>{t('rubiks.scramble')}</span>
           </button>
           <button
             type="button"
-            aria-label="重置魔方"
+            aria-label={t('rubiks.resetAria')}
             onClick={() => engineRef.current?.reset()}
           >
             <RotateCcw aria-hidden="true" />
-            <span>重置</span>
+            <span>{t('rubiks.reset')}</span>
           </button>
         </div>
       </header>
@@ -91,12 +116,12 @@ const GameRubiks = ({
       <main className="rubiks-stage-shell">
         <div ref={stageRef} className="rubiks-stage" />
         <div className="rubiks-help" aria-live="polite">
-          <span className="rubiks-status">{status}</span>
-          <span>单指/左键拖动转层</span>
+          <span className="rubiks-status">{getStatusLabel(status, t)}</span>
+          <span>{t('rubiks.help.drag')}</span>
           <i aria-hidden="true" />
-          <span>双指/右键旋转视角</span>
+          <span>{t('rubiks.help.rotate')}</span>
           <i aria-hidden="true" />
-          <span>滚轮/双指缩放</span>
+          <span>{t('rubiks.help.zoom')}</span>
         </div>
       </main>
     </div>

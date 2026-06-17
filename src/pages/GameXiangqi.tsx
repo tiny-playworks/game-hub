@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { unlock } from '@/lib/achievements';
+import { formatMessage } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import {
   type Board,
@@ -17,7 +18,7 @@ import {
 } from '@/lib/xiangqi';
 
 const GameXiangqi = () => {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const [board, setBoard] = useState<Board>(createInitialBoard);
   const [redTurn, setRedTurn] = useState(true);
   const [selected, setSelected] = useState<[number, number] | null>(null);
@@ -75,14 +76,23 @@ const GameXiangqi = () => {
         </Link>
         <span className="text-sm text-muted-foreground">
           {winner
-            ? `赢家: ${winner === 'red' ? '红方' : '黑方'}`
-            : `下一位: ${redTurn ? '红' : '黑'}`}
+            ? formatMessage(locale, 'game.xiangqi.winner', {
+                winner:
+                  winner === 'red'
+                    ? t('game.xiangqi.red')
+                    : t('game.xiangqi.black'),
+              })
+            : formatMessage(locale, 'game.xiangqi.next', {
+                next: redTurn
+                  ? t('game.xiangqi.redShort')
+                  : t('game.xiangqi.blackShort'),
+              })}
         </span>
       </header>
 
       <main className="flex min-h-[calc(100vh-56px)] flex-col items-center justify-center p-4">
         <p className="mb-2 text-sm text-muted-foreground">
-          中国象棋：红先黑后，点击己方棋子选子，再点击合法格走子
+          {t('game.xiangqi.rules')}
         </p>
         <div
           className="inline-grid gap-0 rounded-lg border-2 border-amber-800 bg-amber-100 p-1"

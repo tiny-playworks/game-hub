@@ -217,7 +217,7 @@ export function runAiClaimPhase(
         if (pilesChi[from].length > 0) pilesChi[from].pop();
         // 与人类 doChi 一致：只完成副露，手牌 11 张；打牌由 useRiichiDrawAiFlow 的 11 张分支处理。
         addLogRef.current(
-          `${SEAT_NAMES[seat]} 吃 ${meldTiles.map(getTileLabel).join('')}`,
+          `${SEAT_NAMES[seat]} 吃 ${meldTiles.map((t) => getTileLabel(t)).join('')}`,
         );
         sounds.playChi();
         if (claimDefensePlan?.action === 'chi' && claimDefensePlan.reason) {

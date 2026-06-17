@@ -8,7 +8,9 @@ import {
 } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useLocale } from '@/contexts/LocaleContext';
 import { unlock } from '@/lib/achievements';
+import { formatMessage } from '@/lib/i18n';
 import {
   applyTetrisAction,
   createInitialTetrisState,
@@ -56,6 +58,7 @@ const GameTetris3D = ({
   const stageRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<TetrisEngineController | null>(null);
   const stateRef = useRef<TetrisState>(createInitialTetrisState());
+  const { locale, t } = useLocale();
   const [state, setState] = useState<TetrisState>(() => stateRef.current);
   const { stats, updateHighScore } = useGameStore();
   const bestLines = stats.tetris?.highScore || 0;
@@ -171,14 +174,15 @@ const GameTetris3D = ({
   );
   const statusText =
     state.status === 'idle'
-      ? '按空格或点击舞台开始'
+      ? t('tetris.startTip')
       : state.status === 'paused'
-        ? '已暂停'
+        ? t('shooter.paused')
         : state.status === 'over'
-          ? '游戏结束'
-          : '游戏进行中';
+          ? t('2048.gameOver')
+          : t('tetris.status.playing');
 
-  const togglePauseLabel = state.status === 'paused' ? '继续游戏' : '暂停游戏';
+  const togglePauseLabel =
+    state.status === 'paused' ? t('shooter.btnResume') : t('shooter.btnPause');
   const skillReady = state.skillEnergy >= state.skillMax;
 
   const handleTouchStart = (event: TouchEvent<HTMLElement>) => {
@@ -209,9 +213,9 @@ const GameTetris3D = ({
     <div className={`tetris-game tetris-theme-${theme}`}>
       <header className="tetris-toolbar">
         <Link to="/" className="tetris-back">
-          ← 返回游戏列表
+          ← {t('common.backToList')}
         </Link>
-        <h1>3D 俄罗斯方块</h1>
+        <h1>{t('game.tetris.name')}</h1>
         <div className="tetris-actions">
           <Button
             type="button"
@@ -227,21 +231,21 @@ const GameTetris3D = ({
             type="button"
             variant="outline"
             size="sm"
-            aria-label="重新开始"
+            aria-label={t('common.restart')}
             onClick={() => dispatch({ type: 'reset' })}
           >
-            重新开始
+            {t('common.restart')}
           </Button>
           <Button
             type="button"
             variant="outline"
             size="sm"
-            aria-label="切换主题"
+            aria-label={t('tetris.toggleTheme')}
             onClick={() =>
               setTheme((current) => (current === 'glass' ? 'neon' : 'glass'))
             }
           >
-            切换主题
+            {t('tetris.toggleTheme')}
           </Button>
         </div>
       </header>
@@ -249,7 +253,7 @@ const GameTetris3D = ({
       <main className="tetris-shell">
         <section
           className="tetris-stage"
-          aria-label="3D 俄罗斯方块游戏舞台"
+          aria-label={t('tetris.stageAria')}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
@@ -260,24 +264,49 @@ const GameTetris3D = ({
               className="tetris-start-layer"
               onClick={() => dispatch({ type: 'start' })}
             >
-              <span>按空格或点击舞台开始</span>
+              <span>{t('tetris.startTip')}</span>
             </button>
           )}
         </section>
 
-        <aside className="tetris-side" aria-label="俄罗斯方块状态">
+        <aside className="tetris-side" aria-label={t('category.mini.name')}>
           <div className="tetris-card tetris-stats">
-            <span>得分: {state.score}</span>
-            <span>等级: {state.level}</span>
-            <span>消行: {state.lines}</span>
-            <span>最高纪录: {bestLines}</span>
-            <span>连击: {state.combo}</span>
             <span>
-              技能能量: {state.skillEnergy}/{state.skillMax}
+              {formatMessage(locale, 'tetris.score', { score: state.score })}
             </span>
-            <span>暂存: {pieceLabel(state.heldPiece)}</span>
-            <span>当前特效: {specialLabel(state.activeSpecial)}</span>
-            <span>下个特效: {specialLabel(state.nextSpecial)}</span>
+            <span>
+              {formatMessage(locale, 'tetris.level', { level: state.level })}
+            </span>
+            <span>
+              {formatMessage(locale, 'tetris.lines', { lines: state.lines })}
+            </span>
+            <span>
+              {formatMessage(locale, 'tetris.bestLines', { lines: bestLines })}
+            </span>
+            <span>
+              {formatMessage(locale, 'tetris.combo', { combo: state.combo })}
+            </span>
+            <span>
+              {formatMessage(locale, 'tetris.energy', {
+                current: state.skillEnergy,
+                max: state.skillMax,
+              })}
+            </span>
+            <span>
+              {formatMessage(locale, 'tetris.hold', {
+                piece: pieceLabel(state.heldPiece, t),
+              })}
+            </span>
+            <span>
+              {formatMessage(locale, 'tetris.activeSpecial', {
+                special: specialLabel(state.activeSpecial, t),
+              })}
+            </span>
+            <span>
+              {formatMessage(locale, 'tetris.nextSpecial', {
+                special: specialLabel(state.nextSpecial, t),
+              })}
+            </span>
             <strong className="tetris-status">{statusText}</strong>
           </div>
 
@@ -285,7 +314,7 @@ const GameTetris3D = ({
             <div
               className="tetris-energy-bar"
               role="progressbar"
-              aria-label="技能能量槽"
+              aria-label={t('tetris.energyAria')}
               aria-valuemin={0}
               aria-valuemax={state.skillMax}
               aria-valuenow={state.skillEnergy}
@@ -300,20 +329,20 @@ const GameTetris3D = ({
               type="button"
               variant={skillReady ? 'default' : 'outline'}
               size="sm"
-              aria-label="释放技能"
+              aria-label={t('tetris.skillAria')}
               disabled={!skillReady || state.status !== 'playing'}
               onClick={() => dispatch({ type: 'useSkill' })}
             >
-              E 释放技能：清除底行
+              {t('tetris.skillBtn')}
             </Button>
           </div>
 
           <div className="tetris-card">
-            <p className="tetris-next-title">下一个方块</p>
+            <p className="tetris-next-title">{t('tetris.nextBlock')}</p>
             <div
               className="tetris-next-grid"
               role="img"
-              aria-label="下一个方块预览"
+              aria-label={t('tetris.nextBlockAria')}
             >
               {nextShape.flatMap((row, rowIndex) =>
                 row.map((cell, colIndex) => (
@@ -333,15 +362,12 @@ const GameTetris3D = ({
             </div>
           </div>
 
-          <p className="tetris-help">
-            方向键移动，向上旋转，向下加速，空格直接落底，Shift/C 暂存，E
-            技能，P 暂停。移动端可滑动操作。
-          </p>
+          <p className="tetris-help">{t('tetris.help')}</p>
         </aside>
       </main>
 
       <fieldset className="tetris-mobile-controls">
-        <legend className="sr-only">移动端操作</legend>
+        <legend className="sr-only">{t('category.mini.name')}</legend>
         <Button
           variant="outline"
           size="sm"
@@ -356,12 +382,12 @@ const GameTetris3D = ({
           }
         >
           {state.status === 'idle'
-            ? '开始'
+            ? t('common.start')
             : state.status === 'paused'
-              ? '继续'
+              ? t('shooter.btnResume')
               : state.status === 'over'
-                ? '重开'
-                : '暂停'}
+                ? t('common.restart')
+                : t('shooter.btnPause')}
         </Button>
         <Button
           variant={skillReady ? 'default' : 'outline'}
@@ -369,7 +395,7 @@ const GameTetris3D = ({
           disabled={!skillReady || state.status !== 'playing'}
           onClick={() => dispatch({ type: 'useSkill' })}
         >
-          技能
+          {t('tetris.mobile.skill')}
         </Button>
         <Button
           variant="outline"
@@ -377,7 +403,7 @@ const GameTetris3D = ({
           disabled={state.status !== 'playing'}
           onClick={() => dispatch({ type: 'move', dx: -1 })}
         >
-          左移
+          {t('tetris.mobile.left')}
         </Button>
         <Button
           variant="outline"
@@ -385,7 +411,7 @@ const GameTetris3D = ({
           disabled={state.status !== 'playing'}
           onClick={() => dispatch({ type: 'move', dx: 1 })}
         >
-          右移
+          {t('tetris.mobile.right')}
         </Button>
         <Button
           variant="outline"
@@ -393,7 +419,7 @@ const GameTetris3D = ({
           disabled={state.status !== 'playing'}
           onClick={() => dispatch({ type: 'rotate', direction: 'cw' })}
         >
-          旋转
+          {t('tetris.mobile.rotate')}
         </Button>
         <Button
           variant="outline"
@@ -401,7 +427,7 @@ const GameTetris3D = ({
           disabled={state.status !== 'playing'}
           onClick={() => dispatch({ type: 'softDrop' })}
         >
-          下移
+          {t('tetris.mobile.down')}
         </Button>
         <Button
           variant="outline"
@@ -409,7 +435,7 @@ const GameTetris3D = ({
           disabled={state.status !== 'playing'}
           onClick={() => dispatch({ type: 'hardDrop' })}
         >
-          硬降
+          {t('tetris.mobile.hardDrop')}
         </Button>
         <Button
           variant="outline"
@@ -417,15 +443,15 @@ const GameTetris3D = ({
           disabled={state.status !== 'playing'}
           onClick={() => dispatch({ type: 'hold' })}
         >
-          暂存
+          {t('tetris.mobile.hold')}
         </Button>
       </fieldset>
 
       {state.pendingUpgradeChoices.length > 0 && (
         <div className="tetris-upgrade-layer" role="dialog" aria-modal="true">
           <div className="tetris-upgrade-panel">
-            <h2>选择局内强化</h2>
-            <p>每清除 10 行出现一次，最多几次轻量成长。</p>
+            <h2>{t('tetris.upgradeTitle')}</h2>
+            <p>{t('tetris.upgradeDesc')}</p>
             <div className="tetris-upgrade-options">
               {state.pendingUpgradeChoices.map((upgrade) => (
                 <button
@@ -433,8 +459,8 @@ const GameTetris3D = ({
                   key={upgrade}
                   onClick={() => dispatch({ type: 'chooseUpgrade', upgrade })}
                 >
-                  <strong>{upgradeLabel(upgrade)}</strong>
-                  <span>{upgradeDescription(upgrade)}</span>
+                  <strong>{upgradeLabel(upgrade, t)}</strong>
+                  <span>{upgradeDescription(upgrade, t)}</span>
                 </button>
               ))}
             </div>
@@ -455,34 +481,45 @@ function supportsWebGL(): boolean {
 
 export default GameTetris3D;
 
-function pieceLabel(piece: number | null): string {
-  if (piece === null) return '空';
-  return ['I', 'O', 'T', 'S', 'Z', 'J', 'L'][piece] ?? '未知';
+function pieceLabel(piece: number | null, t: (k: string) => string): string {
+  if (piece === null) return t('tetris.piece.empty');
+  return (
+    ['I', 'O', 'T', 'S', 'Z', 'J', 'L'][piece] ?? t('tetris.piece.unknown')
+  );
 }
 
-function specialLabel(special: TetrisSpecial | null): string {
-  if (special === 'bomb') return '炸弹';
-  if (special === 'ice') return '冰冻';
-  if (special === 'wildcard') return '万能';
-  return '普通';
+function specialLabel(
+  special: TetrisSpecial | null,
+  t: (k: string) => string,
+): string {
+  if (special === 'bomb') return t('tetris.special.bomb');
+  if (special === 'ice') return t('tetris.special.ice');
+  if (special === 'wildcard') return t('tetris.special.wildcard');
+  return t('tetris.special.normal');
 }
 
-function upgradeLabel(upgrade: TetrisUpgrade): string {
+function upgradeLabel(
+  upgrade: TetrisUpgrade,
+  t: (k: string) => string,
+): string {
   return {
-    score_boost: '消行得分 +20%',
-    slow_fall: '下落速度降低',
-    skill_boost: '技能能量 +25%',
-    bomb_rate: '炸弹块频率提升',
-    combo_boost: '连击倍率提升',
+    score_boost: t('tetris.upgrade.score_boost.label'),
+    slow_fall: t('tetris.upgrade.slow_fall.label'),
+    skill_boost: t('tetris.upgrade.skill_boost.label'),
+    bomb_rate: t('tetris.upgrade.bomb_rate.label'),
+    combo_boost: t('tetris.upgrade.combo_boost.label'),
   }[upgrade];
 }
 
-function upgradeDescription(upgrade: TetrisUpgrade): string {
+function upgradeDescription(
+  upgrade: TetrisUpgrade,
+  t: (k: string) => string,
+): string {
   return {
-    score_boost: '让传统消行更有收益。',
-    slow_fall: '给高层堆叠更多反应时间。',
-    skill_boost: '更快攒满清底行技能。',
-    bomb_rate: '低频特殊块更容易出现炸弹。',
-    combo_boost: '连续消行时获得更高倍率。',
+    score_boost: t('tetris.upgrade.score_boost.desc'),
+    slow_fall: t('tetris.upgrade.slow_fall.desc'),
+    skill_boost: t('tetris.upgrade.skill_boost.desc'),
+    bomb_rate: t('tetris.upgrade.bomb_rate.desc'),
+    combo_boost: t('tetris.upgrade.combo_boost.desc'),
   }[upgrade];
 }

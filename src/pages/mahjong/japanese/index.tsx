@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
+import { formatMessage, type Locale } from '@/lib/i18n';
 import { getBaseTile, getTileLabel, isMenzhen } from '@/lib/mahjongRiichi';
 import { markRecentMahjongPlayed } from '@/lib/recentMahjong';
 import { getTurnTotalSeconds } from '@/lib/riichiClock';
@@ -17,7 +18,7 @@ import { RiichiMobileStage } from './components/RiichiMobileStage';
 import { RulesView } from './components/RulesView';
 import { StatusPanel } from './components/StatusPanel';
 import { getTileColorClass, RiichiTileFace } from './components/Tile';
-import { SEAT_NAMES, TILE_ACTIVE, TILE_DISCARD, TILE_HAND } from './constants';
+import { TILE_ACTIVE, TILE_DISCARD, TILE_HAND } from './constants';
 import { toMeldKeyedItems, toTileKeyedItems } from './helpers';
 import type { RiichiGameState } from './types';
 import { useRiichiGame } from './useRiichiGame';
@@ -31,14 +32,18 @@ type RiichiGameBag = ReturnType<typeof useRiichiGame>;
 function formatChiTripleLabel(
   opt: [number, number],
   lastDiscard: number | null,
+  locale?: 'zh' | 'en',
 ): string {
+  const isEn = locale === 'en';
   if (lastDiscard === null) {
-    return `${getTileLabel(opt[0])}${getTileLabel(opt[1])}`;
+    return isEn
+      ? `${getTileLabel(opt[0], 'en')}${getTileLabel(opt[1], 'en')}`
+      : `${getTileLabel(opt[0])}${getTileLabel(opt[1])}`;
   }
   const tiles = [opt[0], opt[1], lastDiscard].sort(
     (x, y) => getBaseTile(x) - getBaseTile(y) || x - y,
   );
-  return tiles.map(getTileLabel).join('');
+  return tiles.map((t) => getTileLabel(t, locale)).join(isEn ? ' ' : '');
 }
 
 type RiichiActionState = {
@@ -128,14 +133,19 @@ function RiichiActionPanel({
         game.lastDiscard != null &&
         game.lastDiscardFrom != null && (
           <p className="text-center text-xs font-medium text-amber-100/95 leading-snug">
-            对方打出{' '}
-            <span className="text-white">{getTileLabel(game.lastDiscard)}</span>
-            <span className="text-[#a8dadc]/90">
-              （{SEAT_NAMES[game.lastDiscardFrom]}）
-            </span>
+            {formatMessage(
+              locale as 'zh' | 'en',
+              'game.mahjong.discardFromOpponent',
+              {
+                tile: getTileLabel(game.lastDiscard, locale as 'zh' | 'en'),
+                seat: t(`game.mahjong.seats.${game.lastDiscardFrom}`),
+              },
+            )}
           </p>
         )}
-      <p className="text-center text-xs text-[#a8dadc]/90">可执行操作</p>
+      <p className="text-center text-xs text-[#a8dadc]/90">
+        {t('game.mahjong.actionsTitle')}
+      </p>
       <div className="flex flex-wrap items-center justify-center gap-2">
         {claimActionsAvailable && (
           <>
@@ -144,11 +154,29 @@ function RiichiActionPanel({
                 size="sm"
                 className="bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2.5"
                 onClick={doRon}
-                aria-label={`${t('riichi.ron')} 舍牌${getTileLabel(game.lastDiscard)}`}
+                aria-label={formatMessage(
+                  locale as 'zh' | 'en',
+                  'game.mahjong.ronAria',
+                  {
+                    ron: t('riichi.ron'),
+                    tile: getTileLabel(game.lastDiscard, locale as 'zh' | 'en'),
+                  },
+                )}
               >
                 {t('riichi.ron')}
                 <span className="ml-1 text-[11px] font-normal opacity-90">
-                  (舍{getTileLabel(game.lastDiscard)})
+                  (
+                  {formatMessage(
+                    locale as 'zh' | 'en',
+                    'game.mahjong.discardTile',
+                    {
+                      tile: getTileLabel(
+                        game.lastDiscard,
+                        locale as 'zh' | 'en',
+                      ),
+                    },
+                  )}
+                  )
                 </span>
               </Button>
             )}
@@ -165,9 +193,22 @@ function RiichiActionPanel({
             {isMyClaim &&
               chiOptions.map((opt) => {
                 const ld = game.lastDiscard;
-                const triple = formatChiTripleLabel(opt, ld ?? null);
+                const triple = formatChiTripleLabel(
+                  opt,
+                  ld ?? null,
+                  locale as 'zh' | 'en',
+                );
                 const chiDetail =
-                  ld != null ? `舍${getTileLabel(ld)}→${triple}` : triple;
+                  ld != null
+                    ? formatMessage(
+                        locale as 'zh' | 'en',
+                        'game.mahjong.chiFormat',
+                        {
+                          discard: getTileLabel(ld, locale as 'zh' | 'en'),
+                          m: triple,
+                        },
+                      )
+                    : triple;
                 return (
                   <Button
                     key={opt.join('-')}
@@ -185,11 +226,29 @@ function RiichiActionPanel({
                 size="sm"
                 className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5"
                 onClick={doPeng}
-                aria-label={`${t('riichi.peng')} 舍牌${getTileLabel(game.lastDiscard)}`}
+                aria-label={formatMessage(
+                  locale as 'zh' | 'en',
+                  'game.mahjong.pengAria',
+                  {
+                    peng: t('riichi.peng'),
+                    tile: getTileLabel(game.lastDiscard, locale as 'zh' | 'en'),
+                  },
+                )}
               >
                 {t('riichi.peng')}
                 <span className="ml-1 text-[11px] font-normal opacity-90">
-                  (舍{getTileLabel(game.lastDiscard)})
+                  (
+                  {formatMessage(
+                    locale as 'zh' | 'en',
+                    'game.mahjong.discardTile',
+                    {
+                      tile: getTileLabel(
+                        game.lastDiscard,
+                        locale as 'zh' | 'en',
+                      ),
+                    },
+                  )}
+                  )
                 </span>
               </Button>
             )}
@@ -208,11 +267,29 @@ function RiichiActionPanel({
                 size="sm"
                 className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2.5"
                 onClick={doMingang}
-                aria-label={`${t('riichi.mingang')} 舍牌${getTileLabel(game.lastDiscard)}`}
+                aria-label={formatMessage(
+                  locale as 'zh' | 'en',
+                  'game.mahjong.mingangAria',
+                  {
+                    mingang: t('riichi.mingang'),
+                    tile: getTileLabel(game.lastDiscard, locale as 'zh' | 'en'),
+                  },
+                )}
               >
                 {t('riichi.mingang')}
                 <span className="ml-1 text-[11px] font-normal opacity-90">
-                  (舍{getTileLabel(game.lastDiscard)})
+                  (
+                  {formatMessage(
+                    locale as 'zh' | 'en',
+                    'game.mahjong.discardTile',
+                    {
+                      tile: getTileLabel(
+                        game.lastDiscard,
+                        locale as 'zh' | 'en',
+                      ),
+                    },
+                  )}
+                  )
                 </span>
               </Button>
             )}
@@ -278,9 +355,10 @@ function RiichiActionPanel({
                 variant="outline"
                 className="border-slate-400 text-[#f1faee] hover:bg-slate-600/40"
                 onClick={() => doAngang(opt)}
-                aria-label={`${t('riichi.angang')} ${getTileLabel(opt[0])}`}
+                aria-label={`${t('riichi.angang')} ${getTileLabel(opt[0], locale as 'zh' | 'en')}`}
               >
-                {t('riichi.angang')}({getTileLabel(opt[0])})
+                {t('riichi.angang')}(
+                {getTileLabel(opt[0], locale as 'zh' | 'en')})
               </Button>
             ))}
             {kakanOptions.map((meldIndex) => (
@@ -290,15 +368,17 @@ function RiichiActionPanel({
                 variant="outline"
                 className="border-amber-400 text-[#f1faee] hover:bg-amber-600/40"
                 onClick={() => doKakan(meldIndex)}
-                aria-label={
-                  locale === 'zh'
-                    ? `${t('riichi.kakan')} 第${meldIndex + 1}组碰`
-                    : `${t('riichi.kakan')} (Group ${meldIndex + 1})`
-                }
+                aria-label={formatMessage(
+                  locale as 'zh' | 'en',
+                  'game.mahjong.kakanGroup',
+                  { action: t('riichi.kakan'), index: meldIndex + 1 },
+                )}
               >
-                {locale === 'zh'
-                  ? `${t('riichi.kakan')}(第${meldIndex + 1}组碰)`
-                  : `${t('riichi.kakan')} (Group ${meldIndex + 1})`}
+                {formatMessage(
+                  locale as 'zh' | 'en',
+                  'game.mahjong.kakanGroupShort',
+                  { action: t('riichi.kakan'), index: meldIndex + 1 },
+                )}
               </Button>
             ))}
           </>
@@ -309,6 +389,7 @@ function RiichiActionPanel({
 }
 
 function GuideDialog({ onClose }: { onClose: () => void }) {
+  const { t } = useLocale();
   return (
     <dialog
       open
@@ -319,7 +400,7 @@ function GuideDialog({ onClose }: { onClose: () => void }) {
         type="button"
         className="absolute inset-0 bg-black/60"
         onClick={onClose}
-        aria-label="关闭"
+        aria-label={t('game.mahjong.close')}
       />
       <div className="relative z-10 max-h-[90vh] w-full max-w-lg overflow-auto rounded-2xl border border-[#457b9d]/50 bg-[#1d3557] shadow-xl">
         <GuidePanel onClose={onClose} />
@@ -415,11 +496,14 @@ function OpponentGrid({
 }
 
 function GameLogPanel({ gameLog }: { gameLog: string[] }) {
+  const { t } = useLocale();
   return (
     <div className="rounded-xl bg-[#1a2e25]/90 border border-[#2d4a3c] p-3 mt-4 max-h-48 overflow-hidden flex flex-col">
-      <p className="text-xs text-[#f1faee]/80 mb-2">游戏日志（调试信息）</p>
+      <p className="text-xs text-[#f1faee]/80 mb-2">
+        {t('game.mahjong.debugLog')}
+      </p>
       <pre className="text-[11px] text-[#e0e0e0] overflow-auto flex-1 font-mono whitespace-pre-wrap break-all">
-        {gameLog.length === 0 ? '（暂无）' : gameLog.join('\n')}
+        {gameLog.length === 0 ? t('game.mahjong.noLogs') : gameLog.join('\n')}
       </pre>
       <button
         type="button"
@@ -429,7 +513,7 @@ function GameLogPanel({ gameLog }: { gameLog: string[] }) {
         }}
         className="mt-2 text-xs text-amber-300 hover:text-amber-200"
       >
-        复制全部
+        {t('game.mahjong.copyAll')}
       </button>
     </div>
   );
@@ -438,7 +522,7 @@ function GameLogPanel({ gameLog }: { gameLog: string[] }) {
 type SelfHandPanelProps = {
   game: RiichiGameState;
   t: (key: string) => string;
-  locale: string;
+  locale: Locale;
   currentTurnRemainSeconds: number | null;
   decisionSeat: number | null;
   timerTextClass: (seat: 0 | 1 | 2 | 3) => string;
@@ -472,11 +556,18 @@ function SelfHandPanel({
       <div className="text-center text-xs text-[#a8dadc]/90 space-y-1">
         <p>
           <span className={timerTextClass(0)}>
-            自家时库 {game.timeBanks[0]}s
+            {formatMessage(locale, 'game.mahjong.selfTimebank', {
+              timebank: game.timeBanks[0],
+            })}
           </span>
           {currentTurnRemainSeconds != null &&
-            ` · 本巡剩余 ${currentTurnRemainSeconds}s`}
-          {decisionSeat !== null && ` · 当前决策 ${SEAT_NAMES[decisionSeat]}`}
+            formatMessage(locale, 'game.mahjong.selfTurnRemaining', {
+              seconds: currentTurnRemainSeconds,
+            })}
+          {decisionSeat !== null &&
+            formatMessage(locale, 'game.mahjong.currentDecision', {
+              seat: t(`game.mahjong.seats.${decisionSeat}`),
+            })}
         </p>
         {currentTurnRemainSeconds != null && (
           <div className="mx-auto h-1.5 w-44 rounded bg-black/20 overflow-hidden">
@@ -528,9 +619,9 @@ function SelfHandPanel({
                 {m.type === 'angang' && (
                   <span
                     className="text-[10px] text-slate-300 px-0.5"
-                    title="暗杠不算副露"
+                    title={t('game.mahjong.angangTooltip')}
                   >
-                    暗
+                    {t('game.mahjong.dark')}
                   </span>
                 )}
                 {toTileKeyedItems(m.tiles, `${key}-tile`).map(
@@ -555,7 +646,7 @@ function SelfHandPanel({
       {tenpaiHint && (
         <div className="rounded-lg border border-[#457b9d]/50 bg-[#1d3557]/40 px-3 py-2">
           <p className="text-xs text-[#a8dadc]/90 mb-1.5">
-            听牌提示（按可见信息估算）
+            {t('game.mahjong.tenpaiHintTitle')}
           </p>
           {tenpaiHint.kind === 'current' ? (
             <p className="text-sm text-[#f1faee] font-medium">
@@ -571,7 +662,9 @@ function SelfHandPanel({
         </div>
       )}
       {canDiscard && (
-        <p className="text-center text-sm text-[#ffc107]/90">点击手牌出牌</p>
+        <p className="text-center text-sm text-[#ffc107]/90">
+          {t('game.mahjong.clickToDiscard')}
+        </p>
       )}
       <div className="flex flex-wrap justify-center items-center gap-2.5">
         {handTiles.map(({ tile, key }) => {

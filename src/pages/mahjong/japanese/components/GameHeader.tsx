@@ -1,13 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { QuickAccessPanel } from '@/components/home/QuickAccessPanel';
+import { useLocale } from '@/contexts/LocaleContext';
+import { formatMessage } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-import {
-  RIICHI_THEMES,
-  type RiichiThemeId,
-  SEAT_NAMES,
-  WIND_NAMES,
-} from '../constants';
+import { RIICHI_THEMES, type RiichiThemeId } from '../constants';
 import { formatPoints, toTileKeyedItems } from '../helpers';
 import type { RiichiGameState } from '../types';
 import { getTileColorClass, RiichiTileFace } from './Tile';
@@ -41,8 +38,14 @@ export function GameHeader({
   onThemeChange,
   onOpenGuide,
 }: Props) {
+  const { locale, t } = useLocale();
   const [menuOpen, setMenuOpen] = useState(false);
-  const roundText = `${WIND_NAMES[game.roundWind]}${game.roundNumber}局 ${WIND_NAMES[game.roundWind]}${game.honba}场 · 庄 ${SEAT_NAMES[game.dealer]}`;
+  const roundText = formatMessage(locale, 'game.mahjong.roundTextFormat', {
+    wind: t(`game.mahjong.winds.${game.roundWind}`),
+    round: game.roundNumber,
+    honba: game.honba,
+    dealer: t(`game.mahjong.seats.${game.dealer}`),
+  });
 
   return (
     <header className="riichi-app-header flex items-center justify-between border-b px-3 py-2 gap-2">
@@ -65,14 +68,16 @@ export function GameHeader({
           className="text-[11px] md:text-xs font-semibold"
           style={{ color: 'var(--riichi-accent)' }}
         >
-          立直棒 {formatPoints(game.riichiPot)}
+          {t('game.mahjong.riichiStick')} {formatPoints(game.riichiPot)}
         </p>
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
         <QuickAccessPanel compact className="hidden md:flex" />
         <div className="hidden md:flex items-center gap-1">
-          <span className="text-[10px] opacity-80">宝牌</span>
+          <span className="text-[10px] opacity-80">
+            {t('game.mahjong.dora')}
+          </span>
           {toTileKeyedItems(game.doraIndicators, 'header-dora').map(
             ({ tile, key }) => (
               <span
@@ -96,9 +101,9 @@ export function GameHeader({
             color: 'var(--riichi-text)',
             backgroundColor: 'transparent',
           }}
-          aria-label="打开菜单"
+          aria-label={t('game.mahjong.openMenu')}
         >
-          菜单
+          {t('game.mahjong.menu')}
         </button>
       </div>
 
@@ -108,7 +113,7 @@ export function GameHeader({
             type="button"
             className="absolute inset-0 bg-black/45"
             onClick={() => setMenuOpen(false)}
-            aria-label="关闭菜单"
+            aria-label={t('game.mahjong.closeMenu')}
           />
           <aside
             className="absolute right-0 top-0 h-full w-[280px] border-l p-4 overflow-auto"
@@ -119,13 +124,15 @@ export function GameHeader({
             }}
           >
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-semibold">对局菜单</p>
+              <p className="text-sm font-semibold">
+                {t('game.mahjong.gameMenu')}
+              </p>
               <button
                 type="button"
                 onClick={() => setMenuOpen(false)}
                 className="text-xs opacity-80 hover:opacity-100"
               >
-                关闭
+                {t('game.mahjong.close')}
               </button>
             </div>
 
@@ -139,7 +146,7 @@ export function GameHeader({
                 className="w-full rounded-lg border px-3 py-2 text-sm text-left hover:opacity-90"
                 style={{ borderColor: 'var(--riichi-border)' }}
               >
-                再来一局
+                {t('riichi.modal.matchEnd.playAgain')}
               </button>
               <button
                 type="button"
@@ -150,19 +157,23 @@ export function GameHeader({
                 className="w-full rounded-lg border px-3 py-2 text-sm text-left hover:opacity-90"
                 style={{ borderColor: 'var(--riichi-border)' }}
               >
-                新手引导
+                {t('common.beginnerGuide')}
               </button>
             </div>
 
-            <div className="mb-4 md:hidden">
-              <p className="text-xs opacity-75 mb-2">快捷入口</p>
+            <div className="mb-4 border-t pt-2 md:hidden">
+              <p className="text-xs opacity-75 mb-2">
+                {t('game.mahjong.quickAccess')}
+              </p>
               <QuickAccessPanel compact className="w-full" />
             </div>
 
             <div className="mb-4">
-              <p className="text-xs opacity-75 mb-2">主题</p>
+              <p className="text-xs opacity-75 mb-2">
+                {t('game.mahjong.theme')}
+              </p>
               <div className="flex flex-wrap gap-2">
-                {RIICHI_THEMES.map(({ id, label }) => (
+                {RIICHI_THEMES.map(({ id }) => (
                   <button
                     key={id}
                     type="button"
@@ -189,14 +200,16 @@ export function GameHeader({
                     }}
                     aria-pressed={theme === id}
                   >
-                    {label}
+                    {t(`game.mahjong.themes.${id}`)}
                   </button>
                 ))}
               </div>
             </div>
 
             <div>
-              <p className="text-xs opacity-75 mb-2">调试</p>
+              <p className="text-xs opacity-75 mb-2">
+                {t('game.mahjong.debug')}
+              </p>
               <div className="space-y-2">
                 {historyLength > 0 && (
                   <button
@@ -204,9 +217,9 @@ export function GameHeader({
                     onClick={onUndo}
                     className="w-full rounded-lg border px-3 py-2 text-sm text-left hover:opacity-90"
                     style={{ borderColor: 'var(--riichi-border)' }}
-                    title="回退一步（便于排查问题）"
+                    title={t('game.mahjong.undoTooltip')}
                   >
-                    回退一步
+                    {t('game.mahjong.undo')}
                   </button>
                 )}
                 <button
@@ -215,7 +228,9 @@ export function GameHeader({
                   className="w-full rounded-lg border px-3 py-2 text-sm text-left hover:opacity-90"
                   style={{ borderColor: 'var(--riichi-border)' }}
                 >
-                  {logOpen ? '收起日志' : '查看日志'}
+                  {logOpen
+                    ? t('game.mahjong.hideLog')
+                    : t('game.mahjong.showLog')}
                 </button>
               </div>
             </div>

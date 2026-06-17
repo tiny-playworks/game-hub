@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { unlock } from '@/lib/achievements';
 import { GOMOKU_SIZE, type GomokuStone, getGomokuWinner } from '@/lib/gomoku';
+import { formatMessage } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 const GameGomoku = () => {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const [board, setBoard] = useState<GomokuStone[]>(
     Array(GOMOKU_SIZE * GOMOKU_SIZE).fill(null),
   );
@@ -36,14 +37,23 @@ const GameGomoku = () => {
         </Link>
         <span className="text-sm text-muted-foreground">
           {winner
-            ? `赢家: ${winner === 'B' ? '黑' : '白'}`
-            : `下一位: ${blackNext ? '黑' : '白'}`}
+            ? formatMessage(locale, 'game.gomoku.winner', {
+                winner:
+                  winner === 'B'
+                    ? t('game.gomoku.black')
+                    : t('game.gomoku.white'),
+              })
+            : formatMessage(locale, 'game.gomoku.next', {
+                next: blackNext
+                  ? t('game.gomoku.black')
+                  : t('game.gomoku.white'),
+              })}
         </span>
       </header>
 
       <main className="flex min-h-[calc(100vh-56px)] flex-col items-center justify-center p-4">
         <p className="mb-2 text-sm text-muted-foreground">
-          五子连珠即胜，双人轮流落子
+          {t('game.gomoku.rules')}
         </p>
         <div
           className="grid gap-0.5 rounded-lg bg-muted p-2"

@@ -1,4 +1,6 @@
 import { type RefObject, useCallback, useMemo } from 'react';
+import { useLocale } from '@/contexts/LocaleContext';
+import { formatMessage } from '@/lib/i18n';
 import {
   canMingangRiichi,
   canPengRiichi,
@@ -70,6 +72,7 @@ export function useRiichiDerived({
   clockNowMs,
   turnClockRef,
 }: UseRiichiDerivedParams) {
+  const { locale, t } = useLocale();
   const tenpaiHint = useMemo(() => {
     if (winResult) return null;
     if (!game || game.ryuukyoku) return null;
@@ -114,8 +117,15 @@ export function useRiichiDerived({
 
     const formatWait = (handTc: number[], waitTile: number): string => {
       const han = getHanForWaitingTile(handTc, waitTile);
-      const hanStr = han > 0 ? `${han}番` : '无役';
-      return `${getTileLabel(waitTile)}(剩${remaining(waitTile)}, ${hanStr})`;
+      const hanStr =
+        han > 0
+          ? formatMessage(locale, 'game.mahjong.hanCount', { count: han })
+          : t('game.mahjong.noYaku');
+      return formatMessage(locale, 'game.mahjong.waitFormat', {
+        tile: getTileLabel(waitTile, locale),
+        remaining: remaining(waitTile),
+        han: hanStr,
+      });
     };
 
     const extra = hand.length - tc;
@@ -127,13 +137,16 @@ export function useRiichiDerived({
       const uniqueBase = [...new Set(waitingShape.map(getBaseTile))];
       return {
         kind: 'current' as const,
-        line: `听牌：${uniqueBase
-          .map((b) => {
-            const w =
-              waitingShape.find((x) => getBaseTile(x) === b) ?? waitingShape[0];
-            return formatWait(hand, w);
-          })
-          .join(' ')}`,
+        line: formatMessage(locale, 'game.mahjong.tenpaiLine', {
+          waits: uniqueBase
+            .map((b) => {
+              const w =
+                waitingShape.find((x) => getBaseTile(x) === b) ??
+                waitingShape[0];
+              return formatWait(hand, w);
+            })
+            .join(' '),
+        }),
         waiting: uniqueBase,
         remaining,
       };
@@ -153,16 +166,19 @@ export function useRiichiDerived({
         const uniqueBase = [...new Set(waitingShape.map(getBaseTile))];
         options.push({
           discardTile: hand[i],
-          discardLabel: getTileLabel(hand[i]),
+          discardLabel: getTileLabel(hand[i], locale),
           waiting: uniqueBase,
-          line: `打 ${getTileLabel(hand[i])} 听 ${uniqueBase
-            .map((b) => {
-              const w =
-                waitingShape.find((x) => getBaseTile(x) === b) ??
-                waitingShape[0];
-              return formatWait(handWithout, w);
-            })
-            .join(' ')}`,
+          line: formatMessage(locale, 'game.mahjong.discardAndTenpai', {
+            discard: getTileLabel(hand[i], locale),
+            waits: uniqueBase
+              .map((b) => {
+                const w =
+                  waitingShape.find((x) => getBaseTile(x) === b) ??
+                  waitingShape[0];
+                return formatWait(handWithout, w);
+              })
+              .join(' '),
+          }),
         });
       }
       if (options.length === 0) return null;
@@ -177,25 +193,31 @@ export function useRiichiDerived({
     if (unionWaits.size === 0) return null;
     const sortedWaits = Array.from(unionWaits).sort((a, b) => a - b);
     const uniqueBase = [...new Set(sortedWaits.map(getBaseTile))];
-    const line = `需打出 ${extra} 张牌；听牌：${uniqueBase
-      .map((b) => {
-        const waitTile =
-          sortedWaits.find((w) => getBaseTile(w) === b) ?? sortedWaits[0];
-        const repHand = states.find((s) =>
-          getWaitingTilesShapeOnly(s).includes(waitTile),
-        );
-        return repHand
-          ? formatWait(repHand, waitTile)
-          : `${getTileLabel(waitTile)}(剩${remaining(waitTile)})`;
-      })
-      .join(' ')}`;
+    const line = formatMessage(locale, 'game.mahjong.needDiscardAndTenpai', {
+      extra,
+      waits: uniqueBase
+        .map((b) => {
+          const waitTile =
+            sortedWaits.find((w) => getBaseTile(w) === b) ?? sortedWaits[0];
+          const repHand = states.find((s) =>
+            getWaitingTilesShapeOnly(s).includes(waitTile),
+          );
+          return repHand
+            ? formatWait(repHand, waitTile)
+            : formatMessage(locale, 'game.mahjong.waitFormatSimple', {
+                tile: getTileLabel(waitTile, locale),
+                remaining: remaining(waitTile),
+              });
+        })
+        .join(' '),
+    });
     return {
       kind: 'current' as const,
       line,
       waiting: uniqueBase,
       remaining,
     };
-  }, [game, winResult]);
+  }, [game, winResult, locale, t]);
 
   const angangOptions =
     game?.phase === 'discard' &&

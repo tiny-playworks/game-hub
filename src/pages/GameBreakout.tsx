@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { unlock } from '@/lib/achievements';
+import { formatMessage } from '@/lib/i18n';
 import { useGameStore } from '../store/gameStore';
 
 const CANVAS_W = 800;
@@ -54,7 +55,7 @@ function createBricks(): Brick[] {
 }
 
 const GameBreakout = () => {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { stats, updateHighScore } = useGameStore();
   const gameStats = stats.breakout || { highScore: 0 };
@@ -268,10 +269,16 @@ const GameBreakout = () => {
         </Link>
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">
-            最高分: {gameStats.highScore}
+            {formatMessage(locale, 'breakout.highScore', {
+              score: gameStats.highScore,
+            })}
           </span>
-          <span className="text-sm text-muted-foreground">分数: {score}</span>
-          <span className="text-sm text-muted-foreground">生命: {lives}</span>
+          <span className="text-sm text-muted-foreground">
+            {formatMessage(locale, 'breakout.score', { score })}
+          </span>
+          <span className="text-sm text-muted-foreground">
+            {formatMessage(locale, 'breakout.lives', { lives })}
+          </span>
           <Button variant="outline" size="sm" onClick={resetGame}>
             {t('common.restart')}
           </Button>
@@ -296,8 +303,8 @@ const GameBreakout = () => {
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 rounded-lg">
               <p className="mb-4 text-lg text-white">
                 {status === 'idle'
-                  ? '点击画布或按空格发射小球'
-                  : '已暂停，按空格继续'}
+                  ? t('breakout.launchTip')
+                  : t('breakout.pausedTip')}
               </p>
               <Button onClick={launch}>{t('common.startOrContinue')}</Button>
             </div>
@@ -305,8 +312,12 @@ const GameBreakout = () => {
 
           {status === 'win' && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-green-900/80 rounded-lg">
-              <p className="mb-4 text-2xl font-bold text-white">通关！</p>
-              <p className="mb-4 text-white">得分: {score}</p>
+              <p className="mb-4 text-2xl font-bold text-white">
+                {t('breakout.win')}
+              </p>
+              <p className="mb-4 text-white">
+                {formatMessage(locale, 'breakout.finalScore', { score })}
+              </p>
               <div className="flex gap-2">
                 <Button onClick={resetGame}>{t('common.playAgain')}</Button>
                 <Link to="/">
@@ -318,8 +329,12 @@ const GameBreakout = () => {
 
           {status === 'lose' && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-900/80 rounded-lg">
-              <p className="mb-4 text-2xl font-bold text-white">游戏结束</p>
-              <p className="mb-4 text-white">得分: {score}</p>
+              <p className="mb-4 text-2xl font-bold text-white">
+                {t('breakout.gameOver')}
+              </p>
+              <p className="mb-4 text-white">
+                {formatMessage(locale, 'breakout.finalScore', { score })}
+              </p>
               <div className="flex gap-2">
                 <Button onClick={resetGame}>{t('common.playAgain')}</Button>
                 <Link to="/">
@@ -331,7 +346,7 @@ const GameBreakout = () => {
         </div>
 
         <p className="mt-4 text-center text-sm text-muted-foreground">
-          鼠标/手指移动挡板 · 空格发射/暂停
+          {t('breakout.controls')}
         </p>
       </main>
     </div>

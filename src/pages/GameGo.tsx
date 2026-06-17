@@ -11,10 +11,11 @@ import {
   pass,
   placeStone,
 } from '@/lib/go';
+import { formatMessage } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 const GameGo = () => {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const [state, setState] = useState<GoState>(createInitialState);
 
   const handleCellClick = (row: number, col: number) => {
@@ -34,8 +35,15 @@ const GameGo = () => {
 
   const score = state.gameOver ? getScore(state) : null;
   const statusText = state.gameOver
-    ? `终局 · 黑 ${score?.black ?? 0} : 白 ${score?.white ?? 0}`
-    : `下一位: ${state.blackTurn ? '黑' : '白'}`;
+    ? formatMessage(locale, 'game.go.status.gameOver', {
+        black: score?.black ?? 0,
+        white: score?.white ?? 0,
+      })
+    : formatMessage(locale, 'game.go.status.next', {
+        next: state.blackTurn
+          ? t('game.go.status.black')
+          : t('game.go.status.white'),
+      });
 
   return (
     <div className="min-h-screen bg-background">
@@ -48,7 +56,7 @@ const GameGo = () => {
 
       <main className="flex min-h-[calc(100vh-56px)] flex-col items-center justify-center p-4">
         <p className="mb-2 text-sm text-muted-foreground">
-          围棋 9×9：黑先白后，点击空交叉点落子，可 pass，双方连续 pass 终局
+          {t('game.go.rules')}
         </p>
         <div
           className="inline-grid gap-0 rounded-lg border-2 border-amber-800 bg-amber-100 p-1"
@@ -91,7 +99,7 @@ const GameGo = () => {
         <div className="mt-4 flex gap-2">
           {!state.gameOver && (
             <Button variant="outline" size="sm" onClick={handlePass}>
-              Pass
+              {t('game.go.pass')}
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={restart}>

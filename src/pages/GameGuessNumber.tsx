@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
+import { formatMessage } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useScreenShake } from '../hooks/useScreenShake';
 import { useGameStore } from '../store/gameStore';
@@ -22,13 +23,17 @@ interface GuessHistory {
 const getHeat = (
   distance: number,
   isLarger: boolean,
+  t: (key: string) => string,
 ): { heat: GuessHistory['heat']; message: string } => {
-  if (distance === 0) return { heat: 'correct', message: '完全一致' };
-  const dir = isLarger ? '偏大' : '偏小';
-  if (distance <= 5) return { heat: 'hot', message: `${dir} (极热)` };
-  if (distance <= 15) return { heat: 'warm', message: `${dir} (温热)` };
-  if (distance <= 30) return { heat: 'cool', message: `${dir} (微凉)` };
-  return { heat: 'cold', message: `${dir} (冰冷)` };
+  if (distance === 0) return { heat: 'correct', message: t('guess.correct') };
+  const dir = isLarger ? t('guess.larger') : t('guess.smaller');
+  if (distance <= 5)
+    return { heat: 'hot', message: `${dir} ${t('guess.heat.hot')}` };
+  if (distance <= 15)
+    return { heat: 'warm', message: `${dir} ${t('guess.heat.warm')}` };
+  if (distance <= 30)
+    return { heat: 'cool', message: `${dir} ${t('guess.heat.cool')}` };
+  return { heat: 'cold', message: `${dir} ${t('guess.heat.cold')}` };
 };
 
 const getHeatColor = (heat: GuessHistory['heat']) => {
@@ -47,7 +52,7 @@ const getHeatColor = (heat: GuessHistory['heat']) => {
 };
 
 const GameGuessNumber = () => {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const shake = useScreenShake();
   const { stats, updateHighScore } = useGameStore();
 
@@ -116,7 +121,7 @@ const GameGuessNumber = () => {
     }
 
     const distance = Math.abs(answer - n);
-    const { heat, message } = getHeat(distance, n > answer);
+    const { heat, message } = getHeat(distance, n > answer, t);
 
     const newEntry: GuessHistory = { guess: n, distance, heat, message };
     setHistory((prev) => [...prev, newEntry]);
@@ -139,6 +144,7 @@ const GameGuessNumber = () => {
     shake,
     status,
     timeLeft,
+    t,
     updateHighScore,
   ]);
 
@@ -167,7 +173,20 @@ const GameGuessNumber = () => {
   }, [handleBackspace, handleInput, status, submitGuess]);
 
   // Numpad layout
-  const padKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '猜'];
+  const padKeys = [
+    '1',
+    '2',
+    '3',
+    '4',
+    '5',
+    '6',
+    '7',
+    '8',
+    '9',
+    'C',
+    '0',
+    'SUBMIT',
+  ] as const;
 
   return (
     <div className="min-h-screen bg-[#111] text-zinc-300 font-sans selection:bg-red-900/50">
@@ -179,7 +198,11 @@ const GameGuessNumber = () => {
           ← {t('common.backToList')}
         </Link>
         <div className="flex gap-4 text-sm font-led text-red-500">
-          <span>最高纪录: {gameStats.highScore}s</span>
+          <span>
+            {formatMessage(locale, 'guess.highScore', {
+              score: gameStats.highScore,
+            })}
+          </span>
         </div>
       </header>
 
@@ -188,10 +211,10 @@ const GameGuessNumber = () => {
         <div className="text-center mb-6">
           <p className="text-xs text-zinc-500 font-mono">DEFUSE</p>
           <h1 className="text-3xl font-black text-red-600 tracking-widest font-led mb-1">
-            猜数字
+            {t('game.guess-number.name')}
           </h1>
           <p className="text-xs text-zinc-500 font-mono">
-            密码范围: {MIN}-{MAX}
+            {formatMessage(locale, 'guess.range', { min: MIN, max: MAX })}
           </p>
         </div>
 
@@ -232,7 +255,7 @@ const GameGuessNumber = () => {
         >
           {history.length === 0 && (
             <div className="text-zinc-600 italic text-center mt-auto mb-auto">
-              等待输入...
+              {t('guess.waitingInput')}
             </div>
           )}
           {history.map((h, i) => (
@@ -271,19 +294,19 @@ const GameGuessNumber = () => {
               disabled={status !== 'playing'}
               onClick={() => {
                 if (k === 'C') handleBackspace();
-                else if (k === '猜') submitGuess();
+                else if (k === 'SUBMIT') submitGuess();
                 else handleInput(k);
               }}
               className={cn(
                 'h-14 text-xl font-bold rounded-lg border-b-4 active:border-b-0 active:translate-y-1 transition-all',
-                k === '猜'
+                k === 'SUBMIT'
                   ? 'bg-red-900/20 text-red-500 border-red-900 hover:bg-red-900/40'
                   : k === 'C'
                     ? 'bg-zinc-800 text-zinc-400 border-zinc-900 hover:bg-zinc-700'
                     : 'bg-zinc-800 text-white border-zinc-900 hover:bg-zinc-700 hover:text-white',
               )}
             >
-              {k}
+              {k === 'SUBMIT' ? t('guess.btn') : k}
             </Button>
           ))}
         </div>
@@ -297,12 +320,12 @@ const GameGuessNumber = () => {
                 status === 'won' ? 'text-green-500' : 'text-red-500',
               )}
             >
-              {status === 'won' ? '拆除成功' : '引爆失败'}
+              {status === 'won' ? t('guess.won') : t('guess.lost')}
             </h2>
             <p className="text-zinc-400 mb-6 font-mono text-sm">
               {status === 'won'
-                ? `密码是 ${answer}，剩余 ${timeLeft} 秒。`
-                : `正确密码是 ${answer}。`}
+                ? formatMessage(locale, 'guess.wonDesc', { answer, timeLeft })
+                : formatMessage(locale, 'guess.lostDesc', { answer })}
             </p>
             <Button
               size="lg"

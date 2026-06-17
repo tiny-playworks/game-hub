@@ -17,7 +17,6 @@ import {
   getNextLockedTitle,
   getUnlockedTitles,
 } from '@/lib/titles';
-import { SEAT_NAMES } from '../constants';
 import {
   formatPoints,
   getMatchEndReasonText,
@@ -308,7 +307,7 @@ export function WinModal({
   timeoutEvents,
   onNext,
 }: WinModalProps) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const winnerDelta = winSettlementPreview?.deltas[winResult.winner] ?? 0;
   const maxLossSeat = winSettlementPreview
     ? getMaxLossSeat(winSettlementPreview.deltas)
@@ -375,7 +374,7 @@ export function WinModal({
             <p className="mb-2 text-xs text-[#a8dadc]">
               {t('riichi.modal.win.uraIndicator')}{' '}
               {winResult.uraDoraIndicators
-                .map((t) => getTileLabel(t))
+                .map((t) => getTileLabel(t, locale))
                 .join(' · ')}
               {winResult.uraHan != null
                 ? `（${t('riichi.modal.win.uraHan')} ${winResult.uraHan} ${t('riichi.modal.unit.han')}）`
@@ -396,10 +395,11 @@ export function WinModal({
           >
             <p className="text-[11px] font-semibold text-[#ffe082]">
               {t('riichi.modal.summary.title')}
-              {SEAT_NAMES[winResult.winner]} {winnerDelta >= 0 ? '+' : ''}
+              {t(`game.mahjong.seats.${winResult.winner}`)}{' '}
+              {winnerDelta >= 0 ? '+' : ''}
               {winnerDelta}
               {maxLossSeat != null &&
-                ` · ${SEAT_NAMES[maxLossSeat]} ${maxLossDelta >= 0 ? '+' : ''}${maxLossDelta}`}
+                ` · ${t(`game.mahjong.seats.${maxLossSeat}`)} ${maxLossDelta >= 0 ? '+' : ''}${maxLossDelta}`}
             </p>
             {winnerPaymentSummary && (
               <p>
@@ -415,13 +415,16 @@ export function WinModal({
             <p>
               {t('riichi.modal.summary.delta')}{' '}
               {winSettlementPreview.deltas
-                .map((d, i) => `${SEAT_NAMES[i]} ${d >= 0 ? '+' : ''}${d}`)
+                .map(
+                  (d, i) =>
+                    `${t(`game.mahjong.seats.${i}`)} ${d >= 0 ? '+' : ''}${d}`,
+                )
                 .join(' · ')}
             </p>
             <p>
               {t('riichi.modal.summary.total')}{' '}
               {winSettlementPreview.newScores
-                .map((s, i) => `${SEAT_NAMES[i]} ${s}`)
+                .map((s, i) => `${t(`game.mahjong.seats.${i}`)} ${s}`)
                 .join(' · ')}
             </p>
             {winSettlementPreview.payments.length > 0 && (
@@ -429,9 +432,9 @@ export function WinModal({
                 {winSettlementPreview.payments.slice(0, 8).map((p, i) => (
                   <li key={i}>
                     {p.from >= 0
-                      ? SEAT_NAMES[p.from]
+                      ? t(`game.mahjong.seats.${p.from}`)
                       : t('riichi.modal.summary.riichiPool')}{' '}
-                    → {SEAT_NAMES[p.to]} {p.amount}
+                    → {t(`game.mahjong.seats.${p.to}`)} {p.amount}
                     {t('riichi.modal.unit.point')}
                     {p.reason === 'honba'
                       ? `（${t('riichi.modal.summary.reason.honba')}）`
@@ -484,7 +487,7 @@ export function RyuukyokuModal({
   timeoutEvents,
   onNext,
 }: RyuukyokuModalProps) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const isExhaustiveDraw = isExhaustiveRyuukyoku(ryuukyokuReason);
   const reasonText = getRyuukyokuReasonText(ryuukyokuReason, t);
   const maxGainSeat = drawSettlementPreview
@@ -494,6 +497,9 @@ export function RyuukyokuModal({
     maxGainSeat != null && drawSettlementPreview
       ? drawSettlementPreview.settlement.deltas[maxGainSeat]
       : 0;
+
+  const listSeparator = locale === 'en' ? ', ' : '、';
+  const semicolonSeparator = locale === 'en' ? '; ' : '；';
 
   return (
     <div
@@ -541,14 +547,14 @@ export function RyuukyokuModal({
                 ? ` ${t('riichi.modal.draw.tenpaiCountPrefix')} ${drawSettlementPreview.tenpaiSeats.length} ${t('riichi.modal.draw.houseSuffix')}`
                 : ` ${t('riichi.modal.draw.abortive')}`}
               {maxGainSeat != null &&
-                ` · ${SEAT_NAMES[maxGainSeat]} ${maxGainDelta >= 0 ? '+' : ''}${maxGainDelta}`}
+                ` · ${t(`game.mahjong.seats.${maxGainSeat}`)} ${maxGainDelta >= 0 ? '+' : ''}${maxGainDelta}`}
             </p>
             {isExhaustiveDraw ? (
               <p>
                 {t('riichi.modal.draw.tenpaiLabel')}
                 {drawSettlementPreview.tenpaiSeats.length === 0
                   ? ` ${t('riichi.modal.none')}`
-                  : ` ${drawSettlementPreview.tenpaiSeats.map((i) => SEAT_NAMES[i]).join('、')}`}
+                  : ` ${drawSettlementPreview.tenpaiSeats.map((i) => t(`game.mahjong.seats.${i}`)).join(listSeparator)}`}
               </p>
             ) : (
               <p>{t('riichi.modal.draw.abortiveNote')}</p>
@@ -556,19 +562,22 @@ export function RyuukyokuModal({
             <p>
               {t('riichi.modal.summary.delta')}{' '}
               {drawSettlementPreview.settlement.deltas
-                .map((d, i) => `${SEAT_NAMES[i]} ${d >= 0 ? '+' : ''}${d}`)
+                .map(
+                  (d, i) =>
+                    `${t(`game.mahjong.seats.${i}`)} ${d >= 0 ? '+' : ''}${d}`,
+                )
                 .join(' · ')}
             </p>
             <p>
               {t('riichi.modal.summary.total')}{' '}
               {drawSettlementPreview.settlement.newScores
-                .map((s, i) => `${SEAT_NAMES[i]} ${s}`)
+                .map((s, i) => `${t(`game.mahjong.seats.${i}`)} ${s}`)
                 .join(' · ')}
             </p>
             {timeoutEvents.length > 0 && (
               <p className="text-[11px] text-[#f1faee]/80">
                 {t('riichi.modal.summary.timeout')}
-                {timeoutEvents.join('；')}
+                {timeoutEvents.join(semicolonSeparator)}
               </p>
             )}
           </div>
@@ -644,7 +653,8 @@ export function MatchEndModal({
             <p key={seat}>
               {i + 1}
               {t('riichi.modal.matchEnd.rankSuffix')}
-              {SEAT_NAMES[seat]} {formatPoints(matchEnd.finalScores[seat])}
+              {t(`game.mahjong.seats.${seat}`)}{' '}
+              {formatPoints(matchEnd.finalScores[seat])}
             </p>
           ))}
         </div>

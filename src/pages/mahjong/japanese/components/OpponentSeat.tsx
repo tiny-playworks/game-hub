@@ -1,5 +1,7 @@
+import { useLocale } from '@/contexts/LocaleContext';
+import { formatMessage } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-import { SEAT_NAMES, TILE_DISCARD, WIND_NAMES } from '../constants';
+import { TILE_DISCARD } from '../constants';
 import {
   formatPoints,
   getSeatWind,
@@ -35,6 +37,7 @@ export function OpponentSeat({
   timerClassName,
   isCurrentTurn,
 }: Props) {
+  const { locale, t } = useLocale();
   const rot = tileRotation(seat);
   const tileStyle = { transform: `rotate(${rot}deg)` };
   const isVertical = seat !== 2;
@@ -45,6 +48,17 @@ export function OpponentSeat({
   const visibleBacks = isVertical
     ? Math.min(game.hands[seat].length, SIDE_VISIBLE_BACKS)
     : game.hands[seat].length;
+
+  const ariaLabelText = formatMessage(locale, 'game.mahjong.opponentAria', {
+    seat: t(`game.mahjong.seats.${seat}`),
+    wind: t(
+      `game.mahjong.winds.${getSeatWind(game.roundWind, seat, game.dealer)}`,
+    ),
+    count: game.hands[seat].length,
+    points: formatPoints(game.scores[seat]),
+    timer: timerLabel,
+  });
+
   return (
     <button
       type="button"
@@ -53,20 +67,28 @@ export function OpponentSeat({
         isVertical && 'px-1.5 md:px-2',
         isCurrentTurn && 'riichi-opponent-seat-active border',
       )}
-      aria-label={`${SEAT_NAMES[seat]} ${WIND_NAMES[getSeatWind(game.roundWind, seat, game.dealer)]} ${game.hands[seat].length}张 ${formatPoints(game.scores[seat])} ${timerLabel}`}
+      aria-label={ariaLabelText}
     >
       <div className="riichi-opponent-chip">
-        <span className="font-semibold">{SEAT_NAMES[seat]}</span>
+        <span className="font-semibold">{t(`game.mahjong.seats.${seat}`)}</span>
         <span className="opacity-70">
-          {WIND_NAMES[getSeatWind(game.roundWind, seat, game.dealer)]}
+          {t(
+            `game.mahjong.winds.${getSeatWind(game.roundWind, seat, game.dealer)}`,
+          )}
         </span>
       </div>
       <div className="riichi-opponent-float" role="tooltip">
         <p className="font-semibold">
-          {SEAT_NAMES[seat]} ·{' '}
-          {WIND_NAMES[getSeatWind(game.roundWind, seat, game.dealer)]}
+          {t(`game.mahjong.seats.${seat}`)} ·{' '}
+          {t(
+            `game.mahjong.winds.${getSeatWind(game.roundWind, seat, game.dealer)}`,
+          )}
         </p>
-        <p>{game.hands[seat].length} 张</p>
+        <p>
+          {formatMessage(locale, 'game.mahjong.tileCount', {
+            count: game.hands[seat].length,
+          })}
+        </p>
         <p>{formatPoints(game.scores[seat])}</p>
         <p>
           <span className={timerClassName}>{timerLabel}</span>

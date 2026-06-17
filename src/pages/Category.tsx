@@ -1,41 +1,11 @@
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
+import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { categories } from '@/data/categories';
 import { getGamesByCategory } from '@/data/games';
 import { cn } from '@/lib/utils';
-
-function LocaleSwitcher() {
-  const { locale, setLocale } = useLocale();
-  return (
-    <div className="flex gap-1 text-sm">
-      <button
-        type="button"
-        onClick={() => setLocale('zh')}
-        className={
-          locale === 'zh'
-            ? 'font-semibold text-foreground'
-            : 'text-muted-foreground hover:text-foreground'
-        }
-      >
-        中
-      </button>
-      <span className="text-muted-foreground">|</span>
-      <button
-        type="button"
-        onClick={() => setLocale('en')}
-        className={
-          locale === 'en'
-            ? 'font-semibold text-foreground'
-            : 'text-muted-foreground hover:text-foreground'
-        }
-      >
-        En
-      </button>
-    </div>
-  );
-}
 
 const Category = () => {
   const { t } = useLocale();
@@ -59,7 +29,7 @@ const Category = () => {
             >
               ← {t('common.backHome')}
             </Link>
-            <LocaleSwitcher />
+            <LanguageSwitcher />
           </div>
         </header>
         <main className="mx-auto max-w-5xl px-4 py-12 text-center">
@@ -94,7 +64,7 @@ const Category = () => {
               {t(`category.${category.id}.description`)}
             </p>
           </div>
-          <LocaleSwitcher />
+          <LanguageSwitcher />
         </div>
       </header>
 
@@ -194,7 +164,7 @@ const Category = () => {
                         key={tag}
                         className="rounded-full border border-border bg-background px-3 py-1 text-xs text-muted-foreground"
                       >
-                        {tag}
+                        {t(`game.tag.${tag}`)}
                       </span>
                     ))}
                   </div>
