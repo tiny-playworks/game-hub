@@ -1,148 +1,74 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { cn } from '@/lib/utils';
-
-const SIZE = 4;
-type Dir = 'up' | 'down' | 'left' | 'right';
-
-function emptyGrid(): number[][] {
-  return Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
-}
-
-function addRandom(grid: number[][]): number[][] {
-  const empty: [number, number][] = [];
-  for (let r = 0; r < SIZE; r++)
-    for (let c = 0; c < SIZE; c++) if (grid[r][c] === 0) empty.push([r, c]);
-  if (empty.length === 0) return grid;
-  const [r, c] = empty[Math.floor(Math.random() * empty.length)];
-  const next = grid.map((row) => [...row]);
-  next[r][c] = Math.random() < 0.9 ? 2 : 4;
-  return next;
-}
-
-function slideAndMerge(line: number[]): { line: number[]; score: number } {
-  const filtered = line.filter((n) => n !== 0);
-  const merged: number[] = [];
-  let score = 0;
-  let i = 0;
-  while (i < filtered.length) {
-    if (i + 1 < filtered.length && filtered[i] === filtered[i + 1]) {
-      merged.push(filtered[i] * 2);
-      score += filtered[i] * 2;
-      i += 2;
-    } else {
-      merged.push(filtered[i]);
-      i += 1;
-    }
-  }
-  while (merged.length < SIZE) merged.push(0);
-  return { line: merged, score };
-}
-
-function moveGrid(
-  grid: number[][],
-  dir: Dir,
-): { grid: number[][]; score: number } {
-  const next = emptyGrid();
-  let totalScore = 0;
-  if (dir === 'left') {
-    for (let r = 0; r < SIZE; r++) {
-      const { line, score } = slideAndMerge(grid[r]);
-      next[r] = line;
-      totalScore += score;
-    }
-  } else if (dir === 'right') {
-    for (let r = 0; r < SIZE; r++) {
-      const { line, score } = slideAndMerge([...grid[r]].reverse());
-      next[r] = line.reverse();
-      totalScore += score;
-    }
-  } else if (dir === 'up') {
-    for (let c = 0; c < SIZE; c++) {
-      const col = grid.map((row) => row[c]);
-      const { line, score } = slideAndMerge(col);
-      for (let r = 0; r < SIZE; r++) next[r][c] = line[r];
-      totalScore += score;
-    }
-  } else {
-    for (let c = 0; c < SIZE; c++) {
-      const col = grid.map((row) => row[c]).reverse();
-      const { line, score } = slideAndMerge(col);
-      const rev = line.reverse();
-      for (let r = 0; r < SIZE; r++) next[r][c] = rev[r];
-      totalScore += score;
-    }
-  }
-  return { grid: next, score: totalScore };
-}
-
-function sameGrid(a: number[][], b: number[][]): boolean {
-  for (let r = 0; r < SIZE; r++)
-    for (let c = 0; c < SIZE; c++) if (a[r][c] !== b[r][c]) return false;
-  return true;
-}
-
-function canMove(grid: number[][]): boolean {
-  for (let r = 0; r < SIZE; r++)
-    for (let c = 0; c < SIZE; c++) {
-      if (grid[r][c] === 0) return true;
-      const v = grid[r][c];
-      if (c + 1 < SIZE && grid[r][c + 1] === v) return true;
-      if (r + 1 < SIZE && grid[r + 1][c] === v) return true;
-    }
-  return false;
-}
-
-const STORAGE_KEY = 'game-2048-best';
+import { VirtualController } from '../components/common/VirtualController';
+import type { Dir } from '../hooks/use2048Engine';
+import { useEngine2048 } from '../hooks/use2048Engine';
+import { useScreenShake } from '../hooks/useScreenShake';
+import { useGameStore } from '../store/gameStore';
+import './2048.css';
 
 const Game2048 = () => {
   const { t } = useLocale();
-  const [grid, setGrid] = useState<number[][]>(() =>
-    addRandom(addRandom(emptyGrid())),
-  );
-  const [score, setScore] = useState(0);
-  const [best, setBest] = useState(() =>
-    Number.parseInt(localStorage.getItem(STORAGE_KEY) ?? '0', 10),
-  );
-  const [gameOver, setGameOver] = useState(false);
+  const { state, maxCombo, move, undo, initGame, canUndo } = useEngine2048();
+  const shake = useScreenShake();
+
+  const { stats, updateHighScore, updateMaxCombo } = useGameStore();
+  const gameStats = stats['2048'] || {
+    highScore: 0,
+    playCount: 0,
+    maxCombo: 0,
+  };
 
   useEffect(() => {
-    if (score > best) {
-      setBest(score);
-      localStorage.setItem(STORAGE_KEY, String(score));
+    if (state.score > gameStats.highScore) {
+      updateHighScore('2048', state.score);
     }
-  }, [score, best]);
+  }, [state.score, gameStats.highScore, updateHighScore]);
 
-  const tryMove = useCallback((dir: Dir) => {
-    setGrid((prev) => {
-      const { grid: next, score: add } = moveGrid(prev, dir);
-      if (sameGrid(prev, next)) return prev;
-      setScore((s) => s + add);
-      const withNew = addRandom(next);
-      if (!canMove(withNew)) setGameOver(true);
-      return withNew;
-    });
-  }, []);
+  useEffect(() => {
+    if (maxCombo > gameStats.maxCombo) {
+      updateMaxCombo('2048', maxCombo);
+    }
+  }, [maxCombo, gameStats.maxCombo, updateMaxCombo]);
+
+  const tryMove = useCallback(
+    (dir: Dir) => {
+      const { addedScore } = move(dir);
+      if (addedScore >= 512) {
+        shake();
+      }
+    },
+    [move, shake],
+  );
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (gameOver) return;
+      if (state.gameOver) return;
       switch (e.key) {
         case 'ArrowLeft':
+        case 'a':
+        case 'A':
           e.preventDefault();
           tryMove('left');
           break;
         case 'ArrowRight':
+        case 'd':
+        case 'D':
           e.preventDefault();
           tryMove('right');
           break;
         case 'ArrowUp':
+        case 'w':
+        case 'W':
           e.preventDefault();
           tryMove('up');
           break;
         case 'ArrowDown':
+        case 's':
+        case 'S':
           e.preventDefault();
           tryMove('down');
           break;
@@ -150,77 +76,159 @@ const Game2048 = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameOver, tryMove]);
+  }, [state.gameOver, tryMove]);
 
-  const restart = () => {
-    setGrid(addRandom(addRandom(emptyGrid())));
-    setScore(0);
-    setGameOver(false);
-  };
-
-  const colors: Record<number, string> = {
-    0: 'bg-muted',
-    2: 'bg-amber-100 text-amber-900',
-    4: 'bg-amber-200 text-amber-900',
-    8: 'bg-orange-300 text-orange-900',
-    16: 'bg-orange-400 text-orange-900',
-    32: 'bg-red-400 text-red-900',
-    64: 'bg-red-500 text-white',
-    128: 'bg-yellow-300 text-yellow-900',
-    256: 'bg-yellow-400 text-yellow-900',
-    512: 'bg-yellow-500 text-white',
-    1024: 'bg-yellow-600 text-white',
-    2048: 'bg-amber-600 text-white',
+  const getTileClass = (value: number) => {
+    if (value <= 2048) return `tile-${value}`;
+    return 'tile-super';
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
-        <Link to="/" className="text-muted-foreground hover:text-foreground">
+    <div className="min-h-screen bg-[#faf8ef] dark:bg-[#1a1a1a] text-[#776e65] dark:text-[#f9f6f2]">
+      <header className="flex items-center justify-between border-b border-black/10 dark:border-white/10 bg-white/50 dark:bg-black/20 backdrop-blur-md px-4 py-3 sticky top-0 z-10">
+        <Link
+          to="/"
+          className="text-black/60 hover:text-black dark:text-white/60 dark:hover:text-white transition-colors font-medium"
+        >
           ← {t('common.backToList')}
         </Link>
-        <div className="flex items-center gap-4">
-          <span className="text-sm font-medium">分数: {score}</span>
-          <span className="text-sm text-muted-foreground">最高: {best}</span>
-          <Button variant="outline" size="sm" onClick={restart}>
-            {t('common.restart')}
-          </Button>
+        <div className="flex items-center gap-3">
+          <div className="flex gap-2">
+            <div className="bg-[#bbada0] dark:bg-[#333] text-white rounded-md px-3 py-1 text-center">
+              <div className="text-[10px] uppercase font-bold text-[#eee4da] dark:text-white/70">
+                Score
+              </div>
+              <div className="font-bold leading-none">{state.score}</div>
+            </div>
+            <div className="bg-[#bbada0] dark:bg-[#333] text-white rounded-md px-3 py-1 text-center">
+              <div className="text-[10px] uppercase font-bold text-[#eee4da] dark:text-white/70">
+                Best
+              </div>
+              <div className="font-bold leading-none">
+                {Math.max(state.score, gameStats.highScore)}
+              </div>
+            </div>
+          </div>
         </div>
       </header>
 
-      <main className="flex min-h-[calc(100vh-56px)] flex-col items-center justify-center p-4">
-        <p className="mb-2 text-sm text-muted-foreground">
-          方向键移动，相同数字合并
-        </p>
-        <div className="rounded-lg bg-muted p-2">
-          <div
-            className="grid gap-2"
-            style={{ gridTemplateColumns: `repeat(${SIZE}, 1fr)` }}
-          >
-            {grid.flat().map((val, i) => (
-              <div
-                key={i}
-                className={cn(
-                  'flex aspect-square max-w-[72px] items-center justify-center rounded-lg text-xl font-bold sm:max-w-[84px]',
-                  colors[val] ?? 'bg-gray-400 text-white',
-                )}
-              >
-                {val || ''}
+      <main className="flex flex-col items-center justify-center p-4 min-h-[calc(100vh-64px)] pb-32">
+        <div className="flex w-full max-w-[340px] sm:max-w-[400px] justify-between items-end mb-6">
+          <div>
+            <h1 className="text-4xl sm:text-5xl font-extrabold text-[#776e65] dark:text-white/90">
+              2048
+            </h1>
+            <p className="text-sm mt-1 opacity-70">
+              合并方块得到 <strong>2048</strong>!
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={undo}
+              disabled={!canUndo || state.gameOver}
+              className="bg-[#8f7a66] hover:bg-[#9f8b77] text-white border-none font-bold"
+            >
+              Undo
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={initGame}
+              className="bg-[#8f7a66] hover:bg-[#9f8b77] text-white border-none font-bold"
+            >
+              New Game
+            </Button>
+          </div>
+        </div>
+
+        {/* Combo Banner */}
+        <div className="h-6 mb-2">
+          {state.combo > 1 && (
+            <div className="text-[#f67c5f] font-bold text-lg animate-pop-in">
+              {state.combo} Combo!
+            </div>
+          )}
+        </div>
+
+        <div className="relative w-full max-w-[340px] sm:max-w-[400px] aspect-square bg-[#bbada0] dark:bg-[#2a2a2a] rounded-lg p-2 md:p-3 overflow-hidden shadow-2xl">
+          {/* Background grid */}
+          <div className="absolute inset-2 md:inset-3 flex flex-wrap">
+            {Array.from({ length: 16 }).map((_, i) => (
+              <div key={i} className="w-[25%] h-[25%] p-1 md:p-[6px]">
+                <div className="w-full h-full bg-[#cdc1b4] dark:bg-[#3a3a3a] rounded-md md:rounded-lg" />
               </div>
             ))}
           </div>
+
+          {/* Active tiles */}
+          <div className="absolute inset-2 md:inset-3">
+            {Object.values(state.tiles).map((tile) => {
+              // Ensure destroyed merged tiles are rendered BELOW the new tile
+              const zIndex = tile.mergedInto
+                ? 10
+                : tile.isNew || tile.isMerged
+                  ? 30
+                  : 20;
+
+              // use window to avoid SSR issue, but fallback cleanly
+              const pad =
+                typeof window !== 'undefined' && window.innerWidth >= 768
+                  ? '6px'
+                  : '4px';
+
+              return (
+                <div
+                  key={tile.id}
+                  className="absolute transition-all duration-150 ease-in-out"
+                  style={{
+                    width: '25%',
+                    height: '25%',
+                    top: `${tile.r * 25}%`,
+                    left: `${tile.c * 25}%`,
+                    padding: pad,
+                    zIndex,
+                  }}
+                >
+                  <div
+                    className={cn(
+                      'w-full h-full flex items-center justify-center rounded-md md:rounded-lg text-2xl sm:text-3xl font-extrabold shadow-sm',
+                      getTileClass(tile.value),
+                      tile.isNew ? 'animate-pop-in' : '',
+                      tile.isMerged ? 'animate-merge-pop' : '',
+                    )}
+                  >
+                    {tile.value}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Game Over Overlay */}
+          {state.gameOver && (
+            <div className="absolute inset-0 bg-[#eee4da]/70 dark:bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center z-50 animate-pop-in">
+              <h2 className="text-4xl font-extrabold text-[#776e65] dark:text-white mb-4">
+                Game Over!
+              </h2>
+              <Button
+                onClick={initGame}
+                size="lg"
+                className="bg-[#8f7a66] hover:bg-[#9f8b77] text-white font-bold text-lg px-8 py-6 rounded-xl border-none"
+              >
+                Try Again
+              </Button>
+            </div>
+          )}
         </div>
-        {gameOver && (
-          <p className="mt-4 text-lg font-medium text-destructive">
-            无法移动，游戏结束
-          </p>
-        )}
-        <Link to="/" className="mt-6">
-          <Button variant="ghost" size="sm">
-            {t('common.backList')}
-          </Button>
-        </Link>
       </main>
+
+      <VirtualController
+        onDirection={(dir) => tryMove(dir as Dir)}
+        showActions={false}
+        className="pb-safe"
+      />
     </div>
   );
 };

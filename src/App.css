@@ -1088,3 +1088,107 @@ body {
     font-size: clamp(0.55rem, 1.25vw, 0.8rem);
   }
 }
+
+/* =========================================
+   Home UI Glassmorphism & Animations
+   ========================================= */
+
+.home-glass-panel {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.6),
+    rgba(255, 255, 255, 0.25)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow:
+    0 8px 32px 0 rgba(31, 38, 135, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.dark .home-glass-panel {
+  background: linear-gradient(
+    135deg,
+    rgba(30, 41, 59, 0.7),
+    rgba(15, 23, 42, 0.4)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 8px 32px 0 rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.home-hover-lift {
+  transition:
+    transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.3s ease,
+    border-color 0.3s ease;
+}
+.home-hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px -8px rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+.dark .home-hover-lift:hover {
+  box-shadow: 0 16px 40px -8px rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.bg-home-ambient {
+  background-color: #f8fafc;
+  background-image:
+    radial-gradient(circle at 15% 0%, rgba(16, 185, 129, 0.12), transparent 40%),
+    radial-gradient(
+      circle at 85% 100%,
+      rgba(20, 184, 166, 0.12),
+      transparent 40%
+    ),
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(56, 189, 248, 0.05),
+      transparent 60%
+    );
+  background-attachment: fixed;
+}
+
+.dark .bg-home-ambient {
+  background-color: #020617;
+  background-image:
+    radial-gradient(circle at 15% 0%, rgba(16, 185, 129, 0.15), transparent 40%),
+    radial-gradient(
+      circle at 85% 100%,
+      rgba(20, 184, 166, 0.15),
+      transparent 40%
+    ),
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(56, 189, 248, 0.05),
+      transparent 60%
+    );
+  background-attachment: fixed;
+}
+
+@keyframes game-shake {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translate3d(-4px, 0, 0);
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translate3d(4px, 0, 0);
+  }
+}
+
+.animate-game-shake {
+  animation: game-shake 0.3s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}

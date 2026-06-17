@@ -38,9 +38,10 @@ export function ContinuePlaySection({
   return (
     <article
       className={cn(
-        'rounded-[26px] border border-white/80 bg-white/88 p-5 shadow-[0_12px_30px_rgba(15,23,42,0.07)]',
+        'home-glass-panel home-hover-lift rounded-[26px] p-5 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both',
         className,
       )}
+      style={{ animationDelay: '100ms' }}
     >
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-slate-900">
@@ -52,11 +53,11 @@ export function ContinuePlaySection({
       <div className="mt-4 flex flex-wrap gap-2">
         <Button
           asChild
-          className="bg-emerald-900 text-white hover:bg-emerald-800"
+          className="bg-emerald-600 text-white shadow-md transition-transform hover:bg-emerald-700 active:scale-95 dark:bg-emerald-500 dark:hover:bg-emerald-600"
         >
           <Link to={primaryHref}>{primaryLabel}</Link>
         </Button>
-        <Button asChild variant="outline" className="border-slate-200">
+        <Button asChild variant="outline" className="border-slate-200/50 bg-white/50 backdrop-blur-sm transition-transform active:scale-95 dark:border-slate-700/50 dark:bg-slate-800/50">
           <Link to="/game/mahjong-japanese">{t('common.viewRules')}</Link>
         </Button>
         <Button asChild variant="ghost" className="px-0 text-slate-600">

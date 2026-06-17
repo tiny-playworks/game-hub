@@ -148,17 +148,17 @@ const Home = () => {
   if (!riichiGame) return null;
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,#f7f2e4_0,#edf4e8_46%,#dce8dd_100%)] font-['Avenir_Next','PingFang_SC','Hiragino_Sans_GB','Microsoft_YaHei',sans-serif] text-slate-900">
-      <header className="relative z-50 border-b border-emerald-100/80 bg-white/78 px-4 py-4 backdrop-blur">
+    <div className="min-h-screen bg-home-ambient font-['Avenir_Next','PingFang_SC','Hiragino_Sans_GB','Microsoft_YaHei',sans-serif] text-slate-900 transition-colors duration-500 dark:text-slate-100">
+      <header className="relative z-50 border-b border-emerald-100/30 bg-white/40 px-4 py-4 backdrop-blur-md dark:border-slate-800/50 dark:bg-slate-900/40">
         <div className="mx-auto flex max-w-6xl items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-medium tracking-[0.24em] text-emerald-700/70 uppercase">
+            <p className="text-xs font-medium tracking-[0.24em] text-emerald-700/80 uppercase dark:text-emerald-400/80">
               Game Hub
             </p>
-            <h1 className="mt-2 text-2xl font-bold text-slate-900">
+            <h1 className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
               {t('home.title')}
             </h1>
-            <p className="mt-1 max-w-2xl text-sm text-slate-600">
+            <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
               {t('home.subtitle')}
             </p>
           </div>
@@ -188,12 +188,15 @@ const Home = () => {
         </section>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <article className="rounded-[26px] border border-white/80 bg-white/88 p-5 shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
+          <article 
+            className="home-glass-panel home-hover-lift rounded-[26px] p-5 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both"
+            style={{ animationDelay: '150ms' }}
+          >
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-slate-900">
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                 {t('home.daily.title')}
               </p>
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-slate-500 dark:text-slate-400">
                 {dailyTaskState.dateKey}
               </span>
             </div>
@@ -269,13 +272,16 @@ const Home = () => {
             </div>
           </article>
 
-          <article className="rounded-[26px] border border-white/80 bg-white/88 p-5 shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
+          <article 
+            className="home-glass-panel home-hover-lift rounded-[26px] p-5 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both"
+            style={{ animationDelay: '200ms' }}
+          >
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-slate-900">
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                 {t('home.recentGrowth.title')}
               </p>
               <span
-                className="text-xs text-slate-500"
+                className="text-xs text-slate-500 dark:text-slate-400"
                 title={t('home.recentGrowth.cardMetaHint')}
               >
                 {recentGrowthCardMeta}
@@ -301,12 +307,15 @@ const Home = () => {
             </div>
           </article>
 
-          <article className="rounded-[26px] border border-white/80 bg-white/88 p-5 shadow-[0_12px_30px_rgba(15,23,42,0.07)] md:col-span-2 xl:col-span-1">
+          <article 
+            className="home-glass-panel home-hover-lift rounded-[26px] p-5 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both md:col-span-2 xl:col-span-1"
+            style={{ animationDelay: '250ms' }}
+          >
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-slate-900">
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                 {t('home.characters.title')}
               </p>
-              <UserRound className="size-4 text-emerald-700" />
+              <UserRound className="size-4 text-emerald-700 dark:text-emerald-400" />
             </div>
             <div className="mt-4 rounded-[24px] bg-[linear-gradient(135deg,#13243b,#173226_58%,#234036)] p-4 text-white">
               <div className="flex items-start gap-3">
@@ -351,45 +360,46 @@ const Home = () => {
           </article>
         </section>
 
-        <section className="space-y-5">
+        <section className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both" style={{ animationDelay: '300ms' }}>
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div className="space-y-2">
-              <p className="text-xs font-medium tracking-[0.26em] text-emerald-700/70 uppercase">
+              <p className="text-xs font-medium tracking-[0.26em] text-emerald-700/80 uppercase dark:text-emerald-400/80">
                 {t('home.other.shelfLabel')}
               </p>
-              <h2 className="text-2xl font-semibold text-slate-900 md:text-3xl">
+              <h2 className="text-2xl font-semibold text-slate-900 md:text-3xl dark:text-white">
                 {t('home.other.title')}
               </h2>
             </div>
-            <p className="max-w-3xl text-sm leading-6 text-slate-600 md:text-right">
+            <p className="max-w-3xl text-sm leading-6 text-slate-600 md:text-right dark:text-slate-400">
               {t('home.other.subtitle')}
             </p>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
-            {categories.map((category) => {
+            {categories.map((category, index) => {
               const Icon =
                 categoryIconMap[category.id as keyof typeof categoryIconMap];
               return (
                 <Link
                   key={category.id}
                   to={category.path}
-                  className="group rounded-[24px] border border-white/80 bg-[linear-gradient(160deg,rgba(255,255,255,0.94),rgba(244,250,246,0.88))] p-5 shadow-[0_12px_30px_rgba(15,23,42,0.07)] transition duration-300 hover:-translate-y-1 hover:border-emerald-300/70"
+                  className="group home-glass-panel home-hover-lift rounded-[24px] p-5 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both"
+                  style={{ animationDelay: `${350 + index * 50}ms` }}
                 >
                   <div className="flex items-center justify-between">
-                    <p className="text-xs tracking-[0.2em] text-emerald-700/70 uppercase">
+                    <p className="text-xs tracking-[0.2em] text-emerald-700/80 uppercase dark:text-emerald-400/80">
                       {t('home.other.sideLabel')}
                     </p>
                     {Icon && (
-                      <span className="inline-flex size-8 items-center justify-center rounded-full border border-emerald-100 bg-emerald-50 text-emerald-700">
+                      <span className="inline-flex size-8 items-center justify-center rounded-full border border-emerald-200/50 bg-emerald-50/80 text-emerald-700 shadow-sm transition-colors group-hover:bg-emerald-100 dark:border-emerald-800/50 dark:bg-emerald-900/40 dark:text-emerald-400 dark:group-hover:bg-emerald-900/60">
                         <Icon className="size-4" />
                       </span>
                     )}
                   </div>
-                  <h3 className="mt-4 text-lg font-semibold text-slate-900 transition group-hover:text-emerald-900">
+                  <h3 className="mt-4 text-lg font-semibold text-slate-900 transition-colors group-hover:text-emerald-700 dark:text-slate-100 dark:group-hover:text-emerald-400">
                     {t(`category.${category.id}.name`)}
                   </h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                  <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
                     {t(`category.${category.id}.description`)}
                   </p>
                 </Link>
