@@ -1,0 +1,104 @@
+/* 3D Flip Effects */
+.memory-perspective {
+  perspective: 1000px;
+}
+
+.memory-card {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+  transform-style: preserve-3d;
+}
+
+.memory-card.flipped {
+  transform: rotateY(180deg);
+}
+
+.memory-card.shake {
+  animation: card-shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.memory-face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Back of the card (showing when NOT flipped) */
+.memory-back {
+  background-color: #1e1b4b; /* deep indigo */
+  /* Complex geometric pattern using CSS gradients */
+  background-image: 
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.05) 75%, rgba(255,255,255,0.05)),
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.05) 75%, rgba(255,255,255,0.05));
+  background-position: 0 0, 10px 10px;
+  background-size: 20px 20px;
+  border: 4px solid #3730a3;
+  transform: rotateY(0deg);
+}
+
+.memory-back::after {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border: 1px dashed rgba(255,255,255,0.2);
+  border-radius: 4px;
+}
+
+/* Front of the card (showing when flipped) */
+.memory-front {
+  background-color: #f8fafc;
+  border: 2px solid #e2e8f0;
+  transform: rotateY(180deg);
+}
+
+.memory-front.matched {
+  background-color: #dcfce7;
+  border-color: #22c55e;
+  animation: matched-pulse 1.5s infinite;
+}
+
+.memory-front.error {
+  background-color: #fee2e2;
+  border-color: #ef4444;
+}
+
+@keyframes card-shake {
+  10%, 90% { transform: rotateY(180deg) translate3d(-2px, 0, 0); }
+  20%, 80% { transform: rotateY(180deg) translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: rotateY(180deg) translate3d(-4px, 0, 0); }
+  40%, 60% { transform: rotateY(180deg) translate3d(4px, 0, 0); }
+}
+
+@keyframes matched-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+@keyframes fly-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-fly-in {
+  animation: fly-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) backwards;
+}
+
+.timer-bar {
+  transition: width 1s linear, background-color 0.3s ease;
+}

@@ -1,109 +1,242 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { useLocale } from '@/contexts/LocaleContext';
+import { cn } from '@/lib/utils';
+import { useScreenShake } from '../hooks/useScreenShake';
+import { useGameStore } from '../store/gameStore';
+import './guess-number.css';
 
 const MIN = 1;
 const MAX = 100;
+const INITIAL_TIME = 60;
+const PENALTY_TIME = 5;
+
+interface GuessHistory {
+  guess: number;
+  distance: number;
+  heat: 'hot' | 'warm' | 'cool' | 'cold' | 'correct';
+  message: string;
+}
+
+const getHeat = (distance: number, isLarger: boolean): { heat: GuessHistory['heat']; message: string } => {
+  if (distance === 0) return { heat: 'correct', message: 'CRITICAL MATCH' };
+  const dir = isLarger ? 'Too High' : 'Too Low';
+  if (distance <= 5) return { heat: 'hot', message: `${dir} (Hot)` };
+  if (distance <= 15) return { heat: 'warm', message: `${dir} (Warm)` };
+  if (distance <= 30) return { heat: 'cool', message: `${dir} (Cool)` };
+  return { heat: 'cold', message: `${dir} (Cold)` };
+};
+
+const getHeatColor = (heat: GuessHistory['heat']) => {
+  switch (heat) {
+    case 'hot': return 'text-red-500 font-bold';
+    case 'warm': return 'text-orange-400';
+    case 'cool': return 'text-cyan-400';
+    case 'cold': return 'text-blue-600';
+    case 'correct': return 'text-green-500 font-extrabold animate-pulse';
+  }
+};
 
 const GameGuessNumber = () => {
   const { t } = useLocale();
-  const [answer, setAnswer] = useState(
-    () => Math.floor(Math.random() * (MAX - MIN + 1)) + MIN,
-  );
-  const [guess, setGuess] = useState('');
-  const [message, setMessage] = useState('');
-  const [count, setCount] = useState(0);
-  const [ended, setEnded] = useState(false);
+  const shake = useScreenShake();
+  const { stats, updateHighScore } = useGameStore();
+  
+  const gameStats = stats['guess-number'] || { highScore: 0, playCount: 0, maxCombo: 0 };
+  
+  const [answer, setAnswer] = useState(() => Math.floor(Math.random() * (MAX - MIN + 1)) + MIN);
+  const [timeLeft, setTimeLeft] = useState(INITIAL_TIME);
+  const [status, setStatus] = useState<'playing' | 'won' | 'lost'>('playing');
+  const [history, setHistory] = useState<GuessHistory[]>([]);
+  const [currentGuess, setCurrentGuess] = useState('');
+  
+  const logRef = useRef<HTMLDivElement>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const n = Number.parseInt(guess, 10);
-    if (Number.isNaN(n) || n < MIN || n > MAX) {
-      setMessage(`请输入 ${MIN}～${MAX} 之间的整数`);
+  // Timer logic
+  useEffect(() => {
+    if (status !== 'playing') return;
+    
+    if (timeLeft <= 0) {
+      setStatus('lost');
+      shake();
       return;
     }
-    setCount((c) => c + 1);
-    if (n === answer) {
-      setMessage(`猜对了！用了 ${count + 1} 次`);
-      setEnded(true);
-    } else if (n < answer) {
-      setMessage('小了');
-    } else {
-      setMessage('大了');
+    
+    const timer = setInterval(() => {
+      setTimeLeft(prev => prev - 1);
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [timeLeft, status, shake]);
+
+  // Scroll log to bottom on new history
+  useEffect(() => {
+    if (logRef.current) {
+      logRef.current.scrollTop = logRef.current.scrollHeight;
     }
-    setGuess('');
+  }, [history]);
+
+  const handleInput = (char: string) => {
+    if (status !== 'playing') return;
+    if (currentGuess.length >= 3) return; // max 3 digits
+    setCurrentGuess(prev => prev + char);
+  };
+
+  const handleBackspace = () => {
+    if (status !== 'playing') return;
+    setCurrentGuess(prev => prev.slice(0, -1));
+  };
+
+  const submitGuess = () => {
+    if (status !== 'playing' || !currentGuess) return;
+    
+    const n = Number.parseInt(currentGuess, 10);
+    if (Number.isNaN(n) || n < MIN || n > MAX) {
+      shake();
+      setCurrentGuess('');
+      return;
+    }
+    
+    const distance = Math.abs(answer - n);
+    const { heat, message } = getHeat(distance, n > answer);
+    
+    const newEntry: GuessHistory = { guess: n, distance, heat, message };
+    setHistory(prev => [...prev, newEntry]);
+    
+    if (distance === 0) {
+      setStatus('won');
+      if (timeLeft > gameStats.highScore) {
+        updateHighScore('guess-number', timeLeft);
+      }
+    } else {
+      shake();
+      setTimeLeft(prev => Math.max(0, prev - PENALTY_TIME));
+    }
+    
+    setCurrentGuess('');
   };
 
   const restart = () => {
     setAnswer(Math.floor(Math.random() * (MAX - MIN + 1)) + MIN);
-    setGuess('');
-    setMessage('');
-    setCount(0);
-    setEnded(false);
+    setTimeLeft(INITIAL_TIME);
+    setStatus('playing');
+    setHistory([]);
+    setCurrentGuess('');
   };
 
+  // Numpad layout
+  const padKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', 'OK'];
+
   return (
-    <div className="min-h-screen bg-background">
-      <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
-        <Link to="/" className="text-muted-foreground hover:text-foreground">
+    <div className="min-h-screen bg-[#111] text-zinc-300 font-sans selection:bg-red-900/50">
+      <header className="flex items-center justify-between border-b border-zinc-800 bg-[#0a0a0a] px-4 py-3 sticky top-0 z-10">
+        <Link to="/" className="text-zinc-500 hover:text-zinc-300 transition-colors">
           ← {t('common.backToList')}
         </Link>
-        <span className="text-sm text-muted-foreground">猜数字</span>
+        <div className="flex gap-4 text-sm font-led text-red-500">
+          <span>HIGH SCORE: {gameStats.highScore}s</span>
+        </div>
       </header>
 
-      <main className="mx-auto max-w-md px-4 py-12">
-        <Card>
-          <CardHeader>
-            <CardTitle>猜数字</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              我想了一个 {MIN}～{MAX} 之间的整数，你来猜
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <form onSubmit={handleSubmit} className="flex gap-2">
-              <Input
-                type="number"
-                min={MIN}
-                max={MAX}
-                value={guess}
-                onChange={(e) => setGuess(e.target.value)}
-                placeholder={`${MIN}～${MAX}`}
-                disabled={ended}
-                className="text-center"
-              />
-              <Button type="submit" disabled={ended}>
-                猜
-              </Button>
-            </form>
-            {message && (
-              <p
-                className={
-                  ended
-                    ? 'text-lg font-medium text-primary'
-                    : 'text-muted-foreground'
-                }
-              >
-                {message}
-              </p>
-            )}
-            {!ended && count > 0 && (
-              <p className="text-sm text-muted-foreground">已猜 {count} 次</p>
-            )}
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={restart}>
-                {t('common.restartGame')}
-              </Button>
-              <Link to="/">
-                <Button variant="ghost" size="sm">
-                  {t('common.backList')}
-                </Button>
-              </Link>
+      <main className="mx-auto max-w-sm px-4 py-8 flex flex-col items-center">
+        {/* Header Title */}
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-black text-red-600 tracking-widest font-led mb-1">DEFUSE</h1>
+          <p className="text-xs text-zinc-500 font-mono">CODE RANGE: {MIN}-{MAX}</p>
+        </div>
+
+        {/* Timer Display */}
+        <div className={cn(
+          "w-full bg-[#050505] border-2 rounded-lg p-6 mb-6 flex justify-center items-center relative overflow-hidden shadow-[0_0_20px_rgba(220,38,38,0.15)]",
+          status === 'lost' ? "border-red-600 animate-glitch" : 
+          status === 'won' ? "border-green-500" : 
+          timeLeft <= 10 ? "border-red-500 animate-blink-red" : "border-zinc-800"
+        )}>
+          {/* Glare effect */}
+          <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent pointer-events-none" />
+          
+          <div className={cn(
+            "text-6xl font-led font-black tabular-nums tracking-widest",
+            status === 'won' ? "text-green-500 text-shadow-none" :
+            timeLeft <= 10 ? "text-red-500 animate-pulse" : "text-red-500"
+          )}>
+            00:{timeLeft.toString().padStart(2, '0')}
+          </div>
+        </div>
+
+        {/* History Log Display */}
+        <div 
+          ref={logRef}
+          className="w-full h-40 bg-[#0a0a0a] border border-zinc-800 rounded mb-6 p-3 overflow-y-auto font-mono text-sm space-y-2 flex flex-col shadow-inner"
+        >
+          {history.length === 0 && (
+            <div className="text-zinc-600 italic text-center mt-auto mb-auto">Awaiting input...</div>
+          )}
+          {history.map((h, i) => (
+            <div key={i} className="flex justify-between items-center bg-zinc-900/50 px-2 py-1.5 rounded animate-slide-up-fade border border-zinc-800/50">
+              <span className="text-zinc-400">#{i + 1} &gt; {h.guess}</span>
+              <span className={cn("uppercase text-xs tracking-wider", getHeatColor(h.heat))}>
+                {h.message}
+              </span>
             </div>
-          </CardContent>
-        </Card>
+          ))}
+        </div>
+
+        {/* Current Input */}
+        <div className="w-full bg-zinc-900 border-t-2 border-b-2 border-zinc-800 py-3 mb-6 flex justify-center items-center h-16">
+          <div className="text-4xl font-led text-red-500 tracking-[0.2em]">
+            {currentGuess.padEnd(3, '_')}
+          </div>
+        </div>
+
+        {/* Numpad */}
+        <div className="w-full grid grid-cols-3 gap-3 mb-8">
+          {padKeys.map(k => (
+            <Button
+              key={k}
+              variant="outline"
+              disabled={status !== 'playing'}
+              onClick={() => {
+                if (k === 'C') handleBackspace();
+                else if (k === 'OK') submitGuess();
+                else handleInput(k);
+              }}
+              className={cn(
+                "h-14 text-xl font-bold rounded-lg border-b-4 active:border-b-0 active:translate-y-1 transition-all",
+                k === 'OK' 
+                  ? "bg-red-900/20 text-red-500 border-red-900 hover:bg-red-900/40" 
+                  : k === 'C'
+                  ? "bg-zinc-800 text-zinc-400 border-zinc-900 hover:bg-zinc-700"
+                  : "bg-zinc-800 text-white border-zinc-900 hover:bg-zinc-700 hover:text-white"
+              )}
+            >
+              {k}
+            </Button>
+          ))}
+        </div>
+
+        {/* End Game Overlay overlay elements are handled above or inline, but let's add a restart button */}
+        {status !== 'playing' && (
+          <div className="animate-slide-up-fade w-full text-center">
+            <h2 className={cn(
+              "text-3xl font-black mb-4 uppercase",
+              status === 'won' ? "text-green-500" : "text-red-500"
+            )}>
+              {status === 'won' ? 'DEFUSED!' : 'DETONATED!'}
+            </h2>
+            <p className="text-zinc-400 mb-6 font-mono text-sm">
+              {status === 'won' ? `Code was ${answer}. Disarmed with ${timeLeft}s remaining.` : `Correct code was ${answer}.`}
+            </p>
+            <Button 
+              size="lg" 
+              onClick={restart}
+              className="w-full bg-white text-black hover:bg-zinc-200 font-bold tracking-widest uppercase"
+            >
+              {t('common.restartGame')}
+            </Button>
+          </div>
+        )}
       </main>
     </div>
   );
