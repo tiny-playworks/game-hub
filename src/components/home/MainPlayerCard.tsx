@@ -44,7 +44,9 @@ export function MainPlayerCard({
               {profile.nickname}
             </h2>
             <div className="mt-2 inline-flex max-w-full items-center rounded-full border border-emerald-300/60 bg-emerald-100/50 px-2.5 py-0.5 text-xs text-emerald-800 shadow-[inset_0_1px_2px_rgba(255,255,255,0.8)] backdrop-blur-sm dark:border-emerald-500/30 dark:bg-emerald-900/30 dark:text-emerald-300 dark:shadow-none">
-              <span className="mr-1 text-emerald-600 dark:text-emerald-400">✦</span>
+              <span className="mr-1 text-emerald-600 dark:text-emerald-400">
+                ✦
+              </span>
               <span className="truncate">{titleLabel}</span>
             </div>
           </div>

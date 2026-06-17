@@ -96,13 +96,13 @@ const Game2048 = () => {
           <div className="flex gap-2">
             <div className="bg-[#bbada0] dark:bg-[#333] text-white rounded-md px-3 py-1 text-center">
               <div className="text-[10px] uppercase font-bold text-[#eee4da] dark:text-white/70">
-                Score
+                分数:
               </div>
               <div className="font-bold leading-none">{state.score}</div>
             </div>
             <div className="bg-[#bbada0] dark:bg-[#333] text-white rounded-md px-3 py-1 text-center">
               <div className="text-[10px] uppercase font-bold text-[#eee4da] dark:text-white/70">
-                Best
+                最佳:
               </div>
               <div className="font-bold leading-none">
                 {Math.max(state.score, gameStats.highScore)}
@@ -119,7 +119,7 @@ const Game2048 = () => {
               2048
             </h1>
             <p className="text-sm mt-1 opacity-70">
-              合并方块得到 <strong>2048</strong>!
+              方向键移动，相同数字合并，努力拼出 <strong>2048</strong>。
             </p>
           </div>
           <div className="flex gap-2">
@@ -130,7 +130,7 @@ const Game2048 = () => {
               disabled={!canUndo || state.gameOver}
               className="bg-[#8f7a66] hover:bg-[#9f8b77] text-white border-none font-bold"
             >
-              Undo
+              撤销
             </Button>
             <Button
               variant="outline"
@@ -138,7 +138,7 @@ const Game2048 = () => {
               onClick={initGame}
               className="bg-[#8f7a66] hover:bg-[#9f8b77] text-white border-none font-bold"
             >
-              New Game
+              新游戏
             </Button>
           </div>
         </div>
@@ -210,14 +210,14 @@ const Game2048 = () => {
           {state.gameOver && (
             <div className="absolute inset-0 bg-[#eee4da]/70 dark:bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center z-50 animate-pop-in">
               <h2 className="text-4xl font-extrabold text-[#776e65] dark:text-white mb-4">
-                Game Over!
+                游戏结束
               </h2>
               <Button
                 onClick={initGame}
                 size="lg"
                 className="bg-[#8f7a66] hover:bg-[#9f8b77] text-white font-bold text-lg px-8 py-6 rounded-xl border-none"
               >
-                Try Again
+                再来一局
               </Button>
             </div>
           )}
@@ -228,6 +228,7 @@ const Game2048 = () => {
         onDirection={(dir) => tryMove(dir as Dir)}
         showActions={false}
         className="pb-safe"
+        tone="dark"
       />
     </div>
   );

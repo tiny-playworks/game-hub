@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  type ActionType,
+  type Direction,
+  VirtualController,
+} from '@/components/common/VirtualController';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 
@@ -417,9 +422,27 @@ const GameTank = () => {
     };
   }, [status]);
 
-  const start = () => {
+  const start = useCallback(() => {
     if (status === 'idle') setStatus('playing');
-  };
+  }, [status]);
+
+  const setVirtualDirection = useCallback((dir: Direction, active: boolean) => {
+    const keyByDirection: Record<Direction, string> = {
+      UP: 'ArrowUp',
+      DOWN: 'ArrowDown',
+      LEFT: 'ArrowLeft',
+      RIGHT: 'ArrowRight',
+    };
+    stateRef.current.keys[keyByDirection[dir]] = active;
+  }, []);
+
+  const setVirtualAction = useCallback(
+    (_action: ActionType, active: boolean) => {
+      stateRef.current.keys.Space = active;
+      if (active) start();
+    },
+    [start],
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -432,7 +455,7 @@ const GameTank = () => {
         </Button>
       </header>
 
-      <main className="flex min-h-[calc(100vh-56px)] flex-col items-center justify-center p-4">
+      <main className="flex min-h-[calc(100vh-56px)] flex-col items-center justify-center p-4 pb-44 md:pb-4">
         <button
           type="button"
           className="rounded-lg border-2 border-border bg-black block"
@@ -443,12 +466,19 @@ const GameTank = () => {
             width={W}
             height={H}
             className="block cursor-pointer"
-            style={{ width: W, height: H }}
+            style={{ width: 'min(calc(100vw - 2rem), 416px)', height: 'auto' }}
           />
         </button>
         <p className="mt-4 text-center text-sm text-muted-foreground">
           方向键移动 · 空格射击 · 保护黄色基地 · 消灭全部敌坦
         </p>
+        <VirtualController
+          tone="dark"
+          onDirection={(dir) => setVirtualDirection(dir, true)}
+          onDirectionEnd={(dir) => setVirtualDirection(dir, false)}
+          onAction={(action) => setVirtualAction(action, true)}
+          onActionEnd={(action) => setVirtualAction(action, false)}
+        />
       </main>
     </div>
   );

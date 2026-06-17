@@ -4,35 +4,52 @@ import { cn } from '../../lib/utils';
 
 export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
 export type ActionType = 'A' | 'B';
+export type ControllerTone = 'light' | 'dark';
 
 interface VirtualControllerProps {
   onDirection?: (dir: Direction) => void;
+  onDirectionEnd?: (dir: Direction) => void;
   onAction?: (action: ActionType) => void;
+  onActionEnd?: (action: ActionType) => void;
   className?: string;
   showActions?: boolean;
+  tone?: ControllerTone;
 }
 
 export function VirtualController({
   onDirection,
+  onDirectionEnd,
   onAction,
+  onActionEnd,
   className,
   showActions = true,
+  tone = 'light',
 }: VirtualControllerProps) {
+  const buttonTone =
+    tone === 'dark'
+      ? 'bg-black/25 active:bg-black/40 border-black/10'
+      : 'bg-white/20 active:bg-white/40 border-white/10';
+  const iconTone = tone === 'dark' ? 'text-zinc-900' : 'text-white';
+
   // Use touch events to prevent default zooming/scrolling on mobile
-  const handleDirection = (
-    e: React.TouchEvent | React.MouseEvent,
-    dir: Direction,
-  ) => {
+  const handleDirection = (e: React.PointerEvent, dir: Direction) => {
     e.preventDefault();
     onDirection?.(dir);
   };
 
-  const handleAction = (
-    e: React.TouchEvent | React.MouseEvent,
-    action: ActionType,
-  ) => {
+  const handleDirectionEnd = (e: React.PointerEvent, dir: Direction) => {
+    e.preventDefault();
+    onDirectionEnd?.(dir);
+  };
+
+  const handleAction = (e: React.PointerEvent, action: ActionType) => {
     e.preventDefault();
     onAction?.(action);
+  };
+
+  const handleActionEnd = (e: React.PointerEvent, action: ActionType) => {
+    e.preventDefault();
+    onActionEnd?.(action);
   };
 
   return (
@@ -47,36 +64,65 @@ export function VirtualController({
         <button
           type="button"
           onPointerDown={(e) => handleDirection(e, 'UP')}
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-12 bg-white/20 backdrop-blur-sm rounded-t-lg flex items-center justify-center active:bg-white/40 border border-white/10"
+          onPointerUp={(e) => handleDirectionEnd(e, 'UP')}
+          onPointerCancel={(e) => handleDirectionEnd(e, 'UP')}
+          onPointerLeave={(e) => handleDirectionEnd(e, 'UP')}
+          className={cn(
+            'absolute top-0 left-1/2 -translate-x-1/2 w-12 h-12 backdrop-blur-sm rounded-t-lg flex items-center justify-center border',
+            buttonTone,
+          )}
           aria-label="Up"
         >
-          <ArrowUp className="text-white w-6 h-6" />
+          <ArrowUp className={cn('w-6 h-6', iconTone)} />
         </button>
         <button
           type="button"
           onPointerDown={(e) => handleDirection(e, 'LEFT')}
-          className="absolute top-1/2 left-0 -translate-y-1/2 w-12 h-12 bg-white/20 backdrop-blur-sm rounded-l-lg flex items-center justify-center active:bg-white/40 border border-white/10"
+          onPointerUp={(e) => handleDirectionEnd(e, 'LEFT')}
+          onPointerCancel={(e) => handleDirectionEnd(e, 'LEFT')}
+          onPointerLeave={(e) => handleDirectionEnd(e, 'LEFT')}
+          className={cn(
+            'absolute top-1/2 left-0 -translate-y-1/2 w-12 h-12 backdrop-blur-sm rounded-l-lg flex items-center justify-center border',
+            buttonTone,
+          )}
           aria-label="Left"
         >
-          <ArrowLeft className="text-white w-6 h-6" />
+          <ArrowLeft className={cn('w-6 h-6', iconTone)} />
         </button>
         <button
           type="button"
           onPointerDown={(e) => handleDirection(e, 'RIGHT')}
-          className="absolute top-1/2 right-0 -translate-y-1/2 w-12 h-12 bg-white/20 backdrop-blur-sm rounded-r-lg flex items-center justify-center active:bg-white/40 border border-white/10"
+          onPointerUp={(e) => handleDirectionEnd(e, 'RIGHT')}
+          onPointerCancel={(e) => handleDirectionEnd(e, 'RIGHT')}
+          onPointerLeave={(e) => handleDirectionEnd(e, 'RIGHT')}
+          className={cn(
+            'absolute top-1/2 right-0 -translate-y-1/2 w-12 h-12 backdrop-blur-sm rounded-r-lg flex items-center justify-center border',
+            buttonTone,
+          )}
           aria-label="Right"
         >
-          <ArrowRight className="text-white w-6 h-6" />
+          <ArrowRight className={cn('w-6 h-6', iconTone)} />
         </button>
         <button
           type="button"
           onPointerDown={(e) => handleDirection(e, 'DOWN')}
-          className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-12 bg-white/20 backdrop-blur-sm rounded-b-lg flex items-center justify-center active:bg-white/40 border border-white/10"
+          onPointerUp={(e) => handleDirectionEnd(e, 'DOWN')}
+          onPointerCancel={(e) => handleDirectionEnd(e, 'DOWN')}
+          onPointerLeave={(e) => handleDirectionEnd(e, 'DOWN')}
+          className={cn(
+            'absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-12 backdrop-blur-sm rounded-b-lg flex items-center justify-center border',
+            buttonTone,
+          )}
           aria-label="Down"
         >
-          <ArrowDown className="text-white w-6 h-6" />
+          <ArrowDown className={cn('w-6 h-6', iconTone)} />
         </button>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 backdrop-blur-sm border border-white/10" />
+        <div
+          className={cn(
+            'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 backdrop-blur-sm border',
+            buttonTone,
+          )}
+        />
       </div>
 
       {/* Action Buttons (Right Side) */}
@@ -85,7 +131,14 @@ export function VirtualController({
           <button
             type="button"
             onPointerDown={(e) => handleAction(e, 'B')}
-            className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center active:bg-white/40 border border-white/10 mt-12 text-white font-bold text-xl"
+            onPointerUp={(e) => handleActionEnd(e, 'B')}
+            onPointerCancel={(e) => handleActionEnd(e, 'B')}
+            onPointerLeave={(e) => handleActionEnd(e, 'B')}
+            className={cn(
+              'w-14 h-14 rounded-full backdrop-blur-sm flex items-center justify-center border mt-12 font-bold text-xl',
+              buttonTone,
+              iconTone,
+            )}
             aria-label="Action B"
           >
             B
@@ -93,7 +146,14 @@ export function VirtualController({
           <button
             type="button"
             onPointerDown={(e) => handleAction(e, 'A')}
-            className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center active:bg-white/40 border border-white/10 mb-12 text-white font-bold text-xl"
+            onPointerUp={(e) => handleActionEnd(e, 'A')}
+            onPointerCancel={(e) => handleActionEnd(e, 'A')}
+            onPointerLeave={(e) => handleActionEnd(e, 'A')}
+            className={cn(
+              'w-14 h-14 rounded-full backdrop-blur-sm flex items-center justify-center border mb-12 font-bold text-xl',
+              buttonTone,
+              iconTone,
+            )}
             aria-label="Action A"
           >
             A

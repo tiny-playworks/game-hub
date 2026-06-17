@@ -188,7 +188,7 @@ const Home = () => {
         </section>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <article 
+          <article
             className="home-glass-panel home-hover-lift rounded-[26px] p-5 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both"
             style={{ animationDelay: '150ms' }}
           >
@@ -272,7 +272,7 @@ const Home = () => {
             </div>
           </article>
 
-          <article 
+          <article
             className="home-glass-panel home-hover-lift rounded-[26px] p-5 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both"
             style={{ animationDelay: '200ms' }}
           >
@@ -307,7 +307,7 @@ const Home = () => {
             </div>
           </article>
 
-          <article 
+          <article
             className="home-glass-panel home-hover-lift rounded-[26px] p-5 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both md:col-span-2 xl:col-span-1"
             style={{ animationDelay: '250ms' }}
           >
@@ -360,7 +360,10 @@ const Home = () => {
           </article>
         </section>
 
-        <section className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both" style={{ animationDelay: '300ms' }}>
+        <section
+          className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both"
+          style={{ animationDelay: '300ms' }}
+        >
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div className="space-y-2">
               <p className="text-xs font-medium tracking-[0.26em] text-emerald-700/80 uppercase dark:text-emerald-400/80">

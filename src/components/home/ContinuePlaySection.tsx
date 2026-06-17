@@ -57,7 +57,11 @@ export function ContinuePlaySection({
         >
           <Link to={primaryHref}>{primaryLabel}</Link>
         </Button>
-        <Button asChild variant="outline" className="border-slate-200/50 bg-white/50 backdrop-blur-sm transition-transform active:scale-95 dark:border-slate-700/50 dark:bg-slate-800/50">
+        <Button
+          asChild
+          variant="outline"
+          className="border-slate-200/50 bg-white/50 backdrop-blur-sm transition-transform active:scale-95 dark:border-slate-700/50 dark:bg-slate-800/50"
+        >
           <Link to="/game/mahjong-japanese">{t('common.viewRules')}</Link>
         </Button>
         <Button asChild variant="ghost" className="px-0 text-slate-600">

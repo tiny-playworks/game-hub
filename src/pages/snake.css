@@ -1,16 +1,24 @@
 .snake-canvas-container {
-  box-shadow: 0 0 20px rgba(34, 197, 94, 0.2), inset 0 0 20px rgba(34, 197, 94, 0.1);
+  box-shadow:
+    0 0 20px rgba(34, 197, 94, 0.2),
+    inset 0 0 20px rgba(34, 197, 94, 0.1);
   transition: box-shadow 0.3s ease;
 }
 
 .snake-canvas-container.game-over {
-  box-shadow: 0 0 40px rgba(239, 68, 68, 0.6), inset 0 0 40px rgba(239, 68, 68, 0.4);
+  box-shadow:
+    0 0 40px rgba(239, 68, 68, 0.6),
+    inset 0 0 40px rgba(239, 68, 68, 0.4);
   animation: bg-flash-red 0.5s ease-out;
 }
 
 @keyframes bg-flash-red {
-  0% { background-color: rgba(239, 68, 68, 0.5); }
-  100% { background-color: transparent; }
+  0% {
+    background-color: rgba(239, 68, 68, 0.5);
+  }
+  100% {
+    background-color: transparent;
+  }
 }
 
 /* Responsive aspect ratio preservation */

@@ -65,8 +65,10 @@ export function useEngine2048() {
       if (state.gameOver) return { addedScore: 0, isMoved: false };
 
       // Clean up previously merged tiles
-      const activeTiles = Object.values(state.tiles).filter((t) => !t.mergedInto);
-      
+      const activeTiles = Object.values(state.tiles).filter(
+        (t) => !t.mergedInto,
+      );
+
       // Reset isNew and isMerged flags
       activeTiles.forEach((t) => {
         t.isNew = false;
@@ -89,9 +91,7 @@ export function useEngine2048() {
         newTiles[t.id] = { ...t };
       });
 
-      const traverse = (
-        cb: (r: number, c: number) => void,
-      ) => {
+      const traverse = (cb: (r: number, c: number) => void) => {
         const rows = dir === 'down' ? [3, 2, 1, 0] : [0, 1, 2, 3];
         const cols = dir === 'right' ? [3, 2, 1, 0] : [0, 1, 2, 3];
         rows.forEach((r) => {
@@ -141,7 +141,11 @@ export function useEngine2048() {
         if (nextR !== r || nextC !== c) {
           isMoved = true;
           const targetTile = board[nextR][nextC];
-          if (targetTile && targetTile.value === tile.value && !targetTile.mergedInto) {
+          if (
+            targetTile &&
+            targetTile.value === tile.value &&
+            !targetTile.mergedInto
+          ) {
             // Merge!
             const newTileId = nextId();
             const mergedTile: Tile = {
@@ -152,16 +156,16 @@ export function useEngine2048() {
               isMerged: true,
             };
             newTiles[newTileId] = mergedTile;
-            
+
             newTiles[tile.id].r = nextR;
             newTiles[tile.id].c = nextC;
             newTiles[tile.id].mergedInto = newTileId;
-            
+
             newTiles[targetTile.id].mergedInto = newTileId;
 
             board[r][c] = null;
             board[nextR][nextC] = mergedTile; // So it can't be merged again this turn
-            
+
             addedScore += tile.value * 2;
             mergeCount++;
           } else {
@@ -223,7 +227,7 @@ export function useEngine2048() {
 function createRandomTile(tiles: Record<string, Tile>): Tile {
   const empty: [number, number][] = [];
   const board = Array.from({ length: SIZE }, () => Array(SIZE).fill(false));
-  
+
   Object.values(tiles).forEach((t) => {
     if (!t.mergedInto) board[t.r][t.c] = true;
   });
@@ -252,7 +256,7 @@ function createRandomTile(tiles: Record<string, Tile>): Tile {
 function checkGameOver(tiles: Record<string, Tile>): boolean {
   const board = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
   let emptyCount = 0;
-  
+
   Object.values(tiles).forEach((t) => {
     if (!t.mergedInto) board[t.r][t.c] = t.value;
   });

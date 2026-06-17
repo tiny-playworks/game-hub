@@ -19,7 +19,10 @@ interface GuessHistory {
   message: string;
 }
 
-const getHeat = (distance: number, isLarger: boolean): { heat: GuessHistory['heat']; message: string } => {
+const getHeat = (
+  distance: number,
+  isLarger: boolean,
+): { heat: GuessHistory['heat']; message: string } => {
   if (distance === 0) return { heat: 'correct', message: 'CRITICAL MATCH' };
   const dir = isLarger ? 'Too High' : 'Too Low';
   if (distance <= 5) return { heat: 'hot', message: `${dir} (Hot)` };
@@ -30,11 +33,16 @@ const getHeat = (distance: number, isLarger: boolean): { heat: GuessHistory['hea
 
 const getHeatColor = (heat: GuessHistory['heat']) => {
   switch (heat) {
-    case 'hot': return 'text-red-500 font-bold';
-    case 'warm': return 'text-orange-400';
-    case 'cool': return 'text-cyan-400';
-    case 'cold': return 'text-blue-600';
-    case 'correct': return 'text-green-500 font-extrabold animate-pulse';
+    case 'hot':
+      return 'text-red-500 font-bold';
+    case 'warm':
+      return 'text-orange-400';
+    case 'cool':
+      return 'text-cyan-400';
+    case 'cold':
+      return 'text-blue-600';
+    case 'correct':
+      return 'text-green-500 font-extrabold animate-pulse';
   }
 };
 
@@ -42,31 +50,37 @@ const GameGuessNumber = () => {
   const { t } = useLocale();
   const shake = useScreenShake();
   const { stats, updateHighScore } = useGameStore();
-  
-  const gameStats = stats['guess-number'] || { highScore: 0, playCount: 0, maxCombo: 0 };
-  
-  const [answer, setAnswer] = useState(() => Math.floor(Math.random() * (MAX - MIN + 1)) + MIN);
+
+  const gameStats = stats['guess-number'] || {
+    highScore: 0,
+    playCount: 0,
+    maxCombo: 0,
+  };
+
+  const [answer, setAnswer] = useState(
+    () => Math.floor(Math.random() * (MAX - MIN + 1)) + MIN,
+  );
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIME);
   const [status, setStatus] = useState<'playing' | 'won' | 'lost'>('playing');
   const [history, setHistory] = useState<GuessHistory[]>([]);
   const [currentGuess, setCurrentGuess] = useState('');
-  
+
   const logRef = useRef<HTMLDivElement>(null);
 
   // Timer logic
   useEffect(() => {
     if (status !== 'playing') return;
-    
+
     if (timeLeft <= 0) {
       setStatus('lost');
       shake();
       return;
     }
-    
+
     const timer = setInterval(() => {
-      setTimeLeft(prev => prev - 1);
+      setTimeLeft((prev) => prev - 1);
     }, 1000);
-    
+
     return () => clearInterval(timer);
   }, [timeLeft, status, shake]);
 
@@ -75,35 +89,35 @@ const GameGuessNumber = () => {
     if (logRef.current) {
       logRef.current.scrollTop = logRef.current.scrollHeight;
     }
-  }, [history]);
+  });
 
   const handleInput = (char: string) => {
     if (status !== 'playing') return;
     if (currentGuess.length >= 3) return; // max 3 digits
-    setCurrentGuess(prev => prev + char);
+    setCurrentGuess((prev) => prev + char);
   };
 
   const handleBackspace = () => {
     if (status !== 'playing') return;
-    setCurrentGuess(prev => prev.slice(0, -1));
+    setCurrentGuess((prev) => prev.slice(0, -1));
   };
 
   const submitGuess = () => {
     if (status !== 'playing' || !currentGuess) return;
-    
+
     const n = Number.parseInt(currentGuess, 10);
     if (Number.isNaN(n) || n < MIN || n > MAX) {
       shake();
       setCurrentGuess('');
       return;
     }
-    
+
     const distance = Math.abs(answer - n);
     const { heat, message } = getHeat(distance, n > answer);
-    
+
     const newEntry: GuessHistory = { guess: n, distance, heat, message };
-    setHistory(prev => [...prev, newEntry]);
-    
+    setHistory((prev) => [...prev, newEntry]);
+
     if (distance === 0) {
       setStatus('won');
       if (timeLeft > gameStats.highScore) {
@@ -111,9 +125,9 @@ const GameGuessNumber = () => {
       }
     } else {
       shake();
-      setTimeLeft(prev => Math.max(0, prev - PENALTY_TIME));
+      setTimeLeft((prev) => Math.max(0, prev - PENALTY_TIME));
     }
-    
+
     setCurrentGuess('');
   };
 
@@ -126,57 +140,88 @@ const GameGuessNumber = () => {
   };
 
   // Numpad layout
-  const padKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', 'OK'];
+  const padKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '猜'];
 
   return (
     <div className="min-h-screen bg-[#111] text-zinc-300 font-sans selection:bg-red-900/50">
       <header className="flex items-center justify-between border-b border-zinc-800 bg-[#0a0a0a] px-4 py-3 sticky top-0 z-10">
-        <Link to="/" className="text-zinc-500 hover:text-zinc-300 transition-colors">
+        <Link
+          to="/"
+          className="text-zinc-500 hover:text-zinc-300 transition-colors"
+        >
           ← {t('common.backToList')}
         </Link>
         <div className="flex gap-4 text-sm font-led text-red-500">
-          <span>HIGH SCORE: {gameStats.highScore}s</span>
+          <span>最高纪录: {gameStats.highScore}s</span>
         </div>
       </header>
 
       <main className="mx-auto max-w-sm px-4 py-8 flex flex-col items-center">
         {/* Header Title */}
         <div className="text-center mb-6">
-          <h1 className="text-3xl font-black text-red-600 tracking-widest font-led mb-1">DEFUSE</h1>
-          <p className="text-xs text-zinc-500 font-mono">CODE RANGE: {MIN}-{MAX}</p>
+          <p className="text-xs text-zinc-500 font-mono">DEFUSE</p>
+          <h1 className="text-3xl font-black text-red-600 tracking-widest font-led mb-1">
+            猜数字
+          </h1>
+          <p className="text-xs text-zinc-500 font-mono">
+            密码范围: {MIN}-{MAX}
+          </p>
         </div>
 
         {/* Timer Display */}
-        <div className={cn(
-          "w-full bg-[#050505] border-2 rounded-lg p-6 mb-6 flex justify-center items-center relative overflow-hidden shadow-[0_0_20px_rgba(220,38,38,0.15)]",
-          status === 'lost' ? "border-red-600 animate-glitch" : 
-          status === 'won' ? "border-green-500" : 
-          timeLeft <= 10 ? "border-red-500 animate-blink-red" : "border-zinc-800"
-        )}>
+        <div
+          className={cn(
+            'w-full bg-[#050505] border-2 rounded-lg p-6 mb-6 flex justify-center items-center relative overflow-hidden shadow-[0_0_20px_rgba(220,38,38,0.15)]',
+            status === 'lost'
+              ? 'border-red-600 animate-glitch'
+              : status === 'won'
+                ? 'border-green-500'
+                : timeLeft <= 10
+                  ? 'border-red-500 animate-blink-red'
+                  : 'border-zinc-800',
+          )}
+        >
           {/* Glare effect */}
           <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent pointer-events-none" />
-          
-          <div className={cn(
-            "text-6xl font-led font-black tabular-nums tracking-widest",
-            status === 'won' ? "text-green-500 text-shadow-none" :
-            timeLeft <= 10 ? "text-red-500 animate-pulse" : "text-red-500"
-          )}>
+
+          <div
+            className={cn(
+              'text-6xl font-led font-black tabular-nums tracking-widest',
+              status === 'won'
+                ? 'text-green-500 text-shadow-none'
+                : timeLeft <= 10
+                  ? 'text-red-500 animate-pulse'
+                  : 'text-red-500',
+            )}
+          >
             00:{timeLeft.toString().padStart(2, '0')}
           </div>
         </div>
 
         {/* History Log Display */}
-        <div 
+        <div
           ref={logRef}
           className="w-full h-40 bg-[#0a0a0a] border border-zinc-800 rounded mb-6 p-3 overflow-y-auto font-mono text-sm space-y-2 flex flex-col shadow-inner"
         >
           {history.length === 0 && (
-            <div className="text-zinc-600 italic text-center mt-auto mb-auto">Awaiting input...</div>
+            <div className="text-zinc-600 italic text-center mt-auto mb-auto">
+              等待输入...
+            </div>
           )}
           {history.map((h, i) => (
-            <div key={i} className="flex justify-between items-center bg-zinc-900/50 px-2 py-1.5 rounded animate-slide-up-fade border border-zinc-800/50">
-              <span className="text-zinc-400">#{i + 1} &gt; {h.guess}</span>
-              <span className={cn("uppercase text-xs tracking-wider", getHeatColor(h.heat))}>
+            <div
+              key={i}
+              className="flex justify-between items-center bg-zinc-900/50 px-2 py-1.5 rounded animate-slide-up-fade border border-zinc-800/50"
+            >
+              <span className="text-zinc-400">
+                #{i + 1} &gt; {h.guess}
+              </span>
+              <span
+                className={cn(
+                  'uppercase text-xs tracking-wider',
+                  getHeatColor(h.heat),
+                )}
+              >
                 {h.message}
               </span>
             </div>
@@ -192,23 +237,23 @@ const GameGuessNumber = () => {
 
         {/* Numpad */}
         <div className="w-full grid grid-cols-3 gap-3 mb-8">
-          {padKeys.map(k => (
+          {padKeys.map((k) => (
             <Button
               key={k}
               variant="outline"
               disabled={status !== 'playing'}
               onClick={() => {
                 if (k === 'C') handleBackspace();
-                else if (k === 'OK') submitGuess();
+                else if (k === '猜') submitGuess();
                 else handleInput(k);
               }}
               className={cn(
-                "h-14 text-xl font-bold rounded-lg border-b-4 active:border-b-0 active:translate-y-1 transition-all",
-                k === 'OK' 
-                  ? "bg-red-900/20 text-red-500 border-red-900 hover:bg-red-900/40" 
+                'h-14 text-xl font-bold rounded-lg border-b-4 active:border-b-0 active:translate-y-1 transition-all',
+                k === '猜'
+                  ? 'bg-red-900/20 text-red-500 border-red-900 hover:bg-red-900/40'
                   : k === 'C'
-                  ? "bg-zinc-800 text-zinc-400 border-zinc-900 hover:bg-zinc-700"
-                  : "bg-zinc-800 text-white border-zinc-900 hover:bg-zinc-700 hover:text-white"
+                    ? 'bg-zinc-800 text-zinc-400 border-zinc-900 hover:bg-zinc-700'
+                    : 'bg-zinc-800 text-white border-zinc-900 hover:bg-zinc-700 hover:text-white',
               )}
             >
               {k}
@@ -219,17 +264,21 @@ const GameGuessNumber = () => {
         {/* End Game Overlay overlay elements are handled above or inline, but let's add a restart button */}
         {status !== 'playing' && (
           <div className="animate-slide-up-fade w-full text-center">
-            <h2 className={cn(
-              "text-3xl font-black mb-4 uppercase",
-              status === 'won' ? "text-green-500" : "text-red-500"
-            )}>
-              {status === 'won' ? 'DEFUSED!' : 'DETONATED!'}
+            <h2
+              className={cn(
+                'text-3xl font-black mb-4 uppercase',
+                status === 'won' ? 'text-green-500' : 'text-red-500',
+              )}
+            >
+              {status === 'won' ? '拆除成功' : '引爆失败'}
             </h2>
             <p className="text-zinc-400 mb-6 font-mono text-sm">
-              {status === 'won' ? `Code was ${answer}. Disarmed with ${timeLeft}s remaining.` : `Correct code was ${answer}.`}
+              {status === 'won'
+                ? `密码是 ${answer}，剩余 ${timeLeft} 秒。`
+                : `正确密码是 ${answer}。`}
             </p>
-            <Button 
-              size="lg" 
+            <Button
+              size="lg"
               onClick={restart}
               className="w-full bg-white text-black hover:bg-zinc-200 font-bold tracking-widest uppercase"
             >

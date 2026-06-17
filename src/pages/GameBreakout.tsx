@@ -107,10 +107,21 @@ const GameBreakout = () => {
     let rafId = 0;
     let mouseX = CANVAS_W / 2;
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const setPaddleFromClientX = (clientX: number) => {
       const rect = canvas.getBoundingClientRect();
       const scaleX = CANVAS_W / rect.width;
-      mouseX = (e.clientX - rect.left) * scaleX;
+      mouseX = (clientX - rect.left) * scaleX;
+    };
+
+    const handlePointerMove = (e: PointerEvent) => {
+      e.preventDefault();
+      setPaddleFromClientX(e.clientX);
+    };
+
+    const handlePointerDown = (e: PointerEvent) => {
+      e.preventDefault();
+      setPaddleFromClientX(e.clientX);
+      launch();
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -121,8 +132,8 @@ const GameBreakout = () => {
       }
     };
 
-    canvas.addEventListener('mousemove', handleMouseMove);
-    canvas.addEventListener('click', launch);
+    canvas.addEventListener('pointermove', handlePointerMove);
+    canvas.addEventListener('pointerdown', handlePointerDown);
     window.addEventListener('keydown', handleKeyDown);
 
     const gameLoop = (time: number) => {
@@ -224,8 +235,8 @@ const GameBreakout = () => {
 
     return () => {
       cancelAnimationFrame(rafId);
-      canvas.removeEventListener('mousemove', handleMouseMove);
-      canvas.removeEventListener('click', launch);
+      canvas.removeEventListener('pointermove', handlePointerMove);
+      canvas.removeEventListener('pointerdown', handlePointerDown);
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [status, launch]);
@@ -256,7 +267,11 @@ const GameBreakout = () => {
             width={CANVAS_W}
             height={CANVAS_H}
             className="block cursor-none"
-            style={{ width: 'min(100vw - 2rem, 800px)', height: 'auto' }}
+            style={{
+              width: 'min(100vw - 2rem, 800px)',
+              height: 'auto',
+              touchAction: 'none',
+            }}
           />
 
           {(status === 'idle' || status === 'paused') && (
@@ -298,7 +313,7 @@ const GameBreakout = () => {
         </div>
 
         <p className="mt-4 text-center text-sm text-muted-foreground">
-          鼠标移动挡板 · 空格发射/暂停
+          鼠标/手指移动挡板 · 空格发射/暂停
         </p>
       </main>
     </div>
