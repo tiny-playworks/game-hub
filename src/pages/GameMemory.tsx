@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -82,6 +82,14 @@ const GameMemory = () => {
   const [lastFlipped, setLastFlipped] = useState<number | null>(null);
   const [lock, setLock] = useState(false);
 
+  const errorTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+    };
+  }, []);
+
   // Timer logic
   useEffect(() => {
     if (status !== 'playing') return;
@@ -159,7 +167,8 @@ const GameMemory = () => {
           ),
         );
 
-        setTimeout(() => {
+        if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+        errorTimerRef.current = setTimeout(() => {
           setCards((prev) =>
             prev.map((c, i) =>
               i === index || i === lastFlipped
@@ -176,6 +185,7 @@ const GameMemory = () => {
   );
 
   const restart = () => {
+    if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
     setLevel(1);
     setScore(0);
     setMoves(0);
@@ -209,10 +219,10 @@ const GameMemory = () => {
             步数: {moves}
           </span>
           <span className="text-green-600 dark:text-green-400">
-            Score: {score}
+            得分: {score}
           </span>
           <span className="text-zinc-400 text-sm font-normal">
-            Best: {gameStats.highScore}
+            最高分: {gameStats.highScore}
           </span>
         </div>
       </header>
@@ -272,12 +282,12 @@ const GameMemory = () => {
           {status === 'lost' && (
             <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center p-6 text-center animate-fly-in border border-zinc-200 dark:border-slate-800 shadow-xl z-20">
               <h2 className="text-4xl font-black text-red-500 mb-2">
-                TIME'S UP!
+                时间到！
               </h2>
-              <p className="text-lg font-medium mb-6">Score: {score} pairs</p>
+              <p className="text-lg font-medium mb-6">得分: {score} 对</p>
               <div className="flex gap-4">
                 <Button size="lg" onClick={restart} className="font-bold">
-                  Try Again
+                  再来一局
                 </Button>
                 <Link to="/">
                   <Button variant="outline" size="lg">

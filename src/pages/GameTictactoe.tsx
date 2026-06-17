@@ -201,7 +201,7 @@ const GameTictactoe = () => {
             }}
             className="bg-transparent border-purple-900/50 hover:bg-purple-900/20 text-purple-400"
           >
-            {vsAI ? 'PvE (AI)' : 'PvP (Local)'}
+            {vsAI ? '人机对战' : '双人对战'}
           </Button>
         </div>
       </header>
@@ -209,7 +209,7 @@ const GameTictactoe = () => {
       <main className="flex flex-col items-center justify-center p-4 min-h-[calc(100vh-64px)] pb-20">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-black tracking-[0.2em] mb-2 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]">
-            INFINITE TAC
+            无限井字棋
           </h1>
           <p className="text-sm text-zinc-400">
             {winner ? (
@@ -257,6 +257,10 @@ const GameTictactoe = () => {
             {renderWinningLine()}
           </div>
         </div>
+
+        <p className="text-xs text-zinc-500 mt-6 max-w-sm text-center px-4 leading-relaxed font-mono">
+          规则：每方最多保留 3 枚棋子，继续落子将移除最早的棋子。
+        </p>
 
         <div className="mt-12 flex gap-4">
           <Button

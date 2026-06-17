@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { unlock } from '@/lib/achievements';
+import { useGameStore } from '../store/gameStore';
 
 const CANVAS_W = 800;
 const CANVAS_H = 600;
@@ -55,6 +56,8 @@ function createBricks(): Brick[] {
 const GameBreakout = () => {
   const { t } = useLocale();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { stats, updateHighScore } = useGameStore();
+  const gameStats = stats.breakout || { highScore: 0 };
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [status, setStatus] = useState<GameStatus>('idle');
@@ -141,13 +144,19 @@ const GameBreakout = () => {
       const dt = Math.min((time - state.lastTime) / 16, 4);
       state.lastTime = time;
 
-      if (status === 'playing' && state.launched) {
+      if (status === 'idle' || status === 'paused' || status === 'playing') {
         state.paddleX = mouseX - PADDLE_W / 2;
         state.paddleX = Math.max(
           0,
           Math.min(CANVAS_W - PADDLE_W, state.paddleX),
         );
+      }
 
+      if ((status === 'idle' || status === 'paused') && !state.launched) {
+        state.ballX = state.paddleX + PADDLE_W / 2;
+      }
+
+      if (status === 'playing' && state.launched) {
         state.ballX += state.ballVx * dt;
         state.ballY += state.ballVy * dt;
 
@@ -243,7 +252,13 @@ const GameBreakout = () => {
 
   useEffect(() => {
     if (status === 'win') unlock('breakout-first-win');
-  }, [status]);
+    if (
+      (status === 'win' || status === 'lose') &&
+      score > gameStats.highScore
+    ) {
+      updateHighScore('breakout', score);
+    }
+  }, [status, score, gameStats.highScore, updateHighScore]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -252,6 +267,9 @@ const GameBreakout = () => {
           ← {t('common.backToList')}
         </Link>
         <div className="flex items-center gap-4">
+          <span className="text-sm text-muted-foreground">
+            最高分: {gameStats.highScore}
+          </span>
           <span className="text-sm text-muted-foreground">分数: {score}</span>
           <span className="text-sm text-muted-foreground">生命: {lives}</span>
           <Button variant="outline" size="sm" onClick={resetGame}>

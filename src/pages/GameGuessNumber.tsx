@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -23,12 +23,12 @@ const getHeat = (
   distance: number,
   isLarger: boolean,
 ): { heat: GuessHistory['heat']; message: string } => {
-  if (distance === 0) return { heat: 'correct', message: 'CRITICAL MATCH' };
-  const dir = isLarger ? 'Too High' : 'Too Low';
-  if (distance <= 5) return { heat: 'hot', message: `${dir} (Hot)` };
-  if (distance <= 15) return { heat: 'warm', message: `${dir} (Warm)` };
-  if (distance <= 30) return { heat: 'cool', message: `${dir} (Cool)` };
-  return { heat: 'cold', message: `${dir} (Cold)` };
+  if (distance === 0) return { heat: 'correct', message: '完全一致' };
+  const dir = isLarger ? '偏大' : '偏小';
+  if (distance <= 5) return { heat: 'hot', message: `${dir} (极热)` };
+  if (distance <= 15) return { heat: 'warm', message: `${dir} (温热)` };
+  if (distance <= 30) return { heat: 'cool', message: `${dir} (微凉)` };
+  return { heat: 'cold', message: `${dir} (冰冷)` };
 };
 
 const getHeatColor = (heat: GuessHistory['heat']) => {
@@ -91,18 +91,21 @@ const GameGuessNumber = () => {
     }
   });
 
-  const handleInput = (char: string) => {
-    if (status !== 'playing') return;
-    if (currentGuess.length >= 3) return; // max 3 digits
-    setCurrentGuess((prev) => prev + char);
-  };
+  const handleInput = useCallback(
+    (char: string) => {
+      if (status !== 'playing') return;
+      if (currentGuess.length >= 3) return; // max 3 digits
+      setCurrentGuess((prev) => prev + char);
+    },
+    [currentGuess.length, status],
+  );
 
-  const handleBackspace = () => {
+  const handleBackspace = useCallback(() => {
     if (status !== 'playing') return;
     setCurrentGuess((prev) => prev.slice(0, -1));
-  };
+  }, [status]);
 
-  const submitGuess = () => {
+  const submitGuess = useCallback(() => {
     if (status !== 'playing' || !currentGuess) return;
 
     const n = Number.parseInt(currentGuess, 10);
@@ -129,7 +132,15 @@ const GameGuessNumber = () => {
     }
 
     setCurrentGuess('');
-  };
+  }, [
+    answer,
+    currentGuess,
+    gameStats.highScore,
+    shake,
+    status,
+    timeLeft,
+    updateHighScore,
+  ]);
 
   const restart = () => {
     setAnswer(Math.floor(Math.random() * (MAX - MIN + 1)) + MIN);
@@ -138,6 +149,22 @@ const GameGuessNumber = () => {
     setHistory([]);
     setCurrentGuess('');
   };
+
+  // Keyboard support
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (status !== 'playing') return;
+      if (e.key >= '0' && e.key <= '9') {
+        handleInput(e.key);
+      } else if (e.key === 'Backspace') {
+        handleBackspace();
+      } else if (e.key === 'Enter') {
+        submitGuess();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleBackspace, handleInput, status, submitGuess]);
 
   // Numpad layout
   const padKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '猜'];

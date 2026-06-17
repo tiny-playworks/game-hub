@@ -20,6 +20,7 @@ import {
   type TetrisState,
   type TetrisUpgrade,
 } from '@/lib/tetris';
+import { useGameStore } from '@/store/gameStore';
 import {
   Tetris3DEngine,
   type TetrisEngineController,
@@ -27,7 +28,6 @@ import {
 } from './Tetris3DEngine';
 import './tetris.css';
 
-const TETRIS_BEST_LINES_KEY = 'game-tetris-best-lines';
 const TICK_MS = 1000 / 60;
 
 type TetrisEngineFactory = (
@@ -57,7 +57,8 @@ const GameTetris3D = ({
   const engineRef = useRef<TetrisEngineController | null>(null);
   const stateRef = useRef<TetrisState>(createInitialTetrisState());
   const [state, setState] = useState<TetrisState>(() => stateRef.current);
-  const [bestLines, setBestLines] = useState(() => readBestLines());
+  const { stats, updateHighScore } = useGameStore();
+  const bestLines = stats.tetris?.highScore || 0;
   const [theme, setTheme] = useState<'glass' | 'neon'>('glass');
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -102,13 +103,12 @@ const GameTetris3D = ({
   useEffect(() => {
     if (state.lines <= 0) return;
     if (state.lines > bestLines) {
-      localStorage?.setItem(TETRIS_BEST_LINES_KEY, String(state.lines));
-      setBestLines(state.lines);
+      updateHighScore('tetris', state.lines);
     }
     if (state.lines >= 10) unlock('tetris-10');
     if (state.lines >= 50) unlock('tetris-50');
     if (state.lines >= 100) unlock('tetris-100');
-  }, [bestLines, state.lines]);
+  }, [bestLines, state.lines, updateHighScore]);
 
   const dispatch = useCallback(
     (action: TetrisAction) => {
@@ -340,6 +340,87 @@ const GameTetris3D = ({
         </aside>
       </main>
 
+      <fieldset className="tetris-mobile-controls">
+        <legend className="sr-only">移动端操作</legend>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() =>
+            dispatch(
+              state.status === 'idle'
+                ? { type: 'start' }
+                : state.status === 'over'
+                  ? { type: 'reset' }
+                  : { type: 'togglePause' },
+            )
+          }
+        >
+          {state.status === 'idle'
+            ? '开始'
+            : state.status === 'paused'
+              ? '继续'
+              : state.status === 'over'
+                ? '重开'
+                : '暂停'}
+        </Button>
+        <Button
+          variant={skillReady ? 'default' : 'outline'}
+          size="sm"
+          disabled={!skillReady || state.status !== 'playing'}
+          onClick={() => dispatch({ type: 'useSkill' })}
+        >
+          技能
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={state.status !== 'playing'}
+          onClick={() => dispatch({ type: 'move', dx: -1 })}
+        >
+          左移
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={state.status !== 'playing'}
+          onClick={() => dispatch({ type: 'move', dx: 1 })}
+        >
+          右移
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={state.status !== 'playing'}
+          onClick={() => dispatch({ type: 'rotate', direction: 'cw' })}
+        >
+          旋转
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={state.status !== 'playing'}
+          onClick={() => dispatch({ type: 'softDrop' })}
+        >
+          下移
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={state.status !== 'playing'}
+          onClick={() => dispatch({ type: 'hardDrop' })}
+        >
+          硬降
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={state.status !== 'playing'}
+          onClick={() => dispatch({ type: 'hold' })}
+        >
+          暂存
+        </Button>
+      </fieldset>
+
       {state.pendingUpgradeChoices.length > 0 && (
         <div className="tetris-upgrade-layer" role="dialog" aria-modal="true">
           <div className="tetris-upgrade-panel">
@@ -363,13 +444,6 @@ const GameTetris3D = ({
     </div>
   );
 };
-
-function readBestLines(): number {
-  if (typeof localStorage === 'undefined') return 0;
-  return (
-    Number.parseInt(localStorage.getItem(TETRIS_BEST_LINES_KEY) ?? '0', 10) || 0
-  );
-}
 
 function supportsWebGL(): boolean {
   if (typeof document === 'undefined') return false;

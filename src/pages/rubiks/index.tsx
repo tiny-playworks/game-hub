@@ -39,6 +39,11 @@ const GameRubiks = ({
     const stage = stageRef.current;
     if (!stage) return;
 
+    if (!supportsWebGL() && createEngine === createDefaultEngine) {
+      setStatus('设备不支持 WebGL，无法渲染 3D 场景');
+      return;
+    }
+
     const engine = createEngine(stage, {
       onBusyChange: setBusy,
       onStatusChange: setStatus,
@@ -87,15 +92,23 @@ const GameRubiks = ({
         <div ref={stageRef} className="rubiks-stage" />
         <div className="rubiks-help" aria-live="polite">
           <span className="rubiks-status">{status}</span>
-          <span>左键拖动转动层</span>
+          <span>单指/左键拖动转层</span>
           <i aria-hidden="true" />
-          <span>右键拖动旋转视角</span>
+          <span>双指/右键旋转视角</span>
           <i aria-hidden="true" />
-          <span>滚轮缩放</span>
+          <span>滚轮/双指缩放</span>
         </div>
       </main>
     </div>
   );
 };
+
+function supportsWebGL(): boolean {
+  if (typeof document === 'undefined') return false;
+  const canvas = document.createElement('canvas');
+  return Boolean(
+    canvas.getContext('webgl') ?? canvas.getContext('experimental-webgl'),
+  );
+}
 
 export default GameRubiks;

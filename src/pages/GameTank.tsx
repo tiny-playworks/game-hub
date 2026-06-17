@@ -7,6 +7,7 @@ import {
 } from '@/components/common/VirtualController';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useGameStore } from '../store/gameStore';
 
 const TILE = 32;
 const COLS = 13;
@@ -65,9 +66,13 @@ function mapClone(): number[][] {
 const GameTank = () => {
   const { t } = useLocale();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { stats, incrementPlayCount } = useGameStore();
+  const gameStats = stats.tank || { playCount: 0 };
   const [status, setStatus] = useState<'idle' | 'playing' | 'win' | 'over'>(
     'idle',
   );
+  const [remainingEnemies, setRemainingEnemies] = useState(5);
+  const remainingRef = useRef(5);
 
   const stateRef = useRef<{
     map: number[][];
@@ -113,6 +118,8 @@ const GameTank = () => {
       enemySpawnTimer: 120,
     };
     setStatus('idle');
+    setRemainingEnemies(5);
+    remainingRef.current = 5;
   }, []);
 
   useEffect(() => {
@@ -340,6 +347,12 @@ const GameTank = () => {
         if (state.enemies.length === 0 && state.enemySpawnQueue <= 0) {
           setStatus('win');
         }
+
+        const remaining = state.enemySpawnQueue + state.enemies.length;
+        if (remaining !== remainingRef.current) {
+          remainingRef.current = remaining;
+          setRemainingEnemies(remaining);
+        }
       }
 
       const drawTank = (t: Tank, color: string) => {
@@ -406,7 +419,10 @@ const GameTank = () => {
       ) {
         e.preventDefault();
         stateRef.current.keys[e.code] = true;
-        if (status === 'idle' && e.code === 'Space') setStatus('playing');
+        if (status === 'idle' && e.code === 'Space') {
+          setStatus('playing');
+          incrementPlayCount('tank');
+        }
       }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -420,11 +436,14 @@ const GameTank = () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [status]);
+  }, [incrementPlayCount, status]);
 
   const start = useCallback(() => {
-    if (status === 'idle') setStatus('playing');
-  }, [status]);
+    if (status === 'idle') {
+      setStatus('playing');
+      incrementPlayCount('tank');
+    }
+  }, [status, incrementPlayCount]);
 
   const setVirtualDirection = useCallback((dir: Direction, active: boolean) => {
     const keyByDirection: Record<Direction, string> = {
@@ -450,9 +469,17 @@ const GameTank = () => {
         <Link to="/" className="text-muted-foreground hover:text-foreground">
           ← {t('common.backToList')}
         </Link>
-        <Button variant="outline" size="sm" onClick={reset}>
-          {t('common.restart')}
-        </Button>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-muted-foreground">
+            游玩次数: {gameStats.playCount}
+          </span>
+          <span className="text-sm text-red-500 font-bold">
+            剩余敌人: {remainingEnemies}
+          </span>
+          <Button variant="outline" size="sm" onClick={reset}>
+            {t('common.restart')}
+          </Button>
+        </div>
       </header>
 
       <main className="flex min-h-[calc(100vh-56px)] flex-col items-center justify-center p-4 pb-44 md:pb-4">

@@ -7,6 +7,7 @@ import {
 } from '@/components/common/VirtualController';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useGameStore } from '../store/gameStore';
 
 const W = 400;
 const H = 560;
@@ -21,8 +22,12 @@ const SPAWN_INTERVAL = 90;
 const GameShooter = () => {
   const { t } = useLocale();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { stats, updateHighScore } = useGameStore();
+  const gameStats = stats.shooter || { highScore: 0 };
   const [score, setScore] = useState(0);
-  const [status, setStatus] = useState<'idle' | 'playing' | 'over'>('idle');
+  const [status, setStatus] = useState<'idle' | 'playing' | 'paused' | 'over'>(
+    'idle',
+  );
 
   const stateRef = useRef({
     playerX: (W - PLAYER_W) / 2,
@@ -64,7 +69,7 @@ const GameShooter = () => {
         ctx.font = '16px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('按 空格 或 点击 开始', W / 2, H / 2);
-        ctx.fillText('方向键移动 · 空格射击', W / 2, H / 2 + 24);
+        ctx.fillText('方向键移动 · 空格射击 · P暂停', W / 2, H / 2 + 24);
         rafId = requestAnimationFrame(loop);
         return;
       }
@@ -156,6 +161,17 @@ const GameShooter = () => {
         ctx.strokeRect(e.x, e.y, ENEMY_W, ENEMY_H);
       });
 
+      if (status === 'paused') {
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#fff';
+        ctx.font = '24px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('已暂停', W / 2, H / 2);
+        ctx.font = '16px sans-serif';
+        ctx.fillText('按 P 或 空格 继续', W / 2, H / 2 + 30);
+      }
+
       if (status === 'over') {
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
         ctx.fillRect(0, 0, W, H);
@@ -164,6 +180,8 @@ const GameShooter = () => {
         ctx.textAlign = 'center';
         ctx.fillText('游戏结束', W / 2, H / 2 - 12);
         ctx.fillText(`得分: ${score}`, W / 2, H / 2 + 20);
+        ctx.font = '16px sans-serif';
+        ctx.fillText('按 R 或 空格 重新开始', W / 2, H / 2 + 50);
       }
 
       rafId = requestAnimationFrame(loop);
@@ -172,6 +190,12 @@ const GameShooter = () => {
     rafId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafId);
   }, [status, score]);
+
+  useEffect(() => {
+    if (status === 'over' && score > gameStats.highScore) {
+      updateHighScore('shooter', score);
+    }
+  }, [status, score, gameStats.highScore, updateHighScore]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -187,7 +211,17 @@ const GameShooter = () => {
       if (e.code === 'Space') {
         e.preventDefault();
         k.fire = true;
-        if (status === 'idle') setStatus('playing');
+        if (status === 'idle' || status === 'paused') setStatus('playing');
+        else if (status === 'over') reset();
+      }
+      if (e.code === 'KeyP') {
+        e.preventDefault();
+        if (status === 'playing') setStatus('paused');
+        else if (status === 'paused') setStatus('playing');
+      }
+      if (e.code === 'KeyR' && status === 'over') {
+        e.preventDefault();
+        reset();
       }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -202,11 +236,12 @@ const GameShooter = () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [status]);
+  }, [status, reset]);
 
   const start = useCallback(() => {
-    if (status === 'idle') setStatus('playing');
-  }, [status]);
+    if (status === 'idle' || status === 'paused') setStatus('playing');
+    else if (status === 'over') reset();
+  }, [status, reset]);
 
   const setVirtualDirection = useCallback((dir: Direction, active: boolean) => {
     const keys = stateRef.current.keys;
@@ -229,9 +264,26 @@ const GameShooter = () => {
           ← {t('common.backToList')}
         </Link>
         <div className="flex items-center gap-4">
+          <span className="text-sm text-muted-foreground">
+            最高分: {gameStats.highScore}
+          </span>
           <span className="text-sm text-muted-foreground">得分: {score}</span>
-          <Button variant="outline" size="sm" onClick={reset}>
-            {t('common.restart')}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              status === 'playing'
+                ? setStatus('paused')
+                : status === 'paused'
+                  ? setStatus('playing')
+                  : reset()
+            }
+          >
+            {status === 'playing'
+              ? '暂停'
+              : status === 'paused'
+                ? '继续'
+                : t('common.restart')}
           </Button>
         </div>
       </header>

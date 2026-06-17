@@ -64,16 +64,15 @@ export function useEngine2048() {
     (dir: Dir): { addedScore: number; isMoved: boolean } => {
       if (state.gameOver) return { addedScore: 0, isMoved: false };
 
-      // Clean up previously merged tiles
-      const activeTiles = Object.values(state.tiles).filter(
-        (t) => !t.mergedInto,
-      );
-
-      // Reset isNew and isMerged flags
-      activeTiles.forEach((t) => {
-        t.isNew = false;
-        t.isMerged = false;
+      // Clean up previously merged tiles and clone
+      const newTiles: Record<string, Tile> = {};
+      Object.values(state.tiles).forEach((t) => {
+        if (!t.mergedInto) {
+          newTiles[t.id] = { ...t, isNew: false, isMerged: false };
+        }
       });
+
+      const activeTiles = Object.values(newTiles);
 
       const board: (Tile | null)[][] = Array.from({ length: SIZE }, () =>
         Array(SIZE).fill(null),
@@ -85,11 +84,6 @@ export function useEngine2048() {
       let isMoved = false;
       let addedScore = 0;
       let mergeCount = 0;
-
-      const newTiles: Record<string, Tile> = {};
-      activeTiles.forEach((t) => {
-        newTiles[t.id] = { ...t };
-      });
 
       const traverse = (cb: (r: number, c: number) => void) => {
         const rows = dir === 'down' ? [3, 2, 1, 0] : [0, 1, 2, 3];

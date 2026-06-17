@@ -172,8 +172,7 @@
 
   .rubiks-back span,
   .rubiks-actions button span,
-  .rubiks-help i,
-  .rubiks-help span:not(.rubiks-status) {
+  .rubiks-help i {
     display: none;
   }
 
@@ -196,7 +195,15 @@
 
   .rubiks-help {
     bottom: max(16px, env(safe-area-inset-bottom));
-    padding: 9px 13px;
+    width: min(calc(100vw - 28px), 360px);
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px 8px;
+    padding: 9px 12px;
+    border-radius: 14px;
+    font-size: 0.72rem;
+    line-height: 1.35;
+    white-space: normal;
   }
 }
 
