@@ -19,7 +19,11 @@ function inBounds(r: number, c: number): boolean {
 }
 
 /** 获取与 (r,c) 同色的连通块（坐标数组） */
-function getGroup(board: Board, r: number, c: number): [number, number][] {
+export function getGroup(
+  board: Board,
+  r: number,
+  c: number,
+): [number, number][] {
   const color = board[r][c];
   if (!color) return [];
   const out: [number, number][] = [];
@@ -36,7 +40,10 @@ function getGroup(board: Board, r: number, c: number): [number, number][] {
 }
 
 /** 某块棋的气（相邻空点个数） */
-function countLiberties(board: Board, group: [number, number][]): number {
+export function countLiberties(
+  board: Board,
+  group: [number, number][],
+): number {
   const empty = new Set<string>();
   for (const [i, j] of group) {
     for (const [di, dj] of ADJ) {

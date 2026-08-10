@@ -1192,3 +1192,270 @@ body {
 .animate-game-shake {
   animation: game-shake 0.3s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
+
+/* ==========================================================================
+   棋牌类游戏共享外观（GameShell / 棋盘 / 棋子 / 扑克牌）
+   ========================================================================== */
+
+.game-shell-ambient {
+  background-color: #f6f7fb;
+  background-image:
+    radial-gradient(circle at 12% -5%, rgba(16, 185, 129, 0.1), transparent 42%),
+    radial-gradient(
+      circle at 88% 105%,
+      rgba(56, 189, 248, 0.1),
+      transparent 42%
+    );
+  background-attachment: fixed;
+}
+
+.game-shell-header {
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  background: rgba(255, 255, 255, 0.78);
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 80%, white 20%);
+}
+
+/* 状态胶囊 */
+.game-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--border) 78%, white 22%);
+  background: rgba(255, 255, 255, 0.72);
+  padding: 0.25rem 0.7rem;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25rem;
+  white-space: nowrap;
+}
+
+/* --- 木质棋盘（围棋 / 五子棋 / 象棋） --- */
+.board-wood {
+  background-color: #e8c88c;
+  background-image:
+    linear-gradient(
+      115deg,
+      rgba(255, 255, 255, 0.34) 0%,
+      rgba(255, 255, 255, 0) 38%
+    ),
+    repeating-linear-gradient(
+      92deg,
+      rgba(146, 96, 38, 0.09) 0px,
+      rgba(146, 96, 38, 0.09) 1px,
+      transparent 1px,
+      transparent 7px
+    ),
+    radial-gradient(
+      ellipse at 30% 20%,
+      rgba(255, 236, 199, 0.7),
+      transparent 55%
+    ),
+    linear-gradient(160deg, #edd3a0, #d9ad6b);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -2px 6px rgba(120, 72, 20, 0.22),
+    0 18px 40px -14px rgba(92, 56, 16, 0.45);
+}
+
+/* 棋盘网格线层：由 --cell 决定间距，容器需 position: relative */
+.board-grid-lines {
+  position: absolute;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(
+      to right,
+      var(--line-color, rgba(87, 52, 15, 0.62)) 0,
+      var(--line-color, rgba(87, 52, 15, 0.62)) 1px,
+      transparent 1px,
+      transparent var(--cell)
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      var(--line-color, rgba(87, 52, 15, 0.62)) 0,
+      var(--line-color, rgba(87, 52, 15, 0.62)) 1px,
+      transparent 1px,
+      transparent var(--cell)
+    );
+}
+
+/* 棋子：黑白子带光泽 */
+.stone-black {
+  background:
+    radial-gradient(
+      circle at 32% 28%,
+      rgba(255, 255, 255, 0.55),
+      rgba(255, 255, 255, 0) 42%
+    ),
+    radial-gradient(circle at 65% 75%, #2b2b33, #06060a 78%);
+  box-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.42),
+    inset 0 -1px 2px rgba(255, 255, 255, 0.08);
+}
+
+.stone-white {
+  background:
+    radial-gradient(
+      circle at 32% 28%,
+      rgba(255, 255, 255, 1),
+      rgba(255, 255, 255, 0) 46%
+    ),
+    radial-gradient(circle at 65% 75%, #f3f1ec, #c8c4bb 82%);
+  box-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.3),
+    inset 0 -1px 2px rgba(120, 110, 95, 0.25);
+}
+
+/* 象棋棋子：圆木片 */
+.xq-piece {
+  background:
+    radial-gradient(
+      circle at 34% 26%,
+      rgba(255, 255, 255, 0.85),
+      rgba(255, 255, 255, 0) 48%
+    ),
+    linear-gradient(165deg, #fdf1d6, #e5c78e);
+  box-shadow:
+    0 2px 6px rgba(90, 54, 14, 0.4),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+}
+
+/* 落子/走子动画。棋子本身由 flex 居中，这里只做缩放，不要再叠加位移 */
+@keyframes stone-drop {
+  0% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-stone-drop {
+  animation: stone-drop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes last-move-ring {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+}
+
+.animate-last-move {
+  animation: last-move-ring 1.6s ease-in-out infinite;
+}
+
+@keyframes win-line-draw {
+  from {
+    stroke-dashoffset: var(--dash-len, 400);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-win-line {
+  stroke-dasharray: var(--dash-len, 400);
+  animation: win-line-draw 0.5s ease-out both;
+}
+
+/* --- 结果弹层 --- */
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes overlay-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-overlay-in {
+  animation: overlay-in 0.2s ease-out both;
+}
+
+.animate-overlay-card-in {
+  animation: overlay-card-in 0.32s cubic-bezier(0.34, 1.36, 0.64, 1) both;
+}
+
+/* --- 扑克：绿呢桌布与卡牌 --- */
+.table-felt {
+  background-color: #14653c;
+  background-image:
+    radial-gradient(
+      ellipse at 50% 0%,
+      rgba(255, 255, 255, 0.16),
+      transparent 58%
+    ),
+    radial-gradient(ellipse at 50% 100%, rgba(0, 0, 0, 0.32), transparent 62%);
+  box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.38);
+}
+
+.playing-card {
+  background: linear-gradient(160deg, #ffffff, #f3f4f6);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.28),
+    0 6px 14px -8px rgba(15, 23, 42, 0.5);
+}
+
+.playing-card-back {
+  background-color: #1e3a8a;
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.14) 0 3px,
+      transparent 3px 7px
+    ),
+    linear-gradient(160deg, #2544a0, #16296b);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.75),
+    0 4px 10px -4px rgba(0, 0, 0, 0.6);
+}
+
+@keyframes card-deal-in {
+  from {
+    opacity: 0;
+    transform: translateY(28px) rotate(-6deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+  }
+}
+
+.animate-card-deal {
+  animation: card-deal-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-stone-drop,
+  .animate-last-move,
+  .animate-win-line,
+  .animate-overlay-in,
+  .animate-overlay-card-in,
+  .animate-card-deal {
+    animation: none;
+  }
+}

@@ -178,6 +178,17 @@ export function teamIndex(player: number): 0 | 1 {
   return player === 0 || player === 2 ? 0 : 1;
 }
 
+/** 刚打完的一墩，供界面回放；否则第四张牌一出现墩就被清空，玩家根本看不到 */
+export interface FinishedTrick {
+  cards: Card[];
+  /** 领出者 0..3 */
+  leader: number;
+  /** 赢墩者 0..3 */
+  winner: number;
+  /** 这一墩的分数 */
+  points: number;
+}
+
 export interface ShengjiState {
   hands: Card[][];
   /** 庄家 0..3 */
@@ -200,6 +211,12 @@ export interface ShengjiState {
   roundOver: boolean;
   /** 闲家是否升级（roundOver 时有效） */
   defenderUpgrade: boolean;
+  /** 上一墩的完整结果，界面用它做「亮牌 → 收墩」的展示 */
+  lastTrick: FinishedTrick | null;
+  /** 庄家扣的底牌 */
+  bottomCards: Card[];
+  /** 闲家抠底拿到的分（末墩由闲家赢下时按两倍计入），未结算为 0 */
+  bottomBonus: number;
 }
 
 /** 从底牌第一张定主花色；若无主牌则随机 */
@@ -217,8 +234,19 @@ export function createInitialState(): ShengjiState {
   const levelRank = 12;
   const trumpSuit = decideTrumpSuit(bottom, levelRank);
 
+  // 庄家扣底：真人不会把分牌埋进底牌，优先扣掉无分的副牌小牌
   const dealerHand = [...hands[dealer], ...bottom];
-  const afterDiscard = dealerHand.slice(0, -2);
+  const buryOrder = [...dealerHand].sort((a, b) => {
+    const pa = cardPoints(a);
+    const pb = cardPoints(b);
+    if (pa !== pb) return pa - pb;
+    const ta = isTrump(a, trumpSuit, levelRank) ? 1 : 0;
+    const tb = isTrump(b, trumpSuit, levelRank) ? 1 : 0;
+    if (ta !== tb) return ta - tb;
+    return getRank(a) - getRank(b);
+  });
+  const buried = buryOrder.slice(0, 2);
+  const afterDiscard = dealerHand.filter((c) => !buried.includes(c));
 
   const newHands = hands.map((h, i) => (i === dealer ? afterDiscard : h));
 
@@ -234,6 +262,9 @@ export function createInitialState(): ShengjiState {
     tricksPlayed: 0,
     roundOver: false,
     defenderUpgrade: false,
+    lastTrick: null,
+    bottomCards: buried,
+    bottomBonus: 0,
   };
 }
 
@@ -321,6 +352,14 @@ export function playCard(
   const tricksPlayed = state.tricksPlayed + 1;
   const roundOver = tricksPlayed >= 13;
 
+  // 抠底：末墩由闲家赢下，底牌分数按两倍计入闲家
+  let bottomBonus = state.bottomBonus;
+  if (roundOver && winnerTeam !== dealerTeam) {
+    bottomBonus =
+      state.bottomCards.reduce((sum, c) => sum + cardPoints(c), 0) * 2;
+    newScores[1] += bottomBonus;
+  }
+
   return {
     ...state,
     hands: newHands,
@@ -331,7 +370,31 @@ export function playCard(
     tricksPlayed,
     roundOver,
     defenderUpgrade: roundOver ? newScores[1] >= 40 : false,
+    bottomBonus,
+    lastTrick: {
+      cards: trick,
+      leader: state.trickLeader,
+      winner,
+      points: pointsInTrick,
+    },
   };
+}
+
+/** 这一墩当前是谁最大（用于 AI 判断队友是否已经拿下） */
+export function currentTrickLeaderSeat(state: ShengjiState): number | null {
+  if (state.currentTrick.length === 0) return null;
+  const padded = [...state.currentTrick];
+  // trickWinner 需要 4 张，未满时用领出牌补齐，不影响谁最大的判断
+  while (padded.length < 4) padded.push(state.currentTrick[0]);
+  const seatOffset = trickWinner(
+    padded,
+    state.trickLeader,
+    state.trumpSuit,
+    state.levelRank,
+  );
+  const relative = (seatOffset - state.trickLeader + 4) % 4;
+  if (relative >= state.currentTrick.length) return state.trickLeader;
+  return seatOffset;
 }
 
 /** 闲家队得分（roundOver 时有意义） */
@@ -344,13 +407,91 @@ export function isMyTurn(state: ShengjiState): boolean {
   return state.currentPlayer === 0 && !state.roundOver;
 }
 
-/** 简单 AI：从合法牌中随机选一张 */
+/** 这张牌在当前墩里的强弱，用于 AI 排序 */
+function strengthOf(card: Card, state: ShengjiState): number {
+  return isTrump(card, state.trumpSuit, state.levelRank)
+    ? 100 + trumpOrder(card, state.levelRank)
+    : followOrder(card, state.levelRank);
+}
+
+/** 换成这张牌后，出牌方是否能拿下当前这一墩 */
+function wouldWinTrick(
+  state: ShengjiState,
+  player: number,
+  card: Card,
+): boolean {
+  const after = {
+    ...state,
+    hands: state.hands.map((h, i) =>
+      i === player ? h.filter((c) => c !== card) : h,
+    ),
+    currentTrick: [...state.currentTrick, card],
+  };
+  const seat = currentTrickLeaderSeat(after);
+  return seat === player;
+}
+
+/**
+ * 升级 AI：跟牌型游戏的基本盘——队友拿下就贴分，对手拿下就用最省的牌盖过去，
+ * 盖不过就垫最小的闲张。比原来的「随机出一张」强得多，也不会拖慢界面。
+ */
 export function getAIPlay(state: ShengjiState): Card | null {
   const player = state.currentPlayer;
   if (player === 0 || state.roundOver) return null;
   const valid = getValidPlays(state, player);
   if (valid.length === 0) return null;
-  return valid[Math.floor(Math.random() * valid.length)];
+
+  const byStrength = [...valid].sort(
+    (a, b) => strengthOf(a, state) - strengthOf(b, state),
+  );
+
+  // 领出：优先打副牌里的大牌探路，手上只剩主牌时才出主
+  if (state.currentTrick.length === 0) {
+    const sideCards = byStrength.filter(
+      (c) => !isTrump(c, state.trumpSuit, state.levelRank),
+    );
+    const pool = sideCards.length > 0 ? sideCards : byStrength;
+    return pool[pool.length - 1];
+  }
+
+  const leaderSeat = currentTrickLeaderSeat(state);
+  const partnerWinning = leaderSeat !== null && leaderSeat === partner(player);
+  const trickPoints = state.currentTrick.reduce(
+    (sum, c) => sum + pointsForRank(getRank(c)),
+    0,
+  );
+
+  if (partnerWinning) {
+    // 队友已经拿下，把分牌贴进去
+    const pointCards = byStrength.filter((c) => cardPoints(c) > 0);
+    if (pointCards.length > 0) {
+      return pointCards.reduce((best, c) =>
+        cardPoints(c) > cardPoints(best) ? c : best,
+      );
+    }
+    return byStrength[0];
+  }
+
+  // 对手领先：找能赢下来的最小一张
+  const winners = byStrength.filter((c) => wouldWinTrick(state, player, c));
+  if (winners.length > 0) {
+    // 墩里没分且要动用主牌时，不值得为空墩消耗主牌
+    const cheapest = winners[0];
+    const spendsTrump = isTrump(cheapest, state.trumpSuit, state.levelRank);
+    const leadIsTrump = isTrump(
+      state.currentTrick[0],
+      state.trumpSuit,
+      state.levelRank,
+    );
+    if (trickPoints === 0 && spendsTrump && !leadIsTrump) {
+      return byStrength[0];
+    }
+    return cheapest;
+  }
+
+  // 赢不了：垫掉最小的无分牌，保住分牌
+  const noPoint = byStrength.filter((c) => cardPoints(c) === 0);
+  return noPoint.length > 0 ? noPoint[0] : byStrength[0];
 }
 
 /** 执行一步 AI 并返回新状态 */
