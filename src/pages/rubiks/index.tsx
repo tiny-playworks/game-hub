@@ -1,7 +1,8 @@
-import { ArrowLeft, RotateCcw, Shuffle } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Shuffle, Undo2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLocale } from '@/contexts/LocaleContext';
+import { formatMessage } from '@/lib/i18n';
 import { RubiksCubeEngine } from './RubiksCubeEngine';
 import './rubiks.css';
 
@@ -32,11 +33,15 @@ export interface RubiksEngineController {
   dispose(): void;
   reset(): void;
   scramble(): void;
+  undo(): void;
+  getMoveCount(): number;
 }
 
 interface RubiksEngineFactoryOptions {
   onBusyChange: (busy: boolean) => void;
   onStatusChange: (status: string) => void;
+  onMoveCountChange: (count: number) => void;
+  onSolvedChange: (solved: boolean) => void;
 }
 
 type RubiksEngineFactory = (
@@ -54,11 +59,12 @@ const createDefaultEngine: RubiksEngineFactory = (host, options) =>
 const GameRubiks = ({
   createEngine = createDefaultEngine,
 }: GameRubiksProps) => {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const stageRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<RubiksEngineController | null>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('正在初始化');
+  const [moveCount, setMoveCount] = useState(0);
 
   useEffect(() => {
     const stage = stageRef.current;
@@ -72,9 +78,14 @@ const GameRubiks = ({
     const engine = createEngine(stage, {
       onBusyChange: setBusy,
       onStatusChange: setStatus,
+      onMoveCountChange: setMoveCount,
+      onSolvedChange: () => {
+        /* 状态文案已由 onStatusChange 覆盖「已复原」 */
+      },
     });
     engineRef.current = engine;
     setStatus('可操作');
+    setMoveCount(engine.getMoveCount());
 
     return () => {
       engine.dispose();
@@ -93,6 +104,18 @@ const GameRubiks = ({
         <h1>{t('game.rubiks.name')}</h1>
 
         <div className="rubiks-actions">
+          <span className="rubiks-move-count" aria-live="polite">
+            {formatMessage(locale, 'rubiks.moves', { count: moveCount })}
+          </span>
+          <button
+            type="button"
+            aria-label={t('rubiks.undoAria')}
+            disabled={busy || moveCount === 0}
+            onClick={() => engineRef.current?.undo()}
+          >
+            <Undo2 aria-hidden="true" />
+            <span>{t('rubiks.undo')}</span>
+          </button>
           <button
             type="button"
             aria-label={t('rubiks.scrambleAria')}

@@ -22,6 +22,14 @@ import {
   type TetrisState,
   type TetrisUpgrade,
 } from '@/lib/tetris';
+import {
+  createDasArrState,
+  DEFAULT_DAS_ARR,
+  dasArrOnKeyDown,
+  dasArrOnKeyUp,
+  dasArrTick,
+  type HorizontalDir,
+} from '@/lib/tetrisDas';
 import { useGameStore } from '@/store/gameStore';
 import {
   Tetris3DEngine,
@@ -64,6 +72,8 @@ const GameTetris3D = ({
   const bestLines = stats.tetris?.highScore || 0;
   const [theme, setTheme] = useState<'glass' | 'neon'>('glass');
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const dasRef = useRef(createDasArrState());
+  const dasLastTimeRef = useRef(0);
 
   const commitAction = useCallback((action: TetrisAction): TetrisEvent[] => {
     const result = applyTetrisAction(stateRef.current, action);
@@ -122,6 +132,12 @@ const GameTetris3D = ({
   );
 
   useEffect(() => {
+    const applyHorizontal = (dir: HorizontalDir) => {
+      const result = dasArrOnKeyDown(dasRef.current, dir);
+      dasRef.current = result.state;
+      if (result.fire) dispatch({ type: 'move', dx: dir });
+    };
+
     const handleKeyDown = (event: KeyboardEvent) => {
       const current = stateRef.current;
       if (event.code === 'Space') {
@@ -145,10 +161,10 @@ const GameTetris3D = ({
 
       if (event.code === 'ArrowLeft') {
         event.preventDefault();
-        dispatch({ type: 'move', dx: -1 });
+        applyHorizontal(-1);
       } else if (event.code === 'ArrowRight') {
         event.preventDefault();
-        dispatch({ type: 'move', dx: 1 });
+        applyHorizontal(1);
       } else if (event.code === 'ArrowDown') {
         event.preventDefault();
         dispatch({ type: 'softDrop' });
@@ -164,9 +180,46 @@ const GameTetris3D = ({
       }
     };
 
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (event.code === 'ArrowLeft') {
+        dasRef.current = dasArrOnKeyUp(dasRef.current, -1);
+      } else if (event.code === 'ArrowRight') {
+        dasRef.current = dasArrOnKeyUp(dasRef.current, 1);
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
   }, [dispatch]);
+
+  useEffect(() => {
+    if (state.status !== 'playing') {
+      dasRef.current = createDasArrState();
+      dasLastTimeRef.current = 0;
+      return;
+    }
+
+    let rafId = 0;
+    const loop = (time: number) => {
+      const last = dasLastTimeRef.current || time;
+      const dt = Math.min(time - last, 50);
+      dasLastTimeRef.current = time;
+      if (dasRef.current.held !== null) {
+        const result = dasArrTick(dasRef.current, dt, DEFAULT_DAS_ARR);
+        dasRef.current = result.state;
+        for (let i = 0; i < result.fires; i++) {
+          dispatch({ type: 'move', dx: result.state.held ?? 0 });
+        }
+      }
+      rafId = requestAnimationFrame(loop);
+    };
+    rafId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafId);
+  }, [state.status, dispatch]);
 
   const nextShape = useMemo(
     () => SHAPES[state.nextPiece][0],

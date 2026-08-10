@@ -67,7 +67,15 @@
 .rubiks-actions {
   display: flex;
   justify-self: end;
+  align-items: center;
   gap: 10px;
+}
+
+.rubiks-move-count {
+  font-size: 0.82rem;
+  color: rgba(148, 163, 184, 0.9);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .rubiks-actions button {

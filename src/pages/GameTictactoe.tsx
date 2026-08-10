@@ -2,145 +2,63 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
+import {
+  applyMove,
+  boardFromMoves,
+  chooseTicTacToeMove,
+  fadingIndex,
+  getWinner,
+  getWinningLine,
+  type TicMove,
+  type TicPlayer,
+} from '@/lib/tictactoe';
 import { cn } from '@/lib/utils';
 import { useScreenShake } from '../hooks/useScreenShake';
 import './tictactoe.css';
-
-type Player = 'X' | 'O';
-
-interface Move {
-  player: Player;
-  index: number;
-}
-
-const LINES = [
-  [0, 1, 2],
-  [3, 4, 5],
-  [6, 7, 8], // rows
-  [0, 3, 6],
-  [1, 4, 7],
-  [2, 5, 8], // cols
-  [0, 4, 8],
-  [2, 4, 6], // diagonals
-];
-
-// Helper to check winner
-function getWinningLine(moves: Move[]): number[] | null {
-  const board = Array(9).fill(null);
-  moves.forEach((m) => {
-    board[m.index] = m.player;
-  });
-
-  for (const line of LINES) {
-    const [a, b, c] = line;
-    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-      return line;
-    }
-  }
-  return null;
-}
 
 const GameTictactoe = () => {
   const { t } = useLocale();
   const shake = useScreenShake();
 
-  const [moves, setMoves] = useState<Move[]>([]);
+  const [moves, setMoves] = useState<TicMove[]>([]);
   const [xNext, setXNext] = useState(true);
   const [vsAI, setVsAI] = useState(true); // Default to playing against AI
 
-  const currentPlayer: Player = xNext ? 'X' : 'O';
+  const currentPlayer: TicPlayer = xNext ? 'X' : 'O';
   const winningLine = getWinningLine(moves);
-  const winner = winningLine ? (xNext ? 'O' : 'X') : null; // Previous player won
+  const winner = getWinner(moves);
 
-  // Calculate board state
-  const board = useMemo(() => {
-    const b = Array(9).fill(null);
-    moves.forEach((m) => {
-      b[m.index] = m.player;
-    });
-    return b;
-  }, [moves]);
+  const board = useMemo(() => boardFromMoves(moves), [moves]);
 
-  // Identify the oldest move of the current player if they have 3 pieces
-  const currentPlayerMoves = moves.filter((m) => m.player === currentPlayer);
-  const fadingMoveIndex =
-    !winner && currentPlayerMoves.length === 3
-      ? currentPlayerMoves[0].index
-      : null;
+  const fadingMoveIndex = fadingIndex(moves, currentPlayer);
 
   const handlePlay = useCallback(
     (i: number) => {
-      if (board[i] || winner) return;
-
-      const nextMoves = [...moves, { player: currentPlayer, index: i }];
-
-      // Remove oldest if more than 3
-      if (nextMoves.filter((m) => m.player === currentPlayer).length > 3) {
-        const oldestIndex = nextMoves.findIndex(
-          (m) => m.player === currentPlayer,
-        );
-        if (oldestIndex !== -1) {
-          nextMoves.splice(oldestIndex, 1);
-        }
-      }
+      const nextMoves = applyMove(moves, currentPlayer, i);
+      if (!nextMoves) return;
 
       setMoves(nextMoves);
 
-      // Check if this move wins
-      const won = getWinningLine(nextMoves) !== null;
-      if (won) {
+      if (getWinningLine(nextMoves) !== null) {
         shake();
       }
 
       setXNext(!xNext);
     },
-    [board, currentPlayer, moves, shake, winner, xNext],
+    [currentPlayer, moves, shake, xNext],
   );
 
-  // Basic AI logic
   useEffect(() => {
     if (vsAI && !xNext && !winner) {
       const timer = setTimeout(() => {
-        // AI's turn (O)
-        // 1. Can O win?
-        // 2. Can X win? (block)
-        // 3. Random empty cell
-        let bestMove = -1;
-        const emptyCells = board
-          .map((c, i) => (c === null ? i : -1))
-          .filter((i) => i !== -1);
-
-        // Helper to simulate
-        const testWin = (player: Player) => {
-          for (const i of emptyCells) {
-            const tempMoves = [...moves, { player, index: i }];
-            if (tempMoves.filter((m) => m.player === player).length > 3) {
-              const old = tempMoves.findIndex((m) => m.player === player);
-              tempMoves.splice(old, 1);
-            }
-            if (getWinningLine(tempMoves)) return i;
-          }
-          return -1;
-        };
-
-        const winMove = testWin('O');
-        if (winMove !== -1) bestMove = winMove;
-        else {
-          const blockMove = testWin('X');
-          if (blockMove !== -1) bestMove = blockMove;
-          else if (emptyCells.length > 0) {
-            bestMove =
-              emptyCells[Math.floor(Math.random() * emptyCells.length)];
-          }
-        }
-
-        if (bestMove !== -1) {
+        const bestMove = chooseTicTacToeMove(moves, 'O');
+        if (bestMove !== null) {
           handlePlay(bestMove);
         }
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [xNext, vsAI, winner, board, moves, handlePlay]);
+  }, [xNext, vsAI, winner, moves, handlePlay]);
 
   const restart = () => {
     setMoves([]);
@@ -160,8 +78,6 @@ const GameTictactoe = () => {
     const start = getCoord(a);
     const end = getCoord(c);
 
-    // Calculate angle and length for styling (or just use raw SVG coords)
-    // We can just draw an SVG over the board. The board is 300x300 roughly in relative units.
     return (
       <svg
         className="absolute inset-0 w-full h-full pointer-events-none z-10 drop-shadow-[0_0_10px_#fff]"

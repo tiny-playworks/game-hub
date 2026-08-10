@@ -1,66 +1,23 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { formatMessage } from '@/lib/i18n';
+import {
+  allMatched,
+  createInitialMemoryState,
+  MEMORY,
+  type MemoryAction,
+  type MemoryEffect,
+  memoryReducer,
+} from '@/lib/memory';
 import { cn } from '@/lib/utils';
 import { useScreenShake } from '../hooks/useScreenShake';
 import { useGameStore } from '../store/gameStore';
 import './memory.css';
 
-const EMOJIS = [
-  '🐶',
-  '🐱',
-  '🐭',
-  '🐹',
-  '🐰',
-  '🦊',
-  '🐻',
-  '🐼',
-  '🐯',
-  '🦁',
-  '🐮',
-  '🐷',
-  '🐸',
-  '🐙',
-  '🦋',
-  '🦄',
-];
-const ROWS = 4;
-const COLS = 4;
-const INITIAL_TIME = 30;
-const BONUS_MATCH = 3;
-const BONUS_LEVEL = 10;
-
-type CardState = {
-  id: number;
-  emoji: string;
-  flipped: boolean;
-  matched: boolean;
-  error: boolean;
-};
-
-function shuffle<T>(arr: T[]): T[] {
-  const out = [...arr];
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
-}
-
-function generateCards(level: number): CardState[] {
-  // Use different emojis based on level to keep it fresh
-  const offset = (level - 1) % (EMOJIS.length / 8);
-  const pairs = EMOJIS.slice(offset * 8, offset * 8 + (ROWS * COLS) / 2);
-  const list = [...pairs, ...pairs].map((emoji, i) => ({
-    id: i,
-    emoji,
-    flipped: false,
-    matched: false,
-    error: false,
-  }));
-  return shuffle(list);
+function defaultRng() {
+  return Math.random();
 }
 
 const GameMemory = () => {
@@ -73,129 +30,100 @@ const GameMemory = () => {
     maxCombo: 0,
   };
 
-  const [cards, setCards] = useState<CardState[]>(() => generateCards(1));
-  const [level, setLevel] = useState(1);
-  const [score, setScore] = useState(0);
-  const [moves, setMoves] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(INITIAL_TIME);
-  const [status, setStatus] = useState<'playing' | 'lost'>('playing');
+  const [state, setState] = useState(() =>
+    createInitialMemoryState(defaultRng),
+  );
 
-  const [lastFlipped, setLastFlipped] = useState<number | null>(null);
-  const [lock, setLock] = useState(false);
+  const stateRef = useRef(state);
 
   const errorTimerRef = useRef<number | null>(null);
+  const levelTimerRef = useRef<number | null>(null);
+  const highScoreRef = useRef(gameStats.highScore);
+  highScoreRef.current = gameStats.highScore;
+
+  const clearTimers = () => {
+    if (errorTimerRef.current) {
+      clearTimeout(errorTimerRef.current);
+      errorTimerRef.current = null;
+    }
+    if (levelTimerRef.current) {
+      clearTimeout(levelTimerRef.current);
+      levelTimerRef.current = null;
+    }
+  };
+
+  const dispatchActionRef = useRef<(action: MemoryAction) => void>(() => {});
+
+  const applyEffects = (effects: MemoryEffect[], score: number) => {
+    for (const effect of effects) {
+      switch (effect.type) {
+        case 'mismatch_delay': {
+          if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+          const indices = effect.indices;
+          errorTimerRef.current = window.setTimeout(() => {
+            dispatchActionRef.current({ type: 'CLEAR_MISMATCH', indices });
+          }, effect.ms);
+          break;
+        }
+        case 'level_clear_delay': {
+          if (levelTimerRef.current) clearTimeout(levelTimerRef.current);
+          levelTimerRef.current = window.setTimeout(() => {
+            dispatchActionRef.current({
+              type: 'ADVANCE_LEVEL',
+              rng: defaultRng,
+            });
+          }, effect.ms);
+          break;
+        }
+        case 'shake':
+          shake();
+          break;
+        case 'game_over':
+          shake();
+          if (score > highScoreRef.current) {
+            updateHighScore('memory', score);
+          }
+          break;
+      }
+    }
+  };
+
+  const dispatchAction = (action: MemoryAction) => {
+    const { state: next, effects } = memoryReducer(stateRef.current, action);
+    stateRef.current = next;
+    setState(next);
+    applyEffects(effects, next.score);
+  };
+  dispatchActionRef.current = dispatchAction;
 
   useEffect(() => {
     return () => {
       if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+      if (levelTimerRef.current) clearTimeout(levelTimerRef.current);
     };
   }, []);
 
-  // Timer logic
   useEffect(() => {
-    if (status !== 'playing') return;
+    if (state.status !== 'playing') return;
 
-    if (timeLeft <= 0) {
-      setStatus('lost');
-      shake();
-      if (score > gameStats.highScore) {
-        updateHighScore('memory', score);
-      }
-      return;
-    }
-
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => prev - 1);
+    const timer = window.setInterval(() => {
+      dispatchActionRef.current({ type: 'TICK' });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft, status, score, shake, updateHighScore, gameStats.highScore]);
+  }, [state.status]);
 
-  const allMatched = cards.length > 0 && cards.every((c) => c.matched);
-
-  // Level up logic
-  useEffect(() => {
-    if (allMatched && status === 'playing') {
-      setLock(true);
-      const timer = setTimeout(() => {
-        setLevel((l) => l + 1);
-        setTimeLeft((t) => t + BONUS_LEVEL);
-        setCards(generateCards(level + 1));
-        setLock(false);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [allMatched, status, level]);
-
-  const handleClick = useCallback(
-    (index: number) => {
-      if (
-        status !== 'playing' ||
-        lock ||
-        cards[index].flipped ||
-        cards[index].matched
-      )
-        return;
-
-      const next = cards.map((c, i) =>
-        i === index ? { ...c, flipped: true } : c,
-      );
-      setCards(next);
-
-      if (lastFlipped === null) {
-        setLastFlipped(index);
-        return;
-      }
-      setMoves((m) => m + 1);
-
-      const first = cards[lastFlipped];
-      if (first.emoji === cards[index].emoji) {
-        // Match!
-        setCards((prev) =>
-          prev.map((c, i) =>
-            i === index || i === lastFlipped ? { ...c, matched: true } : c,
-          ),
-        );
-        setScore((s) => s + 1);
-        setTimeLeft((t) => t + BONUS_MATCH);
-      } else {
-        // No match
-        setLock(true);
-        shake();
-        setCards((prev) =>
-          prev.map((c, i) =>
-            i === index || i === lastFlipped ? { ...c, error: true } : c,
-          ),
-        );
-
-        if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
-        errorTimerRef.current = setTimeout(() => {
-          setCards((prev) =>
-            prev.map((c, i) =>
-              i === index || i === lastFlipped
-                ? { ...c, flipped: false, error: false }
-                : c,
-            ),
-          );
-          setLock(false);
-        }, 600);
-      }
-      setLastFlipped(null);
-    },
-    [cards, lastFlipped, lock, status, shake],
-  );
+  const handleClick = (index: number) => {
+    dispatchAction({ type: 'FLIP', index });
+  };
 
   const restart = () => {
-    if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
-    setLevel(1);
-    setScore(0);
-    setMoves(0);
-    setTimeLeft(INITIAL_TIME);
-    setStatus('playing');
-    setCards(generateCards(1));
-    setLastFlipped(null);
-    setLock(false);
+    clearTimers();
+    dispatchAction({ type: 'RESTART', rng: defaultRng });
   };
+
+  const { cards, level, score, moves, timeLeft, status } = state;
+  const cleared = allMatched(cards) && status === 'playing';
 
   const timerColor =
     timeLeft > 10
@@ -203,7 +131,7 @@ const GameMemory = () => {
       : timeLeft > 5
         ? 'bg-orange-500'
         : 'bg-red-500';
-  const timerWidth = `${Math.min(100, (timeLeft / INITIAL_TIME) * 100)}%`;
+  const timerWidth = `${Math.min(100, (timeLeft / MEMORY.initialTime) * 100)}%`;
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-[#0f172a] dark:text-zinc-100">
@@ -215,7 +143,9 @@ const GameMemory = () => {
           ← {t('common.backToList')}
         </Link>
         <div className="flex gap-4 font-semibold">
-          <span className="text-blue-600 dark:text-blue-400">Lv.{level}</span>
+          <span className="text-blue-600 dark:text-blue-400">
+            {formatMessage(locale, 'memory.level', { level })}
+          </span>
           <span className="text-purple-600 dark:text-purple-400">
             {formatMessage(locale, 'memory.moves', { moves })}
           </span>
@@ -230,7 +160,6 @@ const GameMemory = () => {
         </div>
       </header>
 
-      {/* Timer Bar */}
       <div className="w-full h-2 bg-zinc-200 dark:bg-slate-800">
         <div
           className={cn(
@@ -242,11 +171,12 @@ const GameMemory = () => {
       </div>
 
       <main className="flex flex-col items-center justify-center p-4 py-8">
-        {/* Game Area */}
         <div className="relative">
           <div
             className="grid gap-3 sm:gap-4 mx-auto"
-            style={{ gridTemplateColumns: `repeat(${COLS}, 1fr)` }}
+            style={{
+              gridTemplateColumns: `repeat(${MEMORY.cols}, 1fr)`,
+            }}
           >
             {cards.map((card, i) => (
               <div
@@ -283,7 +213,6 @@ const GameMemory = () => {
             ))}
           </div>
 
-          {/* Overlays */}
           {status === 'lost' && (
             <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center p-6 text-center animate-fly-in border border-zinc-200 dark:border-slate-800 shadow-xl z-20">
               <h2 className="text-4xl font-black text-red-500 mb-2">
@@ -305,10 +234,12 @@ const GameMemory = () => {
             </div>
           )}
 
-          {allMatched && status === 'playing' && (
+          {cleared && (
             <div className="absolute inset-0 bg-green-500/10 backdrop-blur-md rounded-xl flex items-center justify-center z-20 animate-fly-in">
               <h2 className="text-4xl font-black text-green-500 drop-shadow-lg scale-150 animate-pulse">
-                +10 SEC
+                {formatMessage(locale, 'memory.bonusTime', {
+                  seconds: MEMORY.bonusLevel,
+                })}
               </h2>
             </div>
           )}

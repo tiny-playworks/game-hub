@@ -53,14 +53,23 @@ interface ActiveDrag {
   pointerId: number;
   start: Vector2;
   axis?: CubeAxis;
+  layerCoordinate?: number;
   pivot?: Object3D;
   screenDirection?: Vector2;
   selected?: Cubie[];
 }
 
+interface CubeMove {
+  axis: CubeAxis;
+  layerCoordinate: number;
+  angle: number;
+}
+
 interface EngineOptions {
   onBusyChange?: (busy: boolean) => void;
   onStatusChange?: (status: string) => void;
+  onMoveCountChange?: (count: number) => void;
+  onSolvedChange?: (solved: boolean) => void;
 }
 
 export class RubiksCubeEngine {
@@ -99,6 +108,9 @@ export class RubiksCubeEngine {
   private animationFrame = 0;
   private busy = false;
   private operationToken = 0;
+  private moveHistory: CubeMove[] = [];
+  /** 打乱进行中时不计入玩家步数 */
+  private scrambling = false;
 
   constructor(
     private readonly host: HTMLElement,
@@ -120,6 +132,8 @@ export class RubiksCubeEngine {
     if (this.busy) return;
 
     const token = ++this.operationToken;
+    this.scrambling = true;
+    this.clearHistory();
     this.setBusy(true);
     this.options.onStatusChange?.('正在打乱');
     this.runScrambleMove(0, undefined, token);
@@ -132,9 +146,32 @@ export class RubiksCubeEngine {
     this.clearCubies();
     this.buildCubies();
     this.controls.reset();
+    this.scrambling = false;
+    this.clearHistory();
     this.setBusy(false);
     this.options.onStatusChange?.('已复原');
+    this.options.onSolvedChange?.(true);
   };
+
+  /** 撤销玩家最近一步（打乱过程不入历史） */
+  undo = (): void => {
+    if (this.busy || this.scrambling) return;
+    const last = this.moveHistory.pop();
+    if (!last) return;
+    this.options.onMoveCountChange?.(this.moveHistory.length);
+    this.setBusy(true);
+    this.options.onStatusChange?.('自动对齐');
+    const selected = this.selectLayer(last.axis, last.layerCoordinate);
+    const pivot = this.attachLayerToPivot(selected);
+    this.activePivot = pivot;
+    this.animatePivot(pivot, selected, last.axis, 0, -last.angle, 160, () => {
+      this.controls.enabled = true;
+      this.setBusy(false);
+      this.afterLayerSettled(false);
+    });
+  };
+
+  getMoveCount = (): number => this.moveHistory.length;
 
   dispose(): void {
     cancelAnimationFrame(this.animationFrame);
@@ -243,6 +280,8 @@ export class RubiksCubeEngine {
       cubie.castShadow = true;
       cubie.receiveShadow = true;
       cubie.userData.isCubie = true;
+      cubie.userData.homePosition = cubie.position.clone();
+      cubie.userData.homeQuaternion = cubie.quaternion.clone();
       this.cubies.push(cubie);
       this.scene.add(cubie);
     }
@@ -338,6 +377,7 @@ export class RubiksCubeEngine {
       const pivot = this.attachLayerToPivot(selected);
 
       drag.axis = match.axis;
+      drag.layerCoordinate = layerCoordinate;
       drag.screenDirection = match.screenDirection;
       drag.selected = selected;
       drag.pivot = pivot;
@@ -368,12 +408,18 @@ export class RubiksCubeEngine {
     const drag = this.activeDrag;
     if (!drag || event.pointerId !== drag.pointerId) return;
 
-    if (!drag.axis || !drag.pivot || !drag.selected || !drag.screenDirection) {
+    if (
+      !drag.axis ||
+      !drag.pivot ||
+      !drag.selected ||
+      !drag.screenDirection ||
+      drag.layerCoordinate === undefined
+    ) {
       this.cancelPointerDrag();
       return;
     }
 
-    const { axis, pivot, selected } = drag;
+    const { axis, pivot, selected, layerCoordinate } = drag;
     const targetAngle = snapAngle(drag.angle);
     this.activeDrag = null;
     this.releasePointer(event.pointerId);
@@ -390,7 +436,11 @@ export class RubiksCubeEngine {
       () => {
         this.controls.enabled = true;
         this.setBusy(false);
-        this.options.onStatusChange?.('可操作');
+        if (Math.abs(targetAngle) > 1e-6) {
+          this.moveHistory.push({ axis, layerCoordinate, angle: targetAngle });
+          this.options.onMoveCountChange?.(this.moveHistory.length);
+        }
+        this.afterLayerSettled(true);
       },
     );
   };
@@ -477,8 +527,10 @@ export class RubiksCubeEngine {
   ): void {
     if (token !== this.operationToken) return;
     if (index >= SCRAMBLE_MOVES) {
+      this.scrambling = false;
       this.setBusy(false);
       this.options.onStatusChange?.('打乱完成');
+      this.options.onSolvedChange?.(false);
       return;
     }
 
@@ -502,6 +554,42 @@ export class RubiksCubeEngine {
     this.animatePivot(pivot, selected, axis, 0, direction * HALF_PI, 92, () =>
       this.runScrambleMove(index + 1, axis, token),
     );
+  }
+
+  private clearHistory(): void {
+    this.moveHistory = [];
+    this.options.onMoveCountChange?.(0);
+  }
+
+  private isSolved(): boolean {
+    return this.cubies.every((cubie) => {
+      const homePos = cubie.userData.homePosition as Vector3 | undefined;
+      const homeQuat = cubie.userData.homeQuaternion as
+        | { x: number; y: number; z: number; w: number }
+        | undefined;
+      if (!homePos || !homeQuat) return false;
+      if (cubie.position.distanceTo(homePos) > 0.04) return false;
+      const dot =
+        cubie.quaternion.x * homeQuat.x +
+        cubie.quaternion.y * homeQuat.y +
+        cubie.quaternion.z * homeQuat.z +
+        cubie.quaternion.w * homeQuat.w;
+      return 1 - Math.abs(dot) < 0.02;
+    });
+  }
+
+  /** 层转完后检查是否复原；playerMove 时若已复原则提示 */
+  private afterLayerSettled(playerMove: boolean): void {
+    if (this.scrambling) return;
+    if (this.isSolved()) {
+      this.clearHistory();
+      this.options.onStatusChange?.('已复原');
+      this.options.onSolvedChange?.(true);
+      return;
+    }
+    if (playerMove) this.options.onStatusChange?.('可操作');
+    else this.options.onStatusChange?.('可操作');
+    this.options.onSolvedChange?.(false);
   }
 
   private cancelPointerDrag(): void {

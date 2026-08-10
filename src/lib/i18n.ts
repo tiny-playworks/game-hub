@@ -457,6 +457,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'guess.lost': '引爆失败',
     'guess.wonDesc': '密码是 {answer}，剩余 {timeLeft} 秒。',
     'guess.lostDesc': '正确密码是 {answer}。',
+    'guess.defuse': '拆除密码',
 
     // Tic-tac-toe
     'tictactoe.vsAI': '人机对战',
@@ -475,6 +476,8 @@ const messages: Record<Locale, Record<string, string>> = {
     'memory.faceDown': '未翻开的牌',
     'memory.timeOut': '时间到！',
     'memory.scorePairs': '得分: {score} 对',
+    'memory.level': '第 {level} 关',
+    'memory.bonusTime': '+{seconds} 秒',
 
     // 2048
     '2048.score': '分数',
@@ -586,6 +589,9 @@ const messages: Record<Locale, Record<string, string>> = {
     'rubiks.status.turning': '转动中',
     'rubiks.status.aligning': '自动对齐',
     'rubiks.status.scrambled': '打乱完成',
+    'rubiks.undo': '撤销',
+    'rubiks.undoAria': '撤销上一步',
+    'rubiks.moves': '步数 {count}',
     'game.mahjong.mobileStageAria': '日本立直麻将游戏舞台',
 
     // Chess
@@ -1241,6 +1247,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'guess.lost': 'Exploded',
     'guess.wonDesc': 'Code was {answer}, {timeLeft}s remaining.',
     'guess.lostDesc': 'Correct code was {answer}.',
+    'guess.defuse': 'DEFUSE',
 
     // Tic-tac-toe
     'tictactoe.vsAI': 'vs AI',
@@ -1259,6 +1266,8 @@ const messages: Record<Locale, Record<string, string>> = {
     'memory.faceDown': 'Card Face Down',
     'memory.timeOut': 'Time Up!',
     'memory.scorePairs': 'Score: {score} pairs',
+    'memory.level': 'Lv. {level}',
+    'memory.bonusTime': '+{seconds} SEC',
 
     // 2048
     '2048.score': 'Score',
@@ -1377,6 +1386,9 @@ const messages: Record<Locale, Record<string, string>> = {
     'rubiks.status.turning': 'Turning...',
     'rubiks.status.aligning': 'Aligning...',
     'rubiks.status.scrambled': 'Scramble Complete',
+    'rubiks.undo': 'Undo',
+    'rubiks.undoAria': 'Undo last move',
+    'rubiks.moves': 'Moves {count}',
     'game.mahjong.mobileStageAria': 'Japanese Riichi Mahjong Game Stage',
 
     // Chess

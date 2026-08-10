@@ -209,7 +209,7 @@ const GameGuessNumber = () => {
       <main className="mx-auto max-w-sm px-4 py-8 flex flex-col items-center">
         {/* Header Title */}
         <div className="text-center mb-6">
-          <p className="text-xs text-zinc-500 font-mono">DEFUSE</p>
+          <p className="text-xs text-zinc-500 font-mono">{t('guess.defuse')}</p>
           <h1 className="text-3xl font-black text-red-600 tracking-widest font-led mb-1">
             {t('game.guess-number.name')}
           </h1>

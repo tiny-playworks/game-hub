@@ -3,56 +3,27 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { unlock } from '@/lib/achievements';
+import {
+  BREAKOUT,
+  type BreakoutState,
+  clampPaddleX,
+  createBricks,
+  createInitialState,
+  stepBreakout,
+} from '@/lib/breakout';
 import { formatMessage } from '@/lib/i18n';
 import { useGameStore } from '../store/gameStore';
 
-const CANVAS_W = 800;
-const CANVAS_H = 600;
-const PADDLE_W = 100;
-const PADDLE_H = 12;
-const BALL_R = 8;
-const BRICK_ROWS = 6;
-const BRICK_COLS = 10;
-const BRICK_GAP = 4;
-const BRICK_W = (CANVAS_W - (BRICK_COLS + 1) * BRICK_GAP) / BRICK_COLS;
-const BRICK_H = 24;
+const {
+  canvasW: CANVAS_W,
+  canvasH: CANVAS_H,
+  paddleW: PADDLE_W,
+  paddleH: PADDLE_H,
+  ballR: BALL_R,
+  paddleY,
+} = BREAKOUT;
 
-type GameStatus = 'idle' | 'playing' | 'paused' | 'win' | 'lose';
-
-interface Brick {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  alive: boolean;
-  color: string;
-}
-
-const COLORS = [
-  '#ef4444',
-  '#f97316',
-  '#eab308',
-  '#22c55e',
-  '#3b82f6',
-  '#8b5cf6',
-];
-
-function createBricks(): Brick[] {
-  const bricks: Brick[] = [];
-  for (let row = 0; row < BRICK_ROWS; row++) {
-    for (let col = 0; col < BRICK_COLS; col++) {
-      bricks.push({
-        x: BRICK_GAP + col * (BRICK_W + BRICK_GAP),
-        y: 60 + row * (BRICK_H + BRICK_GAP),
-        w: BRICK_W,
-        h: BRICK_H,
-        alive: true,
-        color: COLORS[row % COLORS.length],
-      });
-    }
-  }
-  return bricks;
-}
+type GameStatus = BreakoutState['status'];
 
 const GameBreakout = () => {
   const { locale, t } = useLocale();
@@ -64,25 +35,14 @@ const GameBreakout = () => {
   const [status, setStatus] = useState<GameStatus>('idle');
 
   const stateRef = useRef({
-    paddleX: (CANVAS_W - PADDLE_W) / 2,
-    ballX: CANVAS_W / 2,
-    ballY: CANVAS_H - 50,
-    ballVx: 0,
-    ballVy: 0,
-    bricks: createBricks(),
-    launched: false,
+    ...createInitialState(),
     lastTime: 0,
   });
 
   const resetGame = useCallback(() => {
     stateRef.current = {
-      paddleX: (CANVAS_W - PADDLE_W) / 2,
-      ballX: CANVAS_W / 2,
-      ballY: CANVAS_H - 50,
-      ballVx: 0,
-      ballVy: 0,
+      ...createInitialState(),
       bricks: createBricks(),
-      launched: false,
       lastTime: 0,
     };
     setScore(0);
@@ -95,8 +55,10 @@ const GameBreakout = () => {
       stateRef.current.launched = true;
       stateRef.current.ballVx = 4;
       stateRef.current.ballVy = -6;
+      stateRef.current.status = 'playing';
       setStatus('playing');
     } else if (status === 'paused') {
+      stateRef.current.status = 'playing';
       setStatus('playing');
     }
   }, [status]);
@@ -146,11 +108,7 @@ const GameBreakout = () => {
       state.lastTime = time;
 
       if (status === 'idle' || status === 'paused' || status === 'playing') {
-        state.paddleX = mouseX - PADDLE_W / 2;
-        state.paddleX = Math.max(
-          0,
-          Math.min(CANVAS_W - PADDLE_W, state.paddleX),
-        );
+        state.paddleX = clampPaddleX(mouseX - PADDLE_W / 2);
       }
 
       if ((status === 'idle' || status === 'paused') && !state.launched) {
@@ -158,64 +116,45 @@ const GameBreakout = () => {
       }
 
       if (status === 'playing' && state.launched) {
-        state.ballX += state.ballVx * dt;
-        state.ballY += state.ballVy * dt;
+        const { state: next, events } = stepBreakout(
+          {
+            paddleX: state.paddleX,
+            ballX: state.ballX,
+            ballY: state.ballY,
+            ballVx: state.ballVx,
+            ballVy: state.ballVy,
+            bricks: state.bricks,
+            launched: state.launched,
+            lives: state.lives,
+            score: state.score,
+            status: 'playing',
+          },
+          dt,
+        );
 
-        if (state.ballX - BALL_R <= 0 || state.ballX + BALL_R >= CANVAS_W)
-          state.ballVx *= -1;
-        if (state.ballY - BALL_R <= 0) state.ballVy *= -1;
+        state.ballX = next.ballX;
+        state.ballY = next.ballY;
+        state.ballVx = next.ballVx;
+        state.ballVy = next.ballVy;
+        state.bricks = next.bricks;
+        state.launched = next.launched;
+        state.lives = next.lives;
+        state.score = next.score;
+        state.status = next.status;
 
-        const paddleTop = CANVAS_H - PADDLE_H - 20;
-        const paddleBottom = CANVAS_H - 20;
-        if (
-          state.ballVy > 0 &&
-          state.ballY + BALL_R >= paddleTop &&
-          state.ballY - BALL_R <= paddleBottom &&
-          state.ballX >= state.paddleX &&
-          state.ballX <= state.paddleX + PADDLE_W
-        ) {
-          const hitPos = (state.ballX - state.paddleX) / PADDLE_W;
-          state.ballVy = -Math.abs(state.ballVy);
-          state.ballVx = (hitPos - 0.5) * 10;
-        }
-
-        for (const brick of state.bricks) {
-          if (!brick.alive) continue;
-          const bx = brick.x;
-          const by = brick.y;
-          const bw = brick.w;
-          const bh = brick.h;
-          if (
-            state.ballX + BALL_R >= bx &&
-            state.ballX - BALL_R <= bx + bw &&
-            state.ballY + BALL_R >= by &&
-            state.ballY - BALL_R <= by + bh
-          ) {
-            brick.alive = false;
-            setScore((s) => s + 10);
-            state.ballVy *= -1;
-            break;
+        for (const event of events) {
+          if (event.type === 'brick_hit') {
+            setScore(next.score);
+          } else if (event.type === 'life_lost') {
+            setLives(event.lives);
+            setStatus('idle');
+          } else if (event.type === 'lose') {
+            setLives(0);
+            setStatus('lose');
+          } else if (event.type === 'win') {
+            setStatus('win');
           }
         }
-
-        if (state.ballY - BALL_R > CANVAS_H) {
-          state.ballX = CANVAS_W / 2;
-          state.ballY = CANVAS_H - 50;
-          state.ballVx = 0;
-          state.ballVy = 0;
-          state.launched = false;
-          setLives((l) => {
-            if (l <= 1) {
-              setStatus('lose');
-              return 0;
-            }
-            setStatus('idle');
-            return l - 1;
-          });
-        }
-
-        const aliveCount = state.bricks.filter((b) => b.alive).length;
-        if (aliveCount === 0) setStatus('win');
       }
 
       ctx.fillStyle = '#0f172a';
@@ -230,7 +169,7 @@ const GameBreakout = () => {
       });
 
       ctx.fillStyle = '#e2e8f0';
-      ctx.fillRect(state.paddleX, CANVAS_H - PADDLE_H - 20, PADDLE_W, PADDLE_H);
+      ctx.fillRect(state.paddleX, paddleY, PADDLE_W, PADDLE_H);
 
       ctx.fillStyle = '#fbbf24';
       ctx.beginPath();

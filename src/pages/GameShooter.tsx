@@ -8,17 +8,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { formatMessage } from '@/lib/i18n';
+import {
+  createInitialShooterState,
+  playerY,
+  SHOOTER,
+  stepShooter,
+} from '@/lib/shooter';
 import { useGameStore } from '../store/gameStore';
-
-const W = 400;
-const H = 560;
-const PLAYER_W = 36;
-const PLAYER_H = 28;
-const BULLET_SPEED = -10;
-const ENEMY_SPEED = 2;
-const ENEMY_W = 32;
-const ENEMY_H = 24;
-const SPAWN_INTERVAL = 90;
 
 const GameShooter = () => {
   const { locale, t } = useLocale();
@@ -31,22 +27,16 @@ const GameShooter = () => {
   );
 
   const stateRef = useRef({
-    playerX: (W - PLAYER_W) / 2,
-    bullets: [] as { x: number; y: number }[],
-    enemies: [] as { x: number; y: number }[],
-    spawnCounter: 0,
+    ...createInitialShooterState(),
     keys: { left: false, right: false, fire: false },
-    fireCooldown: 0,
+    lastTime: 0,
   });
 
   const reset = useCallback(() => {
     stateRef.current = {
-      playerX: (W - PLAYER_W) / 2,
-      bullets: [],
-      enemies: [],
-      spawnCounter: 0,
+      ...createInitialShooterState(),
       keys: { left: false, right: false, fire: false },
-      fireCooldown: 0,
+      lastTime: 0,
     };
     setScore(0);
     setStatus('idle');
@@ -60,91 +50,60 @@ const GameShooter = () => {
 
     let rafId = 0;
 
-    const loop = () => {
+    const loop = (time: number) => {
       const state = stateRef.current;
+      const rawDt =
+        state.lastTime === 0 ? 1 : Math.min((time - state.lastTime) / 16, 4);
+      state.lastTime = time;
+
       ctx.fillStyle = '#0f172a';
-      ctx.fillRect(0, 0, W, H);
+      ctx.fillRect(0, 0, SHOOTER.w, SHOOTER.h);
 
       if (status === 'idle') {
         ctx.fillStyle = '#64748b';
         ctx.font = '16px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(t('shooter.startPrompt'), W / 2, H / 2);
-        ctx.fillText(t('shooter.controlsPrompt'), W / 2, H / 2 + 24);
+        ctx.fillText(t('shooter.startPrompt'), SHOOTER.w / 2, SHOOTER.h / 2);
+        ctx.fillText(
+          t('shooter.controlsPrompt'),
+          SHOOTER.w / 2,
+          SHOOTER.h / 2 + 24,
+        );
         rafId = requestAnimationFrame(loop);
         return;
       }
 
       if (status === 'playing') {
-        const playerY = H - PLAYER_H - 20;
-        const speed = 5;
-        if (state.keys.left) state.playerX = Math.max(0, state.playerX - speed);
-        if (state.keys.right)
-          state.playerX = Math.min(W - PLAYER_W, state.playerX + speed);
-
-        if (state.keys.fire && state.fireCooldown <= 0) {
-          state.bullets.push({
-            x: state.playerX + PLAYER_W / 2 - 2,
-            y: playerY,
-          });
-          state.fireCooldown = 8;
-        }
-        if (state.fireCooldown > 0) state.fireCooldown--;
-
-        state.bullets = state.bullets.filter((b) => {
-          b.y += BULLET_SPEED;
-          return b.y > -4;
-        });
-
-        state.spawnCounter++;
-        if (state.spawnCounter >= SPAWN_INTERVAL) {
-          state.spawnCounter = 0;
-          state.enemies.push({
-            x: Math.random() * (W - ENEMY_W),
-            y: -ENEMY_H,
-          });
-        }
-
-        state.enemies = state.enemies.filter((e) => {
-          e.y += ENEMY_SPEED;
-          const hit = state.bullets.some(
-            (b) =>
-              b.x + 4 > e.x &&
-              b.x < e.x + ENEMY_W &&
-              b.y < e.y + ENEMY_H &&
-              b.y + 4 > e.y,
-          );
-          if (hit) {
-            state.bullets = state.bullets.filter(
-              (b) =>
-                !(
-                  b.x + 4 > e.x &&
-                  b.x < e.x + ENEMY_W &&
-                  b.y < e.y + ENEMY_H &&
-                  b.y + 4 > e.y
-                ),
-            );
-            setScore((s) => s + 10);
-            return false;
-          }
-          if (e.y + ENEMY_H > playerY && e.y < playerY + PLAYER_H) {
-            if (
-              e.x + ENEMY_W > state.playerX &&
-              e.x < state.playerX + PLAYER_W
-            ) {
-              setStatus('over');
-            }
-          }
-          return e.y < H + ENEMY_H;
-        });
+        const result = stepShooter(
+          {
+            playerX: state.playerX,
+            bullets: state.bullets,
+            enemies: state.enemies,
+            spawnCounter: state.spawnCounter,
+            fireCooldown: state.fireCooldown,
+            score: state.score,
+            status: 'playing',
+          },
+          state.keys,
+          rawDt,
+          Math.random,
+        );
+        state.playerX = result.state.playerX;
+        state.bullets = result.state.bullets;
+        state.enemies = result.state.enemies;
+        state.spawnCounter = result.state.spawnCounter;
+        state.fireCooldown = result.state.fireCooldown;
+        state.score = result.state.score;
+        if (result.state.score !== score) setScore(result.state.score);
+        if (result.state.status === 'over') setStatus('over');
       }
 
-      const playerY = H - PLAYER_H - 20;
+      const py = playerY();
       ctx.fillStyle = '#22c55e';
       ctx.beginPath();
-      ctx.moveTo(state.playerX + PLAYER_W / 2, playerY);
-      ctx.lineTo(state.playerX, playerY + PLAYER_H);
-      ctx.lineTo(state.playerX + PLAYER_W, playerY + PLAYER_H);
+      ctx.moveTo(state.playerX + SHOOTER.playerW / 2, py);
+      ctx.lineTo(state.playerX, py + SHOOTER.playerH);
+      ctx.lineTo(state.playerX + SHOOTER.playerW, py + SHOOTER.playerH);
       ctx.closePath();
       ctx.fill();
       ctx.strokeStyle = '#16a34a';
@@ -152,46 +111,55 @@ const GameShooter = () => {
 
       ctx.fillStyle = '#fbbf24';
       state.bullets.forEach((b) => {
-        ctx.fillRect(b.x, b.y, 4, 8);
+        ctx.fillRect(b.x, b.y, SHOOTER.bulletW, SHOOTER.bulletH);
       });
 
       ctx.fillStyle = '#ef4444';
       state.enemies.forEach((e) => {
-        ctx.fillRect(e.x, e.y, ENEMY_W, ENEMY_H);
+        ctx.fillRect(e.x, e.y, SHOOTER.enemyW, SHOOTER.enemyH);
         ctx.strokeStyle = '#b91c1c';
-        ctx.strokeRect(e.x, e.y, ENEMY_W, ENEMY_H);
+        ctx.strokeRect(e.x, e.y, SHOOTER.enemyW, SHOOTER.enemyH);
       });
 
       if (status === 'paused') {
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.fillRect(0, 0, W, H);
+        ctx.fillRect(0, 0, SHOOTER.w, SHOOTER.h);
         ctx.fillStyle = '#fff';
         ctx.font = '24px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(t('shooter.paused'), W / 2, H / 2);
+        ctx.fillText(t('shooter.paused'), SHOOTER.w / 2, SHOOTER.h / 2);
         ctx.font = '16px sans-serif';
-        ctx.fillText(t('shooter.resumePrompt'), W / 2, H / 2 + 30);
+        ctx.fillText(
+          t('shooter.resumePrompt'),
+          SHOOTER.w / 2,
+          SHOOTER.h / 2 + 30,
+        );
       }
 
       if (status === 'over') {
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
-        ctx.fillRect(0, 0, W, H);
+        ctx.fillRect(0, 0, SHOOTER.w, SHOOTER.h);
         ctx.fillStyle = '#fff';
         ctx.font = '24px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(t('2048.gameOver'), W / 2, H / 2 - 12);
+        ctx.fillText(t('2048.gameOver'), SHOOTER.w / 2, SHOOTER.h / 2 - 12);
         ctx.fillText(
           formatMessage(locale, 'shooter.scoreDisplay', { score }),
-          W / 2,
-          H / 2 + 20,
+          SHOOTER.w / 2,
+          SHOOTER.h / 2 + 20,
         );
         ctx.font = '16px sans-serif';
-        ctx.fillText(t('shooter.restartPrompt'), W / 2, H / 2 + 50);
+        ctx.fillText(
+          t('shooter.restartPrompt'),
+          SHOOTER.w / 2,
+          SHOOTER.h / 2 + 50,
+        );
       }
 
       rafId = requestAnimationFrame(loop);
     };
 
+    stateRef.current.lastTime = 0;
     rafId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafId);
   }, [status, score, locale, t]);
@@ -305,10 +273,13 @@ const GameShooter = () => {
         >
           <canvas
             ref={canvasRef}
-            width={W}
-            height={H}
+            width={SHOOTER.w}
+            height={SHOOTER.h}
             className="block cursor-pointer"
-            style={{ width: 'min(calc(100vw - 2rem), 400px)', height: 'auto' }}
+            style={{
+              width: 'min(calc(100vw - 2rem), 400px)',
+              height: 'auto',
+            }}
           />
         </button>
         <p className="mt-4 text-center text-sm text-muted-foreground">

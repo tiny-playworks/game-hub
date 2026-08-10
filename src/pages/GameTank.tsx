@@ -8,61 +8,32 @@ import {
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { formatMessage } from '@/lib/i18n';
+import {
+  bulletHitsTank,
+  cloneMap,
+  countRemainingEnemies,
+  createPlayerTank,
+  DIR_DXY,
+  fireBullet,
+  isOffsetBlocked,
+  moveTank,
+  stepBullet,
+  TANK,
+  type TankBullet,
+  type TankDir,
+  type TankEntity,
+} from '@/lib/tank';
 import { useGameStore } from '../store/gameStore';
 
-const TILE = 32;
-const COLS = 13;
-const ROWS = 13;
-const W = COLS * TILE;
-const H = ROWS * TILE;
-const TANK_W = 28;
-const TANK_H = 28;
-const BULLET_SPEED = 6;
-const TANK_SPEED = 2;
-
-type Dir = 'up' | 'down' | 'left' | 'right';
-const DIR_DXY: Record<Dir, [number, number]> = {
-  up: [0, -1],
-  down: [0, 1],
-  left: [-1, 0],
-  right: [1, 0],
-};
-
-const MAP_TEMPLATE: number[][] = [
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0],
-  [0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 1, 3, 1, 0, 0, 0, 0, 0],
-];
-
-interface Tank {
-  x: number;
-  y: number;
-  dir: Dir;
-  moveCounter: number;
-  isPlayer: boolean;
-}
-
-interface Bullet {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  fromPlayer: boolean;
-}
-
-function mapClone(): number[][] {
-  return MAP_TEMPLATE.map((row) => [...row]);
-}
+const {
+  tile: TILE,
+  cols: COLS,
+  rows: ROWS,
+  w: W,
+  h: H,
+  tankW: TANK_W,
+  tankH: TANK_H,
+} = TANK;
 
 const GameTank = () => {
   const { locale, t } = useLocale();
@@ -77,22 +48,16 @@ const GameTank = () => {
 
   const stateRef = useRef<{
     map: number[][];
-    player: Tank;
-    enemies: Tank[];
-    bullets: Bullet[];
+    player: TankEntity;
+    enemies: TankEntity[];
+    bullets: TankBullet[];
     keys: Record<string, boolean>;
     playerCooldown: number;
     enemySpawnQueue: number;
     enemySpawnTimer: number;
   }>({
-    map: mapClone(),
-    player: {
-      x: 6 * TILE + (TILE - TANK_W) / 2,
-      y: 11 * TILE + (TILE - TANK_H) / 2,
-      dir: 'up',
-      moveCounter: 0,
-      isPlayer: true,
-    },
+    map: cloneMap(),
+    player: createPlayerTank(),
     enemies: [],
     bullets: [],
     keys: {},
@@ -103,14 +68,8 @@ const GameTank = () => {
 
   const reset = useCallback(() => {
     stateRef.current = {
-      map: mapClone(),
-      player: {
-        x: 6 * TILE + (TILE - TANK_W) / 2,
-        y: 11 * TILE + (TILE - TANK_H) / 2,
-        dir: 'up',
-        moveCounter: 0,
-        isPlayer: true,
-      },
+      map: cloneMap(),
+      player: createPlayerTank(),
       enemies: [],
       bullets: [],
       keys: {},
@@ -130,30 +89,6 @@ const GameTank = () => {
     if (!ctx) return;
 
     let rafId = 0;
-
-    const tileSolid = (map: number[][], px: number, py: number): boolean => {
-      const c = Math.floor(px / TILE);
-      const r = Math.floor(py / TILE);
-      if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return true;
-      return map[r][c] >= 1;
-    };
-
-    const tankBlocked = (
-      tank: Tank,
-      dx: number,
-      dy: number,
-      map: number[][],
-    ): boolean => {
-      const nx = tank.x + dx;
-      const ny = tank.y + dy;
-      const corners = [
-        [nx, ny],
-        [nx + TANK_W - 1, ny],
-        [nx, ny + TANK_H - 1],
-        [nx + TANK_W - 1, ny + TANK_H - 1],
-      ];
-      return corners.some(([px, py]) => tileSolid(map, px, py));
-    };
 
     const loop = () => {
       const state = stateRef.current;
@@ -194,37 +129,20 @@ const GameTank = () => {
       }
 
       if (status === 'playing') {
-        const [_dx, _dy] = DIR_DXY[player.dir];
-        if (state.keys.ArrowUp) {
-          player.dir = 'up';
-          if (!tankBlocked(player, 0, -TANK_SPEED, map))
-            player.y = Math.max(0, player.y - TANK_SPEED);
-        }
-        if (state.keys.ArrowDown) {
-          player.dir = 'down';
-          if (!tankBlocked(player, 0, TANK_SPEED, map))
-            player.y = Math.min(H - TANK_H, player.y + TANK_SPEED);
-        }
-        if (state.keys.ArrowLeft) {
-          player.dir = 'left';
-          if (!tankBlocked(player, -TANK_SPEED, 0, map))
-            player.x = Math.max(0, player.x - TANK_SPEED);
-        }
-        if (state.keys.ArrowRight) {
-          player.dir = 'right';
-          if (!tankBlocked(player, TANK_SPEED, 0, map))
-            player.x = Math.min(W - TANK_W, player.x + TANK_SPEED);
+        const dirs: { key: string; dir: TankDir }[] = [
+          { key: 'ArrowUp', dir: 'up' },
+          { key: 'ArrowDown', dir: 'down' },
+          { key: 'ArrowLeft', dir: 'left' },
+          { key: 'ArrowRight', dir: 'right' },
+        ];
+        for (const { key, dir } of dirs) {
+          if (state.keys[key]) {
+            Object.assign(player, moveTank(map, player, dir));
+          }
         }
 
         if (state.keys.Space && state.playerCooldown <= 0) {
-          const [dx, dy] = DIR_DXY[player.dir];
-          state.bullets.push({
-            x: player.x + TANK_W / 2 - 2,
-            y: player.y + TANK_H / 2 - 2,
-            vx: dx * BULLET_SPEED,
-            vy: dy * BULLET_SPEED,
-            fromPlayer: true,
-          });
+          state.bullets.push(fireBullet(player));
           state.playerCooldown = 25;
         }
         if (state.playerCooldown > 0) state.playerCooldown--;
@@ -237,7 +155,8 @@ const GameTank = () => {
         ) {
           state.enemySpawnTimer = 0;
           state.enemySpawnQueue--;
-          const spawns = [
+          // Preserve exact spawn pixels from original game feel
+          const spawns: [number, number][] = [
             [0, 0],
             [6 * TILE + (TILE - TANK_W) / 2, 0],
             [12 * TILE - TANK_W + (TILE - TANK_W) / 2, 0],
@@ -252,119 +171,76 @@ const GameTank = () => {
           });
         }
 
-        enemies.forEach((enemy, _ei) => {
+        enemies.forEach((enemy) => {
           enemy.moveCounter++;
           if (enemy.moveCounter >= 30) {
             enemy.moveCounter = 0;
-            const dirs: Dir[] = ['up', 'down', 'left', 'right'];
-            const [_dx, _dy] = DIR_DXY[enemy.dir];
-            const tryDir = dirs[Math.floor(Math.random() * 4)];
+            const allDirs: TankDir[] = ['up', 'down', 'left', 'right'];
+            const tryDir = allDirs[Math.floor(Math.random() * 4)];
             const [tdx, tdy] = DIR_DXY[tryDir];
-            if (!tankBlocked(enemy, tdx * TILE, tdy * TILE, map)) {
+            if (!isOffsetBlocked(map, enemy, tdx * TILE, tdy * TILE)) {
               enemy.dir = tryDir;
             }
           }
           const [dx, dy] = DIR_DXY[enemy.dir];
-          if (!tankBlocked(enemy, dx * 2, dy * 2, map)) {
+          if (!isOffsetBlocked(map, enemy, dx * 2, dy * 2)) {
             enemy.x += dx * 2;
             enemy.y += dy * 2;
           }
           if (Math.random() < 0.02) {
-            state.bullets.push({
-              x: enemy.x + TANK_W / 2 - 2,
-              y: enemy.y + TANK_H / 2 - 2,
-              vx: dx * BULLET_SPEED,
-              vy: dy * BULLET_SPEED,
-              fromPlayer: false,
-            });
+            state.bullets.push(fireBullet(enemy));
           }
         });
 
-        state.bullets = bullets.filter((b) => {
-          b.x += b.vx;
-          b.y += b.vy;
-          if (b.x < -4 || b.x > W + 4 || b.y < -4 || b.y > H + 4) return false;
-          const bc = Math.floor(b.x / TILE);
-          const br = Math.floor(b.y / TILE);
-          if (br >= 0 && br < ROWS && bc >= 0 && bc < COLS) {
-            const v = map[br][bc];
-            if (v === 1) {
-              map[br][bc] = 0;
-              return false;
-            }
-            if (v === 2) return false;
-            if (v === 3) {
-              setStatus('over');
-              return false;
-            }
+        const nextBullets: TankBullet[] = [];
+        for (const b of bullets) {
+          const stepped = stepBullet(map, b);
+          if (stepped.event === 'base') {
+            setStatus('over');
+            continue;
           }
-          if (b.fromPlayer) {
-            const hit = enemies.some(
-              (e) =>
-                b.x + 4 > e.x &&
-                b.x < e.x + TANK_W &&
-                b.y + 4 > e.y &&
-                b.y < e.y + TANK_H,
+          if (!stepped.bullet) continue;
+
+          const bullet = stepped.bullet;
+          if (bullet.fromPlayer) {
+            const hitEnemy = state.enemies.find((e) =>
+              bulletHitsTank(bullet, e),
             );
-            if (hit) {
-              state.enemies = enemies.filter(
-                (e) =>
-                  !(
-                    b.x + 4 > e.x &&
-                    b.x < e.x + TANK_W &&
-                    b.y + 4 > e.y &&
-                    b.y < e.y + TANK_H
-                  ),
-              );
-              return false;
+            if (hitEnemy) {
+              state.enemies = state.enemies.filter((e) => e !== hitEnemy);
+              continue;
             }
-          } else {
-            const hit =
-              b.x + 4 > player.x &&
-              b.x < player.x + TANK_W &&
-              b.y + 4 > player.y &&
-              b.y < player.y + TANK_H;
-            if (hit) {
-              setStatus('over');
-              return false;
-            }
-            const br = Math.floor(b.y / TILE);
-            const bc = Math.floor(b.x / TILE);
-            if (
-              br >= 0 &&
-              br < ROWS &&
-              bc >= 0 &&
-              bc < COLS &&
-              map[br][bc] === 3
-            ) {
-              map[br][bc] = 0;
-              setStatus('over');
-              return false;
-            }
+          } else if (bulletHitsTank(bullet, player)) {
+            setStatus('over');
+            continue;
           }
-          return true;
-        });
+          nextBullets.push(bullet);
+        }
+        state.bullets = nextBullets;
 
         if (state.enemies.length === 0 && state.enemySpawnQueue <= 0) {
           setStatus('win');
         }
 
-        const remaining = state.enemySpawnQueue + state.enemies.length;
+        const remaining = countRemainingEnemies(
+          state.enemySpawnQueue,
+          state.enemies,
+        );
         if (remaining !== remainingRef.current) {
           remainingRef.current = remaining;
           setRemainingEnemies(remaining);
         }
       }
 
-      const drawTank = (t: Tank, color: string) => {
+      const drawTank = (tank: TankEntity, color: string) => {
         ctx.save();
-        ctx.translate(t.x + TANK_W / 2, t.y + TANK_H / 2);
+        ctx.translate(tank.x + TANK_W / 2, tank.y + TANK_H / 2);
         const angle =
-          t.dir === 'up'
+          tank.dir === 'up'
             ? 0
-            : t.dir === 'down'
+            : tank.dir === 'down'
               ? Math.PI
-              : t.dir === 'left'
+              : tank.dir === 'left'
                 ? -Math.PI / 2
                 : Math.PI / 2;
         ctx.rotate(angle);
@@ -382,7 +258,7 @@ const GameTank = () => {
       });
 
       ctx.fillStyle = '#fbbf24';
-      bullets.forEach((b) => {
+      state.bullets.forEach((b) => {
         ctx.fillRect(b.x, b.y, 4, 4);
       });
 

@@ -3,7 +3,13 @@ import { Link } from 'react-router-dom';
 import { VirtualController } from '@/components/common/VirtualController';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
-import { hitsSnakeBody } from '@/lib/snake';
+import {
+  canSetDir,
+  placeFood as placeFoodLogic,
+  type SnakeDir,
+  type SnakeFood,
+  stepSnake,
+} from '@/lib/snake';
 import { cn } from '@/lib/utils';
 import { useScreenShake } from '../hooks/useScreenShake';
 import { useGameStore } from '../store/gameStore';
@@ -14,9 +20,6 @@ const H = 400;
 const CELL = 20;
 const COLS = W / CELL;
 const ROWS = H / CELL;
-
-type Dir = 'up' | 'down' | 'left' | 'right';
-type FoodType = 'normal' | 'golden';
 
 interface Particle {
   x: number;
@@ -41,9 +44,9 @@ const GameSnake = () => {
 
   const stateRef = useRef({
     snake: [{ x: Math.floor(COLS / 2), y: Math.floor(ROWS / 2) }],
-    dir: 'right' as Dir,
-    nextDir: 'right' as Dir,
-    food: { x: 0, y: 0, type: 'normal' as FoodType, timer: 0 },
+    dir: 'right' as SnakeDir,
+    nextDir: 'right' as SnakeDir,
+    food: { x: 0, y: 0, type: 'normal', timer: 0 } as SnakeFood,
     particles: [] as Particle[],
     lastTick: 0,
   });
@@ -70,20 +73,12 @@ const GameSnake = () => {
   );
 
   const placeFood = useCallback(() => {
-    const body = new Set(stateRef.current.snake.map((s) => `${s.x},${s.y}`));
-    let x: number, y: number;
-    do {
-      x = Math.floor(Math.random() * COLS);
-      y = Math.floor(Math.random() * ROWS);
-    } while (body.has(`${x},${y}`));
-
-    const isGolden = Math.random() < 0.15; // 15% chance for golden
-    stateRef.current.food = {
-      x,
-      y,
-      type: isGolden ? 'golden' : 'normal',
-      timer: isGolden ? 3000 : 0, // 3 seconds in golden mode (tracked via exact time diff ideally, but we'll use frames/dt in loop)
-    };
+    stateRef.current.food = placeFoodLogic(
+      stateRef.current.snake,
+      COLS,
+      ROWS,
+      Math.random,
+    );
   }, []);
 
   const reset = useCallback(() => {
@@ -160,61 +155,39 @@ const GameSnake = () => {
         if (timestamp - state.lastTick > currentSpeed) {
           state.lastTick = timestamp;
 
-          state.dir = state.nextDir;
-          const head = { ...state.snake[0] };
+          const result = stepSnake(
+            {
+              snake: state.snake,
+              dir: state.dir,
+              nextDir: state.nextDir,
+              food: state.food,
+              cols: COLS,
+              rows: ROWS,
+            },
+            Math.random,
+          );
 
-          switch (state.dir) {
-            case 'up':
-              head.y -= 1;
-              break;
-            case 'down':
-              head.y += 1;
-              break;
-            case 'left':
-              head.x -= 1;
-              break;
-            case 'right':
-              head.x += 1;
-              break;
-          }
-
-          // Wall collision
-          if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) {
-            setStatus('over');
-            shake();
-            if (score > gameStats.highScore) updateHighScore('snake', score);
-            return;
-          }
-          const willEat = head.x === state.food.x && head.y === state.food.y;
-
-          // Self collision. Moving into the current tail is legal when the
-          // snake is not growing because that cell leaves this tick.
-          if (hitsSnakeBody(head, state.snake, willEat)) {
+          if (result.kind === 'dead') {
             setStatus('over');
             shake();
             if (score > gameStats.highScore) updateHighScore('snake', score);
             return;
           }
 
-          const nextSnake = [head, ...state.snake];
+          state.snake = result.state.snake;
+          state.dir = result.state.dir;
+          state.nextDir = result.state.nextDir;
+          state.food = result.state.food;
 
-          // Eat food
-          if (willEat) {
-            if (state.food.type === 'golden') {
-              setScore((s) => s + 50);
-              createParticles(head.x, head.y, '#eab308', 30); // yellow particles
-              // add extra length
-              for (let i = 0; i < 3; i++)
-                nextSnake.push({ ...state.snake[state.snake.length - 1] });
+          if (result.ate) {
+            setScore((s) => s + result.scoreDelta);
+            const head = result.state.snake[0];
+            if (result.foodType === 'golden') {
+              createParticles(head.x, head.y, '#eab308', 30);
             } else {
-              setScore((s) => s + 10);
-              createParticles(head.x, head.y, '#ef4444', 15); // red particles
+              createParticles(head.x, head.y, '#ef4444', 15);
             }
-            placeFood();
-          } else {
-            nextSnake.pop();
           }
-          state.snake = nextSnake;
         }
       }
 
@@ -323,24 +296,10 @@ const GameSnake = () => {
   ]);
 
   const handleDirection = useCallback(
-    (dir: Dir) => {
+    (dir: SnakeDir) => {
       const state = stateRef.current;
       if (status === 'idle') start();
-
-      switch (dir) {
-        case 'up':
-          if (state.dir !== 'down') state.nextDir = 'up';
-          break;
-        case 'down':
-          if (state.dir !== 'up') state.nextDir = 'down';
-          break;
-        case 'left':
-          if (state.dir !== 'right') state.nextDir = 'left';
-          break;
-        case 'right':
-          if (state.dir !== 'left') state.nextDir = 'right';
-          break;
-      }
+      if (canSetDir(state.dir, dir)) state.nextDir = dir;
     },
     [status, start],
   );
@@ -458,7 +417,7 @@ const GameSnake = () => {
         {/* Mobile Virtual Controller */}
         <VirtualController
           showActions={false}
-          onDirection={(d) => handleDirection(d.toLowerCase() as Dir)}
+          onDirection={(d) => handleDirection(d.toLowerCase() as SnakeDir)}
         />
       </main>
     </div>
