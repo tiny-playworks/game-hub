@@ -1,118 +1,94 @@
-import {
-  calcFu,
-  calcScore,
-  getTotalHan,
-  isMenzhen,
-  type YakuResult,
-} from '@/lib/mahjongRiichi';
-import { appendUraDoraYaku, countUraDoraHan } from '../helpers';
+import { evaluateRiichiWin, type RiichiWinEvaluation } from '@/lib/riichiRules';
+import type { RiichiWinResult } from '../store/riichiGameStore';
 import type { RiichiGameState } from '../types';
 
-export type EnrichWinParams = {
+export type EvaluateGameWinParams = {
   state: RiichiGameState;
   winner: number;
   isTsumo: boolean;
-  handWithWin: number[];
-  yaku: YakuResult[];
-  fu?: number;
-  han?: number;
-  ten?: number;
+  winningTile: number;
+  afterKan?: boolean;
 };
 
-export function enrichWinResultWithUra(params: EnrichWinParams): {
-  winner: number;
-  isTsumo: boolean;
-  handWithWin: number[];
-  yaku: YakuResult[];
-  fu?: number;
-  han?: number;
-  ten?: number;
-  uraHan?: number;
-  uraDoraIndicators?: number[];
-} {
-  if (!params.state.riichiDeclared[params.winner]) {
-    return {
-      winner: params.winner,
-      isTsumo: params.isTsumo,
-      handWithWin: params.handWithWin,
-      yaku: params.yaku,
-      fu: params.fu,
-      han: params.han,
-      ten: params.ten,
-      uraHan: 0,
-      uraDoraIndicators: [],
-    };
+/**
+ * 页面状态到规则门面的唯一转换点。
+ * 人类与 AI 的和牌判定、符番与点数必须复用这个入口。
+ */
+export function evaluateGameWin(
+  params: EvaluateGameWinParams,
+): RiichiWinEvaluation {
+  const { state, winner, isTsumo, winningTile, afterKan } = params;
+  return evaluateRiichiWin({
+    state: {
+      hand: state.hands[winner],
+      melds: state.melds[winner],
+      doraIndicators: state.doraIndicators,
+      roundWind: state.roundWind,
+      dealer: state.dealer,
+      riichiDeclared: state.riichiDeclared,
+      wallLength: state.wall.length,
+      lastDiscard: state.lastDiscard,
+      ippatsu:
+        state.riichiDeclared[winner] &&
+        (state.ippatsuPossible?.[winner] ?? false),
+      afterKan: afterKan ?? (isTsumo && Boolean(state.lastDrawWasRinshan)),
+      winnerSeat: winner,
+    },
+    isTsumo,
+    winningTile,
+    uraDoraIndicators: state.uraDoraIndicators,
+  });
+}
+
+/** 将规则门面的权威结果转换为 UI/结算使用的局内结果。 */
+export function createRiichiWinResult(
+  state: RiichiGameState,
+  winner: number,
+  isTsumo: boolean,
+  evaluation: RiichiWinEvaluation,
+): RiichiWinResult {
+  if (!evaluation.legalWin || evaluation.totalPoints <= 0) {
+    throw new Error('Cannot create a win result from an illegal evaluation');
   }
-  const allTiles = [
-    ...params.handWithWin,
-    ...params.state.melds[params.winner].flatMap((m) => m.tiles),
-  ];
-  const uraHan = countUraDoraHan(allTiles, params.state.uraDoraIndicators);
-  const yakuWithUra = appendUraDoraYaku(params.yaku, uraHan);
-  const uraAdded = yakuWithUra.length !== params.yaku.length;
-  if (!uraAdded) {
-    return {
-      winner: params.winner,
-      isTsumo: params.isTsumo,
-      handWithWin: params.handWithWin,
-      yaku: yakuWithUra,
-      fu: params.fu,
-      han: params.han,
-      ten: params.ten,
-      uraHan,
-      uraDoraIndicators: params.state.uraDoraIndicators,
-    };
-  }
-  const baseHan = params.han ?? getTotalHan(params.yaku);
-  const nextHan = baseHan + uraHan;
-  const nextTen =
-    params.fu != null
-      ? calcScore(
-          params.fu,
-          nextHan,
-          params.state.dealer === params.winner,
-          params.isTsumo,
-        )
-      : params.ten;
   return {
-    winner: params.winner,
-    isTsumo: params.isTsumo,
-    handWithWin: params.handWithWin,
-    yaku: yakuWithUra,
-    fu: params.fu,
-    han: nextHan,
-    ten: nextTen,
-    uraHan,
-    uraDoraIndicators: params.state.uraDoraIndicators,
+    winner,
+    isTsumo,
+    yaku: evaluation.yaku,
+    fu: evaluation.fu,
+    han: evaluation.han,
+    yakuman: evaluation.yakuman,
+    ten: evaluation.totalPoints,
+    tsumoPayments: evaluation.tsumoPayments,
+    uraHan: evaluation.uraDoraHan,
+    uraDoraIndicators: state.riichiDeclared[winner]
+      ? state.uraDoraIndicators
+      : [],
   };
 }
 
-export type WinResultForBaseTen = {
-  winner: number;
-  isTsumo: boolean;
-  yaku: YakuResult[];
-  fu?: number;
-  han?: number;
-  ten?: number;
-};
+/** 局内中文日志使用；役满不应显示成 riichi-rs 的 0 符 0 番。 */
+export function formatRiichiWinValue(
+  evaluation: Pick<
+    RiichiWinEvaluation,
+    'fu' | 'han' | 'yakuman' | 'totalPoints'
+  >,
+): string {
+  if (evaluation.yakuman > 0) {
+    const multiple = evaluation.yakuman > 1 ? `${evaluation.yakuman}倍` : '';
+    return `${multiple}役满 ${evaluation.totalPoints}点`;
+  }
+  return `${evaluation.fu}符 ${evaluation.han}番 ${evaluation.totalPoints}点`;
+}
 
+export type WinResultForBaseTen = Pick<RiichiWinResult, 'ten'>;
+
+/** 生产和牌结果必须携带规则引擎给出的权威点数，不再以简化公式兜底。 */
 export function resolveWinBaseTen(
   result: WinResultForBaseTen,
-  state: RiichiGameState,
+  _state: RiichiGameState,
 ): number {
-  if (result.ten != null && result.ten > 0) return result.ten;
-  const han = result.han ?? getTotalHan(result.yaku);
-  if (han <= 0) return 1000;
-  const hasPinfu = result.yaku.some((y) => y.id === 'pinfu');
-  const isChiitoitsu = result.yaku.some((y) => y.id === 'chiitoitsu');
-  const menzen = isMenzhen(state.melds[result.winner]);
-  const fu =
-    result.fu ??
-    calcFu({
-      isTsumo: result.isTsumo,
-      isMenzhen: menzen,
-      hasPinfu,
-      isChiitoitsu,
-    });
-  return calcScore(fu, han, state.dealer === result.winner, result.isTsumo);
+  if (result.ten == null || result.ten <= 0) {
+    throw new Error('Win result is missing an authoritative score');
+  }
+  return result.ten;
 }

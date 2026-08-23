@@ -18,6 +18,8 @@ export interface RiichiGameState {
   melds: RiichiMeld[][];
   currentPlayer: number;
   drawnTile: number | null;
+  /** 当前 drawnTile 是否来自杠后的岭上补牌；普通摸牌与出牌时清空。 */
+  lastDrawWasRinshan?: boolean;
   /** 明宝牌表示牌（开局 1 张，每开杠追加 1 张） */
   doraIndicators: number[];
   phase: 'discard' | 'claim';

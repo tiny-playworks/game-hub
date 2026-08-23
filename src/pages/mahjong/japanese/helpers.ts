@@ -1,11 +1,4 @@
-import type { YakuResult } from '@/lib/mahjongRiichi';
-import {
-  getBaseTile,
-  getDoraFromIndicator,
-  hasYaku,
-  isMenzhen,
-  isWinShapeRiichi,
-} from '@/lib/mahjongRiichi';
+import { getBaseTile } from '@/lib/mahjongRiichi';
 import {
   clearDoujunFuriten,
   createInitialFuritenState,
@@ -13,7 +6,9 @@ import {
 } from '@/lib/riichiFuriten';
 import type { MatchEndReason } from '@/lib/riichiGameEnd';
 import type { PaymentDetail } from '@/lib/riichiSettlement';
+import { tenpaiConcealedCount } from '@/lib/riichiTenpaiHelpers';
 import { computeWaitingTilesRiichi } from '@/lib/riichiWaitingTiles';
+import { evaluateGameWin } from './gameLogic/winResult';
 import type { RiichiGameState, RiichiMeld } from './types';
 
 function getOccurrenceKey(baseKey: string, seen: Map<string, number>): string {
@@ -45,11 +40,11 @@ export function toMeldKeyedItems(
 }
 
 export function getSeatWind(
-  roundWind: number,
+  _roundWind: number,
   seat: number,
   dealer: number,
 ): number {
-  return (roundWind + ((seat - dealer + 4) % 4)) % 4;
+  return (seat - dealer + 4) % 4;
 }
 
 /**
@@ -212,7 +207,9 @@ export function countVisibleTilesByBase(state: RiichiGameState): number[] {
     if (b >= 0 && b < 34) count[b]++;
   };
   state.hands[0].forEach(add);
-  for (const m of state.melds[0]) m.tiles.forEach(add);
+  for (const seatMelds of state.melds) {
+    for (const meld of seatMelds) meld.tiles.forEach(add);
+  }
   for (let i = 0; i < 4; i++) state.discardPiles[i].forEach(add);
   for (const ind of state.doraIndicators) add(ind);
   return count;
@@ -224,7 +221,7 @@ export function getRonWaitingTilesForSeatInState(
 ): number[] {
   const hand = state.hands[seat];
   const melds = state.melds[seat];
-  if (hand.length !== 13) return [];
+  if (hand.length !== tenpaiConcealedCount(melds)) return [];
   return computeWaitingTilesRiichi(hand, melds, state, {
     seat,
     isTsumo: false,
@@ -242,21 +239,14 @@ export function canSeatRonByRules(
     state.lastDiscardFrom === seat
   )
     return false;
-  const handWithClaim = [...state.hands[seat], state.lastDiscard];
-  if (!isWinShapeRiichi(handWithClaim, state.melds[seat])) return false;
-  const melds = state.melds[seat];
-  const yakuOk = hasYaku({
-    hand: handWithClaim,
-    melds: melds.map((m) => ({ tiles: m.tiles })),
-    meldsTyped: melds,
-    isMenzhen: isMenzhen(melds),
+  const evaluation = evaluateGameWin({
+    state,
+    winner: seat,
     isTsumo: false,
-    isRiichi: state.riichiDeclared[seat],
-    ippatsuPossible: false,
-    seatWind: getSeatWind(state.roundWind, seat, state.dealer),
-    roundWind: state.roundWind,
+    winningTile: state.lastDiscard,
+    afterKan: state.lastClaimWasKakan ?? false,
   });
-  if (!yakuOk) return false;
+  if (!evaluation.legalWin) return false;
   return !isRonForbiddenByFuriten({
     waitingTiles: getRonWaitingTilesForSeatInState(state, seat),
     ownDiscards: state.discardPiles[seat],
@@ -266,25 +256,6 @@ export function canSeatRonByRules(
 
 export function formatPoints(points: number): string {
   return `${points.toLocaleString()} 点`;
-}
-
-export function countUraDoraHan(
-  allTiles: number[],
-  indicators: number[],
-): number {
-  if (indicators.length === 0) return 0;
-  const doraTypes = indicators.map((i) => getDoraFromIndicator(i));
-  return allTiles.filter((t) => doraTypes.includes(getBaseTile(t))).length;
-}
-
-export function appendUraDoraYaku(
-  yaku: YakuResult[],
-  uraHan: number,
-): YakuResult[] {
-  if (uraHan <= 0) return yaku;
-  const alreadyHasUra = yaku.some((y) => y.id === '54' || y.id === 'ura_dora');
-  if (alreadyHasUra) return yaku;
-  return [...yaku, { id: 'ura_dora', name: '里宝牌', han: uraHan }];
 }
 
 export function summarizeWinnerPayments(

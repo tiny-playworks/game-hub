@@ -40,6 +40,7 @@ export function useRiichiClaimActions(ctx: RiichiRuntimeContext) {
         discardPiles: piles,
         currentPlayer: (player + 1) % 4,
         drawnTile: null,
+        lastDrawWasRinshan: false,
         phase: 'claim',
         lastDiscard: tile,
         lastDiscardFrom: game.currentPlayer,
@@ -290,6 +291,7 @@ export function useRiichiClaimActions(ctx: RiichiRuntimeContext) {
         claimIndex: 0,
         currentPlayer: 0,
         drawnTile: null,
+        lastDrawWasRinshan: false,
         lastClaimMsg: null,
         ryuukyoku: true,
         ryuukyokuReason: '四开杠',
@@ -312,6 +314,7 @@ export function useRiichiClaimActions(ctx: RiichiRuntimeContext) {
       claimIndex: 0,
       currentPlayer: 0,
       drawnTile: rinshan,
+      lastDrawWasRinshan: true,
       lastClaimMsg: null,
     });
   }, [game, addLog, sounds, consumeSeatTimeBank, setGame, turnClockRef]);

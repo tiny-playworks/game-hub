@@ -10,6 +10,11 @@ export interface WinSettlementInput {
   honba: number;
   riichiPot: number;
   ronFrom?: number | null;
+  /** 精确自摸支付额；由规则引擎给出，避免从总点数反推时产生舍入误差。 */
+  tsumoPayments?: {
+    dealerOrAll: number;
+    nonDealer: number;
+  } | null;
 }
 
 export interface PaymentDetail {
@@ -51,13 +56,21 @@ export function settleWin(input: WinSettlementInput): SettlementResult {
   const winnerIsDealer = input.winner === input.dealer;
 
   if (input.isTsumo) {
-    const share = winnerIsDealer
+    const fallbackShare = winnerIsDealer
       ? ceilTo100(input.baseTen / 3)
       : ceilTo100(input.baseTen / 4);
-    const dealerShare = winnerIsDealer ? share : ceilTo100(input.baseTen / 2);
+    const fallbackDealerShare = winnerIsDealer
+      ? fallbackShare
+      : ceilTo100(input.baseTen / 2);
     for (let seat = 0; seat < 4; seat++) {
       if (seat === input.winner) continue;
-      const loss = seat === input.dealer ? dealerShare : share;
+      const loss = input.tsumoPayments
+        ? winnerIsDealer || seat === input.dealer
+          ? input.tsumoPayments.dealerOrAll
+          : input.tsumoPayments.nonDealer
+        : seat === input.dealer
+          ? fallbackDealerShare
+          : fallbackShare;
       applyPayment(scores, payments, seat, input.winner, loss, 'tsumo');
       if (input.honba > 0) {
         applyPayment(

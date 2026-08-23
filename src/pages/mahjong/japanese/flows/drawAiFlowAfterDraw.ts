@@ -3,15 +3,9 @@
  * 由 useRiichiDrawAiFlow 在 currentPlayer !== 0 且 drawnTile !== null 时调用。
  */
 import {
-  calcFu,
-  calcScore,
-  computeYaku,
   getAngangOptionsRiichi,
   getTileLabel,
-  getTotalHan,
-  hasYaku,
   isMenzhen,
-  isWinShapeRiichi,
 } from '@/lib/mahjongRiichi';
 import {
   applyAiRiichiState,
@@ -20,13 +14,8 @@ import {
 } from '@/lib/riichiAi';
 import { consumeTimeBankSeconds } from '@/lib/riichiClock';
 import { recordRiichiProgressEvent } from '@/lib/riichiProgress';
-import {
-  buildRiichiInput,
-  calcWithRiichiRs,
-  type GameStateForRs,
-} from '@/lib/riichiRsAdapter';
 import { SEAT_NAMES } from '../constants';
-import { enrichWinResultWithUra } from '../gameLogic/winResult';
+import { createRiichiWinResult, evaluateGameWin } from '../gameLogic/winResult';
 import { clearSeatDoujunStates } from '../helpers';
 import { applyAbortiveDrawChecks } from '../shared/abortiveDrawChecks';
 import { stripLastSettlementWhenRoundVisible } from '../shared/lastSettlementStrip';
@@ -44,7 +33,6 @@ export function runAiAfterDraw(
     setWinResult,
     addLogRef,
     sounds,
-    buildYakuCtx,
     getWaitingTilesRiichi,
     getElapsedSecondsForSeat,
     turnClockRef,
@@ -55,61 +43,25 @@ export function runAiAfterDraw(
     setGame((g) => {
       if (!g || g.currentPlayer !== p || g.drawnTile === null) return g;
       const hand = [...g.hands[p]];
-      const tsumoCtx = buildYakuCtx(p, hand, true);
-      if (isWinShapeRiichi(hand, g.melds[p]) && tsumoCtx && hasYaku(tsumoCtx)) {
-        const stateForRs: GameStateForRs = {
-          hand,
-          melds: g.melds[p],
-          doraIndicators: g.doraIndicators,
-          roundWind: g.roundWind,
-          dealer: g.dealer,
-          riichiDeclared: g.riichiDeclared,
-          wallLength: g.wall.length,
-          lastDiscard: g.lastDiscard,
-          ippatsu: g.riichiDeclared[p] && (g.ippatsuPossible?.[p] ?? false),
-          winnerSeat: p,
-        };
-        const rs = calcWithRiichiRs(buildRiichiInput(stateForRs, true));
-        const yaku = rs && rs.yaku.length > 0 ? rs.yaku : computeYaku(tsumoCtx);
-        const han = rs && rs.yaku.length > 0 ? rs.han : getTotalHan(yaku);
-        const fu =
-          rs && rs.yaku.length > 0
-            ? rs.fu
-            : calcFu({
-                isTsumo: true,
-                isMenzhen: isMenzhen(g.melds[p]),
-                hasPinfu: yaku.some((y) => y.id === 'pinfu'),
-                isChiitoitsu: yaku.some((y) => y.id === 'chiitoitsu'),
-              });
-        addLogRef.current(`${SEAT_NAMES[p]} 自摸！`);
-        sounds.playTsumo();
-        const ten =
-          rs && rs.yaku.length > 0
-            ? rs.ten
-            : calcScore(fu, han, g.dealer === p, true);
-        const enriched = enrichWinResultWithUra({
+      let tsumoEvaluation: ReturnType<typeof evaluateGameWin>;
+      try {
+        tsumoEvaluation = evaluateGameWin({
           state: g,
           winner: p,
           isTsumo: true,
-          handWithWin: hand,
-          yaku,
-          han,
-          fu,
-          ten,
+          winningTile: g.drawnTile,
         });
+      } catch {
+        addLogRef.current(`${SEAT_NAMES[p]} 规则计算失败，本次行动已暂停`);
+        return g;
+      }
+      if (tsumoEvaluation.legalWin) {
+        addLogRef.current(`${SEAT_NAMES[p]} 自摸！`);
+        sounds.playTsumo();
         recordRiichiProgressEvent('win-hand');
         recordRiichiProgressEvent('tsumo-win');
         recordRiichiProgressEvent('finish-round');
-        setWinResult({
-          winner: p,
-          isTsumo: true,
-          yaku: enriched.yaku,
-          han: enriched.han,
-          fu: enriched.fu,
-          ten: enriched.ten,
-          uraHan: enriched.uraHan,
-          uraDoraIndicators: enriched.uraDoraIndicators,
-        });
+        setWinResult(createRiichiWinResult(g, p, true, tsumoEvaluation));
         return g;
       }
 
@@ -160,6 +112,7 @@ export function runAiAfterDraw(
           furitenStates: clearSeatDoujunStates(g.furitenStates, p),
           currentPlayer: (p + 1) % 4,
           drawnTile: null,
+          lastDrawWasRinshan: false,
           phase: 'claim',
           lastDiscard: fourTiles[0],
           lastDiscardFrom: p,
@@ -230,6 +183,7 @@ export function runAiAfterDraw(
         discardPiles: piles,
         currentPlayer: next,
         drawnTile: null,
+        lastDrawWasRinshan: false,
         phase: 'claim',
         lastDiscard: toDiscard,
         lastDiscardFrom: p,

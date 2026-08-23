@@ -29,6 +29,7 @@ export function buildStateAfterTimeoutDiscard(
     discardPiles: piles,
     currentPlayer: nextPlayer,
     drawnTile: null,
+    lastDrawWasRinshan: false,
     phase: 'claim',
     lastDiscard: tileToDiscard,
     lastDiscardFrom: player,

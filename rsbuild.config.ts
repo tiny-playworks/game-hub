@@ -4,6 +4,10 @@ import { pluginReact } from '@rsbuild/plugin-react';
 // Docs: https://rsbuild.rs/config/
 export default defineConfig({
   plugins: [pluginReact()],
+  // riichi-rs 是异步 WASM 模块；关闭按需编译，确保开发运行时包含异步模块加载器。
+  dev: {
+    lazyCompilation: false,
+  },
   tools: {
     rspack: (config) => {
       config.experiments = { ...config.experiments, asyncWebAssembly: true };

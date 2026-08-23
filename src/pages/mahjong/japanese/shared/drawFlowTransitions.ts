@@ -24,6 +24,7 @@ export function applyDrawOneTile(
     hands: newHands,
     wall: newWall,
     drawnTile: draw,
+    lastDrawWasRinshan: false,
     ippatsuPossible,
     furitenStates,
   };

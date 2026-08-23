@@ -1,21 +1,12 @@
 import { useCallback } from 'react';
-import {
-  calcFu,
-  calcScore,
-  computeYaku,
-  getBaseTile,
-  getTileLabel,
-  getTotalHan,
-  isMenzhen,
-} from '@/lib/mahjongRiichi';
+import { getBaseTile, getTileLabel, isMenzhen } from '@/lib/mahjongRiichi';
 import { shouldAbortOnSuukaikan } from '@/lib/riichiAbortiveDraw';
 import { recordRiichiProgressEvent } from '@/lib/riichiProgress';
 import {
-  buildRiichiInput,
-  calcWithRiichiRs,
-  type GameStateForRs,
-} from '@/lib/riichiRsAdapter';
-import { enrichWinResultWithUra } from '../gameLogic/winResult';
+  createRiichiWinResult,
+  evaluateGameWin,
+  formatRiichiWinValue,
+} from '../gameLogic/winResult';
 import { clearSeatDoujunStates } from '../helpers';
 import type { RiichiRuntimeContext } from '../shared/riichiRuntimeContext';
 
@@ -40,7 +31,6 @@ export function useRiichiWinSpecialActions(
     consumeSeatTimeBank,
     markSeatRonDeclined,
     turnClockRef,
-    buildYakuCtx,
     getWaitingTilesRiichi,
   } = ctx;
   const { canTsumo, canRon, canKyuushuKyuuhai, currentClaimToken } = extra;
@@ -117,6 +107,7 @@ export function useRiichiWinSpecialActions(
           claimIndex: 0,
           currentPlayer: 0,
           drawnTile: null,
+          lastDrawWasRinshan: false,
           lastClaimMsg: null,
           ryuukyoku: true,
           ryuukyokuReason: '四开杠',
@@ -135,6 +126,7 @@ export function useRiichiWinSpecialActions(
         claimIndex: 0,
         currentPlayer: 1,
         drawnTile: null,
+        lastDrawWasRinshan: false,
         lastClaimMsg: `自家 暗杠 ${getTileLabel(fourTiles[0])}`,
         lastClaimWasKakan: true,
         ippatsuPossible: [false, false, false, false],
@@ -182,6 +174,7 @@ export function useRiichiWinSpecialActions(
         lastDiscardFrom: 0,
         claimIndex: 0,
         drawnTile: null,
+        lastDrawWasRinshan: false,
         lastClaimMsg: null,
         lastClaimWasKakan: true,
         ippatsuPossible: [false, false, false, false],
@@ -217,95 +210,32 @@ export function useRiichiWinSpecialActions(
   }, [game, canKyuushuKyuuhai, addLog, sounds, setGame]);
 
   const doTsumo = useCallback(() => {
-    if (!game || !canTsumo) return;
-    const timedBanks = consumeSeatTimeBank(game, 0);
-    turnClockRef.current = null;
-    const hand = game.hands[0];
-    const stateForRs: GameStateForRs = {
-      hand,
-      melds: game.melds[0],
-      doraIndicators: game.doraIndicators,
-      roundWind: game.roundWind,
-      dealer: game.dealer,
-      riichiDeclared: game.riichiDeclared,
-      wallLength: game.wall.length,
-      lastDiscard: game.lastDiscard,
-      ippatsu: game.riichiDeclared[0] && (game.ippatsuPossible?.[0] ?? false),
-      winnerSeat: 0,
-    };
-    const input = buildRiichiInput(stateForRs, true);
-    const rs = calcWithRiichiRs(input);
-    if (rs && rs.yaku.length > 0) {
-      addLog(`自家 自摸！${rs.fu}符 ${rs.han}番 ${rs.ten}点`);
-      sounds.playTsumo();
-      const enriched = enrichWinResultWithUra({
+    if (!game || !canTsumo || game.drawnTile === null) return;
+    let evaluation: ReturnType<typeof evaluateGameWin>;
+    try {
+      evaluation = evaluateGameWin({
         state: game,
         winner: 0,
         isTsumo: true,
-        handWithWin: hand,
-        yaku: rs.yaku,
-        fu: rs.fu,
-        han: rs.han,
-        ten: rs.ten,
+        winningTile: game.drawnTile,
       });
-      recordRiichiProgressEvent('win-hand');
-      recordRiichiProgressEvent('tsumo-win');
-      recordRiichiProgressEvent('finish-round');
-      setWinResult({
-        winner: 0,
-        isTsumo: true,
-        yaku: enriched.yaku,
-        fu: enriched.fu,
-        han: enriched.han,
-        ten: enriched.ten,
-        uraHan: enriched.uraHan,
-        uraDoraIndicators: enriched.uraDoraIndicators,
-      });
-      setGame((g) => (g ? { ...g, timeBanks: timedBanks } : g));
+    } catch {
+      addLog('规则计算失败，本次自摸未结算');
       return;
     }
-    const ctx = buildYakuCtx(0, hand, true);
-    if (!ctx) return;
-    const yaku = computeYaku(ctx);
-    if (yaku.length === 0) return;
-    addLog(`自家 自摸！役: ${yaku.map((y) => y.name).join(' ')}`);
+    if (!evaluation.legalWin) return;
+    const timedBanks = consumeSeatTimeBank(game, 0);
+    turnClockRef.current = null;
+    addLog(`自家 自摸！${formatRiichiWinValue(evaluation)}`);
     sounds.playTsumo();
-    const han = getTotalHan(yaku);
-    const fu = calcFu({
-      isTsumo: true,
-      isMenzhen: isMenzhen(game.melds[0]),
-      hasPinfu: yaku.some((yy) => yy.id === 'pinfu'),
-      isChiitoitsu: yaku.some((yy) => yy.id === 'chiitoitsu'),
-    });
-    const ten = calcScore(fu, han, game.dealer === 0, true);
-    const enriched = enrichWinResultWithUra({
-      state: game,
-      winner: 0,
-      isTsumo: true,
-      handWithWin: hand,
-      yaku,
-      fu,
-      han,
-      ten,
-    });
     recordRiichiProgressEvent('win-hand');
     recordRiichiProgressEvent('tsumo-win');
     recordRiichiProgressEvent('finish-round');
-    setWinResult({
-      winner: 0,
-      isTsumo: true,
-      yaku: enriched.yaku,
-      fu: enriched.fu,
-      han: enriched.han,
-      ten: enriched.ten,
-      uraHan: enriched.uraHan,
-      uraDoraIndicators: enriched.uraDoraIndicators,
-    });
+    setWinResult(createRiichiWinResult(game, 0, true, evaluation));
     setGame((g) => (g ? { ...g, timeBanks: timedBanks } : g));
   }, [
     game,
     canTsumo,
-    buildYakuCtx,
     addLog,
     sounds,
     consumeSeatTimeBank,
@@ -316,97 +246,33 @@ export function useRiichiWinSpecialActions(
 
   const doRon = useCallback(() => {
     if (!game || !canRon || game.lastDiscard === null) return;
-    const timedBanks = consumeSeatTimeBank(game, 0);
-    turnClockRef.current = null;
-    const handWithClaim = [...game.hands[0], game.lastDiscard];
-    const stateForRs: GameStateForRs = {
-      hand: handWithClaim,
-      melds: game.melds[0],
-      doraIndicators: game.doraIndicators,
-      roundWind: game.roundWind,
-      dealer: game.dealer,
-      riichiDeclared: game.riichiDeclared,
-      wallLength: game.wall.length,
-      lastDiscard: game.lastDiscard,
-      ippatsu: game.riichiDeclared[0] && (game.ippatsuPossible?.[0] ?? false),
-      afterKan: game.lastClaimWasKakan ?? false,
-      winnerSeat: 0,
-    };
-    const input = buildRiichiInput(stateForRs, false, game.lastDiscard);
-    const rs = calcWithRiichiRs(input);
-    if (rs && rs.yaku.length > 0) {
-      addLog(
-        `自家 荣和 ${getTileLabel(game.lastDiscard)}！${rs.fu}符 ${rs.han}番 ${rs.ten}点`,
-      );
-      sounds.playRon();
-      const enriched = enrichWinResultWithUra({
+    let evaluation: ReturnType<typeof evaluateGameWin>;
+    try {
+      evaluation = evaluateGameWin({
         state: game,
         winner: 0,
         isTsumo: false,
-        handWithWin: handWithClaim,
-        yaku: rs.yaku,
-        fu: rs.fu,
-        han: rs.han,
-        ten: rs.ten,
+        winningTile: game.lastDiscard,
+        afterKan: game.lastClaimWasKakan ?? false,
       });
-      recordRiichiProgressEvent('win-hand');
-      recordRiichiProgressEvent('finish-round');
-      setWinResult({
-        winner: 0,
-        isTsumo: false,
-        yaku: enriched.yaku,
-        fu: enriched.fu,
-        han: enriched.han,
-        ten: enriched.ten,
-        uraHan: enriched.uraHan,
-        uraDoraIndicators: enriched.uraDoraIndicators,
-      });
-      setGame((g) => (g ? { ...g, timeBanks: timedBanks } : g));
+    } catch {
+      addLog('规则计算失败，本次荣和未结算');
       return;
     }
-    const ctx = buildYakuCtx(0, handWithClaim, false);
-    if (!ctx) return;
-    const yaku = computeYaku(ctx);
-    if (yaku.length === 0) return;
+    if (!evaluation.legalWin) return;
+    const timedBanks = consumeSeatTimeBank(game, 0);
+    turnClockRef.current = null;
     addLog(
-      `自家 荣和 ${getTileLabel(game.lastDiscard)}！役: ${yaku.map((y) => y.name).join(' ')}`,
+      `自家 荣和 ${getTileLabel(game.lastDiscard)}！${formatRiichiWinValue(evaluation)}`,
     );
     sounds.playRon();
-    const han = getTotalHan(yaku);
-    const fu = calcFu({
-      isTsumo: false,
-      isMenzhen: isMenzhen(game.melds[0]),
-      hasPinfu: yaku.some((yy) => yy.id === 'pinfu'),
-      isChiitoitsu: yaku.some((yy) => yy.id === 'chiitoitsu'),
-    });
-    const ten = calcScore(fu, han, game.dealer === 0, false);
-    const enriched = enrichWinResultWithUra({
-      state: game,
-      winner: 0,
-      isTsumo: false,
-      handWithWin: handWithClaim,
-      yaku,
-      fu,
-      han,
-      ten,
-    });
     recordRiichiProgressEvent('win-hand');
     recordRiichiProgressEvent('finish-round');
-    setWinResult({
-      winner: 0,
-      isTsumo: false,
-      yaku: enriched.yaku,
-      fu: enriched.fu,
-      han: enriched.han,
-      ten: enriched.ten,
-      uraHan: enriched.uraHan,
-      uraDoraIndicators: enriched.uraDoraIndicators,
-    });
+    setWinResult(createRiichiWinResult(game, 0, false, evaluation));
     setGame((g) => (g ? { ...g, timeBanks: timedBanks } : g));
   }, [
     game,
     canRon,
-    buildYakuCtx,
     addLog,
     sounds,
     consumeSeatTimeBank,

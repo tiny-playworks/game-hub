@@ -39,6 +39,36 @@ describe('日麻计分结算', () => {
     expect(result.newScores).toEqual([33300, 20900, 22900, 22900]);
   });
 
+  test('规则引擎给出精确自摸支付额时，不从总点数反推', () => {
+    const result = settleWin({
+      scores: [25000, 25000, 25000, 25000],
+      winner: 0,
+      isTsumo: true,
+      baseTen: 3900,
+      dealer: 1,
+      honba: 0,
+      riichiPot: 0,
+      tsumoPayments: { dealerOrAll: 1300, nonDealer: 700 },
+    });
+    expect(result.newScores).toEqual([27700, 23700, 24300, 24300]);
+    expect(result.payments.map((p) => p.amount)).toEqual([1300, 700, 700]);
+  });
+
+  test('庄家自摸时三家都使用规则引擎的全员支付额', () => {
+    const result = settleWin({
+      scores: [25000, 25000, 25000, 25000],
+      winner: 0,
+      isTsumo: true,
+      baseTen: 2100,
+      dealer: 0,
+      honba: 0,
+      riichiPot: 0,
+      tsumoPayments: { dealerOrAll: 700, nonDealer: 400 },
+    });
+    expect(result.newScores).toEqual([27100, 24300, 24300, 24300]);
+    expect(result.payments.map((p) => p.amount)).toEqual([700, 700, 700]);
+  });
+
   test('流局：2 家听牌，2 家不听，执行 3000 不听罚符', () => {
     const result = settleRyuukyoku([25000, 25000, 25000, 25000], [0, 2], 1000);
     expect(result.newScores).toEqual([26500, 23500, 26500, 23500]);

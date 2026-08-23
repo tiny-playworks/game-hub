@@ -26,7 +26,7 @@ export function RulesView({
       <main className="mx-auto max-w-2xl px-4 py-6">
         <h1 className="text-xl font-bold text-foreground">日本立直麻将</h1>
         <p className="mt-2 text-muted-foreground">
-          天凤/雀魂标准，规则以 skill「mahjong-japanese-riichi」为准
+          练习对局 Beta · 核心和牌计算已接入规则引擎，完整牌局流程仍在持续校准
         </p>
 
         <section className="mt-6 rounded-lg border border-border bg-card p-4">
@@ -45,8 +45,9 @@ export function RulesView({
               加杠（补杠）可被抢杠；一发：立直一巡内和了且本巡无吃碰杠 +1 番
             </li>
             <li>
-              符数最小 10 符，七对子固定 25 符；1–2 番按 符×2^(番+2)，3
-              番满贯、5–6 番跳满、7–10 番倍满、≥13 役满
+              一般和牌最低 20 符，七对子固定 25 符；5 番、4 番 40 符以上或 3 番
+              70 符以上为满贯，6–7 番跳满、8–10 番倍满、11–12 番三倍满、13
+              番以上累计役满
             </li>
           </ul>
         </section>

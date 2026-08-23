@@ -72,6 +72,7 @@ export function applyClaimPassToState(
     claimIndex: 0,
     currentPlayer: nextPlayer,
     drawnTile: draw,
+    lastDrawWasRinshan: false,
     lastClaimMsg,
   };
 }
@@ -109,6 +110,7 @@ export function applyKakanRinshanAfterPass(
     claimIndex: 0,
     currentPlayer: kanPlayer,
     drawnTile: rinshan,
+    lastDrawWasRinshan: true,
     lastClaimMsg: null,
     lastClaimWasKakan: undefined,
   };

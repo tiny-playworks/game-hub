@@ -1,5 +1,4 @@
 import type { RefObject } from 'react';
-import type { hasYaku } from '@/lib/mahjongRiichi';
 import type { RiichiWinResult } from '../store/riichiGameStore';
 import type { RiichiGameState, RiichiMeld } from '../types';
 
@@ -35,13 +34,6 @@ export type TurnClockRef = RefObject<{
 
 export type AddLogRef = RefObject<(msg: string) => void>;
 
-/** buildYakuCtx 返回类型与 hasYaku 入参兼容 */
-export type BuildYakuCtx = (
-  seat: number,
-  hand: number[],
-  isTsumo: boolean,
-) => Parameters<typeof hasYaku>[0] | null;
-
 export type GetWaitingTilesRiichi = (
   hand: number[],
   melds: RiichiMeld[],
@@ -71,7 +63,6 @@ export interface RiichiRuntimeContext {
   consumeSeatTimeBank: (state: RiichiGameState, seat: number) => number[];
   getElapsedSecondsForSeat: (seat: number) => number;
   getWaitingTilesRiichi: GetWaitingTilesRiichi;
-  buildYakuCtx: BuildYakuCtx;
   clockNowMs: number;
   setClockNowMs: (value: number) => void;
   setDeclinedRonToken: (token: string | null) => void;

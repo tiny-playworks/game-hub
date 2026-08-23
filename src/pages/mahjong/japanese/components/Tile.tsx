@@ -5,10 +5,10 @@ import { cn } from '@/lib/utils';
 export function getTileColorClass(tile: number): string {
   const t = getBaseTile(tile);
   if (t >= 27) {
-    if (t === 31) return 'text-slate-400 border-slate-300/70 !bg-slate-50';
+    if (t === 31) return 'text-red-700 border-rose-400/60 !bg-rose-50/95';
     if (t === 32)
       return 'text-emerald-700 border-emerald-400/60 !bg-emerald-50/95';
-    if (t === 33) return 'text-red-700 border-rose-400/60 !bg-rose-50/95';
+    if (t === 33) return 'text-slate-400 border-slate-300/70 !bg-slate-50';
     return 'text-stone-900 border-stone-300/70 !bg-stone-50/95';
   }
   if (t < 9) {
@@ -32,7 +32,7 @@ export function RiichiTileFace({
   const redClass = isRed ? 'text-red-600' : '';
 
   if (base >= 27) {
-    const chars = ['東', '南', '西', '北', '白', '發', '中'];
+    const chars = ['東', '南', '西', '北', '中', '發', '白'];
     return (
       <span className={cn('font-bold', className, redClass)}>
         {chars[base - 27]}

@@ -3,18 +3,11 @@
  * 由 useRiichiClaimFlow 在 claimPlayer !== 0 时调用，避免主 flow 文件体积过大。
  */
 import {
-  calcFu,
-  calcScore,
   canMingangRiichi,
   canPengRiichi,
-  computeYaku,
   getBaseTile,
   getChiOptionsRiichi,
   getTileLabel,
-  getTotalHan,
-  hasYaku,
-  isMenzhen,
-  isWinShapeRiichi,
 } from '@/lib/mahjongRiichi';
 import {
   canAiRonOnClaim,
@@ -23,13 +16,8 @@ import {
 } from '@/lib/riichiAi';
 import { resolveClaimPass } from '@/lib/riichiClaimFlow';
 import { recordRiichiProgressEvent } from '@/lib/riichiProgress';
-import {
-  buildRiichiInput,
-  calcWithRiichiRs,
-  type GameStateForRs,
-} from '@/lib/riichiRsAdapter';
 import { SEAT_NAMES } from '../constants';
-import { enrichWinResultWithUra } from '../gameLogic/winResult';
+import { createRiichiWinResult, evaluateGameWin } from '../gameLogic/winResult';
 import { clearSeatDoujunStates, getSeatWind } from '../helpers';
 import { applyAbortiveDrawChecks } from '../shared/abortiveDrawChecks';
 import {
@@ -49,7 +37,7 @@ export function runAiClaimPhase(
   schedule: (fn: () => void, ms: number) => () => void,
   rng: () => number,
 ): () => void {
-  const { setGame, setWinResult, addLogRef, sounds, buildYakuCtx } = ctx;
+  const { setGame, setWinResult, addLogRef, sounds } = ctx;
   const p = extra.claimPlayer;
   const isSeatFuriten = extra.isSeatFuriten;
   if (p === null) return () => {};
@@ -59,15 +47,26 @@ export function runAiClaimPhase(
   if (last === null || from === null) return () => {};
 
   const hand = game.hands[seat];
-  const handWithClaim = [...hand, last];
-  const ronCtx = buildYakuCtx(seat, handWithClaim, false);
   const onlyRonAllowed = game.lastClaimWasKakan ?? false;
   const furitenBlocked = isSeatFuriten(seat, game);
+  let ronEvaluation: ReturnType<typeof evaluateGameWin>;
+  try {
+    ronEvaluation = evaluateGameWin({
+      state: game,
+      winner: seat,
+      isTsumo: false,
+      winningTile: last,
+      afterKan: game.lastClaimWasKakan ?? false,
+    });
+  } catch {
+    addLogRef.current(`${SEAT_NAMES[seat]} 规则计算失败，本次响应已暂停`);
+    return () => {};
+  }
   const aiCanRon = canAiRonOnClaim({
     fromPlayer: from,
     aiSeat: seat,
-    isWinShape: isWinShapeRiichi(handWithClaim, game.melds[seat]),
-    hasYaku: (ronCtx ? hasYaku(ronCtx) : false) && !furitenBlocked,
+    isWinShape: ronEvaluation.structuralAgari,
+    hasYaku: ronEvaluation.legalWin && !furitenBlocked,
   });
   const aiRiichiLocked = game.riichiDeclared[seat];
   const foldClaimByRiichi =
@@ -110,81 +109,11 @@ export function runAiClaimPhase(
 
   const cancel = schedule(() => {
     if (aiCanRon) {
-      const stateForRs: GameStateForRs = {
-        hand: handWithClaim,
-        melds: game.melds[seat],
-        doraIndicators: game.doraIndicators,
-        roundWind: game.roundWind,
-        dealer: game.dealer,
-        riichiDeclared: game.riichiDeclared,
-        wallLength: game.wall.length,
-        lastDiscard: last,
-        ippatsu:
-          game.riichiDeclared[seat] && (game.ippatsuPossible?.[seat] ?? false),
-        afterKan: game.lastClaimWasKakan ?? false,
-        winnerSeat: seat,
-      };
-      const rs = calcWithRiichiRs(buildRiichiInput(stateForRs, false, last));
-      if (rs && rs.yaku.length > 0) {
-        addLogRef.current(`${SEAT_NAMES[seat]} 荣和 ${getTileLabel(last)}！`);
-        sounds.playRon();
-        const enriched = enrichWinResultWithUra({
-          state: game,
-          winner: seat,
-          isTsumo: false,
-          handWithWin: handWithClaim,
-          yaku: rs.yaku,
-          fu: rs.fu,
-          han: rs.han,
-          ten: rs.ten,
-        });
-        recordRiichiProgressEvent('win-hand');
-        recordRiichiProgressEvent('finish-round');
-        setWinResult({
-          winner: seat,
-          isTsumo: false,
-          yaku: enriched.yaku,
-          han: enriched.han,
-          fu: enriched.fu,
-          ten: enriched.ten,
-          uraHan: enriched.uraHan,
-          uraDoraIndicators: enriched.uraDoraIndicators,
-        });
-        return;
-      }
-      const yaku = ronCtx ? computeYaku(ronCtx) : [];
-      const han = getTotalHan(yaku);
-      const fu = calcFu({
-        isTsumo: false,
-        isMenzhen: isMenzhen(game.melds[seat]),
-        hasPinfu: yaku.some((y) => y.id === 'pinfu'),
-        isChiitoitsu: yaku.some((y) => y.id === 'chiitoitsu'),
-      });
       addLogRef.current(`${SEAT_NAMES[seat]} 荣和 ${getTileLabel(last)}！`);
       sounds.playRon();
-      const ten = calcScore(fu, han, game.dealer === seat, false);
-      const enriched = enrichWinResultWithUra({
-        state: game,
-        winner: seat,
-        isTsumo: false,
-        handWithWin: handWithClaim,
-        yaku,
-        han,
-        fu,
-        ten,
-      });
       recordRiichiProgressEvent('win-hand');
       recordRiichiProgressEvent('finish-round');
-      setWinResult({
-        winner: seat,
-        isTsumo: false,
-        yaku: enriched.yaku,
-        han: enriched.han,
-        fu: enriched.fu,
-        ten: enriched.ten,
-        uraHan: enriched.uraHan,
-        uraDoraIndicators: enriched.uraDoraIndicators,
-      });
+      setWinResult(createRiichiWinResult(game, seat, false, ronEvaluation));
       return;
     }
     if (
@@ -236,6 +165,7 @@ export function runAiClaimPhase(
           currentPlayer: seat,
           lastClaimMsg: null,
           drawnTile: null,
+          lastDrawWasRinshan: false,
           lastClaimWasKakan: undefined,
         });
         return;
@@ -283,6 +213,7 @@ export function runAiClaimPhase(
           currentPlayer: seat,
           lastClaimMsg: null,
           drawnTile: null,
+          lastDrawWasRinshan: false,
           lastClaimWasKakan: undefined,
         });
         return;
@@ -329,6 +260,7 @@ export function runAiClaimPhase(
           claimIndex: 0,
           currentPlayer: seat,
           drawnTile: null,
+          lastDrawWasRinshan: false,
           lastClaimMsg: null,
         };
         const { state: afterAbortive } =
@@ -358,6 +290,7 @@ export function runAiClaimPhase(
           claimIndex: 0,
           currentPlayer: seat,
           drawnTile: rinshan,
+          lastDrawWasRinshan: true,
           lastClaimMsg: `${SEAT_NAMES[seat]} 杠了 ${getTileLabel(last)}`,
         });
         return;

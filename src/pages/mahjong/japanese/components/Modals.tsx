@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { getGrowthOverview } from '@/lib/growth';
 import { formatMessage } from '@/lib/i18n';
-import type { YakuResult } from '@/lib/mahjongRiichi';
 import { getTileLabel } from '@/lib/mahjongRiichi';
 import type { MatchEndReason } from '@/lib/riichiGameEnd';
 import type {
@@ -24,18 +23,10 @@ import {
   getRyuukyokuReasonText,
   isExhaustiveRyuukyoku,
 } from '../helpers';
+import type { RiichiWinResult } from '../store/riichiGameStore';
 import type { RiichiGameState } from '../types';
 
-export type WinResultState = {
-  winner: number;
-  isTsumo: boolean;
-  yaku: YakuResult[];
-  fu?: number;
-  han?: number;
-  ten?: number;
-  uraHan?: number;
-  uraDoraIndicators?: number[];
-};
+export type WinResultState = RiichiWinResult;
 
 export type MatchEndState = {
   reason: MatchEndReason;
@@ -346,9 +337,17 @@ export function WinModal({
             className="text-center font-semibold mb-2"
             style={{ color: 'var(--riichi-accent)' }}
           >
-            {winResult.fu != null && winResult.han != null
-              ? `${winResult.fu} ${t('riichi.modal.unit.fu')} ${winResult.han} ${t('riichi.modal.unit.han')} · `
-              : ''}
+            {winResult.yakuman && winResult.yakuman > 0
+              ? `${
+                  winResult.yakuman > 1
+                    ? formatMessage(locale, 'game.mahjong.multipleYakuman', {
+                        count: winResult.yakuman,
+                      })
+                    : t('game.mahjong.yakuman')
+                } · `
+              : winResult.fu != null && winResult.han != null
+                ? `${winResult.fu} ${t('riichi.modal.unit.fu')} ${winResult.han} ${t('riichi.modal.unit.han')} · `
+                : ''}
             {winResult.ten} {t('riichi.modal.unit.point')}
           </p>
         )}
@@ -364,8 +363,10 @@ export function WinModal({
         >
           {winResult.yaku.map((y, i) => (
             <li key={i}>
-              {y.name} {y.han}
-              {t('riichi.modal.unit.han')}
+              {y.name}
+              {!winResult.yakuman || winResult.yakuman <= 0
+                ? ` ${y.han}${t('riichi.modal.unit.han')}`
+                : ''}
             </li>
           ))}
         </ul>

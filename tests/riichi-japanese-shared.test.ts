@@ -55,6 +55,7 @@ describe('日麻 shared/claimTransitions', () => {
     expect(next.phase).toBe('discard');
     expect(next.currentPlayer).toBe(2);
     expect(next.drawnTile).toBe(42);
+    expect(next.lastDrawWasRinshan).toBe(false);
     expect(next.wall).toEqual([43]);
     expect(next.hands[2]).toContain(42);
     expect(next.lastDiscard).toBeNull();
@@ -91,6 +92,7 @@ describe('日麻 shared/claimTransitions', () => {
     expect(next.phase).toBe('discard');
     expect(next.currentPlayer).toBe(0);
     expect(next.drawnTile).toBe(50);
+    expect(next.lastDrawWasRinshan).toBe(true);
     expect(next.wall).toEqual([]);
     expect(next.doraIndicators).toEqual([10, 51]);
     expect(next.lastClaimWasKakan).toBeUndefined();

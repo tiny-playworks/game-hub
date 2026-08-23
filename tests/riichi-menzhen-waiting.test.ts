@@ -11,7 +11,7 @@ import type {
   RiichiMeld,
 } from '../src/pages/mahjong/japanese/types';
 
-/** 与 helpers 中委托路径对齐：荣和听牌 = computeWaitingTilesRiichi(..., isTsumo: false) */
+/** 与 helpers 中委托路径对齐：荣和振听使用纯结构待牌。 */
 function ronWaitingDirect(state: RiichiGameState, seat: number): number[] {
   return computeWaitingTilesRiichi(
     state.hands[seat],
@@ -23,6 +23,60 @@ function ronWaitingDirect(state: RiichiGameState, seat: number): number[] {
 
 function sortNum(a: number[]): number[] {
   return [...a].sort((x, y) => x - y);
+}
+
+/** 无副露：四组面子 + 东单骑，结构上听东。 */
+const CLOSED_TENPAI_WAIT_EAST = [
+  0,
+  1,
+  2, // 123m
+  3,
+  4,
+  5, // 456m
+  12,
+  13,
+  14, // 456s
+  24,
+  25,
+  26, // 789p
+  27, // 东单骑
+];
+
+/** 一副露时合法的 10 张门前牌：三组面子 + 东单骑。 */
+const ONE_MELD_TENPAI_WAIT_EAST = [
+  0,
+  1,
+  2, // 123m
+  12,
+  13,
+  14, // 456s
+  24,
+  25,
+  26, // 789p
+  27, // 东单骑
+];
+
+/** 两副露时合法的 7 张门前牌：两组面子 + 东单骑。 */
+const TWO_MELD_TENPAI_WAIT_EAST = [
+  0,
+  1,
+  2, // 123m
+  12,
+  13,
+  14, // 456s
+  27, // 东单骑
+];
+
+function expectStructuralWaitsAgree(
+  state: RiichiGameState,
+  seat: number,
+  expectedWait: number,
+): void {
+  const fromHelper = sortNum(getRonWaitingTilesForSeatInState(state, seat));
+  const direct = sortNum(ronWaitingDirect(state, seat));
+  expect(fromHelper).toEqual(direct);
+  expect(fromHelper.length).toBeGreaterThan(0);
+  expect(fromHelper).toContain(expectedWait);
 }
 
 describe('门前清 isMenzhen / 副露 isOpenMeld', () => {
@@ -42,18 +96,18 @@ describe('门前清 isMenzhen / 副露 isOpenMeld', () => {
 
   test('吃/碰/明杠/加杠任一则非门前清', () => {
     expect(isMenzhen([{ type: 'chi', tiles: [0, 1, 2] }])).toBe(false);
-    expect(isMenzhen([{ type: 'peng', tiles: [9, 10, 11] }])).toBe(false);
-    expect(isMenzhen([{ type: 'mingang', tiles: [12, 13, 14, 15] }])).toBe(
+    expect(isMenzhen([{ type: 'peng', tiles: [9, 9, 9] }])).toBe(false);
+    expect(isMenzhen([{ type: 'mingang', tiles: [12, 12, 12, 12] }])).toBe(
       false,
     );
-    expect(isMenzhen([{ type: 'kakan', tiles: [16, 17, 18, 19] }])).toBe(false);
+    expect(isMenzhen([{ type: 'kakan', tiles: [16, 16, 16, 16] }])).toBe(false);
   });
 
   test('暗杠与副露并存时非门前清', () => {
     expect(
       isMenzhen([
         { type: 'angang', tiles: [0, 0, 0, 0] },
-        { type: 'peng', tiles: [4, 5, 6] },
+        { type: 'peng', tiles: [4, 4, 4] },
       ]),
     ).toBe(false);
   });
@@ -61,9 +115,11 @@ describe('门前清 isMenzhen / 副露 isOpenMeld', () => {
   test('isOpenMeld 与 isMenzhen 互斥定义', () => {
     const types = ['chi', 'peng', 'mingang', 'angang', 'kakan'] as const;
     for (const t of types) {
+      const tiles =
+        t === 'chi' ? [0, 1, 2] : t === 'peng' ? [0, 0, 0] : [0, 0, 0, 0];
       const m: RiichiMeld = {
         type: t,
-        tiles: [0, 1, 2, 3].slice(0, t === 'chi' || t === 'peng' ? 3 : 4),
+        tiles,
       };
       expect(isOpenMeld(m)).toBe(t !== 'angang');
       expect(!isOpenMeld(m)).toBe(isMenzhen([m]));
@@ -88,81 +144,67 @@ describe('荣和听牌：getRonWaitingTilesForSeatInState 与 computeWaitingTile
     expect(ronWaitingDirect(state, 0)).toEqual([]);
   });
 
-  test('带暗杠副露：两路径仍一致', () => {
+  test('带暗杠副露：10 张门前牌得到非空结构待牌，两路径一致', () => {
     const state = initRiichiGame(1);
-    state.melds[0] = [{ type: 'angang', tiles: [0, 0, 0, 0] }];
-    const a = getRonWaitingTilesForSeatInState(state, 0);
-    const b = ronWaitingDirect(state, 0);
-    expect(sortNum(a)).toEqual(sortNum(b));
+    state.hands[0] = [...ONE_MELD_TENPAI_WAIT_EAST];
+    state.melds[0] = [{ type: 'angang', tiles: [22, 22, 22, 22] }];
+    expectStructuralWaitsAgree(state, 0, 27);
   });
 
-  test('带明杠副露：两路径仍一致', () => {
+  test('带明杠副露：10 张门前牌得到非空结构待牌，两路径一致', () => {
     const state = initRiichiGame(1);
-    state.melds[0] = [{ type: 'mingang', tiles: [12, 13, 14, 15] }];
-    const a = getRonWaitingTilesForSeatInState(state, 0);
-    const b = ronWaitingDirect(state, 0);
-    expect(sortNum(a)).toEqual(sortNum(b));
+    state.hands[0] = [...ONE_MELD_TENPAI_WAIT_EAST];
+    state.melds[0] = [{ type: 'mingang', tiles: [22, 22, 22, 22] }];
+    expectStructuralWaitsAgree(state, 0, 27);
   });
 
-  test('带吃副露：两路径仍一致', () => {
+  test('带吃副露：10 张门前牌得到非空结构待牌，两路径一致', () => {
     const state = initRiichiGame();
-    state.melds[1] = [{ type: 'chi', tiles: [18, 19, 20] }];
-    const a = getRonWaitingTilesForSeatInState(state, 1);
-    const b = ronWaitingDirect(state, 1);
-    expect(sortNum(a)).toEqual(sortNum(b));
+    state.hands[1] = [...ONE_MELD_TENPAI_WAIT_EAST];
+    state.melds[1] = [{ type: 'chi', tiles: [3, 4, 5] }];
+    expectStructuralWaitsAgree(state, 1, 27);
   });
 
-  test('立直宣言后：两路径仍一致', () => {
+  test('立直状态不改变纯结构待牌', () => {
     const state = initRiichiGame();
+    state.hands[2] = [...CLOSED_TENPAI_WAIT_EAST];
+    const beforeRiichi = ronWaitingDirect(state, 2);
     state.riichiDeclared[2] = true;
-    const a = getRonWaitingTilesForSeatInState(state, 2);
-    const b = ronWaitingDirect(state, 2);
-    expect(sortNum(a)).toEqual(sortNum(b));
+    expectStructuralWaitsAgree(state, 2, 27);
+    expect(sortNum(ronWaitingDirect(state, 2))).toEqual(sortNum(beforeRiichi));
   });
 
-  test('场风/庄家变化：两路径仍一致', () => {
+  test('场风/庄家变化不改变纯结构待牌', () => {
     const state = initRiichiGame(2, 1, 3);
-    const a = getRonWaitingTilesForSeatInState(state, 1);
-    const b = ronWaitingDirect(state, 1);
-    expect(sortNum(a)).toEqual(sortNum(b));
+    state.hands[1] = [...CLOSED_TENPAI_WAIT_EAST];
+    expectStructuralWaitsAgree(state, 1, 27);
   });
 
-  test('带明杠副露：两路径仍一致', () => {
+  test('带加杠副露：10 张门前牌得到非空结构待牌，两路径一致', () => {
     const state = initRiichiGame();
-    state.melds[0] = [{ type: 'mingang', tiles: [12, 13, 14, 15] }];
-    const a = getRonWaitingTilesForSeatInState(state, 0);
-    const b = ronWaitingDirect(state, 0);
-    expect(sortNum(a)).toEqual(sortNum(b));
+    state.hands[2] = [...ONE_MELD_TENPAI_WAIT_EAST];
+    state.melds[2] = [{ type: 'kakan', tiles: [22, 22, 22, 22] }];
+    expectStructuralWaitsAgree(state, 2, 27);
   });
 
-  test('带加杠副露：两路径仍一致', () => {
+  test('多副露（吃+碰）：7 张门前牌得到非空结构待牌，两路径一致', () => {
     const state = initRiichiGame();
-    state.melds[2] = [{ type: 'kakan', tiles: [16, 17, 18, 19] }];
-    const a = getRonWaitingTilesForSeatInState(state, 2);
-    const b = ronWaitingDirect(state, 2);
-    expect(sortNum(a)).toEqual(sortNum(b));
-  });
-
-  test('多副露（吃+碰）：两路径仍一致', () => {
-    const state = initRiichiGame();
+    state.hands[3] = [...TWO_MELD_TENPAI_WAIT_EAST];
     state.melds[3] = [
-      { type: 'chi', tiles: [18, 19, 20] },
-      { type: 'peng', tiles: [21, 22, 23] },
+      { type: 'chi', tiles: [24, 25, 26] },
+      { type: 'peng', tiles: [22, 22, 22] },
     ];
-    const a = getRonWaitingTilesForSeatInState(state, 3);
-    const b = ronWaitingDirect(state, 3);
-    expect(sortNum(a)).toEqual(sortNum(b));
+    expectStructuralWaitsAgree(state, 3, 27);
   });
 
-  test('多副露（暗杠+碰）：两路径仍一致', () => {
+  test('多副露（暗杠+碰）：7 张门前牌得到非空结构待牌，两路径一致', () => {
     const state = initRiichiGame();
+    state.hands[1] = [...TWO_MELD_TENPAI_WAIT_EAST];
     state.melds[1] = [
-      { type: 'angang', tiles: [0, 0, 0, 0] },
-      { type: 'peng', tiles: [8, 9, 10] },
+      { type: 'angang', tiles: [22, 22, 22, 22] },
+      { type: 'peng', tiles: [6, 6, 6] },
     ];
-    const a = getRonWaitingTilesForSeatInState(state, 1);
-    const b = ronWaitingDirect(state, 1);
-    expect(sortNum(a)).toEqual(sortNum(b));
+    expectStructuralWaitsAgree(state, 1, 27);
   });
 });
 

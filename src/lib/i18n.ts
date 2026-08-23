@@ -766,6 +766,8 @@ const messages: Record<Locale, Record<string, string>> = {
     'game.mahjong.tenpaiHintTitle': '听牌提示（按可见信息估算）',
     'game.mahjong.clickToDiscard': '点击手牌出牌',
     'game.mahjong.hanCount': '{count}番',
+    'game.mahjong.yakuman': '役满',
+    'game.mahjong.multipleYakuman': '{count}倍役满',
     'game.mahjong.noYaku': '无役',
     'game.mahjong.waitFormat': '{tile}(剩{remaining}, {han})',
     'game.mahjong.needDiscardAndTenpai': '需打出 {extra} 张牌；听牌：{waits}',
@@ -1575,6 +1577,8 @@ const messages: Record<Locale, Record<string, string>> = {
     'game.mahjong.tenpaiHintTitle': 'Tenpai Hints (estimated by visible info)',
     'game.mahjong.clickToDiscard': 'Click hand tiles to discard',
     'game.mahjong.hanCount': '{count} Han',
+    'game.mahjong.yakuman': 'Yakuman',
+    'game.mahjong.multipleYakuman': '{count}x Yakuman',
     'game.mahjong.noYaku': 'No Yaku',
     'game.mahjong.waitFormat': '{tile} (rem {remaining}, {han})',
     'game.mahjong.needDiscardAndTenpai':

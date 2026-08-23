@@ -13,7 +13,12 @@ export type RiichiWinResult = {
   yaku: YakuResult[];
   fu?: number;
   han?: number;
+  yakuman?: number;
   ten?: number;
+  tsumoPayments?: {
+    dealerOrAll: number;
+    nonDealer: number;
+  } | null;
   uraHan?: number;
   uraDoraIndicators?: number[];
 };

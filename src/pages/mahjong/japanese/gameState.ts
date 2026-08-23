@@ -37,6 +37,7 @@ export function initRiichiGame(
     melds: [[], [], [], []],
     currentPlayer: dealer,
     drawnTile: null,
+    lastDrawWasRinshan: false,
     doraIndicators,
     phase: 'discard',
     lastDiscard: null,

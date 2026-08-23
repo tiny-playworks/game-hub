@@ -1,6 +1,6 @@
 /**
  * 日本立直麻将规则库
- * 牌型 0-33 同中国麻将；34=赤5万 35=赤5条 36=赤5筒
+ * 牌型 0-33 为万/条/筒/字；34=赤5万 35=赤5筒 36=赤5条
  * 规则以 .cursor/skills/mahjong-japanese-riichi/ 为准
  */
 
@@ -44,7 +44,7 @@ export const TILE_LABELS_RIICHI: string[] = [
   '白',
 ];
 
-/** 赤5万/赤5条/赤5筒 的牌型 id（用于牌组中） */
+/** 赤5万/赤5筒/赤5条 的牌型 id（用于牌组中） */
 export const AKA_5_MAN = 34;
 export const AKA_5_PIN = 35;
 export const AKA_5_SOU = 36;
@@ -173,7 +173,9 @@ export function getDoraFromIndicator(indicator: number): number {
     return t + 1;
   }
   if (t <= 30) return t === 30 ? 27 : t + 1;
-  return t === 33 ? 31 : t + 1;
+  if (t === 31) return 33;
+  if (t === 32) return 31;
+  return 32;
 }
 
 /** 统计手牌+副露中某基础牌型的张数（赤 5 计入对应 5） */
@@ -398,7 +400,7 @@ export function windIndexToYakuhaiTile(wind: number): number {
   return wind;
 }
 
-/** 役牌：白(31)发(32)中(33)、自风、场风 的刻子。返回组数（每组 1 番） */
+/** 役牌：中(31)发(32)白(33)、自风、场风 的刻子。返回组数（每组 1 番） */
 export function countYakuhai(
   hand: number[],
   melds: { tiles: number[] }[],

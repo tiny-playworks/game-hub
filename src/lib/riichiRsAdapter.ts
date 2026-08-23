@@ -1,6 +1,6 @@
 /**
  * 将本项目的日麻状态转换为 riichi-rs-bundlers 的 calc() 入参，并用其结果作为和了算分来源。
- * 牌 id：本项目 0-33 基础牌型，34-36 赤5万/赤5条/赤5筒；riichi-rs 使用 Tile 枚举 1-34。
+ * 牌 id：本项目 0-33 基础牌型，34-36 为赤5万/赤5筒/赤5条；riichi-rs 使用 Tile 枚举 1-34。
  */
 
 import {
@@ -26,7 +26,24 @@ export function ourTileToRs(tile: number): Tile {
   if (base === 31) return 34 as Tile;
   if (base === 32) return 33 as Tile;
   if (base === 33) return 32 as Tile;
-  return 1 as Tile;
+  throw new RangeError(`Unknown riichi tile id: ${tile}`);
+}
+
+/**
+ * riichi-rs 的 hairi 输出使用从 0 开始的牌型编号，且花色顺序为万/筒/条；
+ * 将其转换为本项目的万/条/筒以及中/发/白顺序。
+ */
+export function rsHairiTileToOur(tile: number): number {
+  if (!Number.isInteger(tile) || tile < 0 || tile > 33) {
+    throw new RangeError(`Unknown riichi-rs hairi tile id: ${tile}`);
+  }
+  if (tile <= 8) return tile;
+  if (tile <= 17) return tile + 9;
+  if (tile <= 26) return tile - 9;
+  if (tile <= 30) return tile;
+  if (tile === 31) return 33;
+  if (tile === 32) return 32;
+  return 31;
 }
 
 const AKA_5_MAN = 34;
@@ -54,15 +71,103 @@ export interface GameStateForRs {
   winnerSeat?: number;
 }
 
+function meldsToRs(melds: GameStateForRs['melds']): Meld[] {
+  return melds.map((meld) => {
+    const isOpen =
+      meld.type === 'chi' ||
+      meld.type === 'peng' ||
+      meld.type === 'mingang' ||
+      meld.type === 'kakan';
+    if (meld.tiles.length === 3) {
+      return [
+        true,
+        [
+          ourTileToRs(meld.tiles[0]),
+          ourTileToRs(meld.tiles[1]),
+          ourTileToRs(meld.tiles[2]),
+        ],
+      ] as Meld;
+    }
+    if (meld.tiles.length === 4) {
+      return [
+        isOpen,
+        [
+          ourTileToRs(meld.tiles[0]),
+          ourTileToRs(meld.tiles[1]),
+          ourTileToRs(meld.tiles[2]),
+          ourTileToRs(meld.tiles[3]),
+        ],
+      ] as Meld;
+    }
+    throw new RangeError(
+      `A riichi meld must contain 3 or 4 tiles, got ${meld.tiles.length}`,
+    );
+  });
+}
+
+/** 构建只用于结构分析的 calc_hairi 入参；杠仍按一个面子处理。 */
+export function buildRiichiHairiInput(
+  hand: number[],
+  melds: GameStateForRs['melds'] = [],
+): RiichiInput {
+  return {
+    closed_part: hand.map(ourTileToRs),
+    open_part: meldsToRs(melds),
+    calc_hairi: true,
+  };
+}
+
 /** 场风 → riichi-rs 风牌 Tile */
 function roundWindToTile(rw: number): Tile {
   return (28 + rw) as Tile;
 }
 
 /** 自风：座位 0 在 roundWind、dealer 下的自风 → Tile */
-function seatWindToTile(roundWind: number, seat: number, dealer: number): Tile {
-  const sw = (roundWind + ((seat - dealer + 4) % 4)) % 4;
+function seatWindToTile(seat: number, dealer: number): Tile {
+  const sw = (seat - dealer + 4) % 4;
   return (28 + sw) as Tile;
+}
+
+function findWinningTileIndex(hand: number[], winningTile: number): number {
+  for (let i = hand.length - 1; i >= 0; i -= 1) {
+    if (hand[i] === winningTile) return i;
+  }
+  const base = getBaseTile(winningTile);
+  for (let i = hand.length - 1; i >= 0; i -= 1) {
+    if (getBaseTile(hand[i]) === base) return i;
+  }
+  return -1;
+}
+
+function normalizeClosedPartForWin(
+  state: GameStateForRs,
+  isTsumo: boolean,
+  winningTile?: number,
+): number[] {
+  const closed = [...state.hand];
+  const completeClosedCount = 14 - state.melds.length * 3;
+  if (
+    !isTsumo &&
+    winningTile != null &&
+    closed.length === completeClosedCount
+  ) {
+    const index = findWinningTileIndex(closed, winningTile);
+    if (index < 0) {
+      throw new RangeError(
+        'Ron winning tile is not present in the completed hand',
+      );
+    }
+    closed.splice(index, 1);
+  }
+  if (isTsumo && winningTile != null) {
+    const index = findWinningTileIndex(closed, winningTile);
+    if (index < 0) {
+      throw new RangeError('Tsumo winning tile is not present in the hand');
+    }
+    const [tile] = closed.splice(index, 1);
+    closed.push(tile);
+  }
+  return closed;
 }
 
 /** 构建 RiichiInput，用于和了时调用 calc。tsumo 时 winningTile 为最后一张手牌（已含在 hand 中）；ron 时为 lastDiscard。 */
@@ -72,40 +177,29 @@ export function buildRiichiInput(
   winningTile?: number,
 ): RiichiInput {
   const w = state.winnerSeat ?? 0;
+  const normalizedHand = normalizeClosedPartForWin(state, isTsumo, winningTile);
   const closed: Tile[] = [];
   let aka = 0;
-  for (const t of state.hand) {
+  for (const t of normalizedHand) {
     closed.push(ourTileToRs(t));
     if (t === AKA_5_MAN || t === AKA_5_PIN || t === AKA_5_SOU) aka += 1;
   }
-  const open_part: Meld[] = [];
-  for (const m of state.melds) {
-    const isOpen =
-      m.type === 'chi' ||
-      m.type === 'peng' ||
-      m.type === 'mingang' ||
-      m.type === 'kakan';
-    if (m.tiles.length === 3) {
-      open_part.push([
-        true,
-        [
-          ourTileToRs(m.tiles[0]),
-          ourTileToRs(m.tiles[1]),
-          ourTileToRs(m.tiles[2]),
-        ],
-      ] as Meld);
-    } else {
-      open_part.push([
-        isOpen,
-        [
-          ourTileToRs(m.tiles[0]),
-          ourTileToRs(m.tiles[1]),
-          ourTileToRs(m.tiles[2]),
-          ourTileToRs(m.tiles[3]),
-        ],
-      ] as Meld);
+  for (const meld of state.melds) {
+    for (const tile of meld.tiles) {
+      if (tile === AKA_5_MAN || tile === AKA_5_PIN || tile === AKA_5_SOU) {
+        aka += 1;
+      }
     }
   }
+  if (
+    !isTsumo &&
+    (winningTile === AKA_5_MAN ||
+      winningTile === AKA_5_PIN ||
+      winningTile === AKA_5_SOU)
+  ) {
+    aka += 1;
+  }
+  const open_part = meldsToRs(state.melds);
   const doraTiles = state.doraIndicators.map((ind) =>
     getDoraFromIndicator(ind),
   );
@@ -122,7 +216,7 @@ export function buildRiichiInput(
         ? ourTileToRs(winningTile)
         : (-1 as Tile),
     bakaze: roundWindToTile(state.roundWind),
-    jikaze: seatWindToTile(state.roundWind, w, state.dealer),
+    jikaze: seatWindToTile(w, state.dealer),
     allow_aka: true,
     allow_kuitan: true,
     with_kiriage: false,
@@ -212,7 +306,7 @@ export function rsResultToYakuList(
   return list;
 }
 
-/** 使用 riichi-rs 计算和了结果；失败时返回 null，调用方回退到自研 computeYaku。 */
+/** @deprecated 仅保留兼容；生产调用应使用 riichiRules.evaluateWin 获取可区分的错误与精确支付。 */
 export function calcWithRiichiRs(input: RiichiInput): {
   fu: number;
   han: number;

@@ -96,6 +96,7 @@ export function useRiichiRoundActions(ctx: RiichiRoundContext) {
       honba: game.honba,
       riichiPot: game.riichiPot,
       ronFrom: game.lastDiscardFrom,
+      tsumoPayments: winResult.tsumoPayments,
     });
     const scoreLine = SEAT_NAMES.map(
       (name, i) => `${name} ${formatPoints(settlement.newScores[i])}`,
@@ -163,9 +164,15 @@ export function useRiichiRoundActions(ctx: RiichiRoundContext) {
     if (!game?.ryuukyoku) return;
     const reason = game.ryuukyokuReason ?? '荒牌';
     const isExhaustiveDraw = reason === '荒牌';
-    const tenpaiSeats = isExhaustiveDraw
-      ? getTenpaiSeatsForDraw(game, getWaitingTilesRiichi)
-      : [];
+    let tenpaiSeats: number[] = [];
+    if (isExhaustiveDraw) {
+      try {
+        tenpaiSeats = getTenpaiSeatsForDraw(game, getWaitingTilesRiichi);
+      } catch {
+        addLog('规则计算失败，本次流局结算已暂停');
+        return;
+      }
+    }
     const settlement = isExhaustiveDraw
       ? settleRyuukyoku(game.scores, tenpaiSeats, game.riichiPot)
       : {

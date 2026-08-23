@@ -4,17 +4,10 @@ import { formatMessage } from '@/lib/i18n';
 import {
   canMingangRiichi,
   canPengRiichi,
-  computeYaku,
-  countDoraInHand,
   getAngangOptionsRiichi,
   getBaseTile,
   getChiOptionsRiichi,
-  getDoraFromIndicator,
   getTileLabel,
-  getTotalHan,
-  hasYaku,
-  isMenzhen,
-  isWinShapeRiichi,
 } from '@/lib/mahjongRiichi';
 import { canDeclareKyuushuKyuuhai } from '@/lib/riichiAbortiveDraw';
 import { canOfferRon } from '@/lib/riichiClaimFlow';
@@ -33,12 +26,11 @@ import {
   enumerateTenpaiConcealedStates,
   tenpaiConcealedCount,
 } from '@/lib/riichiTenpaiHelpers';
-import { resolveWinBaseTen } from './gameLogic/winResult';
+import { evaluateGameWin, resolveWinBaseTen } from './gameLogic/winResult';
 import {
   countVisibleTilesByBase,
   getDecisionSeat,
   getKakanOptions,
-  getSeatWind,
   getTenpaiSeatsForDraw,
   needsTimedDecision,
   summarizeWinnerPayments,
@@ -81,46 +73,52 @@ export function useRiichiDerived({
     const visibleCounts = countVisibleTilesByBase(game);
     const remaining = (baseTile: number) =>
       Math.max(0, 4 - (visibleCounts[baseTile] ?? 0));
-    const doraTypes = game.doraIndicators.map(getDoraFromIndicator);
     const tc = tenpaiConcealedCount(melds);
 
-    const getWaitingTilesShapeOnly = (handTc: number[]): number[] => {
-      if (handTc.length !== tc) return [];
-      const out: number[] = [];
-      for (let t = 0; t < 34; t++) {
-        if (isWinShapeRiichi([...handTc, t], melds)) out.push(t);
-      }
-      return out;
-    };
+    const getWaitingTilesShapeOnly = (handTc: number[]): number[] =>
+      handTc.length === tc ? getWaitingTilesRiichi(handTc, melds, game) : [];
 
-    const getHanForWaitingTile = (
+    const getValueForWaitingTile = (
       hand13: number[],
       baseTile: number,
-    ): number => {
+    ): { han: number; yakuman: number } => {
       const handWithWin = [...hand13, baseTile];
-      const ctx = {
-        hand: handWithWin,
-        melds: melds.map((m) => ({ tiles: m.tiles })),
-        meldsTyped: melds,
-        isMenzhen: isMenzhen(melds),
-        isTsumo: true,
-        isRiichi: game.riichiDeclared[0],
-        ippatsuPossible: false,
-        seatWind: getSeatWind(game.roundWind, 0, game.dealer),
-        roundWind: game.roundWind,
+      const previewState: RiichiGameState = {
+        ...game,
+        // 待牌提示只估算稳定、可见的未来条件，不继承一发/岭上/海底，也不偷看里宝牌。
+        lastDrawWasRinshan: false,
+        uraDoraIndicators: [],
+        ippatsuPossible: game.ippatsuPossible.map((possible, seat) =>
+          seat === 0 ? false : possible,
+        ),
+        wall: game.wall.length === 0 ? [0] : game.wall,
+        hands: game.hands.map((seatHand, seat) =>
+          seat === 0 ? handWithWin : seatHand,
+        ),
       };
-      const yaku = computeYaku(ctx);
-      const allTiles = [...handWithWin, ...melds.flatMap((m) => m.tiles)];
-      const doraHan = countDoraInHand(allTiles, doraTypes, true);
-      return getTotalHan(yaku) + doraHan;
+      const evaluation = evaluateGameWin({
+        state: previewState,
+        winner: 0,
+        isTsumo: true,
+        winningTile: baseTile,
+      });
+      return evaluation.legalWin
+        ? { han: evaluation.han, yakuman: evaluation.yakuman }
+        : { han: 0, yakuman: 0 };
     };
 
     const formatWait = (handTc: number[], waitTile: number): string => {
-      const han = getHanForWaitingTile(handTc, waitTile);
+      const { han, yakuman } = getValueForWaitingTile(handTc, waitTile);
       const hanStr =
-        han > 0
-          ? formatMessage(locale, 'game.mahjong.hanCount', { count: han })
-          : t('game.mahjong.noYaku');
+        yakuman > 1
+          ? formatMessage(locale, 'game.mahjong.multipleYakuman', {
+              count: yakuman,
+            })
+          : yakuman === 1
+            ? t('game.mahjong.yakuman')
+            : han > 0
+              ? formatMessage(locale, 'game.mahjong.hanCount', { count: han })
+              : t('game.mahjong.noYaku');
       return formatMessage(locale, 'game.mahjong.waitFormat', {
         tile: getTileLabel(waitTile, locale),
         remaining: remaining(waitTile),
@@ -217,7 +215,7 @@ export function useRiichiDerived({
       waiting: uniqueBase,
       remaining,
     };
-  }, [game, winResult, locale, t]);
+  }, [game, winResult, locale, t, getWaitingTilesRiichi]);
 
   const angangOptions =
     game?.phase === 'discard' &&
@@ -274,26 +272,6 @@ export function useRiichiDerived({
     game.lastDiscard !== null &&
     canMingangRiichi(game.hands[0], game.lastDiscard);
 
-  const buildYakuCtx = useCallback(
-    (seat: number, hand: number[], isTsumo: boolean) => {
-      if (!game) return null;
-      const melds = game.melds[seat];
-      const menzen = isMenzhen(melds);
-      return {
-        hand,
-        melds: melds.map((m) => ({ tiles: m.tiles })),
-        meldsTyped: melds,
-        isMenzhen: menzen,
-        isTsumo,
-        isRiichi: game.riichiDeclared[seat],
-        ippatsuPossible: false,
-        seatWind: getSeatWind(game.roundWind, seat, game.dealer),
-        roundWind: game.roundWind,
-      };
-    },
-    [game],
-  );
-
   const getRonWaitingTilesForSeat = useCallback(
     (seat: number, state: RiichiGameState): number[] =>
       getWaitingTilesRiichi(state.hands[seat], state.melds[seat], state, {
@@ -313,26 +291,40 @@ export function useRiichiDerived({
     [getRonWaitingTilesForSeat],
   );
 
-  const canTsumo =
-    game &&
-    game.phase === 'discard' &&
-    game.currentPlayer === 0 &&
-    game.hands[0].length === afterDrawConcealedCount(game.melds[0]) &&
-    isWinShapeRiichi(game.hands[0], game.melds[0]) &&
-    (() => {
-      const ctx = buildYakuCtx(0, game.hands[0], true);
-      return ctx ? hasYaku(ctx) : false;
-    })();
+  const tsumoEvaluation = useMemo(() => {
+    if (
+      !game ||
+      game.phase !== 'discard' ||
+      game.currentPlayer !== 0 ||
+      game.drawnTile === null ||
+      game.hands[0].length !== afterDrawConcealedCount(game.melds[0])
+    ) {
+      return null;
+    }
+    return evaluateGameWin({
+      state: game,
+      winner: 0,
+      isTsumo: true,
+      winningTile: game.drawnTile,
+    });
+  }, [game]);
+  const canTsumo = Boolean(tsumoEvaluation?.legalWin);
+
+  const ronEvaluation = useMemo(() => {
+    if (!game || game.lastDiscard === null) return null;
+    return evaluateGameWin({
+      state: game,
+      winner: 0,
+      isTsumo: false,
+      winningTile: game.lastDiscard,
+      afterKan: game.lastClaimWasKakan ?? false,
+    });
+  }, [game]);
 
   const canRon =
     game &&
     (() => {
-      const lastD = game.lastDiscard;
-      if (lastD === null) return false;
-      const handWithClaim = [...game.hands[0], lastD];
-      const winShape = isWinShapeRiichi(handWithClaim, game.melds[0]);
-      const ctx = buildYakuCtx(0, handWithClaim, false);
-      const yakuReady = ctx ? hasYaku(ctx) : false;
+      if (game.lastDiscard === null || !ronEvaluation) return false;
       const furitenBlocked = isSeatFuriten(0, game);
       return canOfferRon({
         phase: game.phase,
@@ -340,8 +332,8 @@ export function useRiichiDerived({
         lastDiscardFrom: game.lastDiscardFrom,
         currentClaimToken,
         declinedRonToken,
-        isWinShape: winShape,
-        hasYaku: yakuReady && !furitenBlocked,
+        isWinShape: ronEvaluation.structuralAgari,
+        hasYaku: ronEvaluation.legalWin && !furitenBlocked,
       });
     })();
 
@@ -398,20 +390,17 @@ export function useRiichiDerived({
   const winSettlementPreview = useMemo(() => {
     if (!game || !winResult) return null;
     const baseTen = resolveWinBaseTen(winResult, game);
-    try {
-      return settleWin({
-        scores: game.scores,
-        winner: winResult.winner,
-        isTsumo: winResult.isTsumo,
-        baseTen,
-        dealer: game.dealer,
-        honba: game.honba,
-        riichiPot: game.riichiPot,
-        ronFrom: game.lastDiscardFrom,
-      });
-    } catch {
-      return null;
-    }
+    return settleWin({
+      scores: game.scores,
+      winner: winResult.winner,
+      isTsumo: winResult.isTsumo,
+      baseTen,
+      dealer: game.dealer,
+      honba: game.honba,
+      riichiPot: game.riichiPot,
+      ronFrom: game.lastDiscardFrom,
+      tsumoPayments: winResult.tsumoPayments,
+    });
   }, [game, winResult]);
 
   const drawSettlementPreview = useMemo(() => {
@@ -454,7 +443,6 @@ export function useRiichiDerived({
     chiOptions,
     canPeng,
     canMingang,
-    buildYakuCtx,
     getRonWaitingTilesForSeat,
     isSeatFuriten,
     canTsumo,
