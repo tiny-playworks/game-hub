@@ -592,7 +592,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'rubiks.undo': '撤销',
     'rubiks.undoAria': '撤销上一步',
     'rubiks.moves': '步数 {count}',
-    'game.mahjong.mobileStageAria': '日本立直麻将游戏舞台',
+    'game.mahjong.desktopStageAria': '日本立直麻将桌面牌桌',
 
     // Chess
     'game.chess.winner': '赢家: {winner}',
@@ -1391,7 +1391,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'rubiks.undo': 'Undo',
     'rubiks.undoAria': 'Undo last move',
     'rubiks.moves': 'Moves {count}',
-    'game.mahjong.mobileStageAria': 'Japanese Riichi Mahjong Game Stage',
+    'game.mahjong.desktopStageAria': 'Japanese Riichi Mahjong Desktop Table',
 
     // Chess
     'game.chess.winner': 'Winner: {winner}',

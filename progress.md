@@ -53,3 +53,22 @@ Original prompt: 完整阅读并审视 Tiny Game Hub，将其从机械扩张的�
 ## Notes / follow-ups
 
 - Phase 2 remains responsible for dead-wall modeling, claim priority (including ankan chankan limits), legal riichi-discard locking, the complete ippatsu lifecycle, and the deterministic round runtime.
+
+## Desktop riichi UI rebuild
+
+- Replaced the mobile-stage direction with a desktop-only stage contract and a default-collapsed 56/360 training side rail.
+- Added a unified local SVG tile renderer for project tile IDs 0–36, including classic man/pin/sou/honor faces, one-sou bird, white-dragon frame, and marked red fives without network fonts or new dependencies.
+- Rebuilt the game surface as one 960px desktop table: full opponent hands, horizontal side-seat information, complete six-column rivers, separate drawn-tile slot, seat-local melds, compact status ribbon, and action-only floating controls.
+- Replaced the global log toggle with a page-local hint/settlement/log panel state; hints light the collapsed rail without opening it automatically.
+- Reworked the rules entry into a two-column desktop lobby, widened rules and result dialogs, removed quick-access/mobile branches, and deleted the obsolete mobile stage and score strip components.
+- Updated the current design specification to make 1920×1080 desktop the only riichi target while leaving archived documents and other games' mobile behavior unchanged.
+- Final implementation-only check: TypeScript compilation passed. No tests, build, or browser acceptance were run, per user direction.
+- Per user direction, this UI phase will not add or run tests and will not perform browser acceptance; the user will validate the finished UI.
+
+## Desktop riichi tile and space pass
+
+- Replaced the programmatic tile-face drawing with one AI-generated 10x5 raster atlas shared by all project tile IDs 0-36 and the face-down tile back; rejected single-tile drafts were removed instead of mixed into the final style.
+- Regenerated and manually audited the full atlas against the supplied Japanese-mahjong reference: 5/6/7/8/9-sou and 6/7/8/9-pin now use the intended counts, arrangements, and colors.
+- Added a persistent left-side table-status panel for round metrics, scores, active seat, discard load, and meld count while preserving the collapsible training rail on the right and keeping the 960px table centered.
+- Rotated each river as a complete six-column block and added a dense mode after 24 discards; each seat can display up to a 6x6 river inside its own board region without entering the center console.
+- TypeScript compilation passed. No tests, build, or browser acceptance were run, per user direction.

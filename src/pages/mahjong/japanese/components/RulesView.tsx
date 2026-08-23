@@ -1,101 +1,166 @@
+import { BookOpen, Check, ChevronLeft, Play, ShieldCheck } from 'lucide-react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
+import { cn } from '@/lib/utils';
+import { RIICHI_THEMES, type RiichiThemeId } from '../constants';
+import { GuidePanel } from './GuidePanel';
 
 type MatchLength = 'east' | 'south';
 
 type Props = {
   matchLength: MatchLength;
-  onMatchLengthChange: (v: MatchLength) => void;
+  onMatchLengthChange: (value: MatchLength) => void;
+  theme: RiichiThemeId;
+  onThemeChange: (theme: RiichiThemeId) => void;
   onStart: () => void;
 };
 
 export function RulesView({
   matchLength,
   onMatchLengthChange,
+  theme,
+  onThemeChange,
   onStart,
 }: Props) {
   const { t } = useLocale();
+  const [guideOpen, setGuideOpen] = useState(false);
+
   return (
-    <div className="min-h-screen bg-background">
-      <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
-        <Link to="/" className="text-muted-foreground hover:text-foreground">
-          ← {t('common.backHome')}
+    <div className="riichi-lobby">
+      <header className="riichi-lobby-header">
+        <Link to="/">
+          <ChevronLeft aria-hidden="true" size={20} />
+          {t('common.backHome')}
         </Link>
+        <span>TINY GAME HUB · RIICHI</span>
       </header>
-      <main className="mx-auto max-w-2xl px-4 py-6">
-        <h1 className="text-xl font-bold text-foreground">日本立直麻将</h1>
-        <p className="mt-2 text-muted-foreground">
-          练习对局 Beta · 核心和牌计算已接入规则引擎，完整牌局流程仍在持续校准
-        </p>
 
-        <section className="mt-6 rounded-lg border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold text-foreground">
-            核心规则摘要
-          </h2>
-          <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-muted-foreground">
-            <li>4 人 · 136 张 + 红宝牌 3 枚（赤 5 万/条/筒）</li>
-            <li>无役不能和了；振听只能自摸，不能荣和</li>
-            <li>
-              立直：门前清听牌宣告，放 1000
-              点棒；立直后禁止换牌、禁止吃/碰/明杠/补杠，仅可暗杠与和了
-            </li>
-            <li>宝牌只加番不算役；里宝牌在立直和了时翻开；开杠时追加杠宝牌</li>
-            <li>
-              加杠（补杠）可被抢杠；一发：立直一巡内和了且本巡无吃碰杠 +1 番
-            </li>
-            <li>
-              一般和牌最低 20 符，七对子固定 25 符；5 番、4 番 40 符以上或 3 番
-              70 符以上为满贯，6–7 番跳满、8–10 番倍满、11–12 番三倍满、13
-              番以上累计役满
-            </li>
-          </ul>
-        </section>
-
-        <section className="mt-4 rounded-lg border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold text-foreground">
-            起和役（常用）
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            立直(1)、门前清自摸(1)、断幺九(1)、役牌(1)、平和(1)、一发(1)、七对子(2)、混一色(3)、清一色(6)
-            等；满贯 12000/8000、跳满 18000/12000、役满 48000/32000（亲/子）
-          </p>
-        </section>
-
-        <section className="mt-4 rounded-lg border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold text-foreground">场次</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            东风场：东1～东4局，东4局子家胡或流局后结束。南风场：东1～南4局。
-          </p>
-          <div className="mt-3 flex gap-2">
-            <Button
-              type="button"
-              variant={matchLength === 'east' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => onMatchLengthChange('east')}
-            >
-              东风场
-            </Button>
-            <Button
-              type="button"
-              variant={matchLength === 'south' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => onMatchLengthChange('south')}
-            >
-              南风场
-            </Button>
+      <main className="riichi-lobby-main">
+        <section className="riichi-lobby-intro">
+          <div className="riichi-lobby-badge">
+            <span>DESKTOP BETA</span>
+            <i />
+            规则引擎已接入
           </div>
+          <p className="riichi-lobby-kicker">RIICHI PRACTICE TABLE</p>
+          <h1>日本立直麻将</h1>
+          <p className="riichi-lobby-lead">
+            面向电脑大屏的完整练习牌桌。专注行牌、听牌与局面判断，不用在手机框里挤牌，也不被大厅任务打断。
+          </p>
+
+          <div className="riichi-lobby-capabilities">
+            <span>
+              <Check aria-hidden="true" size={16} />
+              四人完整牌桌
+            </span>
+            <span>
+              <Check aria-hidden="true" size={16} />
+              规则引擎和牌判定
+            </span>
+            <span>
+              <Check aria-hidden="true" size={16} />
+              本地训练提示
+            </span>
+            <span>
+              <Check aria-hidden="true" size={16} />
+              无需账号与联网
+            </span>
+          </div>
+
+          <button
+            type="button"
+            className="riichi-lobby-guide-button"
+            onClick={() => setGuideOpen(true)}
+          >
+            <BookOpen aria-hidden="true" size={18} />
+            查看完整规则与新人指南
+          </button>
         </section>
 
-        <div className="mt-6">
-          <Button
+        <section className="riichi-lobby-setup" aria-label="对局设置">
+          <div className="riichi-lobby-setup-heading">
+            <span>TABLE SETUP</span>
+            <h2>准备开局</h2>
+            <p>设置只保存在当前浏览器中。</p>
+          </div>
+
+          <fieldset>
+            <legend>场次</legend>
+            <div className="riichi-match-options">
+              {(['east', 'south'] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={cn(matchLength === value && 'is-active')}
+                  onClick={() => onMatchLengthChange(value)}
+                  aria-pressed={matchLength === value}
+                >
+                  <strong>{value === 'east' ? '东风场' : '南风场'}</strong>
+                  <span>{value === 'east' ? '东一至东四' : '东一至南四'}</span>
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>牌桌主题</legend>
+            <div className="riichi-lobby-themes">
+              {RIICHI_THEMES.map(({ id }) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={cn(theme === id && 'is-active')}
+                  onClick={() => onThemeChange(id)}
+                  aria-pressed={theme === id}
+                >
+                  <span className={`riichi-theme-preview is-${id}`}>
+                    <i />
+                  </span>
+                  <strong>{t(`game.mahjong.themes.${id}`)}</strong>
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
+          <div className="riichi-lobby-assurance">
+            <ShieldCheck aria-hidden="true" size={19} />
+            <span>纯前端本地运行 · 不上传牌局数据</span>
+          </div>
+
+          <button
+            type="button"
+            className="riichi-lobby-start"
             onClick={onStart}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
-            {t('common.startGame')}
-          </Button>
-        </div>
+            <span>
+              <strong>{t('common.startGame')}</strong>
+              <small>
+                {matchLength === 'east' ? '东风场' : '南风场'} · 四人对局
+              </small>
+            </span>
+            <Play aria-hidden="true" size={20} fill="currentColor" />
+          </button>
+        </section>
       </main>
+
+      {guideOpen && (
+        <dialog
+          open
+          className="riichi-guide-dialog"
+          aria-labelledby="guide-title"
+        >
+          <button
+            type="button"
+            className="riichi-guide-backdrop"
+            onClick={() => setGuideOpen(false)}
+            aria-label="关闭规则"
+          />
+          <div className="riichi-guide-dialog-content">
+            <GuidePanel onClose={() => setGuideOpen(false)} />
+          </div>
+        </dialog>
+      )}
     </div>
   );
 }

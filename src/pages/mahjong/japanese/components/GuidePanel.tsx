@@ -1,53 +1,89 @@
+import { X } from 'lucide-react';
+
 type Props = {
   onClose: () => void;
 };
 
+const GUIDE_SECTIONS = [
+  {
+    eyebrow: '01 · 基础目标',
+    title: '先组成能和的牌，再确认有役',
+    items: [
+      '通常牌型由四组面子与一组对子构成。',
+      '只有牌型完整还不够，至少需要一个役。',
+      '门前听牌可以立直；立直后手牌固定。',
+    ],
+  },
+  {
+    eyebrow: '02 · 桌面操作',
+    title: '所有决策围绕牌桌底部完成',
+    items: [
+      '轮到自家时，点击一张手牌将其打出。',
+      '吃、碰、杠、立直与和牌会出现在手牌上方。',
+      '训练提示、上一局结算与日志位于右侧工具栏。',
+    ],
+  },
+  {
+    eyebrow: '03 · 关键限制',
+    title: '注意振听、立直与宝牌的区别',
+    items: [
+      '振听状态不能荣和，但仍然可以自摸。',
+      '宝牌只增加番数，本身不能作为起和役。',
+      '赤五是宝牌；白板为空白蓝框，牌背不显示牌面。',
+    ],
+  },
+];
+
 export function GuidePanel({ onClose }: Props) {
   return (
-    <div className="mb-4 p-4 bg-[#1d3557]/80 rounded-xl border border-[#457b9d]/50">
-      <div className="flex justify-between items-start mb-2">
-        <h3 id="guide-title" className="text-lg font-bold text-[#a8dadc]">
-          新人玩家指南
-        </h3>
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-[#f1faee]/70 hover:text-[#f1faee] text-sm"
-        >
-          ✕ 关闭
+    <div className="riichi-guide-panel">
+      <header className="riichi-guide-header">
+        <div>
+          <p>RULES & ONBOARDING</p>
+          <h2 id="guide-title">立直麻将规则与新人指南</h2>
+          <span>在开始做牌前，先记住“有役才能和”这一条。</span>
+        </div>
+        <button type="button" onClick={onClose} aria-label="关闭规则">
+          <X aria-hidden="true" size={22} />
         </button>
+      </header>
+
+      <div className="riichi-guide-grid">
+        {GUIDE_SECTIONS.map((section) => (
+          <section key={section.eyebrow}>
+            <p>{section.eyebrow}</p>
+            <h3>{section.title}</h3>
+            <ul>
+              {section.items.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </section>
+        ))}
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-        <div className="bg-[#2d4a3c]/50 p-3 rounded-lg">
-          <h4 className="font-semibold text-[#f1faee] mb-2">🎯 基本目标</h4>
-          <ul className="text-[#f1faee]/80 space-y-1 text-xs">
-            <li>• 组成 4 面子 + 1 对子</li>
-            <li>• 必须有至少 1 个役种</li>
-            <li>• 立直后听牌固定</li>
-          </ul>
+
+      <section className="riichi-guide-rules">
+        <div>
+          <h3>本项目当前采用的核心规则</h3>
+          <p>
+            四人麻将，136
+            张牌，包含赤五万、赤五筒、赤五索各一枚。无役不能和；里宝牌仅在立直和牌时计算；开杠追加杠宝牌。
+          </p>
         </div>
-        <div className="bg-[#2d4a3c]/50 p-3 rounded-lg">
-          <h4 className="font-semibold text-[#f1faee] mb-2">🎮 操作说明</h4>
-          <ul className="text-[#f1faee]/80 space-y-1 text-xs">
-            <li>• 点击手牌出牌</li>
-            <li>• 可吃/碰/杠时会提示</li>
-            <li>• 听牌时可宣告立直</li>
-          </ul>
+        <div>
+          <h3>符番与打点</h3>
+          <p>
+            一般和牌最低 20 符，七对子固定 25 符。5 番、4 番 40 符以上或 3 番 70
+            符以上为满贯；之后依次为跳满、倍满、三倍满与役满。
+          </p>
         </div>
-        <div className="bg-[#2d4a3c]/50 p-3 rounded-lg">
-          <h4 className="font-semibold text-[#f1faee] mb-2">💡 小贴士</h4>
-          <ul className="text-[#f1faee]/80 space-y-1 text-xs">
-            <li>• 绿色=条子 红色=万子</li>
-            <li>• 黄色=筒子 黑色=字牌</li>
-            <li>• 红色数字=赤宝牌</li>
-          </ul>
+        <div>
+          <h3>场次结束</h3>
+          <p>
+            东风场进行至东四局，南风场进行至南四局；连庄、本场、立直棒与击飞条件按牌局状态结算。
+          </p>
         </div>
-      </div>
-      <div className="mt-3 pt-3 border-t border-[#457b9d]/30">
-        <p className="text-xs text-[#a8dadc]/90">
-          💡 提示：游戏上方会显示当前状态和可选操作，仔细阅读后再做决定哦！
-        </p>
-      </div>
+      </section>
     </div>
   );
 }

@@ -1,24 +1,30 @@
+import {
+  BookOpen,
+  ChevronLeft,
+  Menu,
+  Palette,
+  RotateCcw,
+  ScrollText,
+  Undo2,
+  X,
+} from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { QuickAccessPanel } from '@/components/home/QuickAccessPanel';
 import { useLocale } from '@/contexts/LocaleContext';
 import { formatMessage } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { RIICHI_THEMES, type RiichiThemeId } from '../constants';
 import { formatPoints, toTileKeyedItems } from '../helpers';
 import type { RiichiGameState } from '../types';
-import { getTileColorClass, RiichiTileFace } from './Tile';
+import { RiichiTile } from './Tile';
 
 type Props = {
   game: RiichiGameState;
-  logOpen: boolean;
   historyLength: number;
   onStart: () => void;
   onUndo: () => void;
-  onToggleLog: () => void;
+  onOpenLog: () => void;
   onBackToRules: () => void;
   returnRulesLabel: string;
-  homeLabel: string;
   theme: RiichiThemeId;
   onThemeChange: (theme: RiichiThemeId) => void;
   onOpenGuide: () => void;
@@ -26,14 +32,12 @@ type Props = {
 
 export function GameHeader({
   game,
-  logOpen,
   historyLength,
   onStart,
   onUndo,
-  onToggleLog,
+  onOpenLog,
   onBackToRules,
   returnRulesLabel,
-  homeLabel,
   theme,
   onThemeChange,
   onOpenGuide,
@@ -47,193 +51,134 @@ export function GameHeader({
     dealer: t(`game.mahjong.seats.${game.dealer}`),
   });
 
+  const closeAnd = (action: () => void) => {
+    action();
+    setMenuOpen(false);
+  };
+
   return (
-    <header className="riichi-app-header flex items-center justify-between border-b px-3 py-2 gap-2">
-      <div className="flex items-center gap-2 md:gap-3 min-w-0">
-        <Link to="/" className="opacity-80 hover:opacity-100 text-sm shrink-0">
-          ← {homeLabel}
-        </Link>
-        <button
-          type="button"
-          onClick={onBackToRules}
-          className="opacity-80 hover:opacity-100 text-sm shrink-0"
-        >
-          ← {returnRulesLabel}
-        </button>
-      </div>
+    <header className="riichi-app-header">
+      <button
+        type="button"
+        onClick={onBackToRules}
+        className="riichi-header-back"
+      >
+        <ChevronLeft aria-hidden="true" size={20} />
+        {returnRulesLabel}
+      </button>
 
-      <div className="min-w-0 flex-1 text-center px-2">
-        <p className="text-xs md:text-sm truncate">{roundText}</p>
-        <p
-          className="text-[11px] md:text-xs font-semibold"
-          style={{ color: 'var(--riichi-accent)' }}
-        >
+      <div className="riichi-header-round">
+        <strong>{roundText}</strong>
+        <span>
           {t('game.mahjong.riichiStick')} {formatPoints(game.riichiPot)}
-        </p>
+        </span>
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
-        <QuickAccessPanel compact className="hidden md:flex" />
-        <div className="hidden md:flex items-center gap-1">
-          <span className="text-[10px] opacity-80">
-            {t('game.mahjong.dora')}
-          </span>
-          {toTileKeyedItems(game.doraIndicators, 'header-dora').map(
-            ({ tile, key }) => (
-              <span
-                key={key}
-                className={cn(
-                  'w-8 h-11 rounded-[4px] border-2 bg-[#fff9e6] flex items-center justify-center font-black text-xs shrink-0',
-                  getTileColorClass(tile),
-                )}
-              >
-                <RiichiTileFace tile={tile} />
-              </span>
-            ),
-          )}
+      <div className="riichi-header-actions">
+        <div className="riichi-header-dora">
+          <span>{t('game.mahjong.dora')}</span>
+          <div>
+            {toTileKeyedItems(game.doraIndicators, 'header-dora').map(
+              ({ tile, key }) => (
+                <RiichiTile key={key} tile={tile} variant="indicator" />
+              ),
+            )}
+          </div>
         </div>
         <button
           type="button"
           onClick={() => setMenuOpen(true)}
-          className="rounded-lg border px-2.5 py-1 text-xs md:text-sm"
-          style={{
-            borderColor: 'var(--riichi-border)',
-            color: 'var(--riichi-text)',
-            backgroundColor: 'transparent',
-          }}
+          className="riichi-header-menu"
           aria-label={t('game.mahjong.openMenu')}
         >
+          <Menu aria-hidden="true" size={19} />
           {t('game.mahjong.menu')}
         </button>
       </div>
 
       {menuOpen && (
-        <div className="fixed inset-0 z-50">
+        <div className="riichi-menu-layer">
           <button
             type="button"
-            className="absolute inset-0 bg-black/45"
+            className="riichi-menu-backdrop"
             onClick={() => setMenuOpen(false)}
             aria-label={t('game.mahjong.closeMenu')}
           />
-          <aside
-            className="absolute right-0 top-0 h-full w-[280px] border-l p-4 overflow-auto"
-            style={{
-              backgroundColor: 'var(--riichi-bg)',
-              borderColor: 'var(--riichi-border)',
-              color: 'var(--riichi-text)',
-            }}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-semibold">
-                {t('game.mahjong.gameMenu')}
-              </p>
+          <aside className="riichi-menu-drawer">
+            <header>
+              <div>
+                <p>GAME CONTROL</p>
+                <h2>{t('game.mahjong.gameMenu')}</h2>
+              </div>
               <button
                 type="button"
                 onClick={() => setMenuOpen(false)}
-                className="text-xs opacity-80 hover:opacity-100"
+                aria-label={t('game.mahjong.close')}
               >
-                {t('game.mahjong.close')}
+                <X aria-hidden="true" size={21} />
+              </button>
+            </header>
+
+            <div className="riichi-menu-list">
+              <button type="button" onClick={() => closeAnd(onStart)}>
+                <RotateCcw aria-hidden="true" size={18} />
+                <span>
+                  <strong>{t('riichi.modal.matchEnd.playAgain')}</strong>
+                  <small>重新开始当前场次</small>
+                </span>
+              </button>
+              <button type="button" onClick={() => closeAnd(onOpenGuide)}>
+                <BookOpen aria-hidden="true" size={18} />
+                <span>
+                  <strong>完整规则与新人指南</strong>
+                  <small>查看操作、和牌与结算说明</small>
+                </span>
+              </button>
+              <button type="button" onClick={() => closeAnd(onBackToRules)}>
+                <ChevronLeft aria-hidden="true" size={18} />
+                <span>
+                  <strong>{returnRulesLabel}</strong>
+                  <small>回到场次与主题选择</small>
+                </span>
+              </button>
+              {historyLength > 0 && (
+                <button type="button" onClick={() => closeAnd(onUndo)}>
+                  <Undo2 aria-hidden="true" size={18} />
+                  <span>
+                    <strong>{t('game.mahjong.undo')}</strong>
+                    <small>{t('game.mahjong.undoTooltip')}</small>
+                  </span>
+                </button>
+              )}
+              <button type="button" onClick={() => closeAnd(onOpenLog)}>
+                <ScrollText aria-hidden="true" size={18} />
+                <span>
+                  <strong>牌局记录</strong>
+                  <small>打开侧栏查看并复制日志</small>
+                </span>
               </button>
             </div>
 
-            <div className="space-y-2 mb-4">
-              <button
-                type="button"
-                onClick={() => {
-                  onStart();
-                  setMenuOpen(false);
-                }}
-                className="w-full rounded-lg border px-3 py-2 text-sm text-left hover:opacity-90"
-                style={{ borderColor: 'var(--riichi-border)' }}
-              >
-                {t('riichi.modal.matchEnd.playAgain')}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  onOpenGuide();
-                  setMenuOpen(false);
-                }}
-                className="w-full rounded-lg border px-3 py-2 text-sm text-left hover:opacity-90"
-                style={{ borderColor: 'var(--riichi-border)' }}
-              >
-                {t('common.beginnerGuide')}
-              </button>
-            </div>
-
-            <div className="mb-4 border-t pt-2 md:hidden">
-              <p className="text-xs opacity-75 mb-2">
-                {t('game.mahjong.quickAccess')}
-              </p>
-              <QuickAccessPanel compact className="w-full" />
-            </div>
-
-            <div className="mb-4">
-              <p className="text-xs opacity-75 mb-2">
-                {t('game.mahjong.theme')}
-              </p>
-              <div className="flex flex-wrap gap-2">
+            <section className="riichi-menu-theme">
+              <div className="riichi-menu-section-title">
+                <Palette aria-hidden="true" size={17} />
+                <span>{t('game.mahjong.theme')}</span>
+              </div>
+              <div className="riichi-theme-options">
                 {RIICHI_THEMES.map(({ id }) => (
                   <button
                     key={id}
                     type="button"
                     onClick={() => onThemeChange(id)}
-                    className={cn(
-                      'rounded px-2 py-1 text-xs border',
-                      theme === id
-                        ? 'font-semibold'
-                        : 'opacity-75 hover:opacity-100',
-                    )}
-                    style={{
-                      borderColor:
-                        theme === id
-                          ? 'var(--riichi-accent)'
-                          : 'var(--riichi-border)',
-                      color:
-                        theme === id
-                          ? 'var(--riichi-accent)'
-                          : 'var(--riichi-text)',
-                      backgroundColor:
-                        theme === id
-                          ? 'var(--riichi-accent-soft)'
-                          : 'transparent',
-                    }}
+                    className={cn(theme === id && 'is-active')}
                     aria-pressed={theme === id}
                   >
+                    <span className={`riichi-theme-swatch is-${id}`} />
                     {t(`game.mahjong.themes.${id}`)}
                   </button>
                 ))}
               </div>
-            </div>
-
-            <div>
-              <p className="text-xs opacity-75 mb-2">
-                {t('game.mahjong.debug')}
-              </p>
-              <div className="space-y-2">
-                {historyLength > 0 && (
-                  <button
-                    type="button"
-                    onClick={onUndo}
-                    className="w-full rounded-lg border px-3 py-2 text-sm text-left hover:opacity-90"
-                    style={{ borderColor: 'var(--riichi-border)' }}
-                    title={t('game.mahjong.undoTooltip')}
-                  >
-                    {t('game.mahjong.undo')}
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={onToggleLog}
-                  className="w-full rounded-lg border px-3 py-2 text-sm text-left hover:opacity-90"
-                  style={{ borderColor: 'var(--riichi-border)' }}
-                >
-                  {logOpen
-                    ? t('game.mahjong.hideLog')
-                    : t('game.mahjong.showLog')}
-                </button>
-              </div>
-            </div>
+            </section>
           </aside>
         </div>
       )}

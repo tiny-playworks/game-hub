@@ -307,172 +307,161 @@ export function WinModal({
     maxLossSeat != null && winSettlementPreview
       ? winSettlementPreview.deltas[maxLossSeat]
       : 0;
+  const scoreHeadline =
+    winResult.yakuman && winResult.yakuman > 0
+      ? winResult.yakuman > 1
+        ? formatMessage(locale, 'game.mahjong.multipleYakuman', {
+            count: winResult.yakuman,
+          })
+        : t('game.mahjong.yakuman')
+      : winResult.fu != null && winResult.han != null
+        ? `${winResult.fu} ${t('riichi.modal.unit.fu')} · ${winResult.han} ${t('riichi.modal.unit.han')}`
+        : '';
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-riichi-overlay-in"
+      className="riichi-result-overlay animate-riichi-overlay-in"
       role="presentation"
     >
       <div
-        className="rounded-2xl border-2 p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in"
-        style={{
-          backgroundColor: 'var(--riichi-table)',
-          borderColor: 'var(--riichi-border)',
-        }}
+        className="riichi-result-modal animate-riichi-modal-in"
         role="dialog"
         aria-modal="true"
         aria-labelledby="riichi-win-title"
       >
-        <h3
-          id="riichi-win-title"
-          className="text-xl font-bold text-center mb-3"
-          style={{ color: 'var(--riichi-accent)' }}
-        >
-          {winResult.isTsumo
-            ? t('riichi.modal.win.tsumo')
-            : t('riichi.modal.win.ron')}
-        </h3>
-        {winResult.ten != null && (
-          <p
-            className="text-center font-semibold mb-2"
-            style={{ color: 'var(--riichi-accent)' }}
-          >
-            {winResult.yakuman && winResult.yakuman > 0
-              ? `${
-                  winResult.yakuman > 1
-                    ? formatMessage(locale, 'game.mahjong.multipleYakuman', {
-                        count: winResult.yakuman,
-                      })
-                    : t('game.mahjong.yakuman')
-                } · `
-              : winResult.fu != null && winResult.han != null
-                ? `${winResult.fu} ${t('riichi.modal.unit.fu')} ${winResult.han} ${t('riichi.modal.unit.han')} · `
-                : ''}
-            {winResult.ten} {t('riichi.modal.unit.point')}
-          </p>
-        )}
-        <p
-          className="text-sm mb-2 opacity-90"
-          style={{ color: 'var(--riichi-text)' }}
-        >
-          {t('riichi.modal.win.yakuTitle')}
-        </p>
-        <ul
-          className="list-disc list-inside text-sm space-y-1 mb-4"
-          style={{ color: 'var(--riichi-text)' }}
-        >
-          {winResult.yaku.map((y, i) => (
-            <li key={i}>
-              {y.name}
-              {!winResult.yakuman || winResult.yakuman <= 0
-                ? ` ${y.han}${t('riichi.modal.unit.han')}`
-                : ''}
-            </li>
-          ))}
-        </ul>
-        {winResult.uraDoraIndicators &&
-          winResult.uraDoraIndicators.length > 0 && (
-            <p className="mb-2 text-xs text-[#a8dadc]">
-              {t('riichi.modal.win.uraIndicator')}{' '}
-              {winResult.uraDoraIndicators
-                .map((t) => getTileLabel(t, locale))
-                .join(' · ')}
-              {winResult.uraHan != null
-                ? `（${t('riichi.modal.win.uraHan')} ${winResult.uraHan} ${t('riichi.modal.unit.han')}）`
-                : ''}
-            </p>
-          )}
-        <RoundGrowthSummary roundProgressSummary={roundProgressSummary} />
-        {winSettlementPreview && (
-          <div
-            className="mb-4 rounded-lg border p-3 text-xs space-y-1 opacity-90"
-            style={{
-              borderColor:
-                'color-mix(in srgb, var(--riichi-border) 40%, transparent)',
-              backgroundColor:
-                'color-mix(in srgb, var(--riichi-table-inner) 70%, transparent)',
-              color: 'var(--riichi-text)',
-            }}
-          >
-            <p className="text-[11px] font-semibold text-[#ffe082]">
-              {t('riichi.modal.summary.title')}
-              {t(`game.mahjong.seats.${winResult.winner}`)}{' '}
-              {winnerDelta >= 0 ? '+' : ''}
-              {winnerDelta}
-              {maxLossSeat != null &&
-                ` · ${t(`game.mahjong.seats.${maxLossSeat}`)} ${maxLossDelta >= 0 ? '+' : ''}${maxLossDelta}`}
-            </p>
-            {winnerPaymentSummary && (
-              <p>
-                {t('riichi.modal.summary.winnerIncome')}{' '}
-                {t('riichi.modal.summary.base')} +{winnerPaymentSummary.base}
-                {' / '}
-                {t('riichi.modal.summary.honba')} +{winnerPaymentSummary.honba}
-                {' / '}
-                {t('riichi.modal.summary.riichi')} +
-                {winnerPaymentSummary.riichi}
-              </p>
-            )}
-            <p>
-              {t('riichi.modal.summary.delta')}{' '}
-              {winSettlementPreview.deltas
-                .map(
-                  (d, i) =>
-                    `${t(`game.mahjong.seats.${i}`)} ${d >= 0 ? '+' : ''}${d}`,
-                )
-                .join(' · ')}
-            </p>
-            <p>
-              {t('riichi.modal.summary.total')}{' '}
-              {winSettlementPreview.newScores
-                .map((s, i) => `${t(`game.mahjong.seats.${i}`)} ${s}`)
-                .join(' · ')}
-            </p>
-            {winSettlementPreview.payments.length > 0 && (
-              <ul className="list-disc list-inside text-[11px] text-[#f1faee]/80">
-                {winSettlementPreview.payments.slice(0, 8).map((p, i) => (
-                  <li key={i}>
-                    {p.from >= 0
-                      ? t(`game.mahjong.seats.${p.from}`)
-                      : t('riichi.modal.summary.riichiPool')}{' '}
-                    → {t(`game.mahjong.seats.${p.to}`)} {p.amount}
-                    {t('riichi.modal.unit.point')}
-                    {p.reason === 'honba'
-                      ? `（${t('riichi.modal.summary.reason.honba')}）`
-                      : p.reason === 'riichi'
-                        ? `（${t('riichi.modal.summary.reason.riichi')}）`
-                        : p.reason === 'ron'
-                          ? `（${t('riichi.modal.summary.reason.ron')}）`
-                          : p.reason === 'tsumo'
-                            ? `（${t('riichi.modal.summary.reason.tsumo')}）`
-                            : ''}
-                  </li>
-                ))}
-              </ul>
-            )}
-            {timeoutEvents.length > 0 && (
-              <p className="text-[11px] text-[#f1faee]/80">
-                {t('riichi.modal.summary.timeout')}
-                {timeoutEvents.join('；')}
-              </p>
+        <header className="riichi-result-heading">
+          <div>
+            <p>ROUND RESULT</p>
+            <h3 id="riichi-win-title">
+              {winResult.isTsumo
+                ? t('riichi.modal.win.tsumo')
+                : t('riichi.modal.win.ron')}
+            </h3>
+          </div>
+          <div className="riichi-result-score">
+            <strong>{scoreHeadline}</strong>
+            {winResult.ten != null && (
+              <span>
+                {winResult.ten} {t('riichi.modal.unit.point')}
+              </span>
             )}
           </div>
-        )}
-        <Button
-          className="w-full font-semibold"
-          style={{
-            backgroundColor: 'var(--riichi-btn-primary)',
-            color: 'var(--riichi-btn-primary-text)',
-          }}
-          onClick={onNext}
-        >
+        </header>
+
+        <div className="riichi-result-grid">
+          <section className="riichi-result-section">
+            <p className="riichi-result-section-label">
+              {t('riichi.modal.win.yakuTitle')}
+            </p>
+            <ul className="riichi-yaku-list">
+              {winResult.yaku.map((yaku, index) => (
+                <li key={`${yaku.name}-${index}`}>
+                  <span>{yaku.name}</span>
+                  {(!winResult.yakuman || winResult.yakuman <= 0) && (
+                    <strong>
+                      {yaku.han}
+                      {t('riichi.modal.unit.han')}
+                    </strong>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {winResult.uraDoraIndicators &&
+              winResult.uraDoraIndicators.length > 0 && (
+                <div className="riichi-result-note">
+                  <strong>{t('riichi.modal.win.uraIndicator')}</strong>
+                  <span>
+                    {winResult.uraDoraIndicators
+                      .map((tile) => getTileLabel(tile, locale))
+                      .join(' · ')}
+                    {winResult.uraHan != null
+                      ? ` · ${t('riichi.modal.win.uraHan')} ${winResult.uraHan} ${t('riichi.modal.unit.han')}`
+                      : ''}
+                  </span>
+                </div>
+              )}
+          </section>
+
+          <section className="riichi-result-section">
+            <p className="riichi-result-section-label">
+              {t('riichi.modal.summary.title')}
+            </p>
+            {winSettlementPreview && (
+              <div className="riichi-result-payments">
+                <div className="riichi-result-delta">
+                  <span>{t(`game.mahjong.seats.${winResult.winner}`)}</span>
+                  <strong>
+                    {winnerDelta >= 0 ? '+' : ''}
+                    {winnerDelta}
+                  </strong>
+                  {maxLossSeat != null && (
+                    <small>
+                      {t(`game.mahjong.seats.${maxLossSeat}`)}{' '}
+                      {maxLossDelta >= 0 ? '+' : ''}
+                      {maxLossDelta}
+                    </small>
+                  )}
+                </div>
+                {winnerPaymentSummary && (
+                  <p>
+                    {t('riichi.modal.summary.base')} +
+                    {winnerPaymentSummary.base}
+                    {' · '}
+                    {t('riichi.modal.summary.honba')} +
+                    {winnerPaymentSummary.honba}
+                    {' · '}
+                    {t('riichi.modal.summary.riichi')} +
+                    {winnerPaymentSummary.riichi}
+                  </p>
+                )}
+                <div className="riichi-result-score-table">
+                  {winSettlementPreview.newScores.map((score, seat) => (
+                    <div key={seat}>
+                      <span>{t(`game.mahjong.seats.${seat}`)}</span>
+                      <strong>{score}</strong>
+                      <em>
+                        {winSettlementPreview.deltas[seat] >= 0 ? '+' : ''}
+                        {winSettlementPreview.deltas[seat]}
+                      </em>
+                    </div>
+                  ))}
+                </div>
+                {winSettlementPreview.payments.length > 0 && (
+                  <ul className="riichi-result-payment-list">
+                    {winSettlementPreview.payments
+                      .slice(0, 8)
+                      .map((payment, index) => (
+                        <li key={`${payment.from}-${payment.to}-${index}`}>
+                          <span>
+                            {payment.from >= 0
+                              ? t(`game.mahjong.seats.${payment.from}`)
+                              : t('riichi.modal.summary.riichiPool')}{' '}
+                            → {t(`game.mahjong.seats.${payment.to}`)}
+                          </span>
+                          <strong>{payment.amount}</strong>
+                        </li>
+                      ))}
+                  </ul>
+                )}
+                {timeoutEvents.length > 0 && (
+                  <p className="riichi-result-timeout">
+                    {t('riichi.modal.summary.timeout')}
+                    {timeoutEvents.join('；')}
+                  </p>
+                )}
+              </div>
+            )}
+            <RoundGrowthSummary roundProgressSummary={roundProgressSummary} />
+          </section>
+        </div>
+
+        <Button className="riichi-result-primary" onClick={onNext}>
           {t('riichi.modal.nextRound')}
         </Button>
       </div>
     </div>
   );
 }
-
 type RyuukyokuModalProps = {
   ryuukyokuReason: RiichiGameState['ryuukyokuReason'];
   drawSettlementPreview: DrawSettlementPreview | null;
@@ -498,106 +487,105 @@ export function RyuukyokuModal({
     maxGainSeat != null && drawSettlementPreview
       ? drawSettlementPreview.settlement.deltas[maxGainSeat]
       : 0;
-
   const listSeparator = locale === 'en' ? ', ' : '、';
-  const semicolonSeparator = locale === 'en' ? '; ' : '；';
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-riichi-overlay-in"
+      className="riichi-result-overlay animate-riichi-overlay-in"
       role="presentation"
     >
       <div
-        className="rounded-2xl border-2 p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in"
-        style={{
-          backgroundColor: 'var(--riichi-table)',
-          borderColor: 'var(--riichi-border)',
-        }}
+        className="riichi-result-modal animate-riichi-modal-in"
         role="dialog"
         aria-modal="true"
         aria-labelledby="riichi-ryuukyoku-title"
       >
-        <h3
-          id="riichi-ryuukyoku-title"
-          className="text-xl font-bold text-center mb-3"
-          style={{ color: 'var(--riichi-accent)' }}
-        >
-          {t('riichi.modal.draw.titlePrefix')}（{reasonText}）
-        </h3>
-        <p
-          className="text-sm mb-2 text-center opacity-90"
-          style={{ color: 'var(--riichi-text)' }}
-        >
-          {getRyuukyokuDescription(ryuukyokuReason, t)}
-        </p>
-        <RoundGrowthSummary roundProgressSummary={roundProgressSummary} />
-        {drawSettlementPreview && (
-          <div
-            className="mb-4 rounded-lg border p-3 text-xs space-y-1 opacity-90"
-            style={{
-              borderColor:
-                'color-mix(in srgb, var(--riichi-border) 40%, transparent)',
-              backgroundColor:
-                'color-mix(in srgb, var(--riichi-table-inner) 70%, transparent)',
-              color: 'var(--riichi-text)',
-            }}
-          >
-            <p className="text-[11px] font-semibold text-[#ffe082]">
-              {t('riichi.modal.summary.title')}
-              {isExhaustiveDraw
-                ? ` ${t('riichi.modal.draw.tenpaiCountPrefix')} ${drawSettlementPreview.tenpaiSeats.length} ${t('riichi.modal.draw.houseSuffix')}`
-                : ` ${t('riichi.modal.draw.abortive')}`}
-              {maxGainSeat != null &&
-                ` · ${t(`game.mahjong.seats.${maxGainSeat}`)} ${maxGainDelta >= 0 ? '+' : ''}${maxGainDelta}`}
-            </p>
-            {isExhaustiveDraw ? (
-              <p>
-                {t('riichi.modal.draw.tenpaiLabel')}
-                {drawSettlementPreview.tenpaiSeats.length === 0
-                  ? ` ${t('riichi.modal.none')}`
-                  : ` ${drawSettlementPreview.tenpaiSeats.map((i) => t(`game.mahjong.seats.${i}`)).join(listSeparator)}`}
-              </p>
-            ) : (
-              <p>{t('riichi.modal.draw.abortiveNote')}</p>
-            )}
-            <p>
-              {t('riichi.modal.summary.delta')}{' '}
-              {drawSettlementPreview.settlement.deltas
-                .map(
-                  (d, i) =>
-                    `${t(`game.mahjong.seats.${i}`)} ${d >= 0 ? '+' : ''}${d}`,
-                )
-                .join(' · ')}
-            </p>
-            <p>
-              {t('riichi.modal.summary.total')}{' '}
-              {drawSettlementPreview.settlement.newScores
-                .map((s, i) => `${t(`game.mahjong.seats.${i}`)} ${s}`)
-                .join(' · ')}
-            </p>
-            {timeoutEvents.length > 0 && (
-              <p className="text-[11px] text-[#f1faee]/80">
-                {t('riichi.modal.summary.timeout')}
-                {timeoutEvents.join(semicolonSeparator)}
-              </p>
-            )}
+        <header className="riichi-result-heading">
+          <div>
+            <p>ROUND RESULT</p>
+            <h3 id="riichi-ryuukyoku-title">
+              {t('riichi.modal.draw.titlePrefix')}
+            </h3>
           </div>
-        )}
-        <Button
-          className="w-full font-semibold"
-          style={{
-            backgroundColor: 'var(--riichi-btn-primary)',
-            color: 'var(--riichi-btn-primary-text)',
-          }}
-          onClick={onNext}
-        >
+          <div className="riichi-result-score">
+            <strong>{reasonText}</strong>
+            <span>{getRyuukyokuDescription(ryuukyokuReason, t)}</span>
+          </div>
+        </header>
+
+        <div className="riichi-result-grid">
+          <section className="riichi-result-section">
+            <p className="riichi-result-section-label">局面结果</p>
+            <div className="riichi-draw-summary">
+              <strong>
+                {isExhaustiveDraw
+                  ? `${t('riichi.modal.draw.tenpaiCountPrefix')} ${drawSettlementPreview?.tenpaiSeats.length ?? 0} ${t('riichi.modal.draw.houseSuffix')}`
+                  : t('riichi.modal.draw.abortive')}
+              </strong>
+              <p>
+                {isExhaustiveDraw
+                  ? `${t('riichi.modal.draw.tenpaiLabel')} ${
+                      drawSettlementPreview?.tenpaiSeats.length
+                        ? drawSettlementPreview.tenpaiSeats
+                            .map((seat) => t(`game.mahjong.seats.${seat}`))
+                            .join(listSeparator)
+                        : t('riichi.modal.none')
+                    }`
+                  : t('riichi.modal.draw.abortiveNote')}
+              </p>
+              {maxGainSeat != null && (
+                <div>
+                  <span>{t(`game.mahjong.seats.${maxGainSeat}`)}</span>
+                  <strong>
+                    {maxGainDelta >= 0 ? '+' : ''}
+                    {maxGainDelta}
+                  </strong>
+                </div>
+              )}
+            </div>
+          </section>
+
+          <section className="riichi-result-section">
+            <p className="riichi-result-section-label">
+              {t('riichi.modal.summary.title')}
+            </p>
+            {drawSettlementPreview && (
+              <div className="riichi-result-payments">
+                <div className="riichi-result-score-table">
+                  {drawSettlementPreview.settlement.newScores.map(
+                    (score, seat) => (
+                      <div key={seat}>
+                        <span>{t(`game.mahjong.seats.${seat}`)}</span>
+                        <strong>{score}</strong>
+                        <em>
+                          {drawSettlementPreview.settlement.deltas[seat] >= 0
+                            ? '+'
+                            : ''}
+                          {drawSettlementPreview.settlement.deltas[seat]}
+                        </em>
+                      </div>
+                    ),
+                  )}
+                </div>
+                {timeoutEvents.length > 0 && (
+                  <p className="riichi-result-timeout">
+                    {t('riichi.modal.summary.timeout')}
+                    {timeoutEvents.join(locale === 'en' ? '; ' : '；')}
+                  </p>
+                )}
+              </div>
+            )}
+            <RoundGrowthSummary roundProgressSummary={roundProgressSummary} />
+          </section>
+        </div>
+
+        <Button className="riichi-result-primary" onClick={onNext}>
           {t('riichi.modal.nextRound')}
         </Button>
       </div>
     </div>
   );
 }
-
 type MatchEndModalProps = {
   matchEnd: MatchEndState;
   roundProgressSummary: RiichiRoundProgressSummary;
@@ -612,66 +600,58 @@ export function MatchEndModal({
   homeLabel,
 }: MatchEndModalProps) {
   const { t } = useLocale();
+
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 animate-riichi-overlay-in"
+      className="riichi-result-overlay riichi-result-overlay--final animate-riichi-overlay-in"
       role="presentation"
     >
       <div
-        className="rounded-2xl border-2 p-6 max-w-sm w-full mx-4 shadow-xl animate-riichi-modal-in"
-        style={{
-          backgroundColor: 'var(--riichi-table)',
-          borderColor: 'var(--riichi-border)',
-        }}
+        className="riichi-result-modal animate-riichi-modal-in"
         role="dialog"
         aria-modal="true"
         aria-labelledby="riichi-match-end-title"
       >
-        <h3
-          id="riichi-match-end-title"
-          className="text-xl font-bold text-center mb-2"
-          style={{ color: 'var(--riichi-accent)' }}
-        >
-          {t('riichi.modal.matchEnd.title')}
-        </h3>
-        <p
-          className="text-sm mb-3 text-center opacity-90"
-          style={{ color: 'var(--riichi-text)' }}
-        >
-          {getMatchEndReasonText(matchEnd.reason, t)}
-        </p>
-        <div
-          className="mb-4 rounded-lg border p-3 text-xs space-y-1 opacity-90"
-          style={{
-            borderColor:
-              'color-mix(in srgb, var(--riichi-border) 40%, transparent)',
-            backgroundColor:
-              'color-mix(in srgb, var(--riichi-table-inner) 70%, transparent)',
-            color: 'var(--riichi-text)',
-          }}
-        >
-          {matchEnd.ranking.map((seat, i) => (
-            <p key={seat}>
-              {i + 1}
-              {t('riichi.modal.matchEnd.rankSuffix')}
-              {t(`game.mahjong.seats.${seat}`)}{' '}
-              {formatPoints(matchEnd.finalScores[seat])}
-            </p>
-          ))}
+        <header className="riichi-result-heading">
+          <div>
+            <p>MATCH COMPLETE</p>
+            <h3 id="riichi-match-end-title">
+              {t('riichi.modal.matchEnd.title')}
+            </h3>
+          </div>
+          <div className="riichi-result-score">
+            <strong>{getMatchEndReasonText(matchEnd.reason, t)}</strong>
+            <span>最终排名与本场成长记录</span>
+          </div>
+        </header>
+
+        <div className="riichi-result-grid">
+          <section className="riichi-result-section">
+            <p className="riichi-result-section-label">最终排名</p>
+            <div className="riichi-final-ranking">
+              {matchEnd.ranking.map((seat, index) => (
+                <div key={seat} className={index === 0 ? 'is-first' : ''}>
+                  <strong>
+                    {index + 1}
+                    {t('riichi.modal.matchEnd.rankSuffix')}
+                  </strong>
+                  <span>{t(`game.mahjong.seats.${seat}`)}</span>
+                  <em>{formatPoints(matchEnd.finalScores[seat])}</em>
+                </div>
+              ))}
+            </div>
+          </section>
+          <section className="riichi-result-section">
+            <p className="riichi-result-section-label">成长结果</p>
+            <RoundGrowthSummary roundProgressSummary={roundProgressSummary} />
+          </section>
         </div>
-        <RoundGrowthSummary roundProgressSummary={roundProgressSummary} />
-        <div className="space-y-2">
-          <Button
-            className="w-full font-semibold"
-            style={{
-              backgroundColor: 'var(--riichi-btn-primary)',
-              color: 'var(--riichi-btn-primary-text)',
-            }}
-            onClick={onRestart}
-          >
+
+        <div className="riichi-result-actions">
+          <Button className="riichi-result-primary" onClick={onRestart}>
             {t('riichi.modal.matchEnd.playAgain')}
           </Button>
-          <Button asChild className="w-full" variant="outline">
+          <Button asChild className="riichi-result-secondary" variant="outline">
             <Link to="/">{homeLabel}</Link>
           </Button>
         </div>

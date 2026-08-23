@@ -435,33 +435,6 @@ body {
   animation: riichi-active-pulse 1.2s ease-in-out infinite;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .animate-riichi-tile-drawn,
-  .animate-riichi-overlay-in,
-  .animate-riichi-modal-in,
-  .animate-riichi-active-pulse,
-  .riichi-phone-frame,
-  .riichi-table-surface::before,
-  .riichi-opponent-seat-active,
-  .riichi-tile-active::after {
-    animation: none;
-  }
-
-  .riichi-tile-hand {
-    transition: none;
-  }
-
-  .riichi-tile-hand:hover {
-    transform: none;
-    box-shadow:
-      inset 0 0 6px rgba(0, 0, 0, 0.05),
-      inset -1px -1px 3px rgba(0, 0, 0, 0.1),
-      inset 1px 1px 4px rgba(255, 255, 255, 1),
-      0 4px 0 var(--riichi-tile-back-color),
-      0 5px 6px rgba(0, 0, 0, 0.3);
-  }
-}
-
 /* 日麻多主题：通过 data-riichi-theme 切换，子元素用 var(--riichi-*) */
 [data-riichi-theme="green"] {
   --riichi-bg: #102218;
@@ -514,581 +487,2535 @@ body {
 @keyframes riichi-stage-rise {
   from {
     opacity: 0;
-    transform: translateY(12px) scale(0.985);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes riichi-table-breathe {
-  0%,
-  100% {
-    opacity: 0.78;
-  }
-  50% {
-    opacity: 0.96;
+    transform: translateY(0);
   }
 }
 
 @keyframes riichi-decision-glow {
   0%,
   100% {
-    box-shadow:
-      0 0 0 1px rgba(255, 209, 102, 0.22),
-      0 8px 22px rgba(0, 0, 0, 0.18);
+    box-shadow: 0 0 0 1px rgba(255, 209, 102, 0.2);
   }
   50% {
     box-shadow:
-      0 0 0 2px rgba(255, 209, 102, 0.58),
-      0 10px 30px rgba(255, 209, 102, 0.18);
+      0 0 0 2px rgba(255, 209, 102, 0.62),
+      0 0 28px rgba(255, 209, 102, 0.18);
   }
 }
 
-.riichi-mobile-shell {
-  min-height: 100dvh;
-  height: 100dvh;
-  overflow: hidden;
-  display: grid;
-  place-items: center;
-  padding: max(10px, env(safe-area-inset-top))
-    max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom))
-    max(10px, env(safe-area-inset-left));
+.riichi-desktop-shell {
+  width: 100%;
+  min-width: 1680px;
+  height: 100vh;
+  min-height: 900px;
+  overflow: auto;
   color: var(--riichi-text);
   background:
     radial-gradient(
-      circle at 20% 8%,
+      circle at 18% 8%,
       var(--riichi-accent-soft),
-      transparent 34%
+      transparent 32%
     ),
     radial-gradient(
-      circle at 80% 92%,
-      rgba(255, 255, 255, 0.08),
+      circle at 82% 90%,
+      rgba(255, 255, 255, 0.055),
       transparent 30%
     ),
-    linear-gradient(145deg, var(--riichi-bg), var(--riichi-bg-to) 58%, #02050a);
+    linear-gradient(145deg, var(--riichi-bg), var(--riichi-bg-to) 64%, #020506);
 }
 
-.riichi-phone-frame {
-  width: min(100%, 430px, calc((100dvh - 20px) * 430 / 932));
-  max-height: 100%;
-  aspect-ratio: 430 / 932;
-  position: relative;
-  overflow: hidden;
-  border-radius: clamp(18px, 4vw, 34px);
-  border: 1px solid color-mix(in srgb, var(--riichi-border) 45%, transparent);
-  background: #07110d;
-  box-shadow:
-    0 24px 70px rgba(0, 0, 0, 0.42),
-    0 0 0 10px rgba(255, 255, 255, 0.035),
-    inset 0 1px rgba(255, 255, 255, 0.16);
-  animation: riichi-stage-rise 0.36s ease-out both;
-}
-
-.riichi-phone-frame::before {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  border-radius: inherit;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent 16%),
-    linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.08),
-      transparent 12% 88%,
-      rgba(255, 255, 255, 0.06)
-    );
-  content: "";
-  pointer-events: none;
-}
-
-.riichi-safe-stage {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  overflow: hidden;
-  border-radius: inherit;
-  background:
-    radial-gradient(
-      circle at 50% 22%,
-      rgba(255, 255, 255, 0.08),
-      transparent 38%
-    ),
-    linear-gradient(to bottom, var(--riichi-bg), var(--riichi-bg-to));
+.riichi-desktop-stage {
+  width: 100%;
+  min-width: 1680px;
+  min-height: 900px;
+  height: 100%;
+  animation: riichi-stage-rise 0.32s ease-out both;
 }
 
 .riichi-stage-screen {
-  width: 100%;
-  height: 100%;
-  min-height: 0;
+  min-width: 1680px;
+  min-height: 100%;
   display: flex;
   flex-direction: column;
   color: var(--riichi-text);
-}
-
-.riichi-stage-main {
-  width: 100%;
-  min-height: 0;
-  flex: 1;
-  padding: 6px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
 }
 
 .riichi-app-header {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.1)),
-    color-mix(in srgb, var(--riichi-bg) 92%, black);
-  border-color: color-mix(in srgb, var(--riichi-table) 80%, transparent);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
+  position: sticky;
+  top: 0;
+  z-index: 45;
+  min-width: 1680px;
+  height: 68px;
+  flex: 0 0 68px;
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto minmax(460px, 1fr);
+  align-items: center;
+  gap: 24px;
+  padding: 0 28px;
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--riichi-border) 28%, transparent);
   color: var(--riichi-text);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(0, 0, 0, 0.1)),
+    color-mix(in srgb, var(--riichi-bg) 94%, black);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(16px);
 }
 
-.riichi-score-strip {
-  background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.08), transparent),
-    color-mix(in srgb, var(--riichi-table-inner) 72%, transparent);
+.riichi-header-back,
+.riichi-header-menu {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: var(--riichi-text-muted);
+  font-size: 13px;
+  font-weight: 650;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.riichi-header-back {
+  padding: 8px 10px 8px 7px;
+}
+
+.riichi-header-back:hover,
+.riichi-header-menu:hover {
+  border-color: color-mix(in srgb, var(--riichi-border) 32%, transparent);
+  color: var(--riichi-text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.riichi-header-round {
+  min-width: 350px;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 15px;
   white-space: nowrap;
+}
+
+.riichi-header-round strong {
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+
+.riichi-header-round span {
+  color: var(--riichi-accent);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.riichi-header-actions {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.riichi-header-dora {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.riichi-header-dora > span {
+  color: var(--riichi-text-muted);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+}
+
+.riichi-header-dora > div {
+  display: flex;
+  gap: 3px;
+}
+
+.riichi-header-menu {
+  padding: 8px 12px;
+  border-color: color-mix(in srgb, var(--riichi-border) 28%, transparent);
+  color: var(--riichi-text);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.riichi-desktop-workspace {
+  min-width: 1680px;
+  min-height: 996px;
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) 960px minmax(320px, 1fr);
+  align-items: start;
+  gap: 24px;
+  padding: 18px 24px;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.08),
+    transparent 18% 82%,
+    rgba(0, 0, 0, 0.12)
+  );
+}
+
+.riichi-table-zone {
+  width: 960px;
+  min-width: 960px;
+  min-height: 960px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+.riichi-table-context {
+  position: sticky;
+  top: 86px;
+  justify-self: end;
+  width: 276px;
+  margin-top: 28px;
   overflow: hidden;
-  text-overflow: ellipsis;
+  border: 1px solid color-mix(in srgb, var(--riichi-border) 30%, transparent);
+  border-radius: 18px;
+  color: var(--riichi-text);
+  background:
+    linear-gradient(155deg, rgba(255, 255, 255, 0.065), transparent 42%),
+    color-mix(in srgb, var(--riichi-bg) 91%, black);
+  box-shadow:
+    0 20px 46px rgba(0, 0, 0, 0.24),
+    inset 0 1px rgba(255, 255, 255, 0.055);
+  backdrop-filter: blur(14px);
+}
+
+.riichi-table-context-header {
+  min-height: 82px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 16px;
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--riichi-border) 20%, transparent);
+  background: linear-gradient(110deg, var(--riichi-accent-soft), transparent);
+}
+
+.riichi-table-context-header p {
+  margin-bottom: 5px;
+  color: var(--riichi-text-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.17em;
+}
+
+.riichi-table-context-header h2 {
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: 0.03em;
+}
+
+.riichi-table-context-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 7px;
+  border-radius: 99px;
+  color: var(--riichi-accent);
+  background: var(--riichi-accent-soft);
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.riichi-table-context-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  padding: 1px 0;
+  background: color-mix(in srgb, var(--riichi-border) 16%, transparent);
+}
+
+.riichi-table-context-metrics > div {
+  min-height: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: color-mix(in srgb, var(--riichi-bg) 96%, black);
+}
+
+.riichi-table-context-metrics span {
+  color: var(--riichi-text-muted);
+  font-size: 9px;
+}
+
+.riichi-table-context-metrics strong {
+  color: var(--riichi-accent);
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.riichi-table-context-section {
+  padding: 16px;
+  border-top: 1px solid color-mix(in srgb, var(--riichi-border) 14%, transparent);
+}
+
+.riichi-table-context-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.riichi-table-context-title > span {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.riichi-table-context-title > small {
+  color: var(--riichi-text-muted);
+  font-size: 8px;
+}
+
+.riichi-table-scoreboard,
+.riichi-table-river-load {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.riichi-table-score-row {
+  min-height: 38px;
+  display: grid;
+  grid-template-columns: 20px 25px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 7px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.riichi-table-score-row.is-active {
+  border-color: color-mix(in srgb, var(--riichi-accent) 40%, transparent);
+  background: var(--riichi-accent-soft);
+}
+
+.riichi-table-score-rank {
+  color: var(--riichi-text-muted);
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.riichi-table-score-wind {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--riichi-border) 32%, transparent);
+  border-radius: 6px;
+  color: var(--riichi-accent);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.riichi-table-score-name {
+  color: var(--riichi-text-muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.riichi-table-score-row strong {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.riichi-table-score-row em {
+  color: #ff9ca9;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 750;
+}
+
+.riichi-table-river-load > div {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 8px;
+  color: var(--riichi-text-muted);
+  font-size: 9px;
+}
+
+.riichi-table-river-load > div > div {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.riichi-table-river-load i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--riichi-accent);
+  box-shadow: 0 0 8px var(--riichi-accent-soft);
+}
+
+.riichi-table-river-load strong {
+  color: var(--riichi-text);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.riichi-table-context-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid color-mix(in srgb, var(--riichi-border) 18%, transparent);
+  color: var(--riichi-text-muted);
+  background: rgba(0, 0, 0, 0.12);
+  font-size: 9px;
+}
+
+.riichi-table-context-footer svg {
+  flex: 0 0 auto;
+  color: var(--riichi-accent);
 }
 
 .riichi-table-surface {
   position: relative;
   isolation: isolate;
+  width: 960px;
+  height: 960px;
+  flex: 0 0 960px;
+  overflow: hidden;
+  border: 2px solid color-mix(in srgb, var(--riichi-border) 60%, transparent);
+  border-radius: 34px;
   background:
     radial-gradient(
-      circle at 50% 42%,
-      rgba(255, 255, 255, 0.12),
-      transparent 42%
+      circle at 50% 46%,
+      rgba(255, 255, 255, 0.115),
+      transparent 43%
     ),
     url("./assets/riichi/table-felt.webp"),
     url("./assets/riichi/table-felt.svg"), var(--riichi-table);
   background-size:
     cover,
-    180px 180px,
-    180px 180px,
+    190px 190px,
+    190px 190px,
     auto;
   box-shadow:
-    0 16px 36px rgba(0, 0, 0, 0.5),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-    inset 0 18px 44px rgba(255, 255, 255, 0.06);
+    0 30px 72px rgba(0, 0, 0, 0.48),
+    0 0 0 12px rgba(0, 0, 0, 0.16),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.09),
+    inset 0 24px 52px rgba(255, 255, 255, 0.045);
+}
+
+.riichi-table-surface::before,
+.riichi-table-surface::after {
+  position: absolute;
+  pointer-events: none;
+  content: "";
 }
 
 .riichi-table-surface::before {
-  position: absolute;
-  inset: 8px;
+  inset: 11px;
   z-index: -1;
-  border-radius: 18px;
-  border: 1px solid color-mix(in srgb, var(--riichi-border) 34%, transparent);
+  border: 1px solid color-mix(in srgb, var(--riichi-border) 30%, transparent);
+  border-radius: 25px;
+}
+
+.riichi-table-surface::after {
+  inset: 0;
+  z-index: -2;
   background:
     linear-gradient(
       90deg,
-      transparent 49.7%,
-      rgba(255, 255, 255, 0.08) 50%,
-      transparent 50.3%
+      transparent 49.9%,
+      rgba(255, 255, 255, 0.04) 50%,
+      transparent 50.1%
     ),
     linear-gradient(
       0deg,
-      transparent 49.7%,
-      rgba(255, 255, 255, 0.08) 50%,
-      transparent 50.3%
+      transparent 49.9%,
+      rgba(255, 255, 255, 0.04) 50%,
+      transparent 50.1%
     );
-  content: "";
-  opacity: 0.68;
-  animation: riichi-table-breathe 4.8s ease-in-out infinite;
 }
 
-.riichi-hand-panel {
-  border: 1px solid color-mix(in srgb, var(--riichi-border) 28%, transparent);
-  background:
-    url("./assets/riichi/action-panel.webp") center / cover,
-    url("./assets/riichi/action-panel.svg") center / cover,
-    color-mix(in srgb, var(--riichi-table) 86%, transparent);
-  box-shadow:
-    0 -12px 28px rgba(0, 0, 0, 0.24),
-    inset 0 1px rgba(255, 255, 255, 0.08);
-}
-
-.riichi-action-panel {
-  border: 1px solid color-mix(in srgb, var(--riichi-border) 34%, transparent);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.14)),
-    rgba(12, 28, 22, 0.72);
-  box-shadow: inset 0 1px rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(10px);
-}
-
-.riichi-center-board {
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.08), transparent 38%),
-    color-mix(in srgb, var(--riichi-table-inner) 88%, black);
-  box-shadow:
-    inset 0 0 28px rgba(0, 0, 0, 0.28),
-    inset 0 1px rgba(255, 255, 255, 0.1);
-}
-
-.riichi-dora-well {
-  background:
-    radial-gradient(
-      circle at 50% 0%,
-      var(--riichi-accent-soft),
-      transparent 58%
-    ),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.22), rgba(255, 255, 255, 0.04)),
-    color-mix(in srgb, var(--riichi-bg-to) 90%, transparent);
-  box-shadow:
-    inset 0 1px rgba(255, 255, 255, 0.08),
-    0 10px 22px rgba(0, 0, 0, 0.22);
-}
-
-.riichi-discard-zone {
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.07), rgba(0, 0, 0, 0.08)),
-    color-mix(in srgb, var(--riichi-table-inner) 62%, transparent);
-  box-shadow: inset 0 1px rgba(255, 255, 255, 0.06);
-}
-
-.riichi-opponent-seat {
-  position: relative;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.08)),
-    rgba(0, 0, 0, 0.12);
-  box-shadow: inset 0 1px rgba(255, 255, 255, 0.06);
-  outline: none;
-}
-
-.riichi-opponent-seat-active {
-  border-color: color-mix(in srgb, var(--riichi-accent) 70%, transparent);
-  background:
-    radial-gradient(
-      circle at 50% 0%,
-      var(--riichi-accent-soft),
-      transparent 70%
-    ),
-    rgba(255, 193, 7, 0.08);
-  animation: riichi-decision-glow 1.6s ease-in-out infinite;
-}
-
-.riichi-opponent-chip {
-  display: inline-flex;
+.riichi-status-ribbon {
+  position: absolute;
+  z-index: 30;
+  top: 14px;
+  left: 50%;
+  min-width: 470px;
+  max-width: 720px;
+  height: 34px;
+  transform: translateX(-50%);
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 10px;
+  padding: 0 17px;
+  border: 1px solid color-mix(in srgb, var(--riichi-border) 30%, transparent);
   border-radius: 999px;
-  padding: 2px 6px;
   color: var(--riichi-text);
-  background: rgba(0, 0, 0, 0.22);
-  box-shadow: inset 0 1px rgba(255, 255, 255, 0.08);
-  font-size: 10px;
-  line-height: 1.1;
+  background: color-mix(in srgb, var(--riichi-bg) 78%, transparent);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(12px);
   white-space: nowrap;
 }
 
-.riichi-opponent-float {
+.riichi-status-ribbon strong {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+}
+
+.riichi-status-pulse {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 999px;
+  background: var(--riichi-accent);
+  box-shadow: 0 0 10px var(--riichi-accent);
+}
+
+.riichi-status-event {
+  padding-left: 10px;
+  border-left: 1px solid
+    color-mix(in srgb, var(--riichi-border) 25%, transparent);
+  color: var(--riichi-accent);
+  font-size: 11px;
+}
+
+.riichi-table-grid {
   position: absolute;
-  z-index: 20;
-  top: calc(100% + 4px);
+  inset: 58px 18px 18px;
+  display: grid;
+  grid-template-areas:
+    "top top top"
+    "left center right"
+    "self self self";
+  grid-template-columns: 166px minmax(0, 1fr) 166px;
+  grid-template-rows: 146px minmax(0, 1fr) 204px;
+  gap: 11px;
+}
+
+.riichi-table-seat-top {
+  grid-area: top;
+}
+
+.riichi-table-seat-left {
+  grid-area: left;
+}
+
+.riichi-table-center {
+  grid-area: center;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+}
+
+.riichi-table-seat-right {
+  grid-area: right;
+}
+
+.riichi-table-seat-self {
+  grid-area: self;
+}
+
+.riichi-seat {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid color-mix(in srgb, var(--riichi-border) 16%, transparent);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(0, 0, 0, 0.055)),
+    rgba(0, 0, 0, 0.08);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.riichi-seat--active {
+  border-color: color-mix(in srgb, var(--riichi-accent) 65%, transparent);
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      var(--riichi-accent-soft),
+      transparent 66%
+    ),
+    rgba(0, 0, 0, 0.08);
+  animation: riichi-decision-glow 1.65s ease-in-out infinite;
+}
+
+.riichi-seat-card,
+.riichi-self-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  color: var(--riichi-text);
+}
+
+.riichi-seat-card {
+  min-height: 43px;
+  padding: 7px 10px;
+  border-radius: 11px;
+  background: rgba(0, 0, 0, 0.19);
+}
+
+.riichi-seat-card-main {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.riichi-seat-wind {
+  width: 27px;
+  height: 27px;
+  flex: 0 0 27px;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--riichi-border) 40%, transparent);
+  border-radius: 7px;
+  color: var(--riichi-accent);
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.riichi-seat-name {
+  color: var(--riichi-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.riichi-seat-card-main strong {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.riichi-seat-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  color: var(--riichi-text-muted);
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.riichi-seat-action,
+.riichi-seat-riichi,
+.riichi-seat-warning {
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.riichi-seat-action {
+  color: var(--riichi-accent);
+  background: var(--riichi-accent-soft);
+}
+
+.riichi-seat-riichi {
+  color: #ffd9dc;
+  background: rgba(190, 30, 52, 0.42);
+}
+
+.riichi-seat-warning {
+  color: #ffd2d8;
+  background: rgba(146, 30, 48, 0.42);
+}
+
+.riichi-seat--top {
+  display: grid;
+  grid-template-columns: 270px 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 14px;
+}
+
+.riichi-seat--top .riichi-seat-card {
+  width: 270px;
+}
+
+.riichi-seat--side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+}
+
+.riichi-seat--side .riichi-seat-card {
+  width: 100%;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+}
+
+.riichi-seat--side .riichi-seat-card-meta {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  white-space: normal;
+}
+
+.riichi-opponent-hand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.riichi-seat--side .riichi-opponent-hand {
+  flex-direction: column;
+  gap: 0;
+}
+
+.riichi-opponent-hand-slot {
+  width: 28px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.riichi-seat--side .riichi-opponent-hand-slot {
+  width: 40px;
+  height: 28px;
+}
+
+.riichi-seat-melds,
+.riichi-self-melds {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.riichi-seat--side .riichi-seat-melds {
+  max-width: 100%;
+  flex-direction: column;
+}
+
+.riichi-seat-meld {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  padding: 3px;
+  border: 1px solid color-mix(in srgb, var(--riichi-border) 25%, transparent);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.riichi-center-board {
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  aspect-ratio: 1;
+  display: grid;
+  grid-template-areas:
+    "river-top river-top river-top"
+    "river-left console river-right"
+    "river-bottom river-bottom river-bottom";
+  grid-template-columns: minmax(0, 1fr) 154px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) 154px minmax(0, 1fr);
+  gap: 4px;
+  padding: 11px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--riichi-border) 23%, transparent);
+  border-radius: 24px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.055), transparent 38%),
+    color-mix(in srgb, var(--riichi-table-inner) 83%, black);
+  box-shadow:
+    inset 0 0 34px rgba(0, 0, 0, 0.3),
+    inset 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.riichi-river {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.055);
+}
+
+.riichi-river-grid {
+  --riichi-river-tile-width: 24px;
+  --riichi-river-tile-height: 34px;
+  --riichi-river-row-step: 30px;
+  display: grid;
+  grid-template-columns: repeat(6, var(--riichi-river-tile-width));
+  grid-auto-rows: var(--riichi-river-row-step);
+  place-content: start;
+  gap: 2px;
+  transform-origin: center;
+}
+
+.riichi-river-grid.is-dense {
+  --riichi-river-tile-width: 21px;
+  --riichi-river-tile-height: 30px;
+  --riichi-river-row-step: 25px;
+  gap: 1px;
+}
+
+.riichi-river-grid .riichi-tile--river {
+  --riichi-tile-width: var(--riichi-river-tile-width);
+  --riichi-tile-height: var(--riichi-river-tile-height);
+}
+
+.riichi-river-grid--seat-1 {
+  transform: rotate(-90deg);
+}
+
+.riichi-river-grid--seat-2 {
+  transform: rotate(180deg);
+}
+
+.riichi-river-grid--seat-3 {
+  transform: rotate(90deg);
+}
+
+.riichi-river--seat-2 {
+  grid-area: river-top;
+}
+
+.riichi-river--seat-1 {
+  grid-area: river-right;
+}
+
+.riichi-river--seat-0 {
+  grid-area: river-bottom;
+}
+
+.riichi-river--seat-3 {
+  grid-area: river-left;
+}
+
+.riichi-center-console {
+  grid-area: console;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--riichi-border) 30%, transparent);
+  border-radius: 18px;
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      var(--riichi-accent-soft),
+      transparent 62%
+    ),
+    color-mix(in srgb, var(--riichi-bg-to) 88%, transparent);
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, 0.07),
+    0 12px 28px rgba(0, 0, 0, 0.23);
+}
+
+.riichi-center-round {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  color: var(--riichi-text);
+}
+
+.riichi-center-round span {
+  color: var(--riichi-accent);
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.riichi-center-round strong {
+  font-size: 21px;
+}
+
+.riichi-center-round small {
+  margin-left: 5px;
+  color: var(--riichi-text-muted);
+  font-size: 9px;
+}
+
+.riichi-center-wall {
+  color: var(--riichi-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.riichi-center-indicators {
+  display: flex;
+  gap: 2px;
+}
+
+.riichi-seat--self {
+  padding: 9px 13px 8px;
+  background:
+    url("./assets/riichi/action-panel.webp") center / cover,
+    url("./assets/riichi/action-panel.svg") center / cover,
+    color-mix(in srgb, var(--riichi-table) 82%, transparent);
+}
+
+.riichi-self-meta {
+  height: 35px;
+  padding: 0 4px 5px;
+}
+
+.riichi-self-timer {
+  width: 100%;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.riichi-self-timer > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.25s linear;
+}
+
+.riichi-self-timer .is-safe {
+  background: #44c78b;
+}
+
+.riichi-self-timer .is-warning {
+  background: #f4b942;
+}
+
+.riichi-self-timer .is-critical {
+  background: #ee5364;
+}
+
+.riichi-self-play-row {
+  position: relative;
+  height: 139px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.riichi-self-melds {
+  position: absolute;
+  left: 0;
+  bottom: 2px;
+  max-width: 190px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.riichi-self-hand {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 17px;
+}
+
+.riichi-self-concealed,
+.riichi-self-drawn {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.riichi-self-instruction {
+  position: absolute;
+  right: 14px;
+  bottom: 8px;
+  color: var(--riichi-accent);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.riichi-action-dock {
+  position: absolute;
+  z-index: 42;
   left: 50%;
-  min-width: 94px;
-  transform: translateX(-50%) translateY(-4px);
+  bottom: 174px;
+  max-width: 860px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
   border: 1px solid color-mix(in srgb, var(--riichi-border) 42%, transparent);
-  border-radius: 10px;
-  padding: 7px 8px;
+  border-radius: 13px;
   color: var(--riichi-text);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.12)),
-    color-mix(in srgb, var(--riichi-bg) 92%, black);
-  box-shadow: 0 14px 26px rgba(0, 0, 0, 0.35);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.095), rgba(0, 0, 0, 0.12)),
+    color-mix(in srgb, var(--riichi-bg) 83%, transparent);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(14px);
+  white-space: nowrap;
+}
+
+.riichi-action-target {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-right: 10px;
+  border-right: 1px solid
+    color-mix(in srgb, var(--riichi-border) 27%, transparent);
+  color: var(--riichi-text-muted);
   font-size: 10px;
-  line-height: 1.35;
-  text-align: center;
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    opacity 0.14s ease,
-    transform 0.14s ease;
 }
 
-.riichi-opponent-seat:hover .riichi-opponent-float,
-.riichi-opponent-seat:focus-visible .riichi-opponent-float {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
-.riichi-table-surface
-  .riichi-opponent-seat:nth-of-type(2)
-  .riichi-opponent-float {
-  right: auto;
-  left: 0;
-  transform: translateY(-4px);
-}
-
-.riichi-table-surface
-  .riichi-opponent-seat:nth-of-type(4)
-  .riichi-opponent-float {
-  right: 0;
-  left: auto;
-  transform: translateY(-4px);
-}
-
-.riichi-table-surface
-  .riichi-opponent-seat:nth-of-type(2):hover
-  .riichi-opponent-float,
-.riichi-table-surface
-  .riichi-opponent-seat:nth-of-type(2):focus-visible
-  .riichi-opponent-float,
-.riichi-table-surface
-  .riichi-opponent-seat:nth-of-type(4):hover
-  .riichi-opponent-float,
-.riichi-table-surface
-  .riichi-opponent-seat:nth-of-type(4):focus-visible
-  .riichi-opponent-float {
-  transform: translateY(0);
-}
-
-/* 日麻牌桌区：在手机舞台内接近正方形，避免网页横向布局挤压 */
-.riichi-playfield-outer {
-  flex: 1;
-  min-height: 0;
+.riichi-action-buttons {
   display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 6px;
+}
+
+.riichi-action-button {
+  min-width: 58px;
+  min-height: 36px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  gap: 5px;
+  padding: 7px 13px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  transition:
+    transform 0.12s ease,
+    filter 0.12s ease,
+    background-color 0.12s ease;
+}
+
+.riichi-action-button:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+
+.riichi-action-button small {
+  font-size: 9px;
+  font-weight: 600;
+  opacity: 0.78;
+}
+
+.riichi-action-button.is-primary {
+  border: 1px solid #ef6a78;
+  color: #fff;
+  background: linear-gradient(180deg, #d63f53, #a91f34);
+  box-shadow: 0 6px 16px rgba(171, 31, 52, 0.32);
+}
+
+.riichi-action-button.is-secondary {
+  border: 1px solid color-mix(in srgb, var(--riichi-border) 55%, transparent);
+  color: var(--riichi-text);
+  background: color-mix(in srgb, var(--riichi-table) 72%, black);
+}
+
+.riichi-action-button.is-pass {
+  border: 1px solid transparent;
+  color: var(--riichi-text-muted);
+  background: transparent;
+  font-weight: 650;
+}
+
+.riichi-tile {
+  --riichi-tile-width: 31px;
+  --riichi-tile-height: 44px;
+  position: relative;
+  width: var(--riichi-tile-width);
+  height: var(--riichi-tile-height);
+  display: inline-block;
+  flex: 0 0 auto;
+  box-sizing: border-box;
   padding: 0;
-  container-type: size;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  color: inherit;
+  background: transparent;
+  box-shadow: none;
+  vertical-align: middle;
+  user-select: none;
 }
 
-.riichi-playfield-inner {
-  width: min(100cqw, calc(100cqh * 0.78));
-  height: min(100cqh, calc(100cqw / 0.78));
-  max-width: 100%;
-  max-height: 100%;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+.riichi-tile[data-rotation="90"],
+.riichi-tile[data-rotation="-90"] {
+  width: var(--riichi-tile-height);
+  height: var(--riichi-tile-width);
 }
 
-/* 无 cqw 时：用 aspect-ratio 保持 8:5，宽度撑满外层 */
-@supports not (width: 100cqw) {
-  .riichi-playfield-inner {
-    width: 100%;
-    max-width: 100%;
-    max-height: 100%;
-    aspect-ratio: 0.78 / 1;
-    height: auto;
-  }
-}
-
-/* Premium 3D Tile CSS — 手牌略缩小，随视口 clamp，26:37 与牌面比例一致 */
-.riichi-tile-hand {
-  width: clamp(24px, 8vw, 36px);
-  aspect-ratio: 26 / 37;
-  height: auto;
-  box-sizing: border-box;
-  border-radius: 5px;
-  background-color: #fcfdfd;
-  background-image:
-    linear-gradient(
-      145deg,
-      rgba(255, 255, 255, 0.98),
-      rgba(255, 247, 224, 0.88)
-    ),
-    radial-gradient(
-      circle at 28% 18%,
-      rgba(255, 255, 255, 0.85),
-      transparent 42%
-    );
-  box-shadow:
-    inset 0 0 6px rgba(0, 0, 0, 0.05),
-    inset -1px -1px 3px rgba(0, 0, 0, 0.1),
-    inset 1px 1px 4px rgba(255, 255, 255, 1),
-    0 4px 0 var(--riichi-tile-back-color),
-    0 5px 6px rgba(0, 0, 0, 0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  font-family: Menlo, Monaco, "Noto Serif SC", "STZhongsong", serif;
-  font-size: clamp(0.9rem, 3.1vw, 1.35rem);
-  font-weight: 900;
-  line-height: 1.1;
-  color: #1a1a1a;
-  position: relative;
+.riichi-tile--hand {
+  --riichi-tile-width: 42px;
+  --riichi-tile-height: 60px;
   transition:
-    transform 0.15s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid #e2e8f0;
-  user-select: none;
+    transform 0.13s ease,
+    box-shadow 0.13s ease;
 }
 
-.riichi-tile-hand:hover {
-  transform: translateY(-5px);
-  box-shadow:
-    inset 0 0 6px rgba(0, 0, 0, 0.05),
-    inset -1px -1px 3px rgba(0, 0, 0, 0.1),
-    inset 1px 1px 4px rgba(255, 255, 255, 1),
-    0 10px 0 var(--riichi-tile-back-color),
-    0 12px 10px rgba(0, 0, 0, 0.25);
-  z-index: 10;
+.riichi-tile--river {
+  --riichi-tile-width: 27px;
+  --riichi-tile-height: 38px;
 }
 
-.riichi-tile-discard {
-  width: clamp(20px, 5.4vw, 30px);
-  aspect-ratio: 26 / 37;
-  height: auto;
-  box-sizing: border-box;
-  border-radius: 3px;
-  background-color: #fcfdfd;
-  background-image:
-    linear-gradient(
-      145deg,
-      rgba(255, 255, 255, 0.98),
-      rgba(255, 247, 224, 0.88)
-    ),
-    radial-gradient(
-      circle at 28% 18%,
-      rgba(255, 255, 255, 0.82),
-      transparent 42%
-    );
-  box-shadow:
-    inset 0 0 3px rgba(0, 0, 0, 0.05),
-    inset -1px -1px 2px rgba(0, 0, 0, 0.1),
-    inset 1px 1px 3px rgba(255, 255, 255, 1),
-    0 3px 0 var(--riichi-tile-back-color),
-    0 4px 5px rgba(0, 0, 0, 0.25);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  font-family: Menlo, Monaco, "Noto Serif SC", "STZhongsong", serif;
-  font-size: clamp(0.6rem, 2.1vw, 0.88rem);
-  font-weight: 900;
-  line-height: 1.1;
-  color: #1a1a1a;
-  position: relative;
-  border: 1px solid #e2e8f0;
-  user-select: none;
+.riichi-tile--meld {
+  --riichi-tile-width: 29px;
+  --riichi-tile-height: 42px;
 }
 
-.riichi-tile-active {
-  box-shadow:
-    inset 0 0 6px rgba(0, 0, 0, 0.05),
-    inset -1px -1px 3px rgba(0, 0, 0, 0.1),
-    inset 1px 1px 4px rgba(255, 255, 255, 1),
-    0 8px 0 #d97706,
-    0 10px 12px rgba(217, 119, 6, 0.5);
-  transform: translateY(-4px) scale(1.02);
-  border-color: #f59e0b;
-  z-index: 10;
-  animation: none; /* disabled default pulse to prefer our nice shadow */
+.riichi-tile--indicator {
+  --riichi-tile-width: 31px;
+  --riichi-tile-height: 44px;
 }
 
-/* Red ring for active pulse */
-.riichi-tile-active::after {
-  content: "";
+.riichi-tile-rotator {
   position: absolute;
-  inset: -3px;
-  border-radius: 7px;
-  border: 4px solid rgba(245, 158, 11, 0.4);
-  animation: riichi-active-pulse 1.2s ease-in-out infinite;
-  pointer-events: none;
+  top: 50%;
+  left: 50%;
+  width: var(--riichi-tile-width);
+  height: var(--riichi-tile-height);
+  display: block;
+  overflow: hidden;
+  border: 1px solid #d7d9d5;
+  border-radius: 5px;
+  background: #f8f5ed;
+  box-shadow:
+    inset 1px 1px 2px rgba(255, 255, 255, 0.95),
+    inset -1px -1px 2px rgba(0, 0, 0, 0.08),
+    0 3px 0 var(--riichi-tile-back-color),
+    0 4px 5px rgba(0, 0, 0, 0.28);
+  transform-origin: center;
+}
+
+.riichi-tile[data-rotation="0"] .riichi-tile-rotator {
+  transform: translate(-50%, -50%);
+}
+
+.riichi-tile[data-rotation="90"] .riichi-tile-rotator {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.riichi-tile[data-rotation="180"] .riichi-tile-rotator {
+  transform: translate(-50%, -50%) rotate(180deg);
+}
+
+.riichi-tile[data-rotation="-90"] .riichi-tile-rotator {
+  transform: translate(-50%, -50%) rotate(-90deg);
+}
+
+.riichi-tile--hand .riichi-tile-rotator {
+  border-radius: 6px;
+  box-shadow:
+    inset 1px 1px 3px rgba(255, 255, 255, 0.96),
+    inset -1px -1px 3px rgba(0, 0, 0, 0.09),
+    0 5px 0 var(--riichi-tile-back-color),
+    0 7px 8px rgba(0, 0, 0, 0.32);
+}
+
+.riichi-tile--river .riichi-tile-rotator {
+  border-radius: 3px;
+}
+
+.riichi-tile--meld .riichi-tile-rotator,
+.riichi-tile--indicator .riichi-tile-rotator {
+  border-radius: 4px;
+}
+
+.riichi-tile-art,
+.riichi-tile-face-compat {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.riichi-tile-art {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-color: #f8f5ed;
+}
+
+.riichi-tile-face-compat {
+  position: relative;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #f8f5ed;
+}
+
+.riichi-tile--interactive {
+  cursor: pointer;
+}
+
+.riichi-tile--hand.riichi-tile--interactive:hover {
+  z-index: 12;
+  transform: translateY(-8px);
+}
+
+.riichi-tile--hand.riichi-tile--interactive:hover .riichi-tile-rotator {
+  box-shadow:
+    inset 1px 1px 3px rgba(255, 255, 255, 0.96),
+    inset -1px -1px 3px rgba(0, 0, 0, 0.09),
+    0 11px 0 var(--riichi-tile-back-color),
+    0 14px 13px rgba(0, 0, 0, 0.3);
+}
+
+.riichi-tile--drawn {
+  transform: translateY(-5px);
+}
+
+.riichi-tile--drawn .riichi-tile-rotator {
+  border-color: #e8b852;
+  box-shadow:
+    inset 1px 1px 3px rgba(255, 255, 255, 0.96),
+    0 8px 0 #b57921,
+    0 11px 15px rgba(197, 126, 30, 0.35);
+}
+
+.riichi-tile--last-discard {
+  z-index: 4;
+}
+
+.riichi-tile--last-discard .riichi-tile-rotator {
+  border-color: var(--riichi-accent);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--riichi-accent) 58%, transparent),
+    0 3px 0 var(--riichi-tile-back-color),
+    0 0 14px color-mix(in srgb, var(--riichi-accent) 48%, transparent);
+}
+
+.riichi-tile--disabled {
+  opacity: 0.45;
+  filter: grayscale(0.5);
 }
 
 .riichi-tile-back {
-  background:
-    url("./assets/riichi/tile-back.webp") center / cover,
-    url("./assets/riichi/tile-back.svg") center / cover,
-    linear-gradient(
-      145deg,
-      var(--riichi-tile-back-color),
-      color-mix(in srgb, var(--riichi-tile-back-color) 70%, black)
-    );
+  --riichi-tile-width: 28px;
+  --riichi-tile-height: 40px;
+  position: relative;
+  width: var(--riichi-tile-width);
+  height: var(--riichi-tile-height);
+  display: block;
+  flex: 0 0 auto;
+  overflow: visible;
+  transform-origin: center;
+}
+
+.riichi-tile-back[data-rotation="90"],
+.riichi-tile-back[data-rotation="-90"] {
+  width: var(--riichi-tile-height);
+  height: var(--riichi-tile-width);
+}
+
+.riichi-tile-back-rotator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--riichi-tile-width);
+  height: var(--riichi-tile-height);
+  display: block;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 4px;
+  background: var(--riichi-tile-back-color);
   box-shadow:
-    inset 1px 1px 3px rgba(255, 255, 255, 0.2),
-    inset -1px -1px 3px rgba(0, 0, 0, 0.3),
-    0 3px 5px rgba(0, 0, 0, 0.4);
+    inset 1px 1px 3px rgba(255, 255, 255, 0.18),
+    inset -1px -1px 3px rgba(0, 0, 0, 0.32),
+    0 3px 5px rgba(0, 0, 0, 0.33);
+  transform-origin: center;
 }
 
-@media (orientation: landscape) and (max-height: 520px) {
-  .riichi-mobile-shell {
-    padding: max(6px, env(safe-area-inset-top))
-      max(8px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom))
-      max(8px, env(safe-area-inset-left));
-  }
-
-  .riichi-phone-frame {
-    width: min(100%, calc((100dvh - 12px) * 932 / 430));
-    aspect-ratio: 932 / 430;
-    border-radius: clamp(14px, 2.5vw, 24px);
-  }
-
-  .riichi-app-header {
-    padding: 4px 10px;
-  }
-
-  .riichi-app-header p {
-    line-height: 1.1;
-  }
-
-  .riichi-stage-main {
-    padding: 4px 8px 6px;
-  }
-
-  .riichi-score-strip {
-    display: none;
-  }
-
-  .riichi-game-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(250px, 0.72fr);
-    gap: 8px;
-  }
-
-  .riichi-playfield-inner {
-    width: min(100cqw, calc(100cqh * 1.22));
-    height: min(100cqh, calc(100cqw / 1.22));
-  }
-
-  .riichi-playfield-outer {
-    align-items: center;
-    padding-bottom: 0;
-  }
-
-  .riichi-table-surface {
-    padding: 6px;
-  }
-
-  .riichi-hand-panel {
-    padding: 6px;
-    overflow: hidden;
-    align-self: stretch;
-  }
-
-  .riichi-hand-panel > .text-center {
-    font-size: 10px;
-    line-height: 1.15;
-  }
-
-  .riichi-hand-panel .h-1\.5 {
-    height: 4px;
-  }
-
-  .riichi-tile-hand {
-    width: clamp(22px, 4.1vw, 34px);
-    font-size: clamp(0.78rem, 1.55vw, 1.12rem);
-  }
-
-  .riichi-tile-discard {
-    width: clamp(18px, 2.8vw, 27px);
-    font-size: clamp(0.55rem, 1.25vw, 0.8rem);
-  }
+.riichi-tile-back[data-rotation="0"] .riichi-tile-back-rotator {
+  transform: translate(-50%, -50%);
 }
 
+.riichi-tile-back[data-rotation="90"] .riichi-tile-back-rotator {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.riichi-tile-back[data-rotation="180"] .riichi-tile-back-rotator {
+  transform: translate(-50%, -50%) rotate(180deg);
+}
+
+.riichi-tile-back[data-rotation="-90"] .riichi-tile-back-rotator {
+  transform: translate(-50%, -50%) rotate(-90deg);
+}
+
+.riichi-desktop-rail {
+  position: sticky;
+  top: 68px;
+  z-index: 35;
+  width: 56px;
+  height: calc(100vh - 68px);
+  min-height: 832px;
+  display: grid;
+  grid-template-columns: 56px 304px;
+  overflow: hidden;
+  border-left: 1px solid
+    color-mix(in srgb, var(--riichi-border) 24%, transparent);
+  background: color-mix(in srgb, var(--riichi-bg) 94%, black);
+  box-shadow: -12px 0 28px rgba(0, 0, 0, 0.16);
+  transition: width 0.2s ease;
+}
+
+.riichi-desktop-rail--open {
+  width: 360px;
+}
+
+.riichi-desktop-rail-nav {
+  width: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-top: 16px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.riichi-desktop-rail-button {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--riichi-text-muted);
+  transition:
+    color 0.14s ease,
+    border-color 0.14s ease,
+    background-color 0.14s ease;
+}
+
+.riichi-desktop-rail-button:hover,
+.riichi-desktop-rail-button--active {
+  border-color: color-mix(in srgb, var(--riichi-border) 35%, transparent);
+  color: var(--riichi-accent);
+  background: var(--riichi-accent-soft);
+}
+
+.riichi-desktop-rail-dot {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--riichi-bg);
+  border-radius: 99px;
+  background: #f0bc46;
+  box-shadow: 0 0 8px rgba(240, 188, 70, 0.7);
+}
+
+.riichi-desktop-panel {
+  width: 304px;
+  height: 100%;
+  min-width: 304px;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid
+    color-mix(in srgb, var(--riichi-border) 18%, transparent);
+}
+
+.riichi-desktop-panel-header {
+  min-height: 78px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 18px;
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--riichi-border) 18%, transparent);
+}
+
+.riichi-desktop-panel-kicker {
+  color: var(--riichi-accent);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+}
+
+.riichi-desktop-panel-header h2 {
+  margin-top: 3px;
+  color: var(--riichi-text);
+  font-size: 15px;
+  font-weight: 780;
+}
+
+.riichi-desktop-panel-close {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--riichi-text-muted);
+}
+
+.riichi-desktop-panel-close:hover {
+  color: var(--riichi-text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.riichi-desktop-panel-body {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+
+.riichi-panel-empty {
+  min-height: 210px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 22px;
+  border: 1px dashed color-mix(in srgb, var(--riichi-border) 27%, transparent);
+  border-radius: 13px;
+  color: var(--riichi-text-muted);
+  text-align: center;
+}
+
+.riichi-panel-empty strong {
+  color: var(--riichi-text);
+  font-size: 13px;
+}
+
+.riichi-panel-empty p {
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.riichi-panel-description {
+  margin-bottom: 12px;
+  color: var(--riichi-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.riichi-wait-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.riichi-wait-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.riichi-wait-item > span {
+  color: var(--riichi-text-muted);
+  font-size: 9px;
+}
+
+.riichi-hint-line {
+  margin-top: 15px;
+  padding: 11px;
+  border-radius: 9px;
+  color: var(--riichi-text);
+  background: rgba(255, 255, 255, 0.045);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.riichi-discard-candidates {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.riichi-discard-candidates article {
+  padding: 11px;
+  border: 1px solid color-mix(in srgb, var(--riichi-border) 21%, transparent);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.riichi-candidate-discard,
+.riichi-candidate-waits {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.riichi-candidate-discard {
+  float: left;
+  margin-right: 10px;
+  color: var(--riichi-text-muted);
+  font-size: 10px;
+}
+
+.riichi-candidate-waits {
+  min-height: 51px;
+  flex-wrap: wrap;
+}
+
+.riichi-candidate-waits > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.riichi-candidate-waits small {
+  color: var(--riichi-text-muted);
+  font-size: 8px;
+}
+
+.riichi-discard-candidates article > p {
+  clear: both;
+  margin-top: 8px;
+  color: var(--riichi-text-muted);
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.riichi-settlement-score-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.riichi-settlement-score-list > div {
+  display: grid;
+  grid-template-columns: 1fr auto 54px;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 10px;
+}
+
+.riichi-settlement-score-list strong {
+  color: var(--riichi-text);
+  font-size: 11px;
+}
+
+.riichi-settlement-score-list em {
+  font-style: normal;
+  text-align: right;
+}
+
+.riichi-settlement-score-list .is-up {
+  color: #67d6a0;
+}
+
+.riichi-settlement-score-list .is-down {
+  color: #f07884;
+}
+
+.riichi-settlement-tenpai {
+  margin-top: 13px;
+  color: var(--riichi-text-muted);
+  font-size: 10px;
+}
+
+.riichi-payment-list {
+  margin-top: 14px;
+  padding-top: 13px;
+  border-top: 1px solid
+    color-mix(in srgb, var(--riichi-border) 20%, transparent);
+}
+
+.riichi-payment-list > p {
+  margin-bottom: 8px;
+  color: var(--riichi-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.riichi-payment-list > div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.045);
+  color: var(--riichi-text);
+  font-size: 10px;
+}
+
+.riichi-payment-list small {
+  grid-column: 1 / -1;
+  color: var(--riichi-text-muted);
+  font-size: 8px;
+}
+
+.riichi-log-panel {
+  height: 100%;
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.riichi-log-panel pre {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  padding: 11px;
+  border: 1px solid color-mix(in srgb, var(--riichi-border) 18%, transparent);
+  border-radius: 10px;
+  color: color-mix(in srgb, var(--riichi-text) 88%, transparent);
+  background: rgba(0, 0, 0, 0.18);
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 9px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.riichi-log-panel button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 12px;
+  border: 1px solid color-mix(in srgb, var(--riichi-border) 30%, transparent);
+  border-radius: 8px;
+  color: var(--riichi-text);
+  font-size: 10px;
+}
+
+.riichi-menu-layer,
+.riichi-guide-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.riichi-menu-backdrop,
+.riichi-guide-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.64);
+  backdrop-filter: blur(3px);
+}
+
+.riichi-menu-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 380px;
+  height: 100%;
+  padding: 23px;
+  overflow: auto;
+  border-left: 1px solid
+    color-mix(in srgb, var(--riichi-border) 34%, transparent);
+  color: var(--riichi-text);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent 25%),
+    color-mix(in srgb, var(--riichi-bg) 96%, black);
+  box-shadow: -24px 0 58px rgba(0, 0, 0, 0.4);
+}
+
+.riichi-menu-drawer > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding-bottom: 17px;
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--riichi-border) 20%, transparent);
+}
+
+.riichi-menu-drawer > header p,
+.riichi-menu-section-title {
+  color: var(--riichi-accent);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+}
+
+.riichi-menu-drawer > header h2 {
+  margin-top: 4px;
+  font-size: 19px;
+  font-weight: 760;
+}
+
+.riichi-menu-drawer > header > button {
+  width: 35px;
+  height: 35px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--riichi-text-muted);
+}
+
+.riichi-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.riichi-menu-list > button {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  align-items: center;
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: var(--riichi-text-muted);
+  text-align: left;
+}
+
+.riichi-menu-list > button:hover {
+  border-color: color-mix(in srgb, var(--riichi-border) 25%, transparent);
+  color: var(--riichi-text);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.riichi-menu-list span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.riichi-menu-list strong {
+  color: var(--riichi-text);
+  font-size: 12px;
+}
+
+.riichi-menu-list small {
+  color: var(--riichi-text-muted);
+  font-size: 9px;
+}
+
+.riichi-menu-theme {
+  margin-top: 25px;
+  padding-top: 18px;
+  border-top: 1px solid
+    color-mix(in srgb, var(--riichi-border) 20%, transparent);
+}
+
+.riichi-menu-section-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 11px;
+}
+
+.riichi-theme-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+}
+
+.riichi-theme-options > button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 9px;
+  border: 1px solid color-mix(in srgb, var(--riichi-border) 20%, transparent);
+  border-radius: 8px;
+  color: var(--riichi-text-muted);
+  font-size: 10px;
+}
+
+.riichi-theme-options > button.is-active {
+  border-color: var(--riichi-accent);
+  color: var(--riichi-accent);
+  background: var(--riichi-accent-soft);
+}
+
+.riichi-theme-swatch {
+  width: 100%;
+  height: 25px;
+  display: block;
+  border-radius: 5px;
+}
+
+.riichi-theme-swatch.is-green,
+.riichi-theme-preview.is-green {
+  background: linear-gradient(145deg, #396b54, #153529);
+}
+
+.riichi-theme-swatch.is-blue,
+.riichi-theme-preview.is-blue {
+  background: linear-gradient(145deg, #315f89, #142c43);
+}
+
+.riichi-theme-swatch.is-warm,
+.riichi-theme-preview.is-warm {
+  background: linear-gradient(145deg, #6d4935, #302018);
+}
+
+.riichi-lobby {
+  min-width: 1520px;
+  min-height: 900px;
+  color: var(--riichi-text);
+  background:
+    radial-gradient(
+      circle at 17% 38%,
+      var(--riichi-accent-soft),
+      transparent 31%
+    ),
+    radial-gradient(
+      circle at 80% 70%,
+      rgba(255, 255, 255, 0.055),
+      transparent 27%
+    ),
+    linear-gradient(135deg, var(--riichi-bg), var(--riichi-bg-to) 65%, #030607);
+}
+
+.riichi-lobby-header {
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 46px;
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--riichi-border) 20%, transparent);
+}
+
+.riichi-lobby-header a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--riichi-text-muted);
+  font-size: 12px;
+}
+
+.riichi-lobby-header > span {
+  color: var(--riichi-text-muted);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.17em;
+}
+
+.riichi-lobby-main {
+  width: 1320px;
+  min-height: 830px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) 510px;
+  align-items: center;
+  gap: 100px;
+  padding: 58px 20px 70px;
+}
+
+.riichi-lobby-intro {
+  max-width: 690px;
+}
+
+.riichi-lobby-badge {
+  width: fit-content;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--riichi-border) 27%, transparent);
+  border-radius: 999px;
+  color: var(--riichi-text-muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.riichi-lobby-badge span {
+  color: var(--riichi-accent);
+}
+
+.riichi-lobby-badge i {
+  width: 3px;
+  height: 3px;
+  border-radius: 99px;
+  background: var(--riichi-border);
+}
+
+.riichi-lobby-kicker {
+  margin-top: 42px;
+  color: var(--riichi-accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+}
+
+.riichi-lobby-intro h1 {
+  margin-top: 10px;
+  color: var(--riichi-text);
+  font-size: 64px;
+  font-weight: 850;
+  letter-spacing: -0.045em;
+  line-height: 1.04;
+}
+
+.riichi-lobby-lead {
+  max-width: 620px;
+  margin-top: 24px;
+  color: var(--riichi-text-muted);
+  font-size: 16px;
+  line-height: 1.9;
+}
+
+.riichi-lobby-capabilities {
+  margin-top: 31px;
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  gap: 11px 26px;
+}
+
+.riichi-lobby-capabilities span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--riichi-text);
+  font-size: 12px;
+}
+
+.riichi-lobby-capabilities svg {
+  color: var(--riichi-accent);
+}
+
+.riichi-lobby-guide-button {
+  margin-top: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--riichi-accent) 45%, transparent);
+  color: var(--riichi-accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.riichi-lobby-setup {
+  padding: 29px;
+  border: 1px solid color-mix(in srgb, var(--riichi-border) 31%, transparent);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), transparent 34%),
+    color-mix(in srgb, var(--riichi-bg) 78%, transparent);
+  box-shadow: 0 28px 65px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(16px);
+}
+
+.riichi-lobby-setup-heading > span {
+  color: var(--riichi-accent);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.riichi-lobby-setup-heading h2 {
+  margin-top: 5px;
+  font-size: 24px;
+  font-weight: 780;
+}
+
+.riichi-lobby-setup-heading p {
+  margin-top: 4px;
+  color: var(--riichi-text-muted);
+  font-size: 10px;
+}
+
+.riichi-lobby-setup fieldset {
+  margin-top: 25px;
+}
+
+.riichi-lobby-setup legend {
+  margin-bottom: 9px;
+  color: var(--riichi-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.riichi-match-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.riichi-match-options button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--riichi-border) 22%, transparent);
+  border-radius: 9px;
+  color: var(--riichi-text-muted);
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.riichi-match-options button.is-active {
+  border-color: var(--riichi-accent);
+  color: var(--riichi-text);
+  background: var(--riichi-accent-soft);
+}
+
+.riichi-match-options strong {
+  font-size: 12px;
+}
+
+.riichi-match-options span {
+  font-size: 9px;
+}
+
+.riichi-lobby-themes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.riichi-lobby-themes button {
+  padding: 6px;
+  border: 1px solid color-mix(in srgb, var(--riichi-border) 18%, transparent);
+  border-radius: 8px;
+  color: var(--riichi-text-muted);
+  font-size: 9px;
+}
+
+.riichi-lobby-themes button.is-active {
+  border-color: var(--riichi-accent);
+  color: var(--riichi-accent);
+}
+
+.riichi-theme-preview {
+  position: relative;
+  height: 53px;
+  display: block;
+  margin-bottom: 6px;
+  overflow: hidden;
+  border-radius: 5px;
+}
+
+.riichi-theme-preview i {
+  position: absolute;
+  inset: 12px 23px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.riichi-lobby-assurance {
+  margin-top: 21px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--riichi-text-muted);
+  font-size: 9px;
+}
+
+.riichi-lobby-start {
+  width: 100%;
+  min-height: 56px;
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 17px;
+  border-radius: 10px;
+  color: var(--riichi-btn-primary-text);
+  background: var(--riichi-btn-primary);
+  box-shadow: 0 12px 25px
+    color-mix(in srgb, var(--riichi-btn-primary) 25%, transparent);
+}
+
+.riichi-lobby-start:hover {
+  background: var(--riichi-btn-primary-hover);
+}
+
+.riichi-lobby-start span {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.riichi-lobby-start strong {
+  font-size: 14px;
+}
+
+.riichi-lobby-start small {
+  margin-top: 2px;
+  font-size: 9px;
+  opacity: 0.72;
+}
+
+.riichi-guide-dialog-content {
+  position: relative;
+  z-index: 2;
+  width: 1120px;
+  max-height: calc(100vh - 90px);
+  margin: 45px auto;
+  overflow: auto;
+  border: 1px solid color-mix(in srgb, var(--riichi-border) 36%, transparent);
+  border-radius: 20px;
+  color: var(--riichi-text);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent 28%),
+    color-mix(in srgb, var(--riichi-bg) 96%, black);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.52);
+}
+
+.riichi-guide-panel {
+  padding: 28px;
+}
+
+.riichi-guide-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: 22px;
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--riichi-border) 22%, transparent);
+}
+
+.riichi-guide-header p {
+  color: var(--riichi-accent);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.riichi-guide-header h2 {
+  margin-top: 5px;
+  font-size: 25px;
+  font-weight: 790;
+}
+
+.riichi-guide-header span {
+  display: block;
+  margin-top: 6px;
+  color: var(--riichi-text-muted);
+  font-size: 11px;
+}
+
+.riichi-guide-header button {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--riichi-text-muted);
+}
+
+.riichi-guide-grid,
+.riichi-guide-rules {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 13px;
+}
+
+.riichi-guide-grid {
+  margin-top: 20px;
+}
+
+.riichi-guide-grid section,
+.riichi-guide-rules > div {
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--riichi-border) 18%, transparent);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.riichi-guide-grid section > p {
+  color: var(--riichi-accent);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+}
+
+.riichi-guide-grid h3,
+.riichi-guide-rules h3 {
+  margin-top: 7px;
+  color: var(--riichi-text);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.riichi-guide-grid ul {
+  margin-top: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.riichi-guide-grid li,
+.riichi-guide-rules p {
+  color: var(--riichi-text-muted);
+  font-size: 10px;
+  line-height: 1.65;
+}
+
+.riichi-guide-grid li {
+  position: relative;
+  padding-left: 12px;
+}
+
+.riichi-guide-grid li::before {
+  position: absolute;
+  top: 0.62em;
+  left: 0;
+  width: 4px;
+  height: 4px;
+  border-radius: 99px;
+  background: var(--riichi-accent);
+  content: "";
+}
+
+.riichi-guide-rules {
+  margin-top: 13px;
+}
+
+.riichi-guide-rules p {
+  margin-top: 8px;
+}
+
+.riichi-result-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 36px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+}
+
+.riichi-result-overlay--final {
+  z-index: 110;
+}
+
+.riichi-result-modal {
+  width: 740px;
+  max-height: calc(100vh - 72px);
+  overflow: auto;
+  padding: 25px;
+  border: 1px solid color-mix(in srgb, var(--riichi-border) 55%, transparent);
+  border-radius: 20px;
+  color: var(--riichi-text);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), transparent 27%),
+    color-mix(in srgb, var(--riichi-bg) 95%, black);
+  box-shadow: 0 34px 90px rgba(0, 0, 0, 0.58);
+}
+
+.riichi-result-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 19px;
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--riichi-border) 24%, transparent);
+}
+
+.riichi-result-heading p,
+.riichi-result-section-label {
+  color: var(--riichi-accent);
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.16em;
+}
+
+.riichi-result-heading h3 {
+  margin-top: 4px;
+  font-size: 27px;
+  font-weight: 850;
+  letter-spacing: -0.02em;
+}
+
+.riichi-result-score {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  text-align: right;
+}
+
+.riichi-result-score strong {
+  color: var(--riichi-accent);
+  font-size: 13px;
+}
+
+.riichi-result-score span {
+  max-width: 390px;
+  color: var(--riichi-text-muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.riichi-result-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 13px;
+  margin-top: 16px;
+}
+
+.riichi-result-section {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--riichi-border) 19%, transparent);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.riichi-yaku-list {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.riichi-yaku-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 9px;
+  border-radius: 7px;
+  color: var(--riichi-text);
+  background: rgba(0, 0, 0, 0.12);
+  font-size: 11px;
+}
+
+.riichi-yaku-list strong {
+  color: var(--riichi-accent);
+  font-size: 10px;
+}
+
+.riichi-result-note {
+  margin-top: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  border-radius: 8px;
+  color: var(--riichi-text-muted);
+  background: var(--riichi-accent-soft);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.riichi-result-note strong {
+  color: var(--riichi-accent);
+}
+
+.riichi-result-payments {
+  margin-top: 12px;
+}
+
+.riichi-result-delta {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  padding-bottom: 9px;
+}
+
+.riichi-result-delta span {
+  color: var(--riichi-text);
+  font-size: 11px;
+}
+
+.riichi-result-delta strong {
+  color: #68d9a1;
+  font-size: 17px;
+}
+
+.riichi-result-delta small {
+  grid-column: 1 / -1;
+  color: var(--riichi-text-muted);
+  font-size: 9px;
+}
+
+.riichi-result-payments > p {
+  margin-bottom: 9px;
+  color: var(--riichi-text-muted);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.riichi-result-score-table {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.riichi-result-score-table > div {
+  display: grid;
+  grid-template-columns: 1fr auto 50px;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  color: var(--riichi-text-muted);
+  background: rgba(0, 0, 0, 0.11);
+  font-size: 9px;
+}
+
+.riichi-result-score-table strong {
+  color: var(--riichi-text);
+}
+
+.riichi-result-score-table em {
+  color: var(--riichi-accent);
+  font-style: normal;
+  text-align: right;
+}
+
+.riichi-result-payment-list {
+  margin-top: 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.riichi-result-payment-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--riichi-text-muted);
+  font-size: 9px;
+}
+
+.riichi-result-payment-list strong {
+  color: var(--riichi-text);
+}
+
+.riichi-result-timeout {
+  margin-top: 8px;
+  color: #e9b7bd;
+  font-size: 8px;
+}
+
+.riichi-draw-summary {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.riichi-draw-summary > strong {
+  font-size: 18px;
+}
+
+.riichi-draw-summary > p {
+  color: var(--riichi-text-muted);
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.riichi-draw-summary > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--riichi-accent-soft);
+  font-size: 10px;
+}
+
+.riichi-draw-summary > div strong {
+  color: var(--riichi-accent);
+  font-size: 16px;
+}
+
+.riichi-final-ranking {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.riichi-final-ranking > div {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  align-items: center;
+  gap: 9px;
+  padding: 10px;
+  border-radius: 8px;
+  color: var(--riichi-text-muted);
+  background: rgba(0, 0, 0, 0.12);
+  font-size: 10px;
+}
+
+.riichi-final-ranking > div.is-first {
+  color: var(--riichi-text);
+  background: var(--riichi-accent-soft);
+}
+
+.riichi-final-ranking strong,
+.riichi-final-ranking em {
+  color: var(--riichi-accent);
+  font-style: normal;
+}
+
+.riichi-result-primary {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 16px;
+  border: 0;
+  color: var(--riichi-btn-primary-text);
+  background: var(--riichi-btn-primary);
+  font-weight: 800;
+}
+
+.riichi-result-primary:hover {
+  color: var(--riichi-btn-primary-text);
+  background: var(--riichi-btn-primary-hover);
+}
+
+.riichi-result-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 9px;
+  align-items: end;
+}
+
+.riichi-result-secondary {
+  min-height: 44px;
+  margin-top: 16px;
+  border-color: color-mix(in srgb, var(--riichi-border) 35%, transparent);
+  color: var(--riichi-text-muted);
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .riichi-desktop-stage,
+  .riichi-seat--active,
+  .animate-riichi-tile-drawn,
+  .animate-riichi-overlay-in,
+  .animate-riichi-modal-in,
+  .animate-riichi-active-pulse {
+    animation: none;
+  }
+
+  .riichi-tile--hand,
+  .riichi-desktop-rail {
+    transition: none;
+  }
+}
 /* =========================================
    Home UI Glassmorphism & Animations
    ========================================= */

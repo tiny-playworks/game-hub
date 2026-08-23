@@ -12,10 +12,6 @@ export const RIICHI_THEMES: { id: RiichiThemeId; label: string }[] = [
 ];
 export const RIICHI_THEME_STORAGE_KEY = 'game-hub-riichi-theme';
 
-export const TILE_HAND = 'riichi-tile-hand shrink-0 cursor-pointer';
-export const TILE_DISCARD = 'riichi-tile-discard shrink-0';
-export const TILE_ACTIVE = 'riichi-tile-active';
-
 export const MAX_HISTORY = 40;
 export const MAX_LOG = 150;
 

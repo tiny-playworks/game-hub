@@ -152,11 +152,11 @@ test('日本立直麻将：渲染标题与开始游戏', () => {
   ).toBeInTheDocument();
 });
 
-test('日本立直麻将：自动开局后进入手机游戏舞台', async () => {
+test('日本立直麻将：自动开局后进入桌面游戏舞台', async () => {
   render(
     withRouterAt(<GameMahjongJapanese />, '/game/mahjong-japanese?start=1'),
   );
-  const stage = await screen.findByTestId('riichi-mobile-stage');
+  const stage = await screen.findByTestId('riichi-desktop-stage');
   expect(stage.getAttribute('aria-label')).toMatch(
     /日本立直麻将游戏舞台|Japanese Riichi Mahjong Game Stage/,
   );

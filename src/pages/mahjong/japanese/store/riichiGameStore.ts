@@ -35,7 +35,6 @@ type RiichiGameStore = {
   game: RiichiGameState | null;
   history: RiichiGameState[];
   gameLog: string[];
-  logOpen: boolean;
   winResult: RiichiWinResult | null;
   showGuide: boolean;
   declinedRonToken: string | null;
@@ -46,7 +45,6 @@ type RiichiGameStore = {
   setGame: (updater: Updater<RiichiGameState | null>) => void;
   setHistory: (updater: Updater<RiichiGameState[]>) => void;
   setGameLog: (updater: Updater<string[]>) => void;
-  setLogOpen: (updater: Updater<boolean>) => void;
   setWinResult: (updater: Updater<RiichiWinResult | null>) => void;
   setShowGuide: (updater: Updater<boolean>) => void;
   setDeclinedRonToken: (token: string | null) => void;
@@ -68,7 +66,6 @@ export const useRiichiGameStore = createWithEqualityFn<RiichiGameStore>()(
       game: null,
       history: [],
       gameLog: [],
-      logOpen: false,
       winResult: null,
       showGuide: false,
       declinedRonToken: null,
@@ -94,12 +91,6 @@ export const useRiichiGameStore = createWithEqualityFn<RiichiGameStore>()(
           (s) => ({ gameLog: resolveUpdater(updater, s.gameLog) }),
           false,
           'riichi/setGameLog',
-        ),
-      setLogOpen: (updater) =>
-        set(
-          (s) => ({ logOpen: resolveUpdater(updater, s.logOpen) }),
-          false,
-          'riichi/setLogOpen',
         ),
       setWinResult: (updater) =>
         set(

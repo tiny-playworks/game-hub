@@ -26,13 +26,8 @@ export function StatusPanel({
   isMyTurn,
   currentPlayer,
   lastClaimMsg,
-  myFuritenReason,
-  riichiDeclared,
 }: Props) {
   const { locale, t } = useLocale();
-  const myClaim = !!isMyClaim;
-  const anyClaim = !!hasAnyClaimOption;
-
   const discardLine =
     lastDiscardFrom != null && lastDiscard != null
       ? formatMessage(locale, 'game.mahjong.discardLine', {
@@ -42,8 +37,8 @@ export function StatusPanel({
       : t('game.mahjong.waitingForAction');
 
   const mainLine = isClaimPhase
-    ? myClaim
-      ? anyClaim
+    ? isMyClaim
+      ? hasAnyClaimOption
         ? formatMessage(locale, 'game.mahjong.status.myClaimOptions', {
             discardLine,
           })
@@ -61,44 +56,11 @@ export function StatusPanel({
         });
 
   return (
-    <div className="text-center mb-3">
-      <div className="mb-2">
-        <p className="text-sm text-[#f1faee] font-medium">{mainLine}</p>
-      </div>
-
+    <div className="riichi-status-ribbon" aria-live="polite">
+      <span className="riichi-status-pulse" aria-hidden="true" />
+      <strong>{mainLine}</strong>
       {lastClaimMsg && (
-        <div className="mb-2">
-          <span className="inline-block text-xs text-amber-300/95 bg-amber-900/30 rounded-lg py-1 px-3">
-            {lastClaimMsg}
-          </span>
-        </div>
-      )}
-      {myFuritenReason && (
-        <div className="mb-2">
-          <span className="inline-block text-xs text-rose-200 bg-rose-900/30 rounded-lg py-1 px-3">
-            {myFuritenReason}
-          </span>
-        </div>
-      )}
-
-      {riichiDeclared.some((d) => d) && (
-        <div className="mb-2">
-          <div className="flex flex-wrap justify-center gap-2">
-            {riichiDeclared.map(
-              (declared, i) =>
-                declared && (
-                  <span
-                    key={i}
-                    className="text-xs text-red-300 bg-red-900/30 rounded-lg py-1 px-2"
-                  >
-                    {formatMessage(locale, 'game.mahjong.riichiDeclared', {
-                      seat: t(`game.mahjong.seats.${i}`),
-                    })}
-                  </span>
-                ),
-            )}
-          </div>
-        </div>
+        <span className="riichi-status-event">{lastClaimMsg}</span>
       )}
     </div>
   );

@@ -7,19 +7,18 @@ type Props = {
   children: ReactNode;
 };
 
-export function RiichiMobileStage({ theme, children }: Props) {
+export function RiichiDesktopStage({ theme, children }: Props) {
   const { t } = useLocale();
+
   return (
     <div
-      data-testid="riichi-mobile-stage"
+      data-testid="riichi-desktop-stage"
       data-riichi-theme={theme}
-      className="riichi-mobile-shell"
+      className="riichi-desktop-shell"
       role="application"
-      aria-label={t('game.mahjong.mobileStageAria')}
+      aria-label={t('game.mahjong.desktopStageAria')}
     >
-      <div className="riichi-phone-frame">
-        <div className="riichi-safe-stage">{children}</div>
-      </div>
+      <div className="riichi-desktop-stage">{children}</div>
     </div>
   );
 }
