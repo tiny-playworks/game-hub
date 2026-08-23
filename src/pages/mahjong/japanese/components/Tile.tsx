@@ -25,12 +25,6 @@ export const RIICHI_TILE_ATLAS = Array.from({ length: 37 }, (_, id) => ({
   aka: isAkaFive(id),
 })) as readonly { id: number; base: number; aka: boolean }[];
 
-const AKA_CELLS: Record<number, AtlasCell> = {
-  34: { column: 9, row: 0 },
-  35: { column: 9, row: 1 },
-  36: { column: 9, row: 2 },
-};
-
 const ATLAS_WIDTH = 1620;
 const ATLAS_HEIGHT = 971;
 const ATLAS_TILE_WIDTH = 143;
@@ -44,10 +38,12 @@ const ATLAS_ROWS = [
 ] as const;
 
 function getAtlasCell(tile: number): AtlasCell {
-  const akaCell = AKA_CELLS[tile];
-  if (akaCell) return akaCell;
-
   const base = getBaseTile(tile);
+  if (isAkaFive(tile)) {
+    if (base < 9) return { column: 9, row: 0 };
+    if (base < 18) return { column: 9, row: 1 };
+    return { column: 9, row: 2 };
+  }
   if (base < 9) return { column: base, row: 0 };
   if (base < 18) return { column: base - 9, row: 1 };
   if (base < 27) return { column: base - 18, row: 2 };

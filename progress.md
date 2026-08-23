@@ -72,3 +72,4 @@ Original prompt: 完整阅读并审视 Tiny Game Hub，将其从机械扩张的�
 - Added a persistent left-side table-status panel for round metrics, scores, active seat, discard load, and meld count while preserving the collapsible training rail on the right and keeping the 960px table centered.
 - Rotated each river as a complete six-column block and added a dense mode after 24 discards; each seat can display up to a 6x6 river inside its own board region without entering the center console.
 - TypeScript compilation passed. No tests, build, or browser acceptance were run, per user direction.
+- Fixed the generated-atlas red-five lookup: project IDs are 34=red 5-man, 35=red 5-pin, and 36=red 5-sou. Atlas selection now derives the suit from `getBaseTile()` instead of duplicating that numeric ordering, so sorted red fives cannot display another suit's artwork. TypeScript compilation passed; browser acceptance remained user-owned.
