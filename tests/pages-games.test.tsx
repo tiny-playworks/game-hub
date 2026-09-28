@@ -158,7 +158,7 @@ test('日本立直麻将：自动开局后进入桌面游戏舞台', async () =>
   );
   const stage = await screen.findByTestId('riichi-desktop-stage');
   expect(stage.getAttribute('aria-label')).toMatch(
-    /日本立直麻将游戏舞台|Japanese Riichi Mahjong Game Stage/,
+    /日本立直麻将桌面牌桌|Japanese Riichi Mahjong Desktop Table/,
   );
 });
 

@@ -3,12 +3,7 @@
  * 牌 id：本项目 0-33 基础牌型，34-36 为赤5万/赤5筒/赤5条；riichi-rs 使用 Tile 枚举 1-34。
  */
 
-import {
-  calc,
-  type RiichiInput,
-  type RiichiResult,
-  type Tile,
-} from 'riichi-rs-bundlers';
+import type { RiichiInput, RiichiResult, Tile } from 'riichi-rs-bundlers';
 import { getBaseTile, getDoraFromIndicator } from '@/lib/mahjongRiichi';
 
 type Meld = RiichiInput['open_part'][number];
@@ -69,6 +64,14 @@ export interface GameStateForRs {
   ippatsu?: boolean;
   /** 和了者座位（0–3）；缺省 0，与「自家」一致 */
   winnerSeat?: number;
+  /** 两立直（第一巡无人鸣牌时宣言） */
+  doubleRiichi?: boolean;
+  /** 第一巡无人鸣牌时的首次自摸（天和/地和） */
+  firstTake?: boolean;
+  /** 海底摸月/河底捞鱼；缺省时按 wallLength <= 0 推断 */
+  lastTile?: boolean;
+  /** 国士十三面、四暗刻单骑等按双倍役满计 */
+  allowDoubleYakuman?: boolean;
 }
 
 function meldsToRs(melds: GameStateForRs['melds']): Meld[] {
@@ -208,7 +211,9 @@ export function buildRiichiInput(
     aka_count: aka,
     riichi: state.riichiDeclared[w],
     ippatsu: state.ippatsu ?? false,
-    double_riichi: false,
+    double_riichi: state.doubleRiichi ?? false,
+    first_take: isTsumo && (state.firstTake ?? false),
+    allow_double_yakuman: state.allowDoubleYakuman ?? false,
     after_kan: state.afterKan ?? false,
     tile_discarded_by_someone: isTsumo
       ? -1
@@ -220,7 +225,9 @@ export function buildRiichiInput(
     allow_aka: true,
     allow_kuitan: true,
     with_kiriage: false,
-    last_tile: state.wallLength <= 0 && (state.lastDiscard != null || isTsumo),
+    last_tile:
+      state.lastTile ??
+      (state.wallLength <= 0 && (state.lastDiscard != null || isTsumo)),
   };
   return {
     closed_part: closed,
@@ -304,25 +311,4 @@ export function rsResultToYakuList(
     });
   }
   return list;
-}
-
-/** @deprecated 仅保留兼容；生产调用应使用 riichiRules.evaluateWin 获取可区分的错误与精确支付。 */
-export function calcWithRiichiRs(input: RiichiInput): {
-  fu: number;
-  han: number;
-  ten: number;
-  yaku: { id: string; name: string; han: number }[];
-} | null {
-  try {
-    const result = calc(input);
-    if (!result.is_agari) return null;
-    return {
-      fu: result.fu,
-      han: result.han,
-      ten: result.ten,
-      yaku: rsResultToYakuList(result),
-    };
-  } catch {
-    return null;
-  }
 }

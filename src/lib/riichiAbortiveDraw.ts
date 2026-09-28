@@ -1,10 +1,11 @@
-import { getBaseTile } from '@/lib/mahjongRiichi';
+import { getBaseTile, isKanMeld } from '@/lib/mahjongRiichi';
 
 export type AbortiveDrawReason =
-  | '九种九牌'
-  | '四风连打'
-  | '四家立直'
-  | '四开杠';
+  | 'kyuushu'
+  | 'suufon'
+  | 'suucha'
+  | 'suukaikan'
+  | 'sanchahou';
 
 type RiichiMeldLike = {
   type: 'chi' | 'peng' | 'mingang' | 'angang' | 'kakan';
@@ -49,16 +50,22 @@ export function shouldAbortOnSuuchaRiichi(riichiDeclared: boolean[]): boolean {
   return riichiDeclared.length === 4 && riichiDeclared.every(Boolean);
 }
 
+export function countKans(melds: RiichiMeldLike[][]): {
+  total: number;
+  seats: number;
+} {
+  let total = 0;
+  let seats = 0;
+  for (const seatMelds of melds) {
+    const seatKan = seatMelds.filter(isKanMeld).length;
+    total += seatKan;
+    if (seatKan > 0) seats++;
+  }
+  return { total, seats };
+}
+
 /** 四开杠：全场杠子总数 >=4，且不是同一人独占四杠。 */
 export function shouldAbortOnSuukaikan(melds: RiichiMeldLike[][]): boolean {
-  let totalKan = 0;
-  let kanSeats = 0;
-  for (const seatMelds of melds) {
-    const seatKan = seatMelds.filter(
-      (m) => m.type === 'mingang' || m.type === 'angang' || m.type === 'kakan',
-    ).length;
-    totalKan += seatKan;
-    if (seatKan > 0) kanSeats++;
-  }
-  return totalKan >= 4 && kanSeats >= 2;
+  const { total, seats } = countKans(melds);
+  return total >= 4 && seats >= 2;
 }

@@ -1,7 +1,16 @@
-import { type FuritenState, getBaseTile } from '@/lib/mahjongRiichi';
+import { getBaseTile } from '@/lib/mahjongRiichi';
+
+/**
+ * 振听状态中需要记忆的部分；舍张振听由自家牌河与当前待牌实时计算。
+ * doujun：同巡振听（见逃后到自己下次摸牌前）；riichi：立直后见逃，本局永久振听。
+ */
+export interface FuritenState {
+  doujun: boolean;
+  riichi: boolean;
+}
 
 export function createInitialFuritenState(): FuritenState {
-  return { sutehai: false, doujun: false, riichi: false };
+  return { doujun: false, riichi: false };
 }
 
 export function clearDoujunFuriten(state: FuritenState): FuritenState {
@@ -35,4 +44,19 @@ export function isRonForbiddenByFuriten(params: {
     params.state.doujun ||
     isSutehaiFuriten(params.waitingTiles, params.ownDiscards)
   );
+}
+
+export type FuritenReason = 'riichi' | 'doujun' | 'sutehai';
+
+export function getFuritenReason(params: {
+  waitingTiles: number[];
+  ownDiscards: number[];
+  state: FuritenState;
+}): FuritenReason | null {
+  if (params.state.riichi) return 'riichi';
+  if (params.state.doujun) return 'doujun';
+  if (isSutehaiFuriten(params.waitingTiles, params.ownDiscards)) {
+    return 'sutehai';
+  }
+  return null;
 }

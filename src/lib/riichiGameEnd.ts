@@ -1,4 +1,30 @@
-export type MatchEndReason = 'tobi' | 'east4_end' | 'south4_end' | 'agari_yame';
+export type MatchEndReason =
+  | 'tobi'
+  | 'east4_end'
+  | 'south4_end'
+  | 'agari_yame'
+  | 'extension_end';
+
+export interface MatchEndRules {
+  /** 返点线：最后一局结束时需有人达到该分数，否则进入延长战 */
+  returnScore: number;
+  /** 未达返点线时是否进入延长战（东风战南入 / 半庄战西入） */
+  extension: boolean;
+  /** 最后一局庄家和了且为头名（且达返点线）时自动收场 */
+  agariYame: boolean;
+  /** 最后一局荒牌庄家听牌且为头名时收场 */
+  tenpaiYame: boolean;
+  /** 有人点数低于 0 时击飞终局 */
+  tobi: boolean;
+}
+
+export const DEFAULT_MATCH_END_RULES: MatchEndRules = {
+  returnScore: 30000,
+  extension: true,
+  agariYame: true,
+  tenpaiYame: false,
+  tobi: true,
+};
 
 export function isDealerTop(scores: number[], dealer: number): boolean {
   const dealerScore = scores[dealer] ?? Number.NEGATIVE_INFINITY;
@@ -6,12 +32,13 @@ export function isDealerTop(scores: number[], dealer: number): boolean {
 }
 
 /**
- * 终局判定（简化天凤/雀魂常规）：
- * 1) 任意玩家分数 < 0：击飞终局
- * 2) 东风场（matchLength='east'）：东4局子家胡（庄家没胡）→ 结束（east4_end）
- * 3) 南风场 南4（roundWind=1, roundNumber=4）时：
- *    - 庄家连庄且庄家头名：可收场（agari-yame）
- *    - 非连庄：若有人 >= 30000 则结束（south4_end），否则继续（西入）
+ * 终局判定（对齐雀魂段位规则）：
+ * 1) 有人点数 < 0：击飞
+ * 2) 最后一局（东风战东4 / 半庄战南4）：
+ *    - 庄家和了且为头名并达返点线：和了止め；听牌连庄默认继续
+ *    - 庄家连庄但不满足收场条件：继续
+ *    - 换庄时有人达返点线：终局，否则进入延长战
+ * 3) 延长战（南入 / 西入）：换庄时有人达返点线即终局；延长场第 4 局换庄后强制终局
  */
 export function resolveRiichiMatchEnd(input: {
   scores: number[];
@@ -19,25 +46,46 @@ export function resolveRiichiMatchEnd(input: {
   roundNumber: number;
   dealer: number;
   dealerStays: boolean;
+  /** 庄家是否为和了连庄（区别于听牌连庄） */
+  dealerWon?: boolean;
   matchLength: 'east' | 'south';
+  rules?: Partial<MatchEndRules>;
 }): { end: boolean; reason?: MatchEndReason } {
-  if (input.scores.some((s) => s < 0)) return { end: true, reason: 'tobi' };
-
-  const isEast4 = input.roundWind === 0 && input.roundNumber === 4;
-  if (input.matchLength === 'east' && isEast4 && !input.dealerStays) {
-    return { end: true, reason: 'east4_end' };
+  const rules = { ...DEFAULT_MATCH_END_RULES, ...input.rules };
+  if (rules.tobi && input.scores.some((s) => s < 0)) {
+    return { end: true, reason: 'tobi' };
   }
 
-  const isSouth4 = input.roundWind === 1 && input.roundNumber === 4;
-  if (!isSouth4) return { end: false };
+  const lastWind = input.matchLength === 'east' ? 0 : 1;
+  const isAllLast = input.roundWind === lastWind && input.roundNumber === 4;
+  const inExtension = input.roundWind > lastWind;
+  if (!isAllLast && !inExtension) return { end: false };
 
-  if (!input.dealerStays) {
-    const hasTargetScore = input.scores.some((s) => s >= 30000);
-    if (hasTargetScore) return { end: true, reason: 'south4_end' };
+  const hasTarget = input.scores.some((s) => s >= rules.returnScore);
+  if (input.dealerStays) {
+    const yameAllowed = input.dealerWon ? rules.agariYame : rules.tenpaiYame;
+    if (
+      yameAllowed &&
+      isDealerTop(input.scores, input.dealer) &&
+      input.scores[input.dealer] >= rules.returnScore
+    ) {
+      return { end: true, reason: 'agari_yame' };
+    }
     return { end: false };
   }
-  if (isDealerTop(input.scores, input.dealer)) {
-    return { end: true, reason: 'agari_yame' };
+
+  if (isAllLast) {
+    if (hasTarget || !rules.extension) {
+      return {
+        end: true,
+        reason: input.matchLength === 'east' ? 'east4_end' : 'south4_end',
+      };
+    }
+    return { end: false };
+  }
+
+  if (hasTarget || input.roundNumber === 4 || input.roundWind > lastWind + 1) {
+    return { end: true, reason: 'extension_end' };
   }
   return { end: false };
 }

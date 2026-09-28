@@ -5,4 +5,9 @@ import { defineConfig } from '@rstest/core';
 export default defineConfig({
   extends: withRsbuildConfig(),
   setupFiles: ['./tests/rstest.setup.ts'],
+  coverage: {
+    provider: 'istanbul',
+    include: ['src/lib/**/*.ts', 'src/pages/mahjong/japanese/**/*.{ts,tsx}'],
+    reporters: ['text-summary', 'html'],
+  },
 });

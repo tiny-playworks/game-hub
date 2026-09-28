@@ -17,6 +17,30 @@ export const DEFAULT_AUDIO_VOLUMES: AudioVolumes = {
   voice: 1,
 };
 
+/** 日麻对局偏好 */
+export interface RiichiPlayerSettings {
+  /** 可和了时自动荣和 / 自摸 */
+  autoWin: boolean;
+  /** 不鸣牌：除荣和外自动跳过吃碰杠 */
+  noCall: boolean;
+  /** 立直后自动摸切 */
+  autoTsumogiri: boolean;
+  /** 吃碰杠需再次点击确认 */
+  callConfirm: boolean;
+  /** 他家立直或多副露时，为手牌标注放铳危险度 */
+  dangerHint: boolean;
+  aiLevel: 'beginner' | 'standard';
+}
+
+export const DEFAULT_RIICHI_SETTINGS: RiichiPlayerSettings = {
+  autoWin: false,
+  noCall: false,
+  autoTsumogiri: true,
+  callConfirm: false,
+  dangerHint: true,
+  aiLevel: 'standard',
+};
+
 export interface PlayerProfile {
   nickname: string;
   avatarMode: PlayerAvatarMode;
@@ -25,6 +49,7 @@ export interface PlayerProfile {
   activeTitle: string | null;
   /** 音量分组，缺失或非法字段在归一化时回退为 1 */
   audioVolumes: AudioVolumes;
+  riichiSettings: RiichiPlayerSettings;
   updatedAt: number;
 }
 
@@ -106,7 +131,24 @@ export function createDefaultPlayerProfile(): PlayerProfile {
     avatarUploadDataUrl: null,
     activeTitle: null,
     audioVolumes: { ...DEFAULT_AUDIO_VOLUMES },
+    riichiSettings: { ...DEFAULT_RIICHI_SETTINGS },
     updatedAt: Date.now(),
+  };
+}
+
+export function normalizeRiichiSettings(raw: unknown): RiichiPlayerSettings {
+  const d = DEFAULT_RIICHI_SETTINGS;
+  if (!raw || typeof raw !== 'object') return { ...d };
+  const o = raw as Partial<RiichiPlayerSettings>;
+  const bool = (v: unknown, fallback: boolean) =>
+    typeof v === 'boolean' ? v : fallback;
+  return {
+    autoWin: bool(o.autoWin, d.autoWin),
+    noCall: bool(o.noCall, d.noCall),
+    autoTsumogiri: bool(o.autoTsumogiri, d.autoTsumogiri),
+    callConfirm: bool(o.callConfirm, d.callConfirm),
+    dangerHint: bool(o.dangerHint, d.dangerHint),
+    aiLevel: o.aiLevel === 'beginner' ? 'beginner' : 'standard',
   };
 }
 
@@ -177,6 +219,7 @@ function normalizePlayerProfile(raw: unknown): PlayerProfile {
     activeTitle:
       typeof parsed.activeTitle === 'string' ? parsed.activeTitle : null,
     audioVolumes: normalizeAudioVolumes(parsed.audioVolumes),
+    riichiSettings: normalizeRiichiSettings(parsed.riichiSettings),
     updatedAt:
       typeof parsed.updatedAt === 'number' && Number.isFinite(parsed.updatedAt)
         ? parsed.updatedAt
@@ -220,10 +263,16 @@ export function savePlayerProfile(profile: PlayerProfile): PlayerProfile {
 }
 
 export function updatePlayerProfile(
-  patch: Partial<Omit<PlayerProfile, 'updatedAt'>>,
+  patch: Partial<Omit<PlayerProfile, 'updatedAt' | 'riichiSettings'>> & {
+    riichiSettings?: Partial<RiichiPlayerSettings>;
+  },
 ): PlayerProfile {
   const current = getPlayerProfile();
-  const { audioVolumes: patchAudio, ...rest } = patch;
+  const {
+    audioVolumes: patchAudio,
+    riichiSettings: patchRiichi,
+    ...rest
+  } = patch;
   const merged: PlayerProfile = {
     ...current,
     ...rest,
@@ -234,6 +283,10 @@ export function updatePlayerProfile(
             ...patchAudio,
           })
         : current.audioVolumes,
+    riichiSettings:
+      patchRiichi !== undefined
+        ? normalizeRiichiSettings({ ...current.riichiSettings, ...patchRiichi })
+        : current.riichiSettings,
   };
   return savePlayerProfile(merged);
 }
