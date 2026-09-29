@@ -22,6 +22,7 @@ export function CenterArea({ game }: Props) {
           <div
             key={seat}
             className={`riichi-river riichi-river--seat-${seat}`}
+            role="group"
             aria-label={`${t(`game.mahjong.seats.${seat}`)}舍牌`}
           >
             <div

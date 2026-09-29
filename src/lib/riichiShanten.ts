@@ -21,7 +21,10 @@ export function countRemaining(
   tiles: readonly number[],
   visible: VisibleCounts,
 ): number {
-  return tiles.reduce((sum, t) => sum + remainingOf(getBaseTile(t), visible), 0);
+  return tiles.reduce(
+    (sum, t) => sum + remainingOf(getBaseTile(t), visible),
+    0,
+  );
 }
 
 /** 13 张逻辑牌的向听数（-1 已和，0 听牌） */

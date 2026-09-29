@@ -3,12 +3,14 @@ import {
   AKA_5_MAN,
   AKA_5_PIN,
   AKA_5_SOU,
-  calcFu,
-  computeYaku,
   createRiichiDeck,
   getBaseTile,
   getTileLabel,
 } from '../src/lib/mahjongRiichi';
+
+import { evaluateSeatWin } from '../src/pages/mahjong/japanese/engine';
+import { createTestRound } from './helpers/riichiState';
+import { tile, tiles } from './helpers/riichiTiles';
 
 describe('日麻 - 赤宝牌映射修复', () => {
   test('AKA_5_PIN 映射到五筒(22)', () => {
@@ -38,84 +40,45 @@ describe('日麻 - 赤宝牌映射修复', () => {
   });
 });
 
-describe('日麻 - 符数计算修复', () => {
-  test('平和自摸 = 20 符', () => {
-    const fu = calcFu({
-      isTsumo: true,
-      isMenzhen: true,
-      hasPinfu: true,
-      isChiitoitsu: false,
-    });
-    expect(fu).toBe(20);
-  });
+function evaluateHand(hand: number[], winningTile: number, isTsumo: boolean) {
+  const state = createTestRound(1);
+  state.hands[0] = [...hand];
+  state.drawnTile = winningTile;
+  if (!isTsumo) state.hands[0].splice(state.hands[0].indexOf(winningTile), 1);
+  return evaluateSeatWin({ state, seat: 0, winningTile, isTsumo });
+}
 
-  test('平和荣和 = 30 符', () => {
-    const fu = calcFu({
-      isTsumo: false,
-      isMenzhen: true,
-      hasPinfu: true,
-      isChiitoitsu: false,
-    });
-    expect(fu).toBe(30);
+describe('日麻 - WASM 符数与平和回归', () => {
+  const pinfu = tiles('123456m234p678s55p');
+  test('平和自摸为 20 符', () => {
+    expect(evaluateHand(pinfu, tile('6m'), true).fu).toBe(20);
   });
-
-  test('七对子 = 25 符', () => {
-    const fu = calcFu({
-      isTsumo: false,
-      isMenzhen: true,
-      hasPinfu: false,
-      isChiitoitsu: true,
-    });
-    expect(fu).toBe(25);
+  test('平和荣和为 30 符', () => {
+    expect(evaluateHand(pinfu, tile('6m'), false).fu).toBe(30);
   });
-});
-
-describe('日麻 - 平和判定修复', () => {
-  test('同牌 3 张跨顺子的平和手牌应被识别', () => {
-    // 0,0,0,1,1,1,2,2,2,3,4,5,6,6 → pair 66 + 012×3 + 345
-    const hand = [0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 4, 5, 6, 6];
-    const yaku = computeYaku({
-      hand,
-      melds: [],
-      isMenzhen: true,
-      isTsumo: false,
-      isRiichi: false,
-      ippatsuPossible: false,
-      seatWind: 27,
-      roundWind: 27,
-    });
-    expect(yaku.some((y) => y.id === 'pinfu')).toBe(true);
+  test('七对子为 25 符', () => {
+    expect(
+      evaluateHand(tiles('1122m3344p5566s77z'), tile('7z'), false).fu,
+    ).toBe(25);
   });
-
-  test('含刻子的手牌不是平和', () => {
-    // 0,0,0,9,10,11,18,19,20,1,2,3,4,4 → pair 44 + 000(刻) + 9-10-11 + 18-19-20 + 123
-    const hand = [0, 0, 0, 1, 2, 3, 4, 4, 9, 10, 11, 18, 19, 20];
-    const yaku = computeYaku({
-      hand,
-      melds: [],
-      isMenzhen: true,
-      isTsumo: false,
-      isRiichi: false,
-      ippatsuPossible: false,
-      seatWind: 27,
-      roundWind: 27,
-    });
-    expect(yaku.some((y) => y.id === 'pinfu')).toBe(false);
+  test('同牌 3 张跨顺子的手牌可以有平和', () => {
+    const result = evaluateHand(tiles('122233344m678p55s'), tile('4m'), false);
+    expect(result.yaku.some((y) => y.name === '平和')).toBe(true);
   });
-
-  test('役牌将的手牌不是平和', () => {
-    // pair = 白白(33,33), melds all sequences
-    const hand = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 33, 33];
-    const yaku = computeYaku({
-      hand,
-      melds: [],
-      isMenzhen: true,
-      isTsumo: false,
-      isRiichi: false,
-      ippatsuPossible: false,
-      seatWind: 27,
-      roundWind: 27,
-    });
-    expect(yaku.some((y) => y.id === 'pinfu')).toBe(false);
+  test('含刻子的手牌没有平和', () => {
+    const result = evaluateHand(
+      [0, 0, 0, 1, 2, 3, 4, 4, 9, 10, 11, 18, 19, 20],
+      20,
+      false,
+    );
+    expect(result.yaku.some((y) => y.name === '平和')).toBe(false);
+  });
+  test('役牌雀头没有平和', () => {
+    const result = evaluateHand(
+      [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 33, 33],
+      11,
+      false,
+    );
+    expect(result.yaku.some((y) => y.name === '平和')).toBe(false);
   });
 });

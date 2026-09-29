@@ -69,7 +69,11 @@ export function saveMatch(
       });
       return;
     }
-    const data: RiichiSaveData = { match, processedProgress, savedAt: Date.now() };
+    const data: RiichiSaveData = {
+      match,
+      processedProgress,
+      savedAt: Date.now(),
+    };
     s.setItem(RIICHI_SAVE_STORAGE_KEY, JSON.stringify(data));
   } catch {
     // 存储已满或被禁用时忽略，不影响对局

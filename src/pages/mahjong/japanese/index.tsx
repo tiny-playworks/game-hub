@@ -2,8 +2,9 @@ import { ArrowRight, Copy, Info, TimerReset } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useLocale } from '@/contexts/LocaleContext';
+import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import type { Locale } from '@/lib/i18n';
-import { getBaseTile, getTileLabel, isMenzhen } from '@/lib/mahjongRiichi';
+import { getBaseTile, getTileLabel } from '@/lib/mahjongRiichi';
 import { markRecentMahjongPlayed } from '@/lib/recentMahjong';
 import { getTurnTotalSeconds } from '@/lib/riichiClock';
 import { getCurrentRiichiRoundProgressSummary } from '@/lib/riichiProgress';
@@ -22,19 +23,25 @@ import { RulesView } from './components/RulesView';
 import { StatusPanel } from './components/StatusPanel';
 import { TableContextPanel } from './components/TableContextPanel';
 import { RiichiTile } from './components/Tile';
+import type { RiichiEvent } from './engine';
 import {
+  formatLogEntry,
   formatPoints,
   getSeatWind,
   toMeldKeyedItems,
   toTileKeyedItems,
 } from './helpers';
+import { useRiichiStore } from './store/riichiMatchStore';
 import type { RiichiGameState } from './types';
-import { useRiichiGame } from './useRiichiGame';
+import { useHumanRemainingSeconds } from './useHumanRemainingSeconds';
+import { useRiichiAutomation, withElapsed } from './useRiichiAutomation';
+import { useRiichiEffectSounds } from './useRiichiEffectSounds';
 import { useRiichiTheme } from './useRiichiTheme';
+import { useRiichiViewModel } from './useRiichiViewModel';
 
 export { getNextRound } from './helpers';
 
-type RiichiGameBag = ReturnType<typeof useRiichiGame>;
+type RiichiGameBag = ReturnType<typeof useRiichiViewModel>;
 
 function formatChiTripleLabel(
   option: [number, number],
@@ -64,6 +71,8 @@ type RiichiActionState = {
   canKyuushuKyuuhai: boolean;
   angangOptions: number[][];
   kakanOptions: number[];
+  riichiSelecting: boolean;
+  discardable: number[];
 };
 
 type RiichiActionHandlers = {
@@ -72,7 +81,6 @@ type RiichiActionHandlers = {
   doPeng: () => void;
   doMingang: () => void;
   passClaim: () => void;
-  passRonOpportunity: () => void;
   doTsumo: () => void;
   doRiichi: () => void;
   doKyuushuKyuuhai: () => void;
@@ -110,13 +118,16 @@ function RiichiActionPanel({
 
   return (
     <div className="riichi-action-dock" role="toolbar" aria-label="可用动作">
-      {claimActionsAvailable && game.lastDiscard != null && (
+      {claimActionsAvailable && game.claim != null && (
         <div className="riichi-action-target">
-          <RiichiTile tile={game.lastDiscard} variant="river" />
+          <RiichiTile tile={game.claim.tile} variant="river" />
           <span>
-            {game.lastDiscardFrom != null
-              ? `${t(`game.mahjong.seats.${game.lastDiscardFrom}`)}的舍牌`
-              : '相关舍牌'}
+            {t(`game.mahjong.seats.${game.claim.from}`)} ·{' '}
+            {t(
+              game.claim.kind === 'discard'
+                ? 'riichi.action.discard'
+                : 'riichi.action.chankan',
+            )}
           </span>
         </div>
       )}
@@ -142,7 +153,11 @@ function RiichiActionPanel({
                 >
                   {t('riichi.chi')}
                   <small>
-                    {formatChiTripleLabel(option, game.lastDiscard, locale)}
+                    {formatChiTripleLabel(
+                      option,
+                      game.claim?.tile ?? null,
+                      locale,
+                    )}
                   </small>
                 </button>
               ))}
@@ -167,11 +182,7 @@ function RiichiActionPanel({
             <button
               type="button"
               className="riichi-action-button is-pass"
-              onClick={
-                state.isMyClaim
-                  ? handlers.passClaim
-                  : handlers.passRonOpportunity
-              }
+              onClick={handlers.passClaim}
             >
               {t('riichi.pass')}
             </button>
@@ -194,8 +205,13 @@ function RiichiActionPanel({
                 type="button"
                 className="riichi-action-button is-secondary"
                 onClick={handlers.doRiichi}
+                aria-pressed={state.riichiSelecting}
               >
-                {t('riichi.declareRiichi')}
+                {t(
+                  state.riichiSelecting
+                    ? 'riichi.action.cancelRiichi'
+                    : 'riichi.declareRiichi',
+                )}
               </button>
             )}
             {state.canKyuushuKyuuhai && (
@@ -252,25 +268,36 @@ function GuideDialog({ onClose }: { onClose: () => void }) {
   );
 }
 
-function getOpponentTimerLabel(
-  game: RiichiGameState,
-  seat: 1 | 2 | 3,
-  decisionSeat: number | null,
-  decisionSeatRemainSeconds: number | null,
-): string {
-  const decisionText =
-    decisionSeat === seat && decisionSeatRemainSeconds != null
-      ? ` · 本巡 ${decisionSeatRemainSeconds}s`
-      : '';
-  return `时库 ${game.timeBanks[seat]}s${decisionText}`;
+function HumanTurnTimer({ timeBank }: { timeBank: number }) {
+  const { t } = useLocale();
+  const seconds = useHumanRemainingSeconds();
+  if (seconds === null) return null;
+  return (
+    <div
+      className="riichi-self-timer"
+      role="progressbar"
+      aria-label={t('riichi.action.remainingTime')}
+      aria-valuemin={0}
+      aria-valuemax={getTurnTotalSeconds(timeBank)}
+      aria-valuenow={seconds}
+      title={`${seconds}s`}
+    >
+      <span
+        className={
+          seconds <= 3 ? 'is-critical' : seconds <= 8 ? 'is-warning' : 'is-safe'
+        }
+        style={{
+          width: `${Math.min(100, (seconds / getTurnTotalSeconds(timeBank)) * 100)}%`,
+        }}
+      />
+    </div>
+  );
 }
 
 type SelfSeatProps = {
   game: RiichiGameState;
   locale: Locale;
-  currentTurnRemainSeconds: number | null;
   decisionSeat: number | null;
-  timerTextClass: (seat: 0 | 1 | 2 | 3) => string;
   myFuritenReason: string | null;
   actionState: RiichiActionState;
   actionHandlers: RiichiActionHandlers;
@@ -280,9 +307,7 @@ type SelfSeatProps = {
 function SelfSeat({
   game,
   locale,
-  currentTurnRemainSeconds,
   decisionSeat,
-  timerTextClass,
   myFuritenReason,
   actionState,
   actionHandlers,
@@ -291,7 +316,7 @@ function SelfSeat({
   const { t } = useLocale();
   const handItems = toTileKeyedItems(game.hands[0], 'self-hand');
   let drawnIndex = -1;
-  if (game.drawnTile != null) {
+  if (actionState.isMyTurn && game.drawnTile != null) {
     for (let index = handItems.length - 1; index >= 0; index--) {
       if (handItems[index].tile === game.drawnTile) {
         drawnIndex = index;
@@ -303,7 +328,6 @@ function SelfSeat({
   const drawnItem = drawnIndex >= 0 ? handItems[drawnIndex] : null;
   const seatWind = getSeatWind(game.roundWind, 0, game.dealer);
   const canDiscard = actionState.isMyTurn;
-  const totalSeconds = getTurnTotalSeconds(game.timeBanks[0]);
 
   const renderHandTile = (
     item: { tile: number; key: string },
@@ -313,7 +337,13 @@ function SelfSeat({
       key={item.key}
       tile={item.tile}
       variant="hand"
-      state={drawn ? 'drawn' : 'normal'}
+      state={
+        !actionState.discardable.includes(item.tile)
+          ? 'disabled'
+          : drawn
+            ? 'drawn'
+            : 'normal'
+      }
       onClick={canDiscard ? () => discard(0, item.tile) : undefined}
     />
   );
@@ -341,10 +371,7 @@ function SelfSeat({
           <strong>{formatPoints(game.scores[0])}</strong>
         </div>
         <div className="riichi-seat-card-meta">
-          <span className={timerTextClass(0)}>时库 {game.timeBanks[0]}s</span>
-          {currentTurnRemainSeconds != null && (
-            <span>本巡 {currentTurnRemainSeconds}s</span>
-          )}
+          <span>时库 {game.timeBanks[0]}s</span>
           {game.currentPlayer === 0 && (
             <span className="riichi-seat-action">行动中</span>
           )}
@@ -360,25 +387,7 @@ function SelfSeat({
         </div>
       </div>
 
-      {currentTurnRemainSeconds != null && (
-        <div className="riichi-self-timer" aria-label="本巡剩余时间">
-          <span
-            className={cn(
-              currentTurnRemainSeconds <= 3
-                ? 'is-critical'
-                : currentTurnRemainSeconds <= 8
-                  ? 'is-warning'
-                  : 'is-safe',
-            )}
-            style={{
-              width: `${Math.max(
-                0,
-                Math.min(100, (currentTurnRemainSeconds / totalSeconds) * 100),
-              )}%`,
-            }}
-          />
-        </div>
-      )}
+      <HumanTurnTimer timeBank={game.timeBanks[0]} />
 
       <div className="riichi-self-play-row">
         <div className="riichi-self-melds">
@@ -403,7 +412,15 @@ function SelfSeat({
           )}
         </div>
       </div>
-      {canDiscard && <p className="riichi-self-instruction">点击手牌打出</p>}
+      {canDiscard && (
+        <p className="riichi-self-instruction">
+          {t(
+            actionState.riichiSelecting
+              ? 'riichi.action.chooseRiichiDiscard'
+              : 'riichi.action.chooseDiscard',
+          )}
+        </p>
+      )}
     </section>
   );
 }
@@ -414,6 +431,7 @@ type RiichiTableProps = {
   locale: Locale;
   actionState: RiichiActionState;
   actionHandlers: RiichiActionHandlers;
+  discard: (seat: number, tile: number) => void;
 };
 
 function RiichiTable({
@@ -422,19 +440,15 @@ function RiichiTable({
   locale,
   actionState,
   actionHandlers,
+  discard,
 }: RiichiTableProps) {
   const opponent = (seat: 1 | 2 | 3) => (
     <OpponentSeat
       seat={seat}
       game={game}
-      timerLabel={getOpponentTimerLabel(
-        game,
-        seat,
-        bag.decisionSeat,
-        bag.decisionSeatRemainSeconds,
-      )}
-      timerClassName={bag.timerTextClass(seat)}
-      isCurrentTurn={game.currentPlayer === seat}
+      timerLabel={`时库 ${game.timeBanks[seat]}s`}
+      timerClassName=""
+      isCurrentTurn={bag.decisionSeat === seat}
     />
   );
 
@@ -444,12 +458,14 @@ function RiichiTable({
         isClaimPhase={bag.isClaimPhase}
         isMyClaim={bag.isMyClaim}
         hasAnyClaimOption={bag.hasAnyClaimOption}
-        lastDiscardFrom={game.lastDiscardFrom}
-        lastDiscard={game.lastDiscard}
+        lastDiscardFrom={game.claim?.from ?? game.lastDiscardFrom}
+        lastDiscard={game.claim?.tile ?? game.lastDiscard}
         claimPlayer={bag.claimPlayer}
         isMyTurn={bag.isMyTurn}
         currentPlayer={game.currentPlayer}
-        lastClaimMsg={game.lastClaimMsg}
+        lastClaimMsg={
+          game.lastAction ? formatLogEntry(game.lastAction, locale) : null
+        }
         myFuritenReason={bag.myFuritenReason}
         riichiDeclared={game.riichiDeclared}
       />
@@ -464,13 +480,11 @@ function RiichiTable({
           <SelfSeat
             game={game}
             locale={locale}
-            currentTurnRemainSeconds={bag.currentTurnRemainSeconds}
             decisionSeat={bag.decisionSeat}
-            timerTextClass={bag.timerTextClass}
             myFuritenReason={bag.myFuritenReason}
             actionState={actionState}
             actionHandlers={actionHandlers}
-            discard={bag.discard}
+            discard={discard}
           />
         </div>
       </div>
@@ -616,56 +630,43 @@ const GameMahjongJapanese = () => {
   const [activePanel, setActivePanel] = useState<ActiveDesktopPanel>(null);
   const didHandleEntryRef = useRef(false);
   const { theme, setTheme } = useRiichiTheme();
-  const bag = useRiichiGame();
-  const {
-    view,
-    setView,
-    matchLength,
-    setMatchLength,
-    game,
-    startGame,
-    history,
-    gameLog,
-    winResult,
-    showGuide,
-    setShowGuide,
-    matchEnd,
-    undo,
-    doTsumo,
-    doRon,
-    doChi,
-    doPeng,
-    doMingang,
-    doAngang,
-    doRiichi,
-    doKyuushuKyuuhai,
-    passClaim,
-    passRonOpportunity,
-    proceedToNextRound,
-    proceedAfterRyuukyoku,
-    isMyTurn,
-    isMyClaim,
-    chiOptions,
-    canPeng,
-    canMingang,
-    canRon,
-    tenpaiHint,
-    winSettlementPreview,
-    drawSettlementPreview,
-    winnerPaymentSummary,
-    angangOptions,
-    kakanOptions,
-    canKyuushuKyuuhai,
-    getWaitingTilesRiichi,
-    canTsumo,
-    doKakan,
-  } = bag;
+  const match = useRiichiStore((s) => s.match);
+  const view = useRiichiStore((s) => s.view);
+  const setView = useRiichiStore((s) => s.setView);
+  const matchLength = useRiichiStore((s) => s.matchLength);
+  const setMatchLength = useRiichiStore((s) => s.setMatchLength);
+  const showGuide = useRiichiStore((s) => s.showGuide);
+  const setShowGuide = useRiichiStore((s) => s.setShowGuide);
+  const startGame = useRiichiStore((s) => s.startMatch);
+  const dispatch = useRiichiStore((s) => s.dispatch);
+  const undo = useRiichiStore((s) => s.undo);
+  const { riichiSettings } = usePlayerProfile();
+  useRiichiAutomation(riichiSettings);
+  useRiichiEffectSounds();
+  const game = match?.round ?? null;
+  const bag = useRiichiViewModel(game, activePanel === 'hint', locale);
+  const { turn, claim, tenpaiHint } = bag;
+  const [riichiSelection, setRiichiSelection] = useState<string | null>(null);
+  const decisionKey = match ? `${match.seed}:${match.turn}` : null;
+  const riichiSelecting =
+    decisionKey !== null && riichiSelection === decisionKey;
+  const act = (event: RiichiEvent) => {
+    if (dispatch(withElapsed(event))) setRiichiSelection(null);
+  };
+  const discard = (seat: number, tile: number) =>
+    act({
+      type: riichiSelecting ? 'riichi' : 'discard',
+      seat,
+      tile,
+    });
   const startDesktopGame = () => {
     setActivePanel(null);
+    setRiichiSelection(null);
     startGame();
   };
   const returnToLobby = () => {
     setActivePanel(null);
+    setRiichiSelection(null);
     setView('rules');
   };
 
@@ -714,50 +715,59 @@ const GameMahjongJapanese = () => {
 
   if (!game) return null;
 
-  const canDeclareRiichi =
-    !game.riichiDeclared[0] &&
-    isMenzhen(game.melds[0]) &&
-    getWaitingTilesRiichi(game.hands[0], game.melds[0], game, {
-      seat: 0,
-      isTsumo: false,
-      treatAsRiichi: true,
-    }).length > 0;
   const roundProgressSummary = getCurrentRiichiRoundProgressSummary();
   const actionState: RiichiActionState = {
-    isMyClaim,
-    chiOptions,
-    canPeng,
-    canMingang,
-    canRon,
-    isMyTurn,
-    canTsumo,
-    canDeclareRiichi,
-    canKyuushuKyuuhai,
-    angangOptions,
-    kakanOptions,
+    isMyClaim: Boolean(claim),
+    chiOptions: claim?.chi ?? [],
+    canPeng: claim?.pon ?? false,
+    canMingang: claim?.minkan ?? false,
+    canRon: claim?.ron ?? false,
+    isMyTurn: Boolean(turn),
+    canTsumo: turn?.tsumo ?? false,
+    canDeclareRiichi: Boolean(turn?.riichiDiscards.length),
+    canKyuushuKyuuhai: turn?.kyuushu ?? false,
+    angangOptions: turn?.ankan ?? [],
+    kakanOptions: turn?.kakan.map((option) => option.meldIndex) ?? [],
+    riichiSelecting,
+    discardable:
+      (riichiSelecting ? turn?.riichiDiscards : turn?.discardable) ?? [],
   };
   const actionHandlers: RiichiActionHandlers = {
-    doRon,
-    doChi,
-    doPeng,
-    doMingang,
-    passClaim,
-    passRonOpportunity,
-    doTsumo,
-    doRiichi,
-    doKyuushuKyuuhai,
-    doAngang,
-    doKakan,
+    doRon: () => act({ type: 'claim', seat: 0, response: { type: 'ron' } }),
+    doChi: (tiles) =>
+      act({ type: 'claim', seat: 0, response: { type: 'chi', tiles } }),
+    doPeng: () => act({ type: 'claim', seat: 0, response: { type: 'pon' } }),
+    doMingang: () =>
+      act({ type: 'claim', seat: 0, response: { type: 'minkan' } }),
+    passClaim: () =>
+      act({ type: 'claim', seat: 0, response: { type: 'pass' } }),
+    doTsumo: () => act({ type: 'tsumo', seat: 0 }),
+    doRiichi: () => setRiichiSelection(riichiSelecting ? null : decisionKey),
+    doKyuushuKyuuhai: () => act({ type: 'kyuushu', seat: 0 }),
+    doAngang: (tiles) => act({ type: 'ankan', seat: 0, tiles }),
+    doKakan: (meldIndex) => {
+      const option = turn?.kakan.find((item) => item.meldIndex === meldIndex);
+      if (option) act({ type: 'kakan', seat: 0, ...option });
+    },
   };
+  const result = game.result;
 
   return (
     <RiichiDesktopStage theme={theme}>
       <div className="riichi-stage-screen">
         <GameHeader
           game={game}
-          historyLength={history.length}
+          historyLength={
+            match?.events
+              .slice(match.roundStart.eventIndex)
+              .filter((event) => 'seat' in event && event.seat === 0).length ??
+            0
+          }
           onStart={startDesktopGame}
-          onUndo={undo}
+          onUndo={() => {
+            setRiichiSelection(null);
+            undo();
+          }}
           onOpenLog={() => setActivePanel('log')}
           onBackToRules={returnToLobby}
           returnRulesLabel={t('common.returnRules')}
@@ -775,6 +785,7 @@ const GameMahjongJapanese = () => {
               locale={locale}
               actionState={actionState}
               actionHandlers={actionHandlers}
+              discard={discard}
             />
           </div>
           <DesktopSideRail
@@ -783,38 +794,43 @@ const GameMahjongJapanese = () => {
             hasHint={Boolean(tenpaiHint)}
             hintContent={<HintPanel hint={tenpaiHint} />}
             settlementContent={<SettlementPanel game={game} />}
-            logContent={<GameLogPanel gameLog={gameLog} />}
+            logContent={
+              <GameLogPanel
+                gameLog={
+                  match?.log.map((entry) => formatLogEntry(entry, locale)) ?? []
+                }
+              />
+            }
           />
         </main>
 
         {showGuide && <GuideDialog onClose={() => setShowGuide(false)} />}
 
-        {winResult && (
+        {match?.status === 'roundEnd' && result?.type === 'win' && (
           <WinModal
-            winResult={winResult}
-            winSettlementPreview={winSettlementPreview}
-            winnerPaymentSummary={winnerPaymentSummary}
+            result={result}
             roundProgressSummary={roundProgressSummary}
-            timeoutEvents={game.timeoutEvents}
-            onNext={proceedToNextRound}
+            timeoutEvents={game.timeoutEvents.map((entry) =>
+              formatLogEntry(entry, locale),
+            )}
+            onNext={() => act({ type: 'nextRound' })}
           />
         )}
-
-        {game.ryuukyoku && (
+        {match?.status === 'roundEnd' && result?.type === 'draw' && (
           <RyuukyokuModal
-            ryuukyokuReason={game.ryuukyokuReason}
-            drawSettlementPreview={drawSettlementPreview}
+            result={result}
             roundProgressSummary={roundProgressSummary}
-            timeoutEvents={game.timeoutEvents}
-            onNext={proceedAfterRyuukyoku}
+            timeoutEvents={game.timeoutEvents.map((entry) =>
+              formatLogEntry(entry, locale),
+            )}
+            onNext={() => act({ type: 'nextRound' })}
           />
         )}
-
-        {matchEnd && (
+        {match?.status === 'matchEnd' && match.matchEnd && (
           <MatchEndModal
-            matchEnd={matchEnd}
+            matchEnd={match.matchEnd}
             roundProgressSummary={roundProgressSummary}
-            onRestart={startGame}
+            onRestart={startDesktopGame}
             homeLabel={t('common.backHome')}
           />
         )}

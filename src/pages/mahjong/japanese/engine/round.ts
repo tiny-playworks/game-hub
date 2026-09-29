@@ -76,7 +76,11 @@ function progress(
   state: RiichiGameState,
   event: RiichiProgressEvent,
 ): void {
-  ctx.effects.push({ type: 'progress', event, key: `${state.roundId}:${event}` });
+  ctx.effects.push({
+    type: 'progress',
+    event,
+    key: `${state.roundId}:${event}`,
+  });
 }
 
 function sound(ctx: StepContext, s: RiichiSound, seat: number): void {
@@ -257,7 +261,11 @@ export function discardTile(
   ) {
     return null;
   }
-  if (riichi ? !options.riichiDiscards.includes(tile) : !options.discardable.includes(tile)) {
+  if (
+    riichi
+      ? !options.riichiDiscards.includes(tile)
+      : !options.discardable.includes(tile)
+  ) {
     return null;
   }
   const hand = removeTiles(state.hands[seat], [tile]);
@@ -402,7 +410,8 @@ function applyMissedFuriten(
   const base = getBaseTile(tile);
   const furitenStates = state.furitenStates.map((f, seat) => {
     if (seat === from) return f;
-    if (!getWaits(state.hands[seat], state.melds[seat]).includes(base)) return f;
+    if (!getWaits(state.hands[seat], state.melds[seat]).includes(base))
+      return f;
     return applyRonDeclinedFuriten(f, state.riichiDeclared[seat]);
   });
   return { ...state, furitenStates };
@@ -423,7 +432,9 @@ function settleRiichiDeposit(state: RiichiGameState): RiichiGameState {
 
 function markSuukaikan(state: RiichiGameState): RiichiGameState {
   const { total, seats } = countKans(state.melds);
-  return total === 4 && seats >= 2 ? { ...state, suukaikanPending: true } : state;
+  return total === 4 && seats >= 2
+    ? { ...state, suukaikanPending: true }
+    : state;
 }
 
 function resolveClaimWindow(
@@ -457,7 +468,11 @@ function resolveClaimWindow(
     return drawTile(markSuukaikan(revealKanDora(next)), from, ctx, true);
   }
 
-  if (shouldAbortOnSuuchaRiichi(next.riichiDeclared) && next.riichiPending === null && state.riichiPending !== null) {
+  if (
+    shouldAbortOnSuuchaRiichi(next.riichiDeclared) &&
+    next.riichiPending === null &&
+    state.riichiPending !== null
+  ) {
     return endAbortiveDraw(next, 'suucha', ctx);
   }
   if (shouldAbortOnSuufonRenda(next.discardPiles, next.melds)) {
@@ -501,9 +516,7 @@ const WIND_BASES = [27, 28, 29, 30];
 
 function completedSets(melds: RiichiMeld[], bases: number[]): number {
   return bases.filter((b) =>
-    melds.some(
-      (m) => m.type !== 'chi' && getBaseTile(m.tiles[0]) === b,
-    ),
+    melds.some((m) => m.type !== 'chi' && getBaseTile(m.tiles[0]) === b),
   ).length;
 }
 
@@ -516,8 +529,10 @@ function updatePao(
   from: number,
 ): (number | null)[] {
   const base = getBaseTile(tile);
-  const dragon = DRAGON_BASES.includes(base) && completedSets(melds, DRAGON_BASES) === 3;
-  const wind = WIND_BASES.includes(base) && completedSets(melds, WIND_BASES) === 4;
+  const dragon =
+    DRAGON_BASES.includes(base) && completedSets(melds, DRAGON_BASES) === 3;
+  const wind =
+    WIND_BASES.includes(base) && completedSets(melds, WIND_BASES) === 4;
   return dragon || wind ? replaceAt(state.paoSeat, seat, from) : state.paoSeat;
 }
 
@@ -562,13 +577,18 @@ function applyChi(
     fromPlayer: from,
     calledTile: tile,
   };
-  const entry = log(ctx, { key: 'riichi.log.chi', params: { seat, tiles: meld.tiles } });
+  const entry = log(ctx, {
+    key: 'riichi.log.chi',
+    params: { seat, tiles: meld.tiles },
+  });
   sound(ctx, 'chi', seat);
   const next: RiichiGameState = {
     ...afterCallCommon(state, seat, from),
     hands: replaceAt(state.hands, seat, hand),
     melds: replaceAt(state.melds, seat, [...state.melds[seat], meld]),
-    kuikaeForbidden: ctx.rules.kuikae ? getKuikaeForbiddenBases(tile, pair) : [],
+    kuikaeForbidden: ctx.rules.kuikae
+      ? getKuikaeForbiddenBases(tile, pair)
+      : [],
     lastAction: entry,
   };
   return { ...next, turnOptions: computeCallTurnOptions(next, seat) };
@@ -596,8 +616,12 @@ function applyPon(
     ...afterCallCommon(state, seat, from),
     hands: replaceAt(state.hands, seat, taken.rest),
     melds: replaceAt(state.melds, seat, melds),
-    paoSeat: ctx.rules.pao ? updatePao(state, seat, melds, tile, from) : state.paoSeat,
-    kuikaeForbidden: ctx.rules.kuikae ? getKuikaeForbiddenBases(tile, null) : [],
+    paoSeat: ctx.rules.pao
+      ? updatePao(state, seat, melds, tile, from)
+      : state.paoSeat,
+    kuikaeForbidden: ctx.rules.kuikae
+      ? getKuikaeForbiddenBases(tile, null)
+      : [],
     lastAction: entry,
   };
   return { ...next, turnOptions: computeCallTurnOptions(next, seat) };
@@ -625,7 +649,9 @@ function applyMinkan(
     ...afterCallCommon(state, seat, from),
     hands: replaceAt(state.hands, seat, taken.rest),
     melds: replaceAt(state.melds, seat, melds),
-    paoSeat: ctx.rules.pao ? updatePao(state, seat, melds, tile, from) : state.paoSeat,
+    paoSeat: ctx.rules.pao
+      ? updatePao(state, seat, melds, tile, from)
+      : state.paoSeat,
     lastAction: entry,
   };
   return drawTile(markSuukaikan(revealKanDora(next)), seat, ctx, true);
@@ -655,7 +681,10 @@ export function declareAnkan(
   }
   const hand = removeTiles(state.hands[seat], tiles);
   if (!hand) return null;
-  const entry = log(ctx, { key: 'riichi.log.ankan', params: { seat, tile: tiles[0] } });
+  const entry = log(ctx, {
+    key: 'riichi.log.ankan',
+    params: { seat, tile: tiles[0] },
+  });
   sound(ctx, 'kan', seat);
   const next: RiichiGameState = {
     ...state,
@@ -736,7 +765,15 @@ export function declareTsumo(
     return null;
   }
   const timed = { ...state, timeBanks: consumeTime(state, seat, meta.elapsed) };
-  return endWithWins(timed, [seat], true, state.drawnTile, seat, 'discard', ctx);
+  return endWithWins(
+    timed,
+    [seat],
+    true,
+    state.drawnTile,
+    seat,
+    'discard',
+    ctx,
+  );
 }
 
 export function declareKyuushu(
@@ -790,7 +827,15 @@ function endWithWins(
     const share = ctx.rules.pao ? paoShareFor(evaluation, state, seat) : 0;
     const paoSeat = share > 0 ? state.paoSeat[seat] : null;
     wins.push(
-      toWinResult(state, seat, isTsumo, tile, isTsumo ? null : from, evaluation, paoSeat),
+      toWinResult(
+        state,
+        seat,
+        isTsumo,
+        tile,
+        isTsumo ? null : from,
+        evaluation,
+        paoSeat,
+      ),
     );
     inputs.push({
       winner: seat,
@@ -848,9 +893,7 @@ function endWithWins(
 
 function isNagashi(state: RiichiGameState, seat: number): boolean {
   const pile = state.discardPiles[seat];
-  return (
-    pile.length > 0 && !state.discardCalled[seat] && pile.every(isYaochuu)
-  );
+  return pile.length > 0 && !state.discardCalled[seat] && pile.every(isYaochuu);
 }
 
 function endExhaustiveDraw(
@@ -865,12 +908,24 @@ function endExhaustiveDraw(
     : [];
   const settlement =
     nagashiSeats.length > 0
-      ? settleNagashiMangan(state.scores, state.dealer, nagashiSeats, state.riichiPot)
+      ? settleNagashiMangan(
+          state.scores,
+          state.dealer,
+          nagashiSeats,
+          state.riichiPot,
+        )
       : settleRyuukyoku(state.scores, tenpaiSeats, state.riichiPot);
   for (const seat of nagashiSeats) {
     log(ctx, { key: 'riichi.log.nagashi', params: { seat } });
   }
-  return finishDraw(state, 'exhaustive', tenpaiSeats, nagashiSeats, settlement, ctx);
+  return finishDraw(
+    state,
+    'exhaustive',
+    tenpaiSeats,
+    nagashiSeats,
+    settlement,
+    ctx,
+  );
 }
 
 function endAbortiveDraw(

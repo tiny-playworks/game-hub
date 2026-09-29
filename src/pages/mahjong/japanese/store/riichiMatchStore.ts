@@ -12,11 +12,7 @@ import {
   type RiichiRuleConfig,
   undoLastHumanAction,
 } from '../engine';
-import {
-  clearSavedMatch,
-  loadSavedMatch,
-  saveMatch,
-} from './persistence';
+import { clearSavedMatch, loadSavedMatch, saveMatch } from './persistence';
 
 export type RiichiView = 'rules' | 'game';
 

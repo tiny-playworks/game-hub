@@ -1,18 +1,18 @@
 import { describe, expect, test } from '@rstest/core';
 import { isMenzhen, isOpenMeld } from '../src/lib/mahjongRiichi';
 import { computeWaitingTilesRiichi } from '../src/lib/riichiWaitingTiles';
-import { initRiichiGame } from '../src/pages/mahjong/japanese/gameState';
-import {
-  canSeatRonByRules,
-  getRonWaitingTilesForSeatInState,
-} from '../src/pages/mahjong/japanese/helpers';
+import { getWaits } from '../src/pages/mahjong/japanese/engine/hand';
+import { computeClaimOptions } from '../src/pages/mahjong/japanese/engine/options';
+import { DEFAULT_RIICHI_RULES } from '../src/pages/mahjong/japanese/engine/rules';
 import type {
   RiichiGameState,
   RiichiMeld,
 } from '../src/pages/mahjong/japanese/types';
+import { createTestRound } from './helpers/riichiState';
 
 /** 与 helpers 中委托路径对齐：荣和振听使用纯结构待牌。 */
 function ronWaitingDirect(state: RiichiGameState, seat: number): number[] {
+  if (state.hands[seat].length + state.melds[seat].length * 3 !== 13) return [];
   return computeWaitingTilesRiichi(
     state.hands[seat],
     state.melds[seat],
@@ -72,7 +72,7 @@ function expectStructuralWaitsAgree(
   seat: number,
   expectedWait: number,
 ): void {
-  const fromHelper = sortNum(getRonWaitingTilesForSeatInState(state, seat));
+  const fromHelper = sortNum(getWaits(state.hands[seat], state.melds[seat]));
   const direct = sortNum(ronWaitingDirect(state, seat));
   expect(fromHelper).toEqual(direct);
   expect(fromHelper.length).toBeGreaterThan(0);
@@ -127,46 +127,46 @@ describe('门前清 isMenzhen / 副露 isOpenMeld', () => {
   });
 });
 
-describe('荣和听牌：getRonWaitingTilesForSeatInState 与 computeWaitingTilesRiichi 一致', () => {
-  test('默认开局状态（各座 13 张）：两路径结果相同', () => {
-    const state = initRiichiGame();
+describe('荣和听牌：getWaits 与 computeWaitingTilesRiichi 一致', () => {
+  test('默认开局状态（庄家 14 张）：两路径结果相同', () => {
+    const state = createTestRound();
     for (let seat = 0; seat < 4; seat++) {
-      const a = getRonWaitingTilesForSeatInState(state, seat);
+      const a = getWaits(state.hands[seat], state.melds[seat]);
       const b = ronWaitingDirect(state, seat);
       expect(sortNum(a)).toEqual(sortNum(b));
     }
   });
 
   test('手牌张数非 13 时 helpers 返回 []，与直接计算一致', () => {
-    const state = initRiichiGame();
+    const state = createTestRound();
     state.hands[0] = state.hands[0].slice(0, 12);
-    expect(getRonWaitingTilesForSeatInState(state, 0)).toEqual([]);
+    expect(getWaits(state.hands[0], state.melds[0])).toEqual([]);
     expect(ronWaitingDirect(state, 0)).toEqual([]);
   });
 
   test('带暗杠副露：10 张门前牌得到非空结构待牌，两路径一致', () => {
-    const state = initRiichiGame(1);
+    const state = createTestRound(1);
     state.hands[0] = [...ONE_MELD_TENPAI_WAIT_EAST];
     state.melds[0] = [{ type: 'angang', tiles: [22, 22, 22, 22] }];
     expectStructuralWaitsAgree(state, 0, 27);
   });
 
   test('带明杠副露：10 张门前牌得到非空结构待牌，两路径一致', () => {
-    const state = initRiichiGame(1);
+    const state = createTestRound(1);
     state.hands[0] = [...ONE_MELD_TENPAI_WAIT_EAST];
     state.melds[0] = [{ type: 'mingang', tiles: [22, 22, 22, 22] }];
     expectStructuralWaitsAgree(state, 0, 27);
   });
 
   test('带吃副露：10 张门前牌得到非空结构待牌，两路径一致', () => {
-    const state = initRiichiGame();
+    const state = createTestRound();
     state.hands[1] = [...ONE_MELD_TENPAI_WAIT_EAST];
     state.melds[1] = [{ type: 'chi', tiles: [3, 4, 5] }];
     expectStructuralWaitsAgree(state, 1, 27);
   });
 
   test('立直状态不改变纯结构待牌', () => {
-    const state = initRiichiGame();
+    const state = createTestRound();
     state.hands[2] = [...CLOSED_TENPAI_WAIT_EAST];
     const beforeRiichi = ronWaitingDirect(state, 2);
     state.riichiDeclared[2] = true;
@@ -175,20 +175,20 @@ describe('荣和听牌：getRonWaitingTilesForSeatInState 与 computeWaitingTile
   });
 
   test('场风/庄家变化不改变纯结构待牌', () => {
-    const state = initRiichiGame(2, 1, 3);
+    const state = createTestRound(2, 1, 3);
     state.hands[1] = [...CLOSED_TENPAI_WAIT_EAST];
     expectStructuralWaitsAgree(state, 1, 27);
   });
 
   test('带加杠副露：10 张门前牌得到非空结构待牌，两路径一致', () => {
-    const state = initRiichiGame();
+    const state = createTestRound();
     state.hands[2] = [...ONE_MELD_TENPAI_WAIT_EAST];
     state.melds[2] = [{ type: 'kakan', tiles: [22, 22, 22, 22] }];
     expectStructuralWaitsAgree(state, 2, 27);
   });
 
   test('多副露（吃+碰）：7 张门前牌得到非空结构待牌，两路径一致', () => {
-    const state = initRiichiGame();
+    const state = createTestRound();
     state.hands[3] = [...TWO_MELD_TENPAI_WAIT_EAST];
     state.melds[3] = [
       { type: 'chi', tiles: [24, 25, 26] },
@@ -198,7 +198,7 @@ describe('荣和听牌：getRonWaitingTilesForSeatInState 与 computeWaitingTile
   });
 
   test('多副露（暗杠+碰）：7 张门前牌得到非空结构待牌，两路径一致', () => {
-    const state = initRiichiGame();
+    const state = createTestRound();
     state.hands[1] = [...TWO_MELD_TENPAI_WAIT_EAST];
     state.melds[1] = [
       { type: 'angang', tiles: [22, 22, 22, 22] },
@@ -212,9 +212,9 @@ describe('荣和听牌：getRonWaitingTilesForSeatInState 与 computeWaitingTile
 const TANYAO_13_WAITING_2M = [2, 3, 4, 5, 6, 6, 6, 10, 11, 12, 13, 14, 15];
 const TILE_2M = 1;
 
-describe('canSeatRonByRules 与荣和听牌 / 规则集成', () => {
+describe('鸣牌窗口与荣和听牌 / 规则集成', () => {
   function baseClaimState(): RiichiGameState {
-    const state = initRiichiGame(0, 0, 1);
+    const state = createTestRound(0, 0, 1);
     state.phase = 'claim';
     state.hands[1] = [...TANYAO_13_WAITING_2M];
     state.lastDiscard = TILE_2M;
@@ -224,39 +224,54 @@ describe('canSeatRonByRules 与荣和听牌 / 规则集成', () => {
 
   test('claim 阶段、他家打出所听牌、断幺九形：canSeatRonByRules 为 true', () => {
     const state = baseClaimState();
-    expect(canSeatRonByRules(state, 1)).toBe(true);
-    expect(sortNum(getRonWaitingTilesForSeatInState(state, 1))).toContain(
+    expect(
+      computeClaimOptions(state, TILE_2M, 0, 'discard', DEFAULT_RIICHI_RULES)[1]
+        ?.ron,
+    ).toBe(true);
+    expect(sortNum(getWaits(state.hands[1], state.melds[1]))).toContain(
       TILE_2M,
     );
-  });
-
-  test('phase 非 claim：荣和规则不通过', () => {
-    const state = baseClaimState();
-    state.phase = 'discard';
-    expect(canSeatRonByRules(state, 1)).toBe(false);
-  });
-
-  test('无舍牌（lastDiscard 为空）：荣和规则不通过', () => {
-    const state = baseClaimState();
-    state.lastDiscard = null;
-    expect(canSeatRonByRules(state, 1)).toBe(false);
   });
 
   test('舍牌来自本家：荣和规则不通过', () => {
     const state = baseClaimState();
     state.lastDiscardFrom = 1;
-    expect(canSeatRonByRules(state, 1)).toBe(false);
+    expect(
+      computeClaimOptions(
+        state,
+        state.lastDiscard ?? TILE_2M,
+        state.lastDiscardFrom ?? 0,
+        'discard',
+        DEFAULT_RIICHI_RULES,
+      )[1]?.ron ?? false,
+    ).toBe(false);
   });
 
   test('手牌+舍牌不成和：荣和规则不通过', () => {
     const state = baseClaimState();
     state.lastDiscard = 33;
-    expect(canSeatRonByRules(state, 1)).toBe(false);
+    expect(
+      computeClaimOptions(
+        state,
+        state.lastDiscard ?? TILE_2M,
+        state.lastDiscardFrom ?? 0,
+        'discard',
+        DEFAULT_RIICHI_RULES,
+      )[1]?.ron ?? false,
+    ).toBe(false);
   });
 
   test('舍牌振听：同巡听牌内曾打出所听牌，荣和被挡', () => {
     const state = baseClaimState();
     state.discardPiles[1] = [TILE_2M];
-    expect(canSeatRonByRules(state, 1)).toBe(false);
+    expect(
+      computeClaimOptions(
+        state,
+        state.lastDiscard ?? TILE_2M,
+        state.lastDiscardFrom ?? 0,
+        'discard',
+        DEFAULT_RIICHI_RULES,
+      )[1]?.ron ?? false,
+    ).toBe(false);
   });
 });

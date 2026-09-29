@@ -19,15 +19,16 @@ describe('日麻引擎：固定种子无头模拟', () => {
           const round = after.round;
           expect(countAllTiles(round)).toBe(136);
           if (after.status === 'playing') {
-            const sum = round.scores.reduce((a, b) => a + b, 0) + round.riichiPot;
+            const sum =
+              round.scores.reduce((a, b) => a + b, 0) + round.riichiPot;
             expect(sum).toBe(TOTAL_POINTS);
             expect(getPendingSeats(round).length).toBeGreaterThan(0);
           }
           if (after.status !== 'playing' && round.result) {
             const s = round.result.settlement;
-            expect(s.newScores.reduce((a, b) => a + b, 0) + s.nextRiichiPot).toBe(
-              TOTAL_POINTS,
-            );
+            expect(
+              s.newScores.reduce((a, b) => a + b, 0) + s.nextRiichiPot,
+            ).toBe(TOTAL_POINTS);
           }
           if (event.type === 'nextRound') rounds++;
         },

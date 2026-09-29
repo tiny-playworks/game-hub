@@ -35,7 +35,10 @@ export function humanDecisionKey(round: RiichiGameState): string {
 export function defaultDiscardTile(round: RiichiGameState): number | null {
   const options = getSeatTurnOptions(round, 0);
   if (!options || options.discardable.length === 0) return null;
-  if (round.drawnTile !== null && options.discardable.includes(round.drawnTile)) {
+  if (
+    round.drawnTile !== null &&
+    options.discardable.includes(round.drawnTile)
+  ) {
     return round.drawnTile;
   }
   return options.discardable[options.discardable.length - 1];
@@ -78,13 +81,16 @@ export function useRiichiAutomation(settings: RiichiPlayerSettings): void {
   const match = useRiichiStore((s) => s.match);
   const view = useRiichiStore((s) => s.view);
   const replayOpen = useRiichiStore((s) => s.replay !== null);
-  const turn = match?.turn ?? -1;
-  const status = match?.status;
 
   useEffect(() => {
     const store = useRiichiStore.getState();
-    const current = store.match;
-    if (!current || view !== 'game' || replayOpen || current.status !== 'playing') {
+    const current = match;
+    if (
+      !current ||
+      view !== 'game' ||
+      replayOpen ||
+      current.status !== 'playing'
+    ) {
       return;
     }
     const round = current.round;
@@ -163,9 +169,13 @@ export function useRiichiAutomation(settings: RiichiPlayerSettings): void {
         }
         const tile = defaultDiscardTile(latest.round);
         if (tile !== null) {
-          useRiichiStore
-            .getState()
-            .dispatch({ type: 'discard', seat: 0, tile, elapsed, timeout: true });
+          useRiichiStore.getState().dispatch({
+            type: 'discard',
+            seat: 0,
+            tile,
+            elapsed,
+            timeout: true,
+          });
         }
       });
     } else if (store.decisionClock) {
@@ -175,8 +185,8 @@ export function useRiichiAutomation(settings: RiichiPlayerSettings): void {
     return () => {
       for (const id of timers) window.clearTimeout(id);
     };
-    // turn/status 变化即代表局面推进；settings 变化需要重新评估自动操作
-  }, [turn, status, view, replayOpen, settings]);
+    // match 变化即代表局面推进；settings 变化时重新评估自动操作
+  }, [match, view, replayOpen, settings]);
 }
 
 /** 自家操作时附带本次决策用时（秒） */

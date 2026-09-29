@@ -1,11 +1,8 @@
 import { Activity, Layers3 } from 'lucide-react';
 import { useLocale } from '@/contexts/LocaleContext';
 import { cn } from '@/lib/utils';
-import {
-  formatPoints,
-  getClaimPlayerFromState,
-  getSeatWind,
-} from '../helpers';
+import { getDecisionSeat } from '../engine';
+import { formatPoints, getSeatWind } from '../helpers';
 import type { RiichiGameState } from '../types';
 
 type Props = {
@@ -18,10 +15,7 @@ export function TableContextPanel({ game }: Props) {
     (left, right) => game.scores[right] - game.scores[left],
   );
   const rankBySeat = new Map(ranking.map((seat, index) => [seat, index + 1]));
-  const activeSeat =
-    game.phase === 'claim'
-      ? (getClaimPlayerFromState(game) ?? game.currentPlayer)
-      : game.currentPlayer;
+  const activeSeat = getDecisionSeat(game);
   const roundWind = t(`game.mahjong.winds.${game.roundWind}`);
 
   return (
@@ -58,9 +52,7 @@ export function TableContextPanel({ game }: Props) {
       <section className="riichi-table-context-section">
         <div className="riichi-table-context-title">
           <span>席位与点数</span>
-          <small>
-            庄家 {t(`game.mahjong.seats.${game.dealer}`)}
-          </small>
+          <small>庄家 {t(`game.mahjong.seats.${game.dealer}`)}</small>
         </div>
         <div className="riichi-table-scoreboard">
           {[0, 1, 2, 3].map((seat) => {
@@ -103,7 +95,9 @@ export function TableContextPanel({ game }: Props) {
               <div key={seat}>
                 <span>{t(`game.mahjong.seats.${seat}`)}</span>
                 <div aria-hidden="true">
-                  <i style={{ width: `${Math.min(100, (count / 36) * 100)}%` }} />
+                  <i
+                    style={{ width: `${Math.min(100, (count / 36) * 100)}%` }}
+                  />
                 </div>
                 <strong>{count}</strong>
               </div>

@@ -17,7 +17,7 @@ describe('日麻终局判定', () => {
     expect(out).toEqual({ end: true, reason: 'tobi' });
   });
 
-  test('东风场东4局子家胡本局结束', () => {
+  test('东风场东4局无人到 30000 时南入', () => {
     const out = resolveRiichiMatchEnd({
       scores: [28000, 24000, 26000, 22000],
       roundWind: 0,
@@ -26,7 +26,7 @@ describe('日麻终局判定', () => {
       dealerStays: false,
       matchLength: 'east',
     });
-    expect(out).toEqual({ end: true, reason: 'east4_end' });
+    expect(out).toEqual({ end: false });
   });
 
   test('东风场东4局流局（连庄）不结束', () => {
@@ -65,13 +65,14 @@ describe('日麻终局判定', () => {
     expect(out).toEqual({ end: true, reason: 'south4_end' });
   });
 
-  test('南4庄家连庄且头名可收场', () => {
+  test('南4庄家和了且头名可收场', () => {
     const out = resolveRiichiMatchEnd({
       scores: [37000, 21000, 23000, 19000],
       roundWind: 1,
       roundNumber: 4,
       dealer: 0,
       dealerStays: true,
+      dealerWon: true,
       matchLength: 'south',
     });
     expect(out).toEqual({ end: true, reason: 'agari_yame' });
@@ -84,6 +85,7 @@ describe('日麻终局判定', () => {
       roundNumber: 4,
       dealer: 0,
       dealerStays: true,
+      dealerWon: true,
       matchLength: 'south',
     });
     expect(out).toEqual({ end: false });

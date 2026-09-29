@@ -105,7 +105,10 @@ function settleOneWin(
   if (win.isTsumo) {
     const shares = [0, 1, 2, 3]
       .filter((seat) => seat !== win.winner)
-      .map((seat) => ({ seat, amount: tsumoShareFor(seat, win, input.dealer) }));
+      .map((seat) => ({
+        seat,
+        amount: tsumoShareFor(seat, win, input.dealer),
+      }));
     const total = shares.reduce((sum, s) => sum + s.amount, 0);
     if (paoSeat !== null && paoShare > 0) {
       const paoAmount = ceilTo100(total * paoShare);
@@ -173,7 +176,12 @@ function settleOneWin(
 
   if (receivesSticks && input.riichiPot > 0) {
     for (let i = 0; i < input.riichiPot / 1000; i++) {
-      payments.push({ from: -1, to: win.winner, amount: 1000, reason: 'riichi' });
+      payments.push({
+        from: -1,
+        to: win.winner,
+        amount: 1000,
+        reason: 'riichi',
+      });
     }
     scores[win.winner] += input.riichiPot;
   }

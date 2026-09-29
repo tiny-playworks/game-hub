@@ -1,10 +1,10 @@
-import type { ReactNode } from 'react';
 import {
   FileClock,
   Lightbulb,
   PanelRightClose,
   ReceiptText,
 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 export type DesktopPanelId = 'hint' | 'settlement' | 'log';
@@ -76,6 +76,7 @@ export function DesktopSideRail({
               {id === 'hint' && hasHint && !selected && (
                 <span
                   className="riichi-desktop-rail-dot"
+                  role="img"
                   aria-label="有新提示"
                 />
               )}

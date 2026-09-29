@@ -88,7 +88,10 @@ function normalizeHairiResult(result: RiichiResult): {
 }
 
 const HAIRI_CACHE_LIMIT = 20000;
-const hairiCache = new Map<string, { shanten: number; effectiveTiles: number[] }>();
+const hairiCache = new Map<
+  string,
+  { shanten: number; effectiveTiles: number[] }
+>();
 
 function hairiCacheKey(hand: number[], melds: RiichiRulesMeld[]): string {
   const closed = hand.map(getBaseTile).sort((a, b) => a - b);
@@ -103,7 +106,10 @@ function analyzeThirteenTileState(
   const key = hairiCacheKey(hand, melds);
   const cached = hairiCache.get(key);
   if (cached) {
-    return { shanten: cached.shanten, effectiveTiles: [...cached.effectiveTiles] };
+    return {
+      shanten: cached.shanten,
+      effectiveTiles: [...cached.effectiveTiles],
+    };
   }
   let result: { shanten: number; effectiveTiles: number[] };
   try {
@@ -114,7 +120,10 @@ function analyzeThirteenTileState(
   }
   if (hairiCache.size >= HAIRI_CACHE_LIMIT) hairiCache.clear();
   hairiCache.set(key, result);
-  return { shanten: result.shanten, effectiveTiles: [...result.effectiveTiles] };
+  return {
+    shanten: result.shanten,
+    effectiveTiles: [...result.effectiveTiles],
+  };
 }
 
 function removeFirstBaseTile(hand: number[], base: number): number[] {

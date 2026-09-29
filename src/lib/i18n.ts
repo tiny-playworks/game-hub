@@ -2,6 +2,45 @@ export type Locale = 'zh' | 'en';
 
 const messages: Record<Locale, Record<string, string>> = {
   zh: {
+    'riichi.unit.points': '{points} 点',
+    'riichi.log.roundStart': '{windKey}{round}局 · {honba}本场',
+    'riichi.log.discard': '{seat} 打出 {tile}',
+    'riichi.log.riichi': '{seat} 立直，打出 {tile}',
+    'riichi.log.chi': '{seat} 吃 {tiles}',
+    'riichi.log.pon': '{seat} 碰 {tile}',
+    'riichi.log.minkan': '{seat} 明杠 {tile}',
+    'riichi.log.ankan': '{seat} 暗杠 {tile}',
+    'riichi.log.kakan': '{seat} 加杠 {tile}',
+    'riichi.log.tsumo': '{seat} 自摸 {tile}，{fu}符 {han}番 {points}点',
+    'riichi.log.tsumoYakuman': '{seat} 自摸 {tile}，{yakuman}倍役满 {points}点',
+    'riichi.log.ron': '{seat} 荣和 {from} 的 {tile}，{fu}符 {han}番 {points}点',
+    'riichi.log.ronYakuman':
+      '{seat} 荣和 {from} 的 {tile}，{yakuman}倍役满 {points}点',
+    'riichi.log.ryuukyoku': '流局：{reasonKey}',
+    'riichi.log.nagashi': '{seat} 流局满贯',
+    'riichi.log.timeoutDiscard': '{seat} 超时打出 {tile}',
+    'riichi.log.timeoutPass': '{seat} 超时过牌',
+    'riichi.log.scoreLine':
+      '点数：自家 {s0} / 下家 {s1} / 对家 {s2} / 上家 {s3}',
+    'riichi.log.matchEnd': '终局：{reasonKey}',
+    'riichi.log.undo': '回退至上一次自家操作',
+    'riichi.drawReason.sanchahou': '三家和',
+    'riichi.drawDesc.sanchahou': '三家同时宣告荣和，途中流局，本场+1，庄家连庄',
+    'riichi.matchEndReason.extension_end': '延长战结束',
+    'riichi.furiten.riichi': '立直振听',
+    'riichi.furiten.doujun': '同巡振听',
+    'riichi.furiten.sutehai': '舍牌振听',
+    'riichi.action.discard': '舍牌',
+    'riichi.action.chankan': '抢杠',
+    'riichi.action.cancelRiichi': '取消立直选牌',
+    'riichi.action.chooseRiichiDiscard': '请选择可立直的舍牌',
+    'riichi.action.chooseDiscard': '点击手牌打出',
+    'riichi.action.remainingTime': '本巡剩余时间',
+    'riichi.hint.noRonYaku': '当前无荣和役；可考虑立直或自摸',
+    'riichi.hint.ronPreview': '荣和最高约 {points} 点（不计偶发役与里宝牌）',
+    'riichi.modal.win.multiple': '双响',
+    'riichi.modal.draw.nagashi': '流局满贯',
+    'riichi.modal.draw.nagashiDesc': '符合条件的玩家按满贯结算',
     'home.title': '日麻游戏大厅',
     'home.subtitle': '进来就能开打，规则和新手引导也都在手边',
     'home.hero.badge': '今日牌桌',
@@ -346,23 +385,21 @@ const messages: Record<Locale, Record<string, string>> = {
     'riichi.peng': '碰',
     'riichi.mingang': '明杠',
     'riichi.matchEndReason.tobi': '有人被击飞（负分）',
-    'riichi.matchEndReason.east4': '东风场东4局结束',
-    'riichi.matchEndReason.agariYame': '南4庄家连庄且头名，收场',
-    'riichi.matchEndReason.south4': '南风场南4局结束（已达返场线）',
+    'riichi.matchEndReason.east4_end': '东风场东4局结束',
+    'riichi.matchEndReason.agari_yame': '南4庄家连庄且头名，收场',
+    'riichi.matchEndReason.south4_end': '南风场南4局结束（已达返场线）',
     'riichi.matchEndReason.default': '终局',
-    'riichi.drawReason.suufonRenda': '四风连打',
-    'riichi.drawReason.suuchaRiichi': '四家立直',
+    'riichi.drawReason.suufon': '四风连打',
+    'riichi.drawReason.suucha': '四家立直',
     'riichi.drawReason.suukaikan': '四开杠',
-    'riichi.drawReason.kyuushuKyuuhai': '九种九牌',
-    'riichi.drawReason.default': '荒牌',
-    'riichi.drawDesc.suufonRenda':
-      '四家第一打同风牌，途中流局，本场+1，庄家连庄',
-    'riichi.drawDesc.suuchaRiichi': '四家均已立直，途中流局，本场+1，庄家连庄',
+    'riichi.drawReason.kyuushu': '九种九牌',
+    'riichi.drawReason.exhaustive': '荒牌',
+    'riichi.drawDesc.suufon': '四家第一打同风牌，途中流局，本场+1，庄家连庄',
+    'riichi.drawDesc.suucha': '四家均已立直，途中流局，本场+1，庄家连庄',
     'riichi.drawDesc.suukaikan':
       '全场四杠成立（非一人四杠），途中流局，本场+1，庄家连庄',
-    'riichi.drawDesc.kyuushuKyuuhai':
-      '九种九牌宣言成立，途中流局，本场+1，庄家连庄',
-    'riichi.drawDesc.default':
+    'riichi.drawDesc.kyuushu': '九种九牌宣言成立，途中流局，本场+1，庄家连庄',
+    'riichi.drawDesc.exhaustive':
       '牌墙摸完无人和，本场+1，庄家听牌则连庄，不听换庄',
     'riichi.modal.growth.title': '本局成长回报',
     'riichi.modal.growth.autoSettlePrefix': '自动结算 +',
@@ -776,6 +813,51 @@ const messages: Record<Locale, Record<string, string>> = {
     'game.mahjong.discardAndTenpai': '打 {discard} 听 {waits}',
   },
   en: {
+    'riichi.unit.points': '{points} points',
+    'riichi.log.roundStart': '{windKey} {round} · Honba {honba}',
+    'riichi.log.discard': '{seat} discards {tile}',
+    'riichi.log.riichi': '{seat} declares riichi, discarding {tile}',
+    'riichi.log.chi': '{seat} calls chi: {tiles}',
+    'riichi.log.pon': '{seat} calls pon: {tile}',
+    'riichi.log.minkan': '{seat} calls open kan: {tile}',
+    'riichi.log.ankan': '{seat} declares closed kan: {tile}',
+    'riichi.log.kakan': '{seat} adds a kan: {tile}',
+    'riichi.log.tsumo':
+      '{seat} tsumo {tile}: {fu} fu, {han} han, {points} points',
+    'riichi.log.tsumoYakuman':
+      '{seat} tsumo {tile}: {yakuman}x yakuman, {points} points',
+    'riichi.log.ron':
+      '{seat} ron on {from}: {tile}, {fu} fu, {han} han, {points} points',
+    'riichi.log.ronYakuman':
+      '{seat} ron on {from}: {tile}, {yakuman}x yakuman, {points} points',
+    'riichi.log.ryuukyoku': 'Draw: {reasonKey}',
+    'riichi.log.nagashi': '{seat} wins nagashi mangan',
+    'riichi.log.timeoutDiscard': '{seat} timed out and discarded {tile}',
+    'riichi.log.timeoutPass': '{seat} timed out and passed',
+    'riichi.log.scoreLine':
+      'Scores: Self {s0} / Right {s1} / Across {s2} / Left {s3}',
+    'riichi.log.matchEnd': 'Match ended: {reasonKey}',
+    'riichi.log.undo': 'Undid the last human action',
+    'riichi.drawReason.sanchahou': 'Triple ron',
+    'riichi.drawDesc.sanchahou':
+      'Three players declared ron. Abortive draw; dealer repeats and honba increases.',
+    'riichi.matchEndReason.extension_end': 'Extension round ended',
+    'riichi.furiten.riichi': 'Riichi furiten',
+    'riichi.furiten.doujun': 'Temporary furiten',
+    'riichi.furiten.sutehai': 'Discard furiten',
+    'riichi.action.discard': 'Discard',
+    'riichi.action.chankan': 'Robbing a kan',
+    'riichi.action.cancelRiichi': 'Cancel riichi selection',
+    'riichi.action.chooseRiichiDiscard': 'Choose a highlighted riichi discard',
+    'riichi.action.chooseDiscard': 'Click a hand tile to discard',
+    'riichi.action.remainingTime': 'Time remaining this turn',
+    'riichi.hint.noRonYaku': 'No ron yaku yet; consider riichi or tsumo',
+    'riichi.hint.ronPreview':
+      'Ron up to {points} points (without situational yaku or ura dora)',
+    'riichi.modal.win.multiple': 'Double ron',
+    'riichi.modal.draw.nagashi': 'Nagashi mangan',
+    'riichi.modal.draw.nagashiDesc':
+      'Qualifying players receive mangan payments',
     'home.title': 'Riichi Game Lobby',
     'home.subtitle':
       'Jump in fast. Rules and beginner guide are one click away',
@@ -1135,26 +1217,26 @@ const messages: Record<Locale, Record<string, string>> = {
     'riichi.peng': 'Peng',
     'riichi.mingang': 'Open kan',
     'riichi.matchEndReason.tobi': 'A player busted (below zero)',
-    'riichi.matchEndReason.east4': 'East-only game ended at East 4',
-    'riichi.matchEndReason.agariYame':
+    'riichi.matchEndReason.east4_end': 'East-only game ended at East 4',
+    'riichi.matchEndReason.agari_yame':
       'Dealer finished first in South 4 and ended the game',
-    'riichi.matchEndReason.south4':
+    'riichi.matchEndReason.south4_end':
       'South game ended at South 4 (return line reached)',
     'riichi.matchEndReason.default': 'Match end',
-    'riichi.drawReason.suufonRenda': 'Four winds in first discard',
-    'riichi.drawReason.suuchaRiichi': 'Four players declared riichi',
+    'riichi.drawReason.suufon': 'Four winds in first discard',
+    'riichi.drawReason.suucha': 'Four players declared riichi',
     'riichi.drawReason.suukaikan': 'Four kans',
-    'riichi.drawReason.kyuushuKyuuhai': 'Nine terminals/honors draw',
-    'riichi.drawReason.default': 'Exhaustive draw',
-    'riichi.drawDesc.suufonRenda':
+    'riichi.drawReason.kyuushu': 'Nine terminals/honors draw',
+    'riichi.drawReason.exhaustive': 'Exhaustive draw',
+    'riichi.drawDesc.suufon':
       'All players discarded the same wind as first discard. Abortive draw, honba +1, dealer repeats.',
-    'riichi.drawDesc.suuchaRiichi':
+    'riichi.drawDesc.suucha':
       'All four players declared riichi. Abortive draw, honba +1, dealer repeats.',
     'riichi.drawDesc.suukaikan':
       'Four kans were declared. Abortive draw, honba +1, dealer repeats.',
-    'riichi.drawDesc.kyuushuKyuuhai':
+    'riichi.drawDesc.kyuushu':
       'A player requested nine terminals/honors draw. Abortive draw, honba +1, dealer repeats.',
-    'riichi.drawDesc.default':
+    'riichi.drawDesc.exhaustive':
       'Wall exhausted with no winner. Honba +1. Dealer repeats if tenpai, otherwise dealer changes.',
     'riichi.modal.growth.title': 'Growth Rewards This Round',
     'riichi.modal.growth.autoSettlePrefix': 'Auto settle +',

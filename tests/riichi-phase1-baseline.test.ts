@@ -6,11 +6,11 @@ import {
   sumMeldTileCount,
   tenpaiConcealedCount,
 } from '../src/lib/riichiTenpaiHelpers';
-import { initRiichiGame } from '../src/pages/mahjong/japanese/gameState';
 import {
   countVisibleTilesByBase,
   getSeatWind,
 } from '../src/pages/mahjong/japanese/helpers';
+import { createTestRound } from './helpers/riichiState';
 
 describe('Phase 1：牌形张数与自风', () => {
   test('杠子物理 4 张，但牌形只占一个 3 张面子', () => {
@@ -51,7 +51,7 @@ describe('Phase 1：三元牌宝牌循环', () => {
 
 describe('Phase 1：公开牌计数', () => {
   test('剩余枚数使用的可见牌包含四家全部副露', () => {
-    const state = initRiichiGame();
+    const state = createTestRound();
     state.hands[0] = [0, 0, 4];
     state.melds = [
       [{ type: 'chi', tiles: [1, 2, 3] }],

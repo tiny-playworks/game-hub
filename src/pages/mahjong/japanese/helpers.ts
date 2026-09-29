@@ -45,7 +45,9 @@ export function getMatchEndReasonText(
   translate: (key: string) => string,
 ): string {
   return translate(
-    reason ? `riichi.matchEndReason.${reason}` : 'riichi.matchEndReason.default',
+    reason
+      ? `riichi.matchEndReason.${reason}`
+      : 'riichi.matchEndReason.default',
   );
 }
 

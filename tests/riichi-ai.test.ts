@@ -1,195 +1,177 @@
 import { describe, expect, test } from '@rstest/core';
 import {
-  applyAiRiichiState,
-  canAiRonOnClaim,
-  chooseAiClaimActionAgainstRiichi,
-  chooseAiDefensiveDiscard,
-  chooseAiDefensiveDiscardWithMeta,
-  evaluateTileDangerVsRiichi,
-  shouldAiDeclareRiichi,
-  shouldAiFoldClaimAgainstRiichi,
+  evaluateTileDanger,
+  evaluateTileValue,
+  type OpponentView,
 } from '../src/lib/riichiAi';
+import { emptyVisibleCounts } from '../src/lib/riichiShanten';
+import {
+  applyEvent,
+  decideAiClaim,
+  decideAiTurn,
+  getPendingSeats,
+} from '../src/pages/mahjong/japanese/engine';
+import { computeClaimOptions } from '../src/pages/mahjong/japanese/engine/options';
+import { DEFAULT_RIICHI_RULES } from '../src/pages/mahjong/japanese/engine/rules';
+import { createTestRound, matchWithRound } from './helpers/riichiState';
+import { tile, tiles } from './helpers/riichiTiles';
 
-describe('日麻 AI 决策回归', () => {
-  test('AI 立直：满足门清/听牌/点数且命中概率时应宣告', () => {
-    const ok = shouldAiDeclareRiichi({
-      alreadyRiichi: false,
-      isMenzen: true,
-      score: 12000,
-      waitingCount: 3,
-      random: 0.1,
-    });
-    expect(ok).toBe(true);
-  });
+const opponent: OpponentView = {
+  discards: [4, 12, 20],
+  safeAfterRiichi: [],
+  riichi: true,
+  riichiIndex: 0,
+  meldCount: 0,
+};
 
-  test('AI 立直：点数不足 1000 时必须禁止', () => {
-    const ok = shouldAiDeclareRiichi({
-      alreadyRiichi: false,
-      isMenzen: true,
-      score: 900,
-      waitingCount: 2,
-      random: 0.01,
-    });
-    expect(ok).toBe(false);
-  });
-
-  test('AI 立直状态应用：扣 1000 并增加棒池', () => {
-    const out = applyAiRiichiState(
-      [25000, 25000, 25000, 25000],
-      [false, false, false, false],
-      2000,
-      2,
+describe('日麻确定性 AI 决策回归', () => {
+  test('同一局面始终产生同一合法事件，不改写输入', () => {
+    const match = matchWithRound(createTestRound());
+    const snapshot = structuredClone(match.round);
+    const event = decideAiTurn(match.round, 0, 'standard');
+    expect(event).not.toBeNull();
+    expect(decideAiTurn(structuredClone(match.round), 0, 'standard')).toEqual(
+      event,
     );
-    expect(out.scores).toEqual([25000, 25000, 24000, 25000]);
-    expect(out.riichiDeclared).toEqual([false, false, true, false]);
-    expect(out.riichiPot).toBe(3000);
+    expect(match.round).toEqual(snapshot);
+    expect(applyEvent(match, event!)).not.toBeNull();
   });
 
-  test('AI 要牌轮：可和形+有役且非自打时应优先荣和', () => {
-    const ok = canAiRonOnClaim({
-      fromPlayer: 1,
-      aiSeat: 2,
-      isWinShape: true,
-      hasYaku: true,
-    });
-    expect(ok).toBe(true);
+  test('无役听牌选择立直，并在宣言牌通过后缴纳立直棒', () => {
+    const state = createTestRound();
+    state.hands[0] = tiles('123456m234p678s5p1z');
+    state.drawnTile = tile('1z');
+    let match = matchWithRound(state);
+    const event = decideAiTurn(match.round, 0, 'standard');
+    expect(event).toEqual({ type: 'riichi', seat: 0, tile: tile('1z') });
+    match = applyEvent(match, event!)!.match;
+    while (match.round.phase === 'claim') {
+      const seat = getPendingSeats(match.round)[0];
+      match = applyEvent(match, {
+        type: 'claim',
+        seat,
+        response: { type: 'pass' },
+      })!.match;
+    }
+    expect(match.round.scores[0]).toBe(24000);
+    expect(match.round.riichiPot).toBe(1000);
   });
 
-  test('防守危险度：立直家现物危险度应为最低', () => {
-    const danger = evaluateTileDangerVsRiichi(4, [4, 12, 20]);
-    expect(danger).toBe(0);
-  });
-
-  test('防守舍牌：有人立直时应优先切现物', () => {
-    const picked = chooseAiDefensiveDiscard({
-      hand: [4, 5, 17, 28],
-      aiSeat: 2,
-      riichiDeclared: [false, true, false, false],
-      discardPiles: [[], [4, 22, 30], [], []],
-    });
-    expect(picked).toBe(4);
-  });
-
-  test('防守舍牌：无人立直时返回 null（不强制防守）', () => {
-    const picked = chooseAiDefensiveDiscard({
-      hand: [4, 5, 17, 28],
-      aiSeat: 1,
-      riichiDeclared: [false, false, false, false],
-      discardPiles: [[], [], [], []],
-    });
-    expect(picked).toBe(null);
-  });
-
-  test('防守舍牌：同等危险度下优先保留赤宝牌', () => {
-    const picked = chooseAiDefensiveDiscard({
-      hand: [34, 6],
-      aiSeat: 0,
-      riichiDeclared: [false, true, false, false],
-      discardPiles: [[], [], [], []],
-    });
-    expect(picked).toBe(6);
-  });
-
-  test('防守舍牌：同等危险度下优先保留宝牌', () => {
-    const picked = chooseAiDefensiveDiscard({
-      hand: [4, 6],
-      aiSeat: 0,
-      riichiDeclared: [false, true, false, false],
-      discardPiles: [[], [], [], []],
-      doraIndicators: [3],
-    });
-    expect(picked).toBe(6);
-  });
-
-  test('防守舍牌：绝对安全牌里优先切孤张字牌', () => {
-    const picked = chooseAiDefensiveDiscard({
-      hand: [27, 4, 5],
-      aiSeat: 0,
-      riichiDeclared: [false, true, false, false],
-      discardPiles: [[], [27, 4, 31], [], []],
-    });
-    expect(picked).toBe(27);
-  });
-
-  test('防守舍牌：绝对安全牌里优先切孤张幺九', () => {
-    const picked = chooseAiDefensiveDiscard({
-      hand: [0, 3, 4],
-      aiSeat: 0,
-      riichiDeclared: [false, true, false, false],
-      discardPiles: [[], [0, 3, 12], [], []],
-    });
-    expect(picked).toBe(0);
-  });
-
-  test('防守解释：应返回可读原因文本', () => {
-    const out = chooseAiDefensiveDiscardWithMeta({
-      hand: [4, 6, 28],
-      aiSeat: 0,
-      riichiDeclared: [false, true, false, false],
-      discardPiles: [[], [4, 12], [], []],
-    });
-    expect(out.tile).toBe(4);
-    expect(out.reason.length).toBeGreaterThan(0);
-  });
-
-  test('要牌防守：有他家立直时应转入过牌防守', () => {
-    const fold = shouldAiFoldClaimAgainstRiichi({
-      aiSeat: 2,
-      riichiDeclared: [false, true, false, false],
-    });
-    expect(fold).toBe(true);
-  });
-
-  test('要牌防守：无人立直时不应强制过牌', () => {
-    const fold = shouldAiFoldClaimAgainstRiichi({
-      aiSeat: 2,
-      riichiDeclared: [false, false, false, false],
-    });
-    expect(fold).toBe(false);
-  });
-
-  test('要牌中间档：牌效提升明显时允许谨慎碰', () => {
-    const out = chooseAiClaimActionAgainstRiichi({
-      aiSeat: 2,
-      hand: [31, 31, 1, 4, 7, 10, 13, 16, 19, 22, 25, 27, 30],
-      chiOptions: [],
-      canPeng: true,
-      lastTile: 31,
-      riichiDeclared: [false, true, false, false],
-      discardPiles: [[], [27, 31, 30], [], []],
-    });
-    expect(out.action).toBe('peng');
-    expect(out.reason.includes('高于吃') || out.reason.includes('役牌碰')).toBe(
-      true,
+  test('点数不足 1000 时不宣告立直', () => {
+    const state = createTestRound();
+    state.hands[0] = tiles('123456m234p678s5p1z');
+    state.scores[0] = 900;
+    state.drawnTile = tile('1z');
+    expect(decideAiTurn(matchWithRound(state).round, 0, 'standard')?.type).toBe(
+      'discard',
     );
   });
 
-  test('要牌中间档：牌效提升不足时应继续过牌', () => {
-    const out = chooseAiClaimActionAgainstRiichi({
-      aiSeat: 2,
-      hand: [1, 3, 7, 9, 12, 15, 18, 20, 22, 24, 27, 28, 29],
-      chiOptions: [[1, 3]],
-      canPeng: false,
-      lastTile: 2,
-      riichiDeclared: [false, true, false, false],
-      discardPiles: [[], [2, 11, 19], [], []],
+  test('立直后只打摸入牌', () => {
+    const state = createTestRound();
+    state.hands[0] = tiles('123456m234p678s5p1z');
+    state.riichiDeclared[0] = true;
+    state.drawnTile = tile('1z');
+    expect(decideAiTurn(matchWithRound(state).round, 0, 'standard')).toEqual({
+      type: 'discard',
+      seat: 0,
+      tile: tile('1z'),
     });
-    expect(out.action).toBe('pass');
   });
 
-  test('要牌中间档：役牌碰应给出更高价值理由', () => {
-    const out = chooseAiClaimActionAgainstRiichi({
-      aiSeat: 0,
-      hand: [27, 27, 1, 4, 7, 10, 13, 16, 19, 22, 25, 30, 31],
-      chiOptions: [],
-      canPeng: true,
-      lastTile: 27,
-      riichiDeclared: [false, true, false, false],
-      discardPiles: [[], [27, 30, 31], [], []],
-      seatWind: 0,
-      roundWind: 0,
+  test('手牌很远而他家立直时选择现物', () => {
+    const state = createTestRound();
+    state.hands[0] = tiles('147m147p147s12345z');
+    state.riichiDeclared[1] = true;
+    state.discardPiles[1] = [tile('1z')];
+    expect(decideAiTurn(matchWithRound(state).round, 0, 'standard')).toEqual({
+      type: 'discard',
+      seat: 0,
+      tile: tile('1z'),
     });
-    expect(out.action).toBe('peng');
-    expect(out.reason.includes('役牌碰')).toBe(true);
+  });
+
+  test('现物和立直后安全牌的危险度为零', () => {
+    expect(evaluateTileDanger(4, opponent, emptyVisibleCounts())).toBe(0);
+    expect(evaluateTileDanger(34, opponent, emptyVisibleCounts())).toBe(0);
+    expect(
+      evaluateTileDanger(
+        7,
+        { ...opponent, safeAfterRiichi: [7] },
+        emptyVisibleCounts(),
+      ),
+    ).toBe(0);
+  });
+
+  test('壁和已见三枚字牌会降低危险度', () => {
+    const visible = emptyVisibleCounts();
+    const plain = { ...opponent, discards: [] };
+    const before = evaluateTileDanger(0, plain, visible);
+    visible[1] = 4;
+    expect(evaluateTileDanger(0, plain, visible)).toBeLessThan(before);
+    visible[27] = 3;
+    expect(evaluateTileDanger(27, plain, visible)).toBeLessThan(
+      evaluateTileDanger(28, plain, visible),
+    );
+  });
+
+  test('同等牌效下保留赤五和宝牌的价值更高', () => {
+    const ctx = { doraIndicators: [3], seatWind: 0, roundWind: 0 };
+    expect(evaluateTileValue(34, [34, 4], ctx)).toBeGreaterThan(
+      evaluateTileValue(4, [34, 4], ctx),
+    );
+    expect(evaluateTileValue(4, [4, 6], ctx)).toBeGreaterThan(
+      evaluateTileValue(6, [4, 6], ctx),
+    );
+  });
+
+  function claimState(hand: string, called: string) {
+    const state = createTestRound();
+    state.phase = 'claim';
+    state.hands[2] = tiles(hand);
+    state.claim = {
+      tile: tile(called),
+      from: 1,
+      kind: 'discard',
+      options: computeClaimOptions(
+        state,
+        tile(called),
+        1,
+        'discard',
+        DEFAULT_RIICHI_RULES,
+      ),
+      responses: [null, null, null, null],
+    };
+    return state;
+  }
+
+  test('合法荣和优先于所有鸣牌和防守', () => {
+    const state = claimState('123456m234p678s5p', '5p');
+    state.riichiDeclared[2] = true;
+    state.claim!.options = computeClaimOptions(
+      state,
+      tile('5p'),
+      1,
+      'discard',
+      DEFAULT_RIICHI_RULES,
+    );
+    expect(decideAiClaim(state, 2, 'standard')).toEqual({ type: 'ron' });
+  });
+
+  test('役牌碰使向听下降时鸣牌', () => {
+    const state = claimState('55z123m456p22s68s1m', '5z');
+    expect(decideAiClaim(state, 2, 'standard')).toEqual({ type: 'pon' });
+  });
+
+  test('无役路线的碰牌选择过牌', () => {
+    const state = claimState('22m456p789s11z89p4z', '2m');
+    expect(state.claim!.options[2]?.pon).toBe(true);
+    expect(decideAiClaim(state, 2, 'standard')).toEqual({ type: 'pass' });
+  });
+
+  test('他家立直且自己未听牌时不冒险鸣牌', () => {
+    const state = claimState('55z123m456p22s68s1m', '5z');
+    state.riichiDeclared[1] = true;
+    expect(decideAiClaim(state, 2, 'standard')).toEqual({ type: 'pass' });
   });
 });

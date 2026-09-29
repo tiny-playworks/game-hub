@@ -1,4 +1,8 @@
-import type { RiichiGameState, SeatClaimOptions, SeatTurnOptions } from '../types';
+import type {
+  RiichiGameState,
+  SeatClaimOptions,
+  SeatTurnOptions,
+} from '../types';
 
 /** 当前需要表态的座位（打牌阶段为行牌者；鸣牌窗口为尚未响应且有选项者） */
 export function getPendingSeats(state: RiichiGameState): number[] {
@@ -57,7 +61,11 @@ export function countAllTiles(state: RiichiGameState): number {
     state.rinshanTiles.length + state.doraPool.length + state.uraPool.length;
   const kanCount = state.melds.reduce(
     (s, ms) =>
-      s + ms.filter((m) => m.type === 'mingang' || m.type === 'angang' || m.type === 'kakan').length,
+      s +
+      ms.filter(
+        (m) =>
+          m.type === 'mingang' || m.type === 'angang' || m.type === 'kakan',
+      ).length,
     0,
   );
   // 每开一杠，活牌山末尾一张补入王牌（这里不单独存放，按杠数计入）

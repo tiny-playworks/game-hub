@@ -30,7 +30,12 @@ export type RiichiEvent =
   | ({ type: 'riichi'; seat: number; tile: number } & ActionMeta)
   | ({ type: 'tsumo'; seat: number } & ActionMeta)
   | ({ type: 'ankan'; seat: number; tiles: number[] } & ActionMeta)
-  | ({ type: 'kakan'; seat: number; meldIndex: number; tile: number } & ActionMeta)
+  | ({
+      type: 'kakan';
+      seat: number;
+      meldIndex: number;
+      tile: number;
+    } & ActionMeta)
   | ({ type: 'kyuushu'; seat: number } & ActionMeta)
   | ({ type: 'claim'; seat: number; response: ClaimResponse } & ActionMeta)
   | { type: 'nextRound' };
@@ -96,7 +101,11 @@ function statusOf(round: RiichiGameState): RiichiMatchStatus {
 export function createMatch(options: CreateMatchOptions): StepResult {
   const rules = resolveRules(options.rules);
   const ctx = createStepContext(rules);
-  ctx.effects.push({ type: 'progress', event: 'enter-game', key: 'enter-game' });
+  ctx.effects.push({
+    type: 'progress',
+    event: 'enter-game',
+    key: 'enter-game',
+  });
   const round = createRound(
     {
       matchSeed: options.seed,
@@ -276,7 +285,14 @@ function applyRoundEvent(
     case 'ankan':
       return declareAnkan(round, event.seat, event.tiles, event, ctx);
     case 'kakan':
-      return declareKakan(round, event.seat, event.meldIndex, event.tile, event, ctx);
+      return declareKakan(
+        round,
+        event.seat,
+        event.meldIndex,
+        event.tile,
+        event,
+        ctx,
+      );
     case 'kyuushu':
       return declareKyuushu(round, event.seat, ctx);
     case 'claim':

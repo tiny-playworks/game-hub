@@ -139,6 +139,7 @@ export function RiichiTile({
 
   return (
     <span
+      role="img"
       className={className}
       data-rotation={rotation}
       aria-label={getTileLabel(tile)}

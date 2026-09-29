@@ -21,7 +21,11 @@ export function nextAutoEvent(
   const seat = getPendingSeats(round)[0];
   if (seat === undefined) return null;
   if (round.phase === 'discard') return decideAiTurn(round, seat, levels[seat]);
-  return { type: 'claim', seat, response: decideAiClaim(round, seat, levels[seat]) };
+  return {
+    type: 'claim',
+    seat,
+    response: decideAiClaim(round, seat, levels[seat]),
+  };
 }
 
 export interface SimOptions {
@@ -30,7 +34,11 @@ export interface SimOptions {
   rules?: Partial<RiichiRuleConfig>;
   levels?: RiichiAiLevel[];
   maxSteps?: number;
-  onStep?: (before: RiichiMatchState, event: RiichiEvent, after: RiichiMatchState) => void;
+  onStep?: (
+    before: RiichiMatchState,
+    event: RiichiEvent,
+    after: RiichiMatchState,
+  ) => void;
 }
 
 export function simulateMatch(options: SimOptions): RiichiMatchState {

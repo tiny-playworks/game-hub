@@ -26,7 +26,7 @@ import {
 import { getRecentMahjongEntry } from '@/lib/recentMahjong';
 import { getTitleById, resolveActiveTitle } from '@/lib/titles';
 import { cn } from '@/lib/utils';
-import { useRiichiGameStore } from '@/pages/mahjong/japanese/store/riichiGameStore';
+import { useRiichiStore } from '@/pages/mahjong/japanese/store/riichiMatchStore';
 
 function formatGrowthFeedLine(
   item: GrowthFeedItem,
@@ -53,9 +53,8 @@ const categoryIconMap = {
 
 const Home = () => {
   const { t, locale } = useLocale();
-  const view = useRiichiGameStore((state) => state.view);
-  const game = useRiichiGameStore((state) => state.game);
-  const matchEnd = useRiichiGameStore((state) => state.matchEnd);
+  const view = useRiichiStore((state) => state.view);
+  const match = useRiichiStore((state) => state.match);
   const [playerProfile, setPlayerProfile] = useState<PlayerProfile>(() =>
     getPlayerProfile(),
   );
@@ -71,7 +70,9 @@ const Home = () => {
   );
 
   const recentMahjong = getRecentMahjongEntry();
-  const isRiichiActive = Boolean(view === 'game' && game && !matchEnd);
+  const isRiichiActive = Boolean(
+    view === 'game' && match && match.status !== 'matchEnd',
+  );
   const riichiGame = games.find((item) => item.id === 'mahjong-japanese');
   const activeCharacter = getCharacterById(characterState.activeCharacterId);
   const activeAffinity =

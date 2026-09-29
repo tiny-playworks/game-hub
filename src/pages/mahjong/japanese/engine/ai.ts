@@ -92,18 +92,22 @@ function dangerFor(
     if (opp === seat) continue;
     const threat = threatOf(state, opp);
     if (threat <= 0) continue;
-    danger += threat * evaluateTileDanger(tile, opponentViewOf(state, opp), visible);
+    danger +=
+      threat * evaluateTileDanger(tile, opponentViewOf(state, opp), visible);
   }
   return danger;
 }
 
 function totalThreat(state: RiichiGameState, seat: number): number {
   let sum = 0;
-  for (let opp = 0; opp < 4; opp++) if (opp !== seat) sum += threatOf(state, opp);
+  for (let opp = 0; opp < 4; opp++)
+    if (opp !== seat) sum += threatOf(state, opp);
   return sum;
 }
 
-function candidateMap(cands: DiscardCandidate[]): Map<number, DiscardCandidate> {
+function candidateMap(
+  cands: DiscardCandidate[],
+): Map<number, DiscardCandidate> {
   return new Map(cands.map((c) => [c.base, c]));
 }
 
@@ -147,7 +151,8 @@ function pickDiscard(
     const shanten = cand?.shanten ?? 8;
     const ukeire = cand?.ukeire ?? 0;
     const efficiency = -shanten * 100 + ukeire;
-    const value = level === 'beginner' ? 0 : evaluateTileValue(tile, hand, valueCtx);
+    const value =
+      level === 'beginner' ? 0 : evaluateTileValue(tile, hand, valueCtx);
     const edgeBonus = isYaochuu(tile) ? 0.5 : 0;
     const attackScore = efficiency - value * 4 + edgeBonus;
     const danger =
@@ -235,7 +240,8 @@ export function decideAiTurn(
   }
 
   if (state.riichiDeclared[seat]) {
-    if (opts.ankan.length > 0) return { type: 'ankan', seat, tiles: opts.ankan[0] };
+    if (opts.ankan.length > 0)
+      return { type: 'ankan', seat, tiles: opts.ankan[0] };
     return { type: 'discard', seat, tile: discardable[0] };
   }
 
@@ -245,10 +251,17 @@ export function decideAiTurn(
     for (const option of opts.ankan) {
       const rest = removeTiles(hand, option);
       if (!rest) continue;
-      const after = getShanten(rest, [...melds, { type: 'angang', tiles: option }]);
+      const after = getShanten(rest, [
+        ...melds,
+        { type: 'angang', tiles: option },
+      ]);
       if (after <= bestShanten) return { type: 'ankan', seat, tiles: option };
     }
-    if (stance === 'attack' && opts.kakan.length > 0 && totalThreat(state, seat) === 0) {
+    if (
+      stance === 'attack' &&
+      opts.kakan.length > 0 &&
+      totalThreat(state, seat) === 0
+    ) {
       const k = opts.kakan[0];
       return { type: 'kakan', seat, meldIndex: k.meldIndex, tile: k.tile };
     }
@@ -271,15 +284,29 @@ export function decideAiTurn(
     }
   }
 
-  const tile = pickDiscard(state, seat, discardable, cands, stance, visible, level);
+  const tile = pickDiscard(
+    state,
+    seat,
+    discardable,
+    cands,
+    stance,
+    visible,
+    level,
+  );
   return { type: 'discard', seat, tile };
 }
 
-function allTilesOf(hand: readonly number[], melds: readonly RiichiMeld[]): number[] {
+function allTilesOf(
+  hand: readonly number[],
+  melds: readonly RiichiMeld[],
+): number[] {
   return [...hand, ...melds.flatMap((m) => m.tiles)];
 }
 
-function tanyaoPossible(tiles: readonly number[], hand: readonly number[]): boolean {
+function tanyaoPossible(
+  tiles: readonly number[],
+  hand: readonly number[],
+): boolean {
   const meldTiles = tiles.slice(hand.length);
   if (meldTiles.some(isYaochuu)) return false;
   return hand.filter(isYaochuu).length <= 1;
@@ -319,7 +346,13 @@ function evaluateCall(
   );
   if (cands.length === 0) return null;
   const best = cands.reduce((a, b) =>
-    a.shanten !== b.shanten ? (a.shanten < b.shanten ? a : b) : a.ukeire >= b.ukeire ? a : b,
+    a.shanten !== b.shanten
+      ? a.shanten < b.shanten
+        ? a
+        : b
+      : a.ukeire >= b.ukeire
+        ? a
+        : b,
   );
   return { shanten: best.shanten, ukeire: best.ukeire };
 }
@@ -333,7 +366,8 @@ function callHasYaku(
 ): boolean {
   const base = getBaseTile(tile);
   const seatWind = getSeatWindOf(state, seat);
-  if (meld.type !== 'chi' && isYakuhaiBase(base, seatWind, state.roundWind)) return true;
+  if (meld.type !== 'chi' && isYakuhaiBase(base, seatWind, state.roundWind))
+    return true;
   const hand = state.hands[seat];
   if (
     hand.some(
@@ -346,7 +380,9 @@ function callHasYaku(
   }
   if (
     state.melds[seat].some(
-      (m) => m.type !== 'chi' && isYakuhaiBase(getBaseTile(m.tiles[0]), seatWind, state.roundWind),
+      (m) =>
+        m.type !== 'chi' &&
+        isYakuhaiBase(getBaseTile(m.tiles[0]), seatWind, state.roundWind),
     )
   ) {
     return true;
@@ -381,7 +417,11 @@ export function decideAiClaim(
   if (options.pon) {
     const taken = takeByBase(hand, base, 2);
     if (taken) {
-      const meld: RiichiMeld = { type: 'peng', tiles: [...taken.taken, tile], fromPlayer: claim.from };
+      const meld: RiichiMeld = {
+        type: 'peng',
+        tiles: [...taken.taken, tile],
+        fromPlayer: claim.from,
+      };
       const result = evaluateCall(
         state,
         seat,
@@ -390,13 +430,21 @@ export function decideAiClaim(
         getKuikaeForbiddenBases(tile, null),
         visible,
       );
-      if (result && (level === 'beginner' || callHasYaku(state, seat, tile, taken.taken, meld))) {
+      if (
+        result &&
+        (level === 'beginner' ||
+          callHasYaku(state, seat, tile, taken.taken, meld))
+      ) {
         plans.push({ response: { type: 'pon' }, ...result });
       }
     }
   }
   for (const pair of options.chi) {
-    const meld: RiichiMeld = { type: 'chi', tiles: [...pair, tile], fromPlayer: claim.from };
+    const meld: RiichiMeld = {
+      type: 'chi',
+      tiles: [...pair, tile],
+      fromPlayer: claim.from,
+    };
     const result = evaluateCall(
       state,
       seat,
@@ -405,7 +453,10 @@ export function decideAiClaim(
       getKuikaeForbiddenBases(tile, pair),
       visible,
     );
-    if (result && (level === 'beginner' || callHasYaku(state, seat, tile, pair, meld))) {
+    if (
+      result &&
+      (level === 'beginner' || callHasYaku(state, seat, tile, pair, meld))
+    ) {
       plans.push({ response: { type: 'chi', tiles: pair }, ...result });
     }
   }

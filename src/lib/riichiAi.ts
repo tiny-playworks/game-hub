@@ -26,10 +26,7 @@ function isGenbutsu(base: number, opp: OpponentView): boolean {
   );
 }
 
-function sujiState(
-  base: number,
-  opp: OpponentView,
-): 'full' | 'half' | 'none' {
+function sujiState(base: number, opp: OpponentView): 'full' | 'half' | 'none' {
   const num = base % 9;
   const suitStart = base - num;
   const has = (n: number) =>
@@ -54,7 +51,9 @@ function isKabeSafe(base: number, visible: VisibleCounts): boolean {
   const walled = (n: number) => n >= 0 && n <= 8 && visible[suitStart + n] >= 4;
   if (num <= 2) return walled(num + 1) || walled(num + 2);
   if (num >= 6) return walled(num - 1) || walled(num - 2);
-  return (walled(num - 1) || walled(num - 2)) && (walled(num + 1) || walled(num + 2));
+  return (
+    (walled(num - 1) || walled(num - 2)) && (walled(num + 1) || walled(num + 2))
+  );
 }
 
 /**
