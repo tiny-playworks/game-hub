@@ -212,7 +212,8 @@ export function buildRiichiInput(
     riichi: state.riichiDeclared[w],
     ippatsu: state.ippatsu ?? false,
     double_riichi: state.doubleRiichi ?? false,
-    first_take: isTsumo && (state.firstTake ?? false),
+    first_take: state.firstTake ?? false,
+    local_yaku_enabled: [15],
     allow_double_yakuman: state.allowDoubleYakuman ?? false,
     after_kan: state.afterKan ?? false,
     tile_discarded_by_someone: isTsumo

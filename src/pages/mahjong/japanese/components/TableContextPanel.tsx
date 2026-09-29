@@ -1,5 +1,6 @@
 import { Activity, Layers3 } from 'lucide-react';
 import { useLocale } from '@/contexts/LocaleContext';
+import { formatMessage } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { getDecisionSeat } from '../engine';
 import { formatPoints, getSeatWind } from '../helpers';
@@ -10,7 +11,7 @@ type Props = {
 };
 
 export function TableContextPanel({ game }: Props) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const ranking = [...game.scores.keys()].sort(
     (left, right) => game.scores[right] - game.scores[left],
   );
@@ -19,40 +20,49 @@ export function TableContextPanel({ game }: Props) {
   const roundWind = t(`game.mahjong.winds.${game.roundWind}`);
 
   return (
-    <aside className="riichi-table-context" aria-label="牌局场况">
+    <aside
+      className="riichi-table-context"
+      aria-label={t('riichi.context.label')}
+    >
       <header className="riichi-table-context-header">
         <div>
           <p>TABLE STATUS</p>
           <h2>
-            {roundWind}
-            {game.roundNumber}局
+            {formatMessage(locale, 'riichi.context.round', {
+              wind: roundWind,
+              number: game.roundNumber,
+            })}
           </h2>
         </div>
         <span className="riichi-table-context-live">
           <Activity aria-hidden="true" size={13} />
-          进行中
+          {t('riichi.context.live')}
         </span>
       </header>
 
       <div className="riichi-table-context-metrics">
         <div>
-          <span>余牌</span>
+          <span>{t('riichi.context.wall')}</span>
           <strong>{game.wall.length}</strong>
         </div>
         <div>
-          <span>本场</span>
+          <span>{t('riichi.context.honba')}</span>
           <strong>{game.honba}</strong>
         </div>
         <div>
-          <span>立直棒</span>
+          <span>{t('riichi.context.riichiSticks')}</span>
           <strong>{game.riichiPot / 1000}</strong>
         </div>
       </div>
 
       <section className="riichi-table-context-section">
         <div className="riichi-table-context-title">
-          <span>席位与点数</span>
-          <small>庄家 {t(`game.mahjong.seats.${game.dealer}`)}</small>
+          <span>{t('riichi.context.scores')}</span>
+          <small>
+            {formatMessage(locale, 'riichi.context.dealer', {
+              seat: t(`game.mahjong.seats.${game.dealer}`),
+            })}
+          </small>
         </div>
         <div className="riichi-table-scoreboard">
           {[0, 1, 2, 3].map((seat) => {
@@ -75,8 +85,10 @@ export function TableContextPanel({ game }: Props) {
                 <span className="riichi-table-score-name">
                   {t(`game.mahjong.seats.${seat}`)}
                 </span>
-                <strong>{formatPoints(game.scores[seat])}</strong>
-                {game.riichiDeclared[seat] && <em>立直</em>}
+                <strong>{formatPoints(game.scores[seat], locale)}</strong>
+                {game.riichiDeclared[seat] && (
+                  <em>{t('riichi.state.riichi')}</em>
+                )}
               </div>
             );
           })}
@@ -85,8 +97,8 @@ export function TableContextPanel({ game }: Props) {
 
       <section className="riichi-table-context-section">
         <div className="riichi-table-context-title">
-          <span>牌河进度</span>
-          <small>每家最多显示 6 × 6</small>
+          <span>{t('riichi.context.rivers')}</span>
+          <small>{t('riichi.context.riverCapacity')}</small>
         </div>
         <div className="riichi-table-river-load">
           {[0, 1, 2, 3].map((seat) => {
@@ -109,8 +121,15 @@ export function TableContextPanel({ game }: Props) {
       <footer className="riichi-table-context-footer">
         <Layers3 aria-hidden="true" size={15} />
         <span>
-          副露 {game.melds.reduce((total, melds) => total + melds.length, 0)} 组
-          · {game.phase === 'claim' ? '鸣牌响应中' : '摸打阶段'}
+          {formatMessage(locale, 'riichi.context.melds', {
+            count: game.melds.reduce((total, melds) => total + melds.length, 0),
+          })}
+          {' · '}
+          {t(
+            game.phase === 'claim'
+              ? 'riichi.context.claimPhase'
+              : 'riichi.context.drawPhase',
+          )}
         </span>
       </footer>
     </aside>

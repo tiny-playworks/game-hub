@@ -58,16 +58,9 @@ export function countAllTiles(state: RiichiGameState): number {
     0,
   );
   const deadWall =
-    state.rinshanTiles.length + state.doraPool.length + state.uraPool.length;
-  const kanCount = state.melds.reduce(
-    (s, ms) =>
-      s +
-      ms.filter(
-        (m) =>
-          m.type === 'mingang' || m.type === 'angang' || m.type === 'kakan',
-      ).length,
-    0,
-  );
-  // 每开一杠，活牌山末尾一张补入王牌（这里不单独存放，按杠数计入）
-  return inHands + inRivers + inMelds + state.wall.length + deadWall + kanCount;
+    state.rinshanTiles.length +
+    state.doraPool.length +
+    state.uraPool.length +
+    state.deadWallSupplements.length;
+  return inHands + inRivers + inMelds + state.wall.length + deadWall;
 }

@@ -17,17 +17,16 @@ const HONORS = [
 ] as const;
 
 describe('日麻字牌牌面', () => {
-  test.each(HONORS)('$tile 与规则层标签 $label 保持同一字牌顺序', ({
-    tile,
-    label,
-    face,
-  }) => {
-    expect(getTileLabel(tile)).toBe(label);
+  test.each(HONORS)(
+    '$tile 与规则层标签 $label 保持同一字牌顺序',
+    ({ tile, label, face }) => {
+      expect(getTileLabel(tile)).toBe(label);
 
-    render(<RiichiTileFace tile={tile} />);
+      render(<RiichiTileFace tile={tile} />);
 
-    expect(screen.getByText(face)).toBeInTheDocument();
-  });
+      expect(screen.getByText(face)).toBeInTheDocument();
+    },
+  );
 
   test('中、发、白分别使用红、绿、白色牌样式', () => {
     expect(getTileColorClass(31)).toContain('text-red-700');

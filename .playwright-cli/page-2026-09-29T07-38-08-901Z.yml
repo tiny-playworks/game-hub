@@ -1,0 +1,116 @@
+- generic:
+  - generic:
+    - generic:
+      - generic [aria-hidden]:
+        - banner:
+          - link:
+            - /url: /
+            - text: 返回首页
+          - generic: TINY GAME HUB · RIICHI
+        - main:
+          - generic:
+            - generic:
+              - generic: DESKTOP BETA
+              - text: 规则引擎已接入
+            - paragraph: RIICHI PRACTICE TABLE
+            - heading [level=1]: 日本立直麻将
+            - paragraph: 面向电脑大屏的完整练习牌桌。专注行牌、听牌与局面判断。
+            - generic:
+              - generic: 四人完整牌桌
+              - generic: 规则引擎和牌判定
+              - generic: 本地训练提示
+              - generic: 无需账号与联网
+            - button: 规则与新人指南
+          - region:
+            - generic:
+              - text: TABLE SETUP
+              - heading [level=2]: 准备开局
+              - paragraph: 设置只保存在当前浏览器中。
+            - group:
+              - generic: 场次
+              - generic:
+                - button [pressed]:
+                  - strong: 东风场
+                  - generic: 东一至东四
+                - button:
+                  - strong: 南风场
+                  - generic: 东一至南四
+            - group:
+              - generic: 对局偏好
+              - generic:
+                - generic:
+                  - generic: 自动和了
+                  - checkbox
+                - generic:
+                  - generic: 不鸣牌
+                  - checkbox
+                - generic:
+                  - generic: 立直后自动摸切
+                  - checkbox [checked]
+                - generic:
+                  - generic: 鸣牌前确认
+                  - checkbox
+                - generic:
+                  - generic: 危险度提示
+                  - checkbox [checked]
+              - generic:
+                - generic: 电脑难度
+                - combobox
+            - generic:
+              - text: 导入牌谱
+              - button
+            - group:
+              - generic: 牌桌主题
+              - generic:
+                - button [pressed]:
+                  - strong: 绿桌
+                - button:
+                  - strong: 蓝桌
+                - button:
+                  - strong: 暖桌
+            - generic: 纯前端本地运行 · 不上传牌局数据
+            - button:
+              - generic:
+                - strong: 开始游戏
+                - generic: 东风场 · 四人完整牌桌
+      - dialog [ref=f1e98]:
+        - heading "规则与新人指南" [level=2] [ref=f1e99]
+        - generic [ref=f1e100]:
+          - banner [ref=f1e101]:
+            - generic [ref=f1e102]:
+              - paragraph [ref=f1e103]: RULES & ONBOARDING
+              - heading "规则与新人指南" [level=2] [ref=f1e104]
+              - generic [ref=f1e105]: 开始做牌前，先记住“有役才能和”。
+            - button "关闭" [active] [ref=f1e106]
+          - generic [ref=f1e110]:
+            - generic [ref=f1e111]:
+              - paragraph [ref=f1e112]: 01 · 基础目标
+              - heading "先组成能和的牌，再确认有役" [level=3] [ref=f1e113]
+              - list [ref=f1e114]:
+                - listitem [ref=f1e115]: 通常牌型由四组面子与一组对子构成。
+                - listitem [ref=f1e116]: 只有牌型完整还不够，至少需要一个役。
+                - listitem [ref=f1e117]: 门前听牌可以立直；立直后手牌固定。
+            - generic [ref=f1e118]:
+              - paragraph [ref=f1e119]: 02 · 桌面操作
+              - heading "所有决策围绕牌桌底部完成" [level=3] [ref=f1e120]
+              - list [ref=f1e121]:
+                - listitem [ref=f1e122]: 轮到自家时，点击一张手牌将其打出。
+                - listitem [ref=f1e123]: 吃、碰、杠、立直与和牌会出现在手牌上方。
+                - listitem [ref=f1e124]: 训练提示、上一局结算与日志位于右侧工具栏。
+            - generic [ref=f1e125]:
+              - paragraph [ref=f1e126]: 03 · 关键限制
+              - heading "注意振听、立直与宝牌的区别" [level=3] [ref=f1e127]
+              - list [ref=f1e128]:
+                - listitem [ref=f1e129]: 振听状态不能荣和，但仍然可以自摸。
+                - listitem [ref=f1e130]: 宝牌只增加番数，本身不能作为起和役。
+                - listitem [ref=f1e131]: 赤五是宝牌；白板为空白蓝框，牌背不显示牌面。
+          - generic [ref=f1e132]:
+            - generic [ref=f1e133]:
+              - heading "本项目当前采用的核心规则" [level=3] [ref=f1e134]
+              - paragraph [ref=f1e135]: 四人麻将，136 张牌，包含赤五万、赤五筒、赤五索各一枚。无役不能和；里宝牌仅在立直和牌时计算；开杠追加杠宝牌。
+            - generic [ref=f1e136]:
+              - heading "符番与打点" [level=3] [ref=f1e137]
+              - paragraph [ref=f1e138]: 一般和牌最低 20 符，七对子固定 25 符。5 番、4 番 40 符以上或 3 番 70 符以上为满贯；之后依次为跳满、倍满、三倍满与役满。
+            - generic [ref=f1e139]:
+              - heading "场次结束" [level=3] [ref=f1e140]
+              - paragraph [ref=f1e141]: 东风场进行至东四局，南风场进行至南四局；连庄、本场、立直棒与击飞条件按牌局状态结算。

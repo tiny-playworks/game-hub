@@ -3,12 +3,20 @@ import {
   RIICHI_MATCH_VERSION,
   type RiichiMatchState,
   type RiichiReplayFile,
+  restoreMatch,
+  toReplayFile,
 } from '../engine/match';
 
 export const RIICHI_SAVE_STORAGE_KEY = 'game-hub-riichi-save-v1';
 export const RIICHI_LAST_REPLAY_STORAGE_KEY = 'game-hub-riichi-last-replay-v1';
 
 export interface RiichiSaveData {
+  replay: RiichiReplayFile;
+  processedProgress: string[];
+  savedAt: number;
+}
+
+export interface LoadedRiichiSave {
   match: RiichiMatchState;
   processedProgress: string[];
   savedAt: number;
@@ -22,23 +30,18 @@ function storage(): Storage | null {
   }
 }
 
-export function loadSavedMatch(): RiichiSaveData | null {
+export function loadSavedMatch(): LoadedRiichiSave | null {
   const s = storage();
   if (!s) return null;
   try {
     const raw = s.getItem(RIICHI_SAVE_STORAGE_KEY);
     if (!raw) return null;
     const data = JSON.parse(raw) as Partial<RiichiSaveData>;
-    const match = data.match;
-    if (
-      !match ||
-      match.version !== RIICHI_MATCH_VERSION ||
-      match.status === 'matchEnd' ||
-      !match.round ||
-      !Array.isArray(match.events)
-    ) {
+    const replay = data.replay;
+    if (!isReplayFile(replay) || replay.version !== RIICHI_MATCH_VERSION)
       return null;
-    }
+    const match = restoreMatch(replay);
+    if (!match || match.status === 'matchEnd') return null;
     return {
       match,
       processedProgress: Array.isArray(data.processedProgress)
@@ -48,6 +51,16 @@ export function loadSavedMatch(): RiichiSaveData | null {
     };
   } catch {
     return null;
+  }
+}
+
+export function hasSavedMatch(): boolean {
+  try {
+    const raw = storage()?.getItem(RIICHI_SAVE_STORAGE_KEY);
+    if (!raw) return false;
+    return isReplayFile((JSON.parse(raw) as Partial<RiichiSaveData>).replay);
+  } catch {
+    return false;
   }
 }
 
@@ -70,7 +83,7 @@ export function saveMatch(
       return;
     }
     const data: RiichiSaveData = {
-      match,
+      replay: toReplayFile(match),
       processedProgress,
       savedAt: Date.now(),
     };

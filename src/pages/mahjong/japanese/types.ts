@@ -125,6 +125,8 @@ export interface RiichiGameState {
   wall: number[];
   /** 王牌中的岭上牌（最多 4 张） */
   rinshanTiles: number[];
+  /** 开杠时从活牌山末端移入死壁的补充牌 */
+  deadWallSupplements: number[];
   /** 王牌中的 5 张宝牌表示牌位 / 5 张里宝牌表示牌位 */
   doraPool: number[];
   uraPool: number[];

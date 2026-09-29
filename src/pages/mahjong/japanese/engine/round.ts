@@ -123,6 +123,7 @@ export function createRound(
     hands: hands.map(sortHand),
     wall: rest.slice(0, -14),
     rinshanTiles: dead.slice(10, 14),
+    deadWallSupplements: [],
     doraPool,
     uraPool,
     doraIndicators: [doraPool[0]],
@@ -193,18 +194,23 @@ export function drawTile(
   const wall = [...state.wall];
   const rinshanTiles = [...state.rinshanTiles];
   let tile: number | undefined;
+  let supplement: number | undefined;
   if (rinshan) {
     tile = rinshanTiles.shift();
     // 王牌保持 14 张：活牌山最后一张补入王牌
-    wall.pop();
+    supplement = wall.pop();
   } else {
     tile = wall.shift();
   }
-  if (tile === undefined) return endExhaustiveDraw(state, ctx);
+  if (tile === undefined || (rinshan && supplement === undefined))
+    return endExhaustiveDraw(state, ctx);
   const next: RiichiGameState = {
     ...state,
     wall,
     rinshanTiles,
+    deadWallSupplements: rinshan
+      ? [...state.deadWallSupplements, supplement!]
+      : state.deadWallSupplements,
     hands: replaceAt(state.hands, seat, sortHand([...state.hands[seat], tile])),
     furitenStates: replaceAt(
       state.furitenStates,

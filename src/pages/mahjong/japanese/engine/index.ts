@@ -1,4 +1,10 @@
-export { decideAiClaim, decideAiTurn } from './ai';
+export {
+  dangerFor,
+  decideAiClaim,
+  decideAiTurn,
+  threatOf,
+  visibleCountsFor,
+} from './ai';
 export { evaluateSeatWin } from './evaluate';
 export {
   applyEvent,
@@ -10,6 +16,7 @@ export {
   type RiichiMatchState,
   type RiichiReplayFile,
   replayMatch,
+  restoreMatch,
   type StepResult,
   toReplayFile,
   undoLastHumanAction,

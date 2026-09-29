@@ -405,13 +405,74 @@ export function replayMatch(file: RiichiReplayFile): RiichiMatchState[] {
   return frames;
 }
 
+/** 仅恢复最终局面；存档入口无需保存每一步快照。 */
+export function restoreMatch(file: RiichiReplayFile): RiichiMatchState | null {
+  let match = createMatch({
+    seed: file.seed,
+    matchLength: file.matchLength,
+    rules: file.rules,
+  }).match;
+  for (const event of file.events) {
+    const step = applyEvent(match, event);
+    if (!step) return null;
+    match = step.match;
+  }
+  return match;
+}
+
 export function isReplayFile(value: unknown): value is RiichiReplayFile {
   if (!value || typeof value !== 'object') return false;
   const v = value as Partial<RiichiReplayFile>;
+  const seat = (n: unknown) =>
+    Number.isInteger(n) && Number(n) >= 0 && Number(n) < 4;
+  const tile = (n: unknown) =>
+    Number.isInteger(n) && Number(n) >= 0 && Number(n) <= 36;
+  const eventIsValid = (item: unknown): boolean => {
+    if (!item || typeof item !== 'object') return false;
+    const e = item as Record<string, unknown>;
+    if (e.type === 'nextRound') return true;
+    if (!seat(e.seat)) return false;
+    switch (e.type) {
+      case 'discard':
+      case 'riichi':
+        return tile(e.tile);
+      case 'tsumo':
+      case 'kyuushu':
+        return true;
+      case 'ankan':
+        return (
+          Array.isArray(e.tiles) && e.tiles.length === 4 && e.tiles.every(tile)
+        );
+      case 'kakan':
+        return (
+          Number.isInteger(e.meldIndex) &&
+          Number(e.meldIndex) >= 0 &&
+          tile(e.tile)
+        );
+      case 'claim': {
+        const response = e.response as Record<string, unknown> | null;
+        if (!response || typeof response !== 'object') return false;
+        if (['pass', 'ron', 'pon', 'minkan'].includes(String(response.type)))
+          return true;
+        return (
+          response.type === 'chi' &&
+          Array.isArray(response.tiles) &&
+          response.tiles.length === 2 &&
+          response.tiles.every(tile)
+        );
+      }
+      default:
+        return false;
+    }
+  };
   return (
-    typeof v.seed === 'number' &&
+    v.version === RIICHI_MATCH_VERSION &&
+    Number.isSafeInteger(v.seed) &&
     (v.matchLength === 'east' || v.matchLength === 'south') &&
     Array.isArray(v.events) &&
+    v.events.length <= 20000 &&
+    v.events.every(eventIsValid) &&
+    !!v.rules &&
     typeof v.rules === 'object'
   );
 }

@@ -1,10 +1,12 @@
 import { BookOpen, Check, ChevronLeft, Play, ShieldCheck } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLocale } from '@/contexts/LocaleContext';
 import { cn } from '@/lib/utils';
 import { RIICHI_THEMES, type RiichiThemeId } from '../constants';
 import { GuidePanel } from './GuidePanel';
+import { RiichiSettingsPanel } from './RiichiSettingsPanel';
 
 type MatchLength = 'east' | 'south';
 
@@ -14,6 +16,12 @@ type Props = {
   theme: RiichiThemeId;
   onThemeChange: (theme: RiichiThemeId) => void;
   onStart: () => void;
+  loadError: boolean;
+  hasSaved: boolean;
+  hasReplay: boolean;
+  onResume: () => void;
+  onOpenReplay: () => void;
+  onImportReplay: (file: File) => Promise<boolean>;
 };
 
 export function RulesView({
@@ -22,9 +30,21 @@ export function RulesView({
   theme,
   onThemeChange,
   onStart,
+  loadError,
+  hasSaved,
+  hasReplay,
+  onResume,
+  onOpenReplay,
+  onImportReplay,
 }: Props) {
   const { t } = useLocale();
   const [guideOpen, setGuideOpen] = useState(false);
+  const guideTriggerRef = useRef<HTMLButtonElement>(null);
+  const [importError, setImportError] = useState(false);
+  const themeContainer =
+    typeof document === 'undefined'
+      ? undefined
+      : document.querySelector<HTMLElement>('[data-riichi-theme]');
 
   return (
     <div className="riichi-lobby">
@@ -41,52 +61,54 @@ export function RulesView({
           <div className="riichi-lobby-badge">
             <span>DESKTOP BETA</span>
             <i />
-            规则引擎已接入
+            {t('riichi.lobby.badge')}
           </div>
           <p className="riichi-lobby-kicker">RIICHI PRACTICE TABLE</p>
-          <h1>日本立直麻将</h1>
-          <p className="riichi-lobby-lead">
-            面向电脑大屏的完整练习牌桌。专注行牌、听牌与局面判断，不用在手机框里挤牌，也不被大厅任务打断。
-          </p>
+          <h1>{t('riichi.lobby.title')}</h1>
+          <p className="riichi-lobby-lead">{t('riichi.lobby.lead')}</p>
 
           <div className="riichi-lobby-capabilities">
             <span>
               <Check aria-hidden="true" size={16} />
-              四人完整牌桌
+              {t('riichi.lobby.fourPlayers')}
             </span>
             <span>
               <Check aria-hidden="true" size={16} />
-              规则引擎和牌判定
+              {t('riichi.lobby.rules')}
             </span>
             <span>
               <Check aria-hidden="true" size={16} />
-              本地训练提示
+              {t('riichi.lobby.hints')}
             </span>
             <span>
               <Check aria-hidden="true" size={16} />
-              无需账号与联网
+              {t('riichi.lobby.offline')}
             </span>
           </div>
 
           <button
+            ref={guideTriggerRef}
             type="button"
             className="riichi-lobby-guide-button"
             onClick={() => setGuideOpen(true)}
           >
             <BookOpen aria-hidden="true" size={18} />
-            查看完整规则与新人指南
+            {t('riichi.guide.title')}
           </button>
         </section>
 
-        <section className="riichi-lobby-setup" aria-label="对局设置">
+        <section
+          className="riichi-lobby-setup"
+          aria-label={t('riichi.lobby.setup')}
+        >
           <div className="riichi-lobby-setup-heading">
             <span>TABLE SETUP</span>
-            <h2>准备开局</h2>
-            <p>设置只保存在当前浏览器中。</p>
+            <h2>{t('riichi.lobby.ready')}</h2>
+            <p>{t('riichi.lobby.localSettings')}</p>
           </div>
 
           <fieldset>
-            <legend>场次</legend>
+            <legend>{t('riichi.lobby.matchLength')}</legend>
             <div className="riichi-match-options">
               {(['east', 'south'] as const).map((value) => (
                 <button
@@ -96,15 +118,45 @@ export function RulesView({
                   onClick={() => onMatchLengthChange(value)}
                   aria-pressed={matchLength === value}
                 >
-                  <strong>{value === 'east' ? '东风场' : '南风场'}</strong>
-                  <span>{value === 'east' ? '东一至东四' : '东一至南四'}</span>
+                  <strong>{t(`riichi.lobby.${value}`)}</strong>
+                  <span>{t(`riichi.lobby.${value}Range`)}</span>
                 </button>
               ))}
             </div>
           </fieldset>
 
+          <RiichiSettingsPanel />
+
+          {(hasSaved || hasReplay) && (
+            <div className="riichi-lobby-secondary-actions">
+              {hasSaved && (
+                <button type="button" onClick={onResume}>
+                  {t('riichi.resume')}
+                </button>
+              )}
+              {hasReplay && (
+                <button type="button" onClick={onOpenReplay}>
+                  {t('riichi.replay.open')}
+                </button>
+              )}
+            </div>
+          )}
+          <label className="riichi-lobby-import">
+            {t('riichi.replay.import')}
+            <input
+              type="file"
+              accept="application/json,.json"
+              onChange={async (event) => {
+                const file = event.target.files?.[0];
+                if (file) setImportError(!(await onImportReplay(file)));
+                event.target.value = '';
+              }}
+            />
+          </label>
+          {importError && <p role="alert">{t('riichi.replay.invalid')}</p>}
+
           <fieldset>
-            <legend>牌桌主题</legend>
+            <legend>{t('riichi.lobby.theme')}</legend>
             <div className="riichi-lobby-themes">
               {RIICHI_THEMES.map(({ id }) => (
                 <button
@@ -125,8 +177,9 @@ export function RulesView({
 
           <div className="riichi-lobby-assurance">
             <ShieldCheck aria-hidden="true" size={19} />
-            <span>纯前端本地运行 · 不上传牌局数据</span>
+            <span>{t('riichi.lobby.privacy')}</span>
           </div>
+          {loadError && <p role="alert">{t('riichi.loadError')}</p>}
 
           <button
             type="button"
@@ -136,7 +189,8 @@ export function RulesView({
             <span>
               <strong>{t('common.startGame')}</strong>
               <small>
-                {matchLength === 'east' ? '东风场' : '南风场'} · 四人对局
+                {t(`riichi.lobby.${matchLength}`)} ·{' '}
+                {t('riichi.lobby.fourPlayers')}
               </small>
             </span>
             <Play aria-hidden="true" size={20} fill="currentColor" />
@@ -144,23 +198,23 @@ export function RulesView({
         </section>
       </main>
 
-      {guideOpen && (
-        <dialog
-          open
-          className="riichi-guide-dialog"
-          aria-labelledby="guide-title"
+      <Dialog open={guideOpen} onOpenChange={setGuideOpen}>
+        <DialogContent
+          container={themeContainer}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            guideTriggerRef.current?.focus();
+          }}
+          className="riichi-guide-dialog-content !w-[min(1120px,calc(100vw-40px))] !max-w-none"
+          showCloseButton={false}
+          aria-describedby={undefined}
         >
-          <button
-            type="button"
-            className="riichi-guide-backdrop"
-            onClick={() => setGuideOpen(false)}
-            aria-label="关闭规则"
-          />
-          <div className="riichi-guide-dialog-content">
-            <GuidePanel onClose={() => setGuideOpen(false)} />
-          </div>
-        </dialog>
-      )}
+          <DialogTitle className="sr-only">
+            {t('riichi.guide.title')}
+          </DialogTitle>
+          <GuidePanel onClose={() => setGuideOpen(false)} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { type ReactNode, useMemo } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLocale } from '@/contexts/LocaleContext';
 import { getGrowthOverview } from '@/lib/growth';
 import { formatMessage } from '@/lib/i18n';
@@ -25,6 +26,31 @@ import {
 import type { RiichiWinResult, RoundResult } from '../types';
 
 export type WinResultState = RiichiWinResult;
+
+function ResultDialog({
+  children,
+  onClose,
+}: {
+  children: ReactNode;
+  onClose: () => void;
+}) {
+  const container =
+    typeof document === 'undefined'
+      ? undefined
+      : document.querySelector<HTMLElement>('[data-riichi-theme]');
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        container={container}
+        className="riichi-result-modal !w-[min(740px,calc(100vw-40px))] !max-w-none animate-riichi-modal-in"
+        showCloseButton={false}
+        aria-describedby={undefined}
+      >
+        {children}
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export type MatchEndState = {
   reason: MatchEndReason;
@@ -272,19 +298,11 @@ export function WinModal({
   const { t, locale } = useLocale();
   const { wins, settlement } = result;
   return (
-    <div
-      className="riichi-result-overlay animate-riichi-overlay-in"
-      role="presentation"
-    >
-      <div
-        className="riichi-result-modal animate-riichi-modal-in"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="riichi-win-title"
-      >
-        <header className="riichi-result-heading">
-          <div>
-            <p>ROUND RESULT</p>
+    <ResultDialog onClose={onNext}>
+      <header className="riichi-result-heading">
+        <div>
+          <p>ROUND RESULT</p>
+          <DialogTitle asChild>
             <h3 id="riichi-win-title">
               {t(
                 wins.length > 1
@@ -294,109 +312,109 @@ export function WinModal({
                     : 'riichi.modal.win.ron',
               )}
             </h3>
-          </div>
-        </header>
-        <div className="riichi-result-grid">
-          <section className="riichi-result-section">
-            {wins.map((win) => {
-              const payment = summarizeWinnerPayments(
-                settlement.payments,
-                win.winner,
-              );
-              return (
-                <article key={win.winner}>
-                  <h4>
-                    {t(`game.mahjong.seats.${win.winner}`)} ·{' '}
-                    {win.yakuman > 0
-                      ? formatMessage(locale, 'game.mahjong.multipleYakuman', {
-                          count: win.yakuman,
-                        })
-                      : `${win.fu} ${t('riichi.modal.unit.fu')} · ${win.han} ${t('riichi.modal.unit.han')}`}
-                  </h4>
-                  <p>{formatPoints(win.ten, locale)}</p>
-                  <p className="riichi-result-section-label">
-                    {t('riichi.modal.win.yakuTitle')}
-                  </p>
-                  <ul className="riichi-yaku-list">
-                    {win.yaku.map((yaku, index) => (
-                      <li key={`${yaku.id}-${index}`}>
-                        <span>{yaku.name}</span>
-                        {win.yakuman === 0 && (
-                          <strong>
-                            {yaku.han}
-                            {t('riichi.modal.unit.han')}
-                          </strong>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                  {win.uraDoraIndicators.length > 0 && (
-                    <div className="riichi-result-note">
-                      <strong>{t('riichi.modal.win.uraIndicator')}</strong>
-                      <span>
-                        {win.uraDoraIndicators
-                          .map((tile) => getTileLabel(tile, locale))
-                          .join(' · ')}
-                        {' · '}
-                        {t('riichi.modal.win.uraHan')} {win.uraHan}{' '}
-                        {t('riichi.modal.unit.han')}
-                      </span>
-                    </div>
-                  )}
-                  <p>
-                    {t('riichi.modal.summary.base')} +{payment.base} ·{' '}
-                    {t('riichi.modal.summary.honba')} +{payment.honba} ·{' '}
-                    {t('riichi.modal.summary.riichi')} +{payment.riichi}
-                  </p>
-                </article>
-              );
-            })}
-          </section>
-          <section className="riichi-result-section">
-            <p className="riichi-result-section-label">
-              {t('riichi.modal.summary.title')}
-            </p>
-            <div className="riichi-result-payments">
-              <div className="riichi-result-score-table">
-                {settlement.newScores.map((score, seat) => (
-                  <div key={seat}>
-                    <span>{t(`game.mahjong.seats.${seat}`)}</span>
-                    <strong>{score}</strong>
-                    <em>
-                      {settlement.deltas[seat] >= 0 ? '+' : ''}
-                      {settlement.deltas[seat]}
-                    </em>
-                  </div>
-                ))}
-              </div>
-              <ul className="riichi-result-payment-list">
-                {settlement.payments.map((payment, index) => (
-                  <li key={`${payment.from}-${payment.to}-${index}`}>
-                    <span>
-                      {payment.from >= 0
-                        ? t(`game.mahjong.seats.${payment.from}`)
-                        : t('riichi.modal.summary.riichiPool')}{' '}
-                      → {t(`game.mahjong.seats.${payment.to}`)}
-                    </span>
-                    <strong>{payment.amount}</strong>
-                  </li>
-                ))}
-              </ul>
-              {timeoutEvents.length > 0 && (
-                <p className="riichi-result-timeout">
-                  {t('riichi.modal.summary.timeout')}
-                  {timeoutEvents.join(locale === 'en' ? '; ' : '；')}
-                </p>
-              )}
-            </div>
-            <RoundGrowthSummary roundProgressSummary={roundProgressSummary} />
-          </section>
+          </DialogTitle>
         </div>
-        <Button className="riichi-result-primary" onClick={onNext}>
-          {t('riichi.modal.nextRound')}
-        </Button>
+      </header>
+      <div className="riichi-result-grid">
+        <section className="riichi-result-section">
+          {wins.map((win) => {
+            const payment = summarizeWinnerPayments(
+              settlement.payments,
+              win.winner,
+            );
+            return (
+              <article key={win.winner}>
+                <h4>
+                  {t(`game.mahjong.seats.${win.winner}`)} ·{' '}
+                  {win.yakuman > 0
+                    ? formatMessage(locale, 'game.mahjong.multipleYakuman', {
+                        count: win.yakuman,
+                      })
+                    : `${win.fu} ${t('riichi.modal.unit.fu')} · ${win.han} ${t('riichi.modal.unit.han')}`}
+                </h4>
+                <p>{formatPoints(win.ten, locale)}</p>
+                <p className="riichi-result-section-label">
+                  {t('riichi.modal.win.yakuTitle')}
+                </p>
+                <ul className="riichi-yaku-list">
+                  {win.yaku.map((yaku, index) => (
+                    <li key={`${yaku.id}-${index}`}>
+                      <span>{t(`riichi.yaku.${yaku.id}`)}</span>
+                      {win.yakuman === 0 && (
+                        <strong>
+                          {yaku.han}
+                          {t('riichi.modal.unit.han')}
+                        </strong>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                {win.uraDoraIndicators.length > 0 && (
+                  <div className="riichi-result-note">
+                    <strong>{t('riichi.modal.win.uraIndicator')}</strong>
+                    <span>
+                      {win.uraDoraIndicators
+                        .map((tile) => getTileLabel(tile, locale))
+                        .join(' · ')}
+                      {' · '}
+                      {t('riichi.modal.win.uraHan')} {win.uraHan}{' '}
+                      {t('riichi.modal.unit.han')}
+                    </span>
+                  </div>
+                )}
+                <p>
+                  {t('riichi.modal.summary.base')} +{payment.base} ·{' '}
+                  {t('riichi.modal.summary.honba')} +{payment.honba} ·{' '}
+                  {t('riichi.modal.summary.riichi')} +{payment.riichi}
+                </p>
+              </article>
+            );
+          })}
+        </section>
+        <section className="riichi-result-section">
+          <p className="riichi-result-section-label">
+            {t('riichi.modal.summary.title')}
+          </p>
+          <div className="riichi-result-payments">
+            <div className="riichi-result-score-table">
+              {settlement.newScores.map((score, seat) => (
+                <div key={seat}>
+                  <span>{t(`game.mahjong.seats.${seat}`)}</span>
+                  <strong>{score}</strong>
+                  <em>
+                    {settlement.deltas[seat] >= 0 ? '+' : ''}
+                    {settlement.deltas[seat]}
+                  </em>
+                </div>
+              ))}
+            </div>
+            <ul className="riichi-result-payment-list">
+              {settlement.payments.map((payment, index) => (
+                <li key={`${payment.from}-${payment.to}-${index}`}>
+                  <span>
+                    {payment.from >= 0
+                      ? t(`game.mahjong.seats.${payment.from}`)
+                      : t('riichi.modal.summary.riichiPool')}{' '}
+                    → {t(`game.mahjong.seats.${payment.to}`)}
+                  </span>
+                  <strong>{payment.amount}</strong>
+                </li>
+              ))}
+            </ul>
+            {timeoutEvents.length > 0 && (
+              <p className="riichi-result-timeout">
+                {t('riichi.modal.summary.timeout')}
+                {timeoutEvents.join(locale === 'en' ? '; ' : '；')}
+              </p>
+            )}
+          </div>
+          <RoundGrowthSummary roundProgressSummary={roundProgressSummary} />
+        </section>
       </div>
-    </div>
+      <Button className="riichi-result-primary" onClick={onNext}>
+        {t('riichi.modal.nextRound')}
+      </Button>
+    </ResultDialog>
   );
 }
 type RyuukyokuModalProps = {
@@ -428,112 +446,106 @@ export function RyuukyokuModal({
   const listSeparator = locale === 'en' ? ', ' : '、';
 
   return (
-    <div
-      className="riichi-result-overlay animate-riichi-overlay-in"
-      role="presentation"
-    >
-      <div
-        className="riichi-result-modal animate-riichi-modal-in"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="riichi-ryuukyoku-title"
-      >
-        <header className="riichi-result-heading">
-          <div>
-            <p>ROUND RESULT</p>
+    <ResultDialog onClose={onNext}>
+      <header className="riichi-result-heading">
+        <div>
+          <p>ROUND RESULT</p>
+          <DialogTitle asChild>
             <h3 id="riichi-ryuukyoku-title">
               {t('riichi.modal.draw.titlePrefix')}
             </h3>
-          </div>
-          <div className="riichi-result-score">
+          </DialogTitle>
+        </div>
+        <div className="riichi-result-score">
+          <strong>
+            {isNagashi ? t('riichi.modal.draw.nagashi') : reasonText}
+          </strong>
+          <span>
+            {isNagashi
+              ? t('riichi.modal.draw.nagashiDesc')
+              : getRyuukyokuDescription(ryuukyokuReason, t)}
+          </span>
+        </div>
+      </header>
+
+      <div className="riichi-result-grid">
+        <section className="riichi-result-section">
+          <p className="riichi-result-section-label">
+            {t('riichi.modal.draw.roundOutcome')}
+          </p>
+          <div className="riichi-draw-summary">
             <strong>
-              {isNagashi ? t('riichi.modal.draw.nagashi') : reasonText}
+              {isNagashi
+                ? result.nagashiSeats
+                    .map((seat) => t(`game.mahjong.seats.${seat}`))
+                    .join(listSeparator)
+                : isExhaustiveDraw
+                  ? `${t('riichi.modal.draw.tenpaiCountPrefix')} ${drawSettlementPreview?.tenpaiSeats.length ?? 0} ${t('riichi.modal.draw.houseSuffix')}`
+                  : t('riichi.modal.draw.abortive')}
             </strong>
-            <span>
+            <p>
               {isNagashi
                 ? t('riichi.modal.draw.nagashiDesc')
-                : getRyuukyokuDescription(ryuukyokuReason, t)}
-            </span>
-          </div>
-        </header>
-
-        <div className="riichi-result-grid">
-          <section className="riichi-result-section">
-            <p className="riichi-result-section-label">局面结果</p>
-            <div className="riichi-draw-summary">
-              <strong>
-                {isNagashi
-                  ? result.nagashiSeats
-                      .map((seat) => t(`game.mahjong.seats.${seat}`))
-                      .join(listSeparator)
-                  : isExhaustiveDraw
-                    ? `${t('riichi.modal.draw.tenpaiCountPrefix')} ${drawSettlementPreview?.tenpaiSeats.length ?? 0} ${t('riichi.modal.draw.houseSuffix')}`
-                    : t('riichi.modal.draw.abortive')}
-              </strong>
-              <p>
-                {isNagashi
-                  ? t('riichi.modal.draw.nagashiDesc')
-                  : isExhaustiveDraw
-                    ? `${t('riichi.modal.draw.tenpaiLabel')} ${
-                        drawSettlementPreview?.tenpaiSeats.length
-                          ? drawSettlementPreview.tenpaiSeats
-                              .map((seat) => t(`game.mahjong.seats.${seat}`))
-                              .join(listSeparator)
-                          : t('riichi.modal.none')
-                      }`
-                    : t('riichi.modal.draw.abortiveNote')}
-              </p>
-              {maxGainSeat != null && (
-                <div>
-                  <span>{t(`game.mahjong.seats.${maxGainSeat}`)}</span>
-                  <strong>
-                    {maxGainDelta >= 0 ? '+' : ''}
-                    {maxGainDelta}
-                  </strong>
-                </div>
-              )}
-            </div>
-          </section>
-
-          <section className="riichi-result-section">
-            <p className="riichi-result-section-label">
-              {t('riichi.modal.summary.title')}
+                : isExhaustiveDraw
+                  ? `${t('riichi.modal.draw.tenpaiLabel')} ${
+                      drawSettlementPreview?.tenpaiSeats.length
+                        ? drawSettlementPreview.tenpaiSeats
+                            .map((seat) => t(`game.mahjong.seats.${seat}`))
+                            .join(listSeparator)
+                        : t('riichi.modal.none')
+                    }`
+                  : t('riichi.modal.draw.abortiveNote')}
             </p>
-            {drawSettlementPreview && (
-              <div className="riichi-result-payments">
-                <div className="riichi-result-score-table">
-                  {drawSettlementPreview.settlement.newScores.map(
-                    (score, seat) => (
-                      <div key={seat}>
-                        <span>{t(`game.mahjong.seats.${seat}`)}</span>
-                        <strong>{score}</strong>
-                        <em>
-                          {drawSettlementPreview.settlement.deltas[seat] >= 0
-                            ? '+'
-                            : ''}
-                          {drawSettlementPreview.settlement.deltas[seat]}
-                        </em>
-                      </div>
-                    ),
-                  )}
-                </div>
-                {timeoutEvents.length > 0 && (
-                  <p className="riichi-result-timeout">
-                    {t('riichi.modal.summary.timeout')}
-                    {timeoutEvents.join(locale === 'en' ? '; ' : '；')}
-                  </p>
-                )}
+            {maxGainSeat != null && (
+              <div>
+                <span>{t(`game.mahjong.seats.${maxGainSeat}`)}</span>
+                <strong>
+                  {maxGainDelta >= 0 ? '+' : ''}
+                  {maxGainDelta}
+                </strong>
               </div>
             )}
-            <RoundGrowthSummary roundProgressSummary={roundProgressSummary} />
-          </section>
-        </div>
+          </div>
+        </section>
 
-        <Button className="riichi-result-primary" onClick={onNext}>
-          {t('riichi.modal.nextRound')}
-        </Button>
+        <section className="riichi-result-section">
+          <p className="riichi-result-section-label">
+            {t('riichi.modal.summary.title')}
+          </p>
+          {drawSettlementPreview && (
+            <div className="riichi-result-payments">
+              <div className="riichi-result-score-table">
+                {drawSettlementPreview.settlement.newScores.map(
+                  (score, seat) => (
+                    <div key={seat}>
+                      <span>{t(`game.mahjong.seats.${seat}`)}</span>
+                      <strong>{score}</strong>
+                      <em>
+                        {drawSettlementPreview.settlement.deltas[seat] >= 0
+                          ? '+'
+                          : ''}
+                        {drawSettlementPreview.settlement.deltas[seat]}
+                      </em>
+                    </div>
+                  ),
+                )}
+              </div>
+              {timeoutEvents.length > 0 && (
+                <p className="riichi-result-timeout">
+                  {t('riichi.modal.summary.timeout')}
+                  {timeoutEvents.join(locale === 'en' ? '; ' : '；')}
+                </p>
+              )}
+            </div>
+          )}
+          <RoundGrowthSummary roundProgressSummary={roundProgressSummary} />
+        </section>
       </div>
-    </div>
+
+      <Button className="riichi-result-primary" onClick={onNext}>
+        {t('riichi.modal.nextRound')}
+      </Button>
+    </ResultDialog>
   );
 }
 type MatchEndModalProps = {
@@ -549,63 +561,60 @@ export function MatchEndModal({
   onRestart,
   homeLabel,
 }: MatchEndModalProps) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const navigate = useNavigate();
 
   return (
-    <div
-      className="riichi-result-overlay riichi-result-overlay--final animate-riichi-overlay-in"
-      role="presentation"
-    >
-      <div
-        className="riichi-result-modal animate-riichi-modal-in"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="riichi-match-end-title"
-      >
-        <header className="riichi-result-heading">
-          <div>
-            <p>MATCH COMPLETE</p>
+    <ResultDialog onClose={() => navigate('/')}>
+      <header className="riichi-result-heading">
+        <div>
+          <p>MATCH COMPLETE</p>
+          <DialogTitle asChild>
             <h3 id="riichi-match-end-title">
               {t('riichi.modal.matchEnd.title')}
             </h3>
-          </div>
-          <div className="riichi-result-score">
-            <strong>{getMatchEndReasonText(matchEnd.reason, t)}</strong>
-            <span>最终排名与本场成长记录</span>
-          </div>
-        </header>
-
-        <div className="riichi-result-grid">
-          <section className="riichi-result-section">
-            <p className="riichi-result-section-label">最终排名</p>
-            <div className="riichi-final-ranking">
-              {matchEnd.ranking.map((seat, index) => (
-                <div key={seat} className={index === 0 ? 'is-first' : ''}>
-                  <strong>
-                    {index + 1}
-                    {t('riichi.modal.matchEnd.rankSuffix')}
-                  </strong>
-                  <span>{t(`game.mahjong.seats.${seat}`)}</span>
-                  <em>{formatPoints(matchEnd.finalScores[seat])}</em>
-                </div>
-              ))}
-            </div>
-          </section>
-          <section className="riichi-result-section">
-            <p className="riichi-result-section-label">成长结果</p>
-            <RoundGrowthSummary roundProgressSummary={roundProgressSummary} />
-          </section>
+          </DialogTitle>
         </div>
-
-        <div className="riichi-result-actions">
-          <Button className="riichi-result-primary" onClick={onRestart}>
-            {t('riichi.modal.matchEnd.playAgain')}
-          </Button>
-          <Button asChild className="riichi-result-secondary" variant="outline">
-            <Link to="/">{homeLabel}</Link>
-          </Button>
+        <div className="riichi-result-score">
+          <strong>{getMatchEndReasonText(matchEnd.reason, t)}</strong>
+          <span>{t('riichi.modal.matchEnd.summary')}</span>
         </div>
+      </header>
+
+      <div className="riichi-result-grid">
+        <section className="riichi-result-section">
+          <p className="riichi-result-section-label">
+            {t('riichi.modal.matchEnd.ranking')}
+          </p>
+          <div className="riichi-final-ranking">
+            {matchEnd.ranking.map((seat, index) => (
+              <div key={seat} className={index === 0 ? 'is-first' : ''}>
+                <strong>
+                  {index + 1}
+                  {t('riichi.modal.matchEnd.rankSuffix')}
+                </strong>
+                <span>{t(`game.mahjong.seats.${seat}`)}</span>
+                <em>{formatPoints(matchEnd.finalScores[seat], locale)}</em>
+              </div>
+            ))}
+          </div>
+        </section>
+        <section className="riichi-result-section">
+          <p className="riichi-result-section-label">
+            {t('riichi.modal.matchEnd.growth')}
+          </p>
+          <RoundGrowthSummary roundProgressSummary={roundProgressSummary} />
+        </section>
       </div>
-    </div>
+
+      <div className="riichi-result-actions">
+        <Button className="riichi-result-primary" onClick={onRestart}>
+          {t('riichi.modal.matchEnd.playAgain')}
+        </Button>
+        <Button asChild className="riichi-result-secondary" variant="outline">
+          <Link to="/">{homeLabel}</Link>
+        </Button>
+      </div>
+    </ResultDialog>
   );
 }

@@ -1,13 +1,15 @@
 import { ArrowRight, Copy, Info, TimerReset } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLocale } from '@/contexts/LocaleContext';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
-import type { Locale } from '@/lib/i18n';
+import { formatMessage, type Locale } from '@/lib/i18n';
 import { getBaseTile, getTileLabel } from '@/lib/mahjongRiichi';
 import { markRecentMahjongPlayed } from '@/lib/recentMahjong';
 import { getTurnTotalSeconds } from '@/lib/riichiClock';
 import { getCurrentRiichiRoundProgressSummary } from '@/lib/riichiProgress';
+import { preloadRiichiRules } from '@/lib/riichiRules';
 import { cn } from '@/lib/utils';
 import { CenterArea } from './components/CenterArea';
 import {
@@ -18,12 +20,19 @@ import { GameHeader } from './components/GameHeader';
 import { GuidePanel } from './components/GuidePanel';
 import { MatchEndModal, RyuukyokuModal, WinModal } from './components/Modals';
 import { OpponentSeat } from './components/OpponentSeat';
+import { ReplayViewer } from './components/ReplayViewer';
 import { RiichiDesktopStage } from './components/RiichiDesktopStage';
 import { RulesView } from './components/RulesView';
 import { StatusPanel } from './components/StatusPanel';
 import { TableContextPanel } from './components/TableContextPanel';
 import { RiichiTile } from './components/Tile';
-import type { RiichiEvent } from './engine';
+import {
+  isReplayFile,
+  type RiichiEvent,
+  restoreMatch,
+  toReplayFile,
+} from './engine';
+import { dangerFor, threatOf, visibleCountsFor } from './engine/ai';
 import {
   formatLogEntry,
   formatPoints,
@@ -31,10 +40,15 @@ import {
   toMeldKeyedItems,
   toTileKeyedItems,
 } from './helpers';
-import { useRiichiStore } from './store/riichiMatchStore';
-import type { RiichiGameState } from './types';
+import { loadLastReplay } from './store/persistence';
+import { hasResumableMatch, useRiichiStore } from './store/riichiMatchStore';
+import type { ClaimResponse, RiichiGameState } from './types';
 import { useHumanRemainingSeconds } from './useHumanRemainingSeconds';
-import { useRiichiAutomation, withElapsed } from './useRiichiAutomation';
+import {
+  humanDecisionKey,
+  useRiichiAutomation,
+  withElapsed,
+} from './useRiichiAutomation';
 import { useRiichiEffectSounds } from './useRiichiEffectSounds';
 import { useRiichiTheme } from './useRiichiTheme';
 import { useRiichiViewModel } from './useRiichiViewModel';
@@ -73,6 +87,7 @@ type RiichiActionState = {
   kakanOptions: number[];
   riichiSelecting: boolean;
   discardable: number[];
+  pendingCall: string | null;
 };
 
 type RiichiActionHandlers = {
@@ -117,7 +132,11 @@ function RiichiActionPanel({
   if (!claimActionsAvailable && !turnActionsAvailable) return null;
 
   return (
-    <div className="riichi-action-dock" role="toolbar" aria-label="可用动作">
+    <div
+      className="riichi-action-dock"
+      role="toolbar"
+      aria-label={t('riichi.action.available')}
+    >
       {claimActionsAvailable && game.claim != null && (
         <div className="riichi-action-target">
           <RiichiTile tile={game.claim.tile} variant="river" />
@@ -242,29 +261,38 @@ function RiichiActionPanel({
                 onClick={() => handlers.doKakan(meldIndex)}
               >
                 {t('riichi.kakan')}
-                <small>第 {meldIndex + 1} 组</small>
+                <small>
+                  {formatMessage(locale, 'riichi.action.meldGroup', {
+                    index: meldIndex + 1,
+                  })}
+                </small>
               </button>
             ))}
           </>
         )}
       </div>
+      {state.pendingCall && (
+        <p role="status">{t('riichi.action.confirmCall')}</p>
+      )}
     </div>
   );
 }
 
 function GuideDialog({ onClose }: { onClose: () => void }) {
+  const { t } = useLocale();
+  const container = document.querySelector<HTMLElement>('[data-riichi-theme]');
   return (
-    <dialog open className="riichi-guide-dialog" aria-labelledby="guide-title">
-      <button
-        type="button"
-        className="riichi-guide-backdrop"
-        onClick={onClose}
-        aria-label="关闭规则"
-      />
-      <div className="riichi-guide-dialog-content">
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        container={container}
+        className="riichi-guide-dialog-content !w-[min(1120px,calc(100vw-40px))] !max-w-none"
+        showCloseButton={false}
+        aria-describedby={undefined}
+      >
+        <DialogTitle className="sr-only">{t('riichi.guide.title')}</DialogTitle>
         <GuidePanel onClose={onClose} />
-      </div>
-    </dialog>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -273,23 +301,31 @@ function HumanTurnTimer({ timeBank }: { timeBank: number }) {
   const seconds = useHumanRemainingSeconds();
   if (seconds === null) return null;
   return (
-    <div
-      className="riichi-self-timer"
-      role="progressbar"
-      aria-label={t('riichi.action.remainingTime')}
-      aria-valuemin={0}
-      aria-valuemax={getTurnTotalSeconds(timeBank)}
-      aria-valuenow={seconds}
-      title={`${seconds}s`}
-    >
-      <span
-        className={
-          seconds <= 3 ? 'is-critical' : seconds <= 8 ? 'is-warning' : 'is-safe'
-        }
-        style={{
-          width: `${Math.min(100, (seconds / getTurnTotalSeconds(timeBank)) * 100)}%`,
-        }}
-      />
+    <div className="riichi-self-clock">
+      <div
+        className="riichi-self-timer"
+        role="progressbar"
+        aria-label={t('riichi.action.remainingTime')}
+        aria-valuemin={0}
+        aria-valuemax={getTurnTotalSeconds(timeBank)}
+        aria-valuenow={seconds}
+      >
+        <span
+          className={
+            seconds <= 3
+              ? 'is-critical'
+              : seconds <= 8
+                ? 'is-warning'
+                : 'is-safe'
+          }
+          style={{
+            width: `${Math.min(100, (seconds / getTurnTotalSeconds(timeBank)) * 100)}%`,
+          }}
+        />
+      </div>
+      <span>
+        {t('riichi.action.remainingTime')} {seconds}s
+      </span>
     </div>
   );
 }
@@ -302,6 +338,9 @@ type SelfSeatProps = {
   actionState: RiichiActionState;
   actionHandlers: RiichiActionHandlers;
   discard: (seat: number, tile: number) => void;
+  highlightedBase: number | null;
+  onHighlight: (base: number | null) => void;
+  dangerHint: boolean;
 };
 
 function SelfSeat({
@@ -312,6 +351,9 @@ function SelfSeat({
   actionState,
   actionHandlers,
   discard,
+  highlightedBase,
+  onHighlight,
+  dangerHint,
 }: SelfSeatProps) {
   const { t } = useLocale();
   const handItems = toTileKeyedItems(game.hands[0], 'self-hand');
@@ -328,25 +370,42 @@ function SelfSeat({
   const drawnItem = drawnIndex >= 0 ? handItems[drawnIndex] : null;
   const seatWind = getSeatWind(game.roundWind, 0, game.dealer);
   const canDiscard = actionState.isMyTurn;
+  const visible = visibleCountsFor(game, 0);
+  const hasThreat = [1, 2, 3].some((seat) => threatOf(game, seat) > 0);
+  const dangerOf = (tile: number): 'safe' | 'medium' | 'high' | undefined => {
+    if (!dangerHint || !hasThreat) return undefined;
+    const score = dangerFor(game, 0, tile, visible);
+    return score < 0.2 ? 'safe' : score < 0.8 ? 'medium' : 'high';
+  };
 
   const renderHandTile = (
     item: { tile: number; key: string },
     drawn: boolean,
-  ) => (
-    <RiichiTile
-      key={item.key}
-      tile={item.tile}
-      variant="hand"
-      state={
-        !actionState.discardable.includes(item.tile)
-          ? 'disabled'
-          : drawn
-            ? 'drawn'
-            : 'normal'
-      }
-      onClick={canDiscard ? () => discard(0, item.tile) : undefined}
-    />
-  );
+  ) => {
+    const danger = dangerOf(item.tile);
+    return (
+      <RiichiTile
+        key={item.key}
+        tile={item.tile}
+        variant="hand"
+        state={
+          !actionState.discardable.includes(item.tile)
+            ? 'disabled'
+            : drawn
+              ? 'drawn'
+              : 'normal'
+        }
+        onClick={canDiscard ? () => discard(0, item.tile) : undefined}
+        onFocus={() => onHighlight(getBaseTile(item.tile))}
+        onBlur={() => onHighlight(null)}
+        onPointerEnter={() => onHighlight(getBaseTile(item.tile))}
+        onPointerLeave={() => onHighlight(null)}
+        highlighted={getBaseTile(item.tile) === highlightedBase}
+        danger={danger}
+        title={danger ? t(`riichi.danger.${danger}`) : undefined}
+      />
+    );
+  };
 
   return (
     <section
@@ -368,18 +427,30 @@ function SelfSeat({
             {t(`game.mahjong.winds.${seatWind}`)}
           </span>
           <span className="riichi-seat-name">{t('game.mahjong.seats.0')}</span>
-          <strong>{formatPoints(game.scores[0])}</strong>
+          <strong>{formatPoints(game.scores[0], locale)}</strong>
         </div>
         <div className="riichi-seat-card-meta">
-          <span>时库 {game.timeBanks[0]}s</span>
+          <span>
+            {formatMessage(locale, 'riichi.table.timeBank', {
+              seconds: game.timeBanks[0],
+            })}
+          </span>
           {game.currentPlayer === 0 && (
-            <span className="riichi-seat-action">行动中</span>
+            <span className="riichi-seat-action">
+              {t('riichi.context.live')}
+            </span>
           )}
           {decisionSeat !== null && decisionSeat !== 0 && (
-            <span>等待 {t(`game.mahjong.seats.${decisionSeat}`)}</span>
+            <span>
+              {formatMessage(locale, 'riichi.table.waiting', {
+                seat: t(`game.mahjong.seats.${decisionSeat}`),
+              })}
+            </span>
           )}
           {game.riichiDeclared[0] && (
-            <span className="riichi-seat-riichi">立直</span>
+            <span className="riichi-seat-riichi">
+              {t('riichi.state.riichi')}
+            </span>
           )}
           {myFuritenReason && (
             <span className="riichi-seat-warning">{myFuritenReason}</span>
@@ -393,9 +464,19 @@ function SelfSeat({
         <div className="riichi-self-melds">
           {toMeldKeyedItems(game.melds[0], 'self-meld').map(({ meld, key }) => (
             <span className="riichi-seat-meld" key={key}>
+              {meld.fromPlayer !== undefined && (
+                <small className="riichi-meld-source">
+                  {t(`game.mahjong.seats.${meld.fromPlayer}`)}
+                </small>
+              )}
               {toTileKeyedItems(meld.tiles, `${key}-tile`).map(
                 ({ tile, key: tileKey }) => (
-                  <RiichiTile key={tileKey} tile={tile} variant="meld" />
+                  <RiichiTile
+                    key={tileKey}
+                    tile={tile}
+                    variant="meld"
+                    highlighted={getBaseTile(tile) === highlightedBase}
+                  />
                 ),
               )}
             </span>
@@ -432,6 +513,7 @@ type RiichiTableProps = {
   actionState: RiichiActionState;
   actionHandlers: RiichiActionHandlers;
   discard: (seat: number, tile: number) => void;
+  dangerHint: boolean;
 };
 
 function RiichiTable({
@@ -441,14 +523,19 @@ function RiichiTable({
   actionState,
   actionHandlers,
   discard,
+  dangerHint,
 }: RiichiTableProps) {
+  const [highlightedBase, setHighlightedBase] = useState<number | null>(null);
   const opponent = (seat: 1 | 2 | 3) => (
     <OpponentSeat
       seat={seat}
       game={game}
-      timerLabel={`时库 ${game.timeBanks[seat]}s`}
+      timerLabel={formatMessage(locale, 'riichi.table.timeBank', {
+        seconds: game.timeBanks[seat],
+      })}
       timerClassName=""
       isCurrentTurn={bag.decisionSeat === seat}
+      highlightedBase={highlightedBase}
     />
   );
 
@@ -473,7 +560,7 @@ function RiichiTable({
         <div className="riichi-table-seat-top">{opponent(2)}</div>
         <div className="riichi-table-seat-left">{opponent(3)}</div>
         <div className="riichi-table-center">
-          <CenterArea game={game} />
+          <CenterArea game={game} highlightedBase={highlightedBase} />
         </div>
         <div className="riichi-table-seat-right">{opponent(1)}</div>
         <div className="riichi-table-seat-self">
@@ -485,6 +572,9 @@ function RiichiTable({
             actionState={actionState}
             actionHandlers={actionHandlers}
             discard={discard}
+            highlightedBase={highlightedBase}
+            onHighlight={setHighlightedBase}
+            dangerHint={dangerHint}
           />
         </div>
       </div>
@@ -493,12 +583,13 @@ function RiichiTable({
 }
 
 function HintPanel({ hint }: { hint: RiichiGameBag['tenpaiHint'] }) {
+  const { t, locale } = useLocale();
   if (!hint) {
     return (
       <div className="riichi-panel-empty">
         <Info aria-hidden="true" size={22} />
-        <strong>当前没有成形提示</strong>
-        <p>有明确听牌或弃牌候选时，这里会显示牌面与剩余枚数。</p>
+        <strong>{t('riichi.hint.emptyTitle')}</strong>
+        <p>{t('riichi.hint.emptyDesc')}</p>
       </div>
     );
   }
@@ -506,12 +597,18 @@ function HintPanel({ hint }: { hint: RiichiGameBag['tenpaiHint'] }) {
   if (hint.kind === 'current') {
     return (
       <div className="riichi-hint-content">
-        <p className="riichi-panel-description">当前待牌</p>
+        <p className="riichi-panel-description">
+          {t('riichi.hint.currentWaits')}
+        </p>
         <div className="riichi-wait-list">
           {hint.waiting.map((tile) => (
             <div className="riichi-wait-item" key={tile}>
               <RiichiTile tile={tile} variant="indicator" />
-              <span>余 {hint.remaining(tile)} 枚</span>
+              <span>
+                {formatMessage(locale, 'riichi.hint.remaining', {
+                  count: hint.remaining(tile),
+                })}
+              </span>
             </div>
           ))}
         </div>
@@ -522,12 +619,14 @@ function HintPanel({ hint }: { hint: RiichiGameBag['tenpaiHint'] }) {
 
   return (
     <div className="riichi-hint-content">
-      <p className="riichi-panel-description">弃牌候选与对应待牌</p>
+      <p className="riichi-panel-description">
+        {t('riichi.hint.discardCandidates')}
+      </p>
       <div className="riichi-discard-candidates">
         {hint.options.map((option) => (
           <article key={`${option.discardTile}-${option.line}`}>
             <div className="riichi-candidate-discard">
-              <span>切</span>
+              <span>{t('riichi.hint.discard')}</span>
               <RiichiTile tile={option.discardTile} variant="indicator" />
               <ArrowRight aria-hidden="true" size={16} />
             </div>
@@ -535,7 +634,11 @@ function HintPanel({ hint }: { hint: RiichiGameBag['tenpaiHint'] }) {
               {option.waiting.map((tile) => (
                 <div key={tile}>
                   <RiichiTile tile={tile} variant="indicator" />
-                  <small>余 {hint.remaining(tile)} 枚</small>
+                  <small>
+                    {formatMessage(locale, 'riichi.hint.remaining', {
+                      count: hint.remaining(tile),
+                    })}
+                  </small>
                 </div>
               ))}
             </div>
@@ -548,14 +651,14 @@ function HintPanel({ hint }: { hint: RiichiGameBag['tenpaiHint'] }) {
 }
 
 function SettlementPanel({ game }: { game: RiichiGameState }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const settlement = game.lastSettlement;
   if (!settlement) {
     return (
       <div className="riichi-panel-empty">
         <TimerReset aria-hidden="true" size={22} />
-        <strong>还没有上一局结算</strong>
-        <p>完成一局后，这里会保留点数变化和支付明细。</p>
+        <strong>{t('riichi.settlement.emptyTitle')}</strong>
+        <p>{t('riichi.settlement.emptyDesc')}</p>
       </div>
     );
   }
@@ -566,7 +669,7 @@ function SettlementPanel({ game }: { game: RiichiGameState }) {
         {[0, 1, 2, 3].map((seat) => (
           <div key={seat}>
             <span>{t(`game.mahjong.seats.${seat}`)}</span>
-            <strong>{formatPoints(settlement.newScores[seat])}</strong>
+            <strong>{formatPoints(settlement.newScores[seat], locale)}</strong>
             <em className={settlement.deltas[seat] >= 0 ? 'is-up' : 'is-down'}>
               {settlement.deltas[seat] >= 0 ? '+' : ''}
               {settlement.deltas[seat]}
@@ -576,23 +679,23 @@ function SettlementPanel({ game }: { game: RiichiGameState }) {
       </div>
       {settlement.tenpaiSeats && (
         <p className="riichi-settlement-tenpai">
-          听牌：
+          {t('riichi.settlement.tenpai')}
           {settlement.tenpaiSeats.length > 0
             ? settlement.tenpaiSeats
                 .map((seat) => t(`game.mahjong.seats.${seat}`))
-                .join('、')
-            : '无'}
+                .join(t('riichi.listSeparator'))
+            : t('riichi.none')}
         </p>
       )}
       {settlement.payments.length > 0 && (
         <div className="riichi-payment-list">
-          <p>支付明细</p>
+          <p>{t('riichi.settlement.payments')}</p>
           {settlement.payments.map((payment, index) => (
             <div key={`${payment.from}-${payment.to}-${index}`}>
               <span>
                 {payment.from >= 0
                   ? t(`game.mahjong.seats.${payment.from}`)
-                  : '立直棒'}
+                  : t('riichi.context.riichiSticks')}
                 {' → '}
                 {t(`game.mahjong.seats.${payment.to}`)}
               </span>
@@ -624,10 +727,83 @@ function GameLogPanel({ gameLog }: { gameLog: string[] }) {
   );
 }
 
+function RiichiKeyboardShortcuts({
+  state,
+  handlers,
+  enabled,
+}: {
+  state: RiichiActionState;
+  handlers: RiichiActionHandlers;
+  enabled: boolean;
+}) {
+  useEffect(() => {
+    if (!enabled) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.closest(
+          'input,select,textarea,[contenteditable="true"],[role="dialog"]',
+        ) ||
+        document.querySelector('.riichi-menu-drawer')
+      )
+        return;
+      const key = event.key.toLowerCase();
+      if (key === 'arrowleft' || key === 'arrowright') {
+        if (!state.isMyTurn) return;
+        const tiles = Array.from(
+          document.querySelectorAll<HTMLButtonElement>(
+            '.riichi-self-hand button:not(:disabled)',
+          ),
+        );
+        if (tiles.length === 0) return;
+        const current = tiles.indexOf(
+          document.activeElement as HTMLButtonElement,
+        );
+        const next =
+          current < 0
+            ? 0
+            : (current + (key === 'arrowright' ? 1 : tiles.length - 1)) %
+              tiles.length;
+        tiles[next].focus();
+        event.preventDefault();
+        return;
+      }
+      const shortcut = (() => {
+        if (key === 'r' && state.canDeclareRiichi) return handlers.doRiichi;
+        if (key === 't' && state.canTsumo) return handlers.doTsumo;
+        if (key === 'c' && state.chiOptions.length > 0)
+          return () => handlers.doChi(state.chiOptions[0]);
+        if (key === 'p' && state.canPeng) return handlers.doPeng;
+        if (key === 'k') {
+          if (state.canMingang) return handlers.doMingang;
+          if (state.angangOptions.length > 0)
+            return () => handlers.doAngang(state.angangOptions[0]);
+          if (state.kakanOptions.length > 0)
+            return () => handlers.doKakan(state.kakanOptions[0]);
+        }
+        if (key === 'escape') {
+          if (state.isMyClaim) return handlers.passClaim;
+          if (state.riichiSelecting) return handlers.doRiichi;
+        }
+        return null;
+      })();
+      if (shortcut) {
+        event.preventDefault();
+        shortcut();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [enabled, state, handlers]);
+  return null;
+}
+
 const GameMahjongJapanese = () => {
   const { t, locale } = useLocale();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activePanel, setActivePanel] = useState<ActiveDesktopPanel>(null);
+  const [loadError, setLoadError] = useState(false);
   const didHandleEntryRef = useRef(false);
   const { theme, setTheme } = useRiichiTheme();
   const match = useRiichiStore((s) => s.match);
@@ -640,6 +816,9 @@ const GameMahjongJapanese = () => {
   const startGame = useRiichiStore((s) => s.startMatch);
   const dispatch = useRiichiStore((s) => s.dispatch);
   const undo = useRiichiStore((s) => s.undo);
+  const resumeSaved = useRiichiStore((s) => s.resumeSaved);
+  const replay = useRiichiStore((s) => s.replay);
+  const openReplay = useRiichiStore((s) => s.openReplay);
   const { riichiSettings } = usePlayerProfile();
   useRiichiAutomation(riichiSettings);
   useRiichiEffectSounds();
@@ -647,11 +826,35 @@ const GameMahjongJapanese = () => {
   const bag = useRiichiViewModel(game, activePanel === 'hint', locale);
   const { turn, claim, tenpaiHint } = bag;
   const [riichiSelection, setRiichiSelection] = useState<string | null>(null);
+  const [callConfirmation, setCallConfirmation] = useState<{
+    key: string;
+    response: string;
+  } | null>(null);
   const decisionKey = match ? `${match.seed}:${match.turn}` : null;
   const riichiSelecting =
     decisionKey !== null && riichiSelection === decisionKey;
+  const claimKey = game ? humanDecisionKey(game) : null;
+  const pendingCall =
+    claimKey !== null && callConfirmation?.key === claimKey
+      ? callConfirmation.response
+      : null;
   const act = (event: RiichiEvent) => {
-    if (dispatch(withElapsed(event))) setRiichiSelection(null);
+    if (dispatch(withElapsed(event))) {
+      setRiichiSelection(null);
+      setCallConfirmation(null);
+    }
+  };
+  const callOrConfirm = (response: ClaimResponse) => {
+    const serialized = JSON.stringify(response);
+    if (
+      !riichiSettings.callConfirm ||
+      !claimKey ||
+      pendingCall === serialized
+    ) {
+      act({ type: 'claim', seat: 0, response });
+      return;
+    }
+    setCallConfirmation({ key: claimKey, response: serialized });
   };
   const discard = (seat: number, tile: number) =>
     act({
@@ -659,10 +862,46 @@ const GameMahjongJapanese = () => {
       seat,
       tile,
     });
-  const startDesktopGame = () => {
+  const startDesktopGame = async () => {
     setActivePanel(null);
     setRiichiSelection(null);
-    startGame();
+    try {
+      await preloadRiichiRules();
+      setLoadError(false);
+      startGame({ rules: { aiLevel: riichiSettings.aiLevel } });
+    } catch {
+      setLoadError(true);
+    }
+  };
+  const resumeDesktopGame = async () => {
+    try {
+      await preloadRiichiRules();
+      setLoadError(!resumeSaved());
+    } catch {
+      setLoadError(true);
+    }
+  };
+  const importReplay = async (file: File): Promise<boolean> => {
+    try {
+      await preloadRiichiRules();
+      const parsed: unknown = JSON.parse(await file.text());
+      if (!isReplayFile(parsed) || !restoreMatch(parsed)) return false;
+      openReplay(parsed);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const openCurrentReplay = () => {
+    if (match) openReplay(toReplayFile(match));
+  };
+  const openLastReplay = async () => {
+    try {
+      await preloadRiichiRules();
+      openReplay(loadLastReplay());
+    } catch {
+      setLoadError(true);
+    }
   };
   const returnToLobby = () => {
     setActivePanel(null);
@@ -672,23 +911,38 @@ const GameMahjongJapanese = () => {
 
   useEffect(() => {
     markRecentMahjongPlayed();
+    void preloadRiichiRules().catch(() => setLoadError(true));
   }, []);
 
   useEffect(() => {
     if (didHandleEntryRef.current) return;
     const shouldAutoStart = searchParams.get('start') === '1';
+    const shouldResume = searchParams.get('resume') === '1';
     const shouldOpenGuide = searchParams.get('guide') === '1';
-    if (!shouldAutoStart && !shouldOpenGuide) return;
+    if (!shouldAutoStart && !shouldResume && !shouldOpenGuide) return;
 
     didHandleEntryRef.current = true;
-    startGame();
+    void preloadRiichiRules()
+      .then(() => {
+        if (shouldResume) setLoadError(!resumeSaved());
+        else startGame({ rules: { aiLevel: riichiSettings.aiLevel } });
+      })
+      .catch(() => setLoadError(true));
     if (shouldOpenGuide) setShowGuide(true);
 
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete('start');
+    nextParams.delete('resume');
     nextParams.delete('guide');
     setSearchParams(nextParams, { replace: true });
-  }, [searchParams, setSearchParams, startGame, setShowGuide]);
+  }, [
+    searchParams,
+    setSearchParams,
+    startGame,
+    resumeSaved,
+    setShowGuide,
+    riichiSettings.aiLevel,
+  ]);
 
   useEffect(() => {
     if (!showGuide) return;
@@ -708,7 +962,16 @@ const GameMahjongJapanese = () => {
           theme={theme}
           onThemeChange={setTheme}
           onStart={startDesktopGame}
+          loadError={loadError}
+          hasSaved={hasResumableMatch()}
+          hasReplay={loadLastReplay() !== null}
+          onResume={resumeDesktopGame}
+          onOpenReplay={openLastReplay}
+          onImportReplay={importReplay}
         />
+        {replay && (
+          <ReplayViewer file={replay} onClose={() => openReplay(null)} />
+        )}
       </div>
     );
   }
@@ -731,14 +994,13 @@ const GameMahjongJapanese = () => {
     riichiSelecting,
     discardable:
       (riichiSelecting ? turn?.riichiDiscards : turn?.discardable) ?? [],
+    pendingCall,
   };
   const actionHandlers: RiichiActionHandlers = {
     doRon: () => act({ type: 'claim', seat: 0, response: { type: 'ron' } }),
-    doChi: (tiles) =>
-      act({ type: 'claim', seat: 0, response: { type: 'chi', tiles } }),
-    doPeng: () => act({ type: 'claim', seat: 0, response: { type: 'pon' } }),
-    doMingang: () =>
-      act({ type: 'claim', seat: 0, response: { type: 'minkan' } }),
+    doChi: (tiles) => callOrConfirm({ type: 'chi', tiles }),
+    doPeng: () => callOrConfirm({ type: 'pon' }),
+    doMingang: () => callOrConfirm({ type: 'minkan' }),
     passClaim: () =>
       act({ type: 'claim', seat: 0, response: { type: 'pass' } }),
     doTsumo: () => act({ type: 'tsumo', seat: 0 }),
@@ -755,6 +1017,11 @@ const GameMahjongJapanese = () => {
   return (
     <RiichiDesktopStage theme={theme}>
       <div className="riichi-stage-screen">
+        <RiichiKeyboardShortcuts
+          state={actionState}
+          handlers={actionHandlers}
+          enabled={match?.status === 'playing' && !showGuide && !replay}
+        />
         <GameHeader
           game={game}
           historyLength={
@@ -774,6 +1041,7 @@ const GameMahjongJapanese = () => {
           theme={theme}
           onThemeChange={setTheme}
           onOpenGuide={() => setShowGuide(true)}
+          onOpenReplay={openCurrentReplay}
         />
 
         <main className="riichi-desktop-workspace">
@@ -786,6 +1054,7 @@ const GameMahjongJapanese = () => {
               actionState={actionState}
               actionHandlers={actionHandlers}
               discard={discard}
+              dangerHint={riichiSettings.dangerHint}
             />
           </div>
           <DesktopSideRail
@@ -833,6 +1102,9 @@ const GameMahjongJapanese = () => {
             onRestart={startDesktopGame}
             homeLabel={t('common.backHome')}
           />
+        )}
+        {replay && (
+          <ReplayViewer file={replay} onClose={() => openReplay(null)} />
         )}
       </div>
     </RiichiDesktopStage>

@@ -1,16 +1,12 @@
-# 日麻引擎重构交接（阶段 0 完成 / 阶段 1 进行中）
+# 日麻引擎重构交接（阶段 0、1 完成）
 
 对应计划：`.cursor/plans/日麻评估与优化计划_9ccd25c1.plan.md`（只读，不要改）。
 
 ## 当前状态
 
-- **能用的**：纯函数引擎 `src/pages/mahjong/japanese/engine/`，以及对应测试 `tests/riichi-engine-sim.test.ts`、`tests/riichi-test-helpers.test.ts`，全部通过。
-- **不能编译的**：UI 还没有接到新引擎上。`pnpm run typecheck` 会在以下 4 个文件报错：
-  - `index.tsx`
-  - `components/Modals.tsx`
-  - `components/TableContextPanel.tsx`
-  - `src/pages/Home.tsx`（引用了已删除的 `store/riichiGameStore`）
-- **旧测试**：部分旧测试依赖已删除的模块或旧签名，需要移植，清单见下文。
+- **阶段 1 已完成**：日麻页面、结算弹窗、场况侧栏和首页均已接入纯函数引擎；旧 effect/定时器流程不再使用。
+- **验收证据**：`pnpm run check`、`pnpm run test`（54 个文件、378 条用例）、`pnpm run build` 均通过。桌面浏览器已验证“开局 → 出牌 → AI 响应 → 荒牌结算 → 下一局”，并截图核对；双响弹窗有专门组件测试。
+- **计划状态**：原计划文件要求只读，未修改；本交接将阶段 1 标为完成。阶段 2 的逐条规则测试仍未全部完成，阶段 4 至 7 仍待推进。
 
 ## 已完成
 
@@ -47,44 +43,30 @@
 | `ai.ts` | 确定性 AI：按向听数和进张选牌；攻、守、平衡三种姿态；立直判断；鸣牌前检查役 |
 | `selectors.ts` | `getPendingSeats`、`getDecisionSeat`、`countAllTiles` |
 
-### 已写好但尚未接入 UI
+### 阶段 1 UI 集成
 
-- `store/riichiMatchStore.ts`：`dispatch`、效果监听、进度去重、自动保存。
+- `store/riichiMatchStore.ts`：`dispatch`、效果监听、进度去重、自动保存；已接到页面。
 - `store/persistence.ts`：存档和上局牌谱。
-- `useRiichiAutomation.ts`：唯一的调度器；AI 延迟行动；自动和了、不鸣、自动摸切；超时处理；所有回调都用 `turn` 校验是否过期。
+- `useRiichiAutomation.ts`：唯一的调度器；AI 延迟行动；自动和了、不鸣、自动摸切；超时处理；所有回调都用 `turn` 校验是否过期。页面已启用。
 - `playerProfile.riichiSettings`。
 - `src/components/ui/dialog.tsx`（shadcn）。
-- `helpers.ts`：新增 `formatLogEntry`，把日志条目渲染为文本。
+- `helpers.ts`：`formatLogEntry` 把引擎日志按当前语言渲染。另新增 `useHumanRemainingSeconds`、`useRiichiEffectSounds`、`useRiichiViewModel`。
 
-## 下一步（阶段 1 收尾）
+## 阶段 1 验收
 
-1. **补 3 个小 hook**
-   - `useHumanRemainingSeconds`：读 `decisionClock`，每 250ms 刷新；只在计时组件里订阅。
-   - `useRiichiEffectSounds`：用 `subscribeRiichiEffects` 把 sound 效果映射到 `useRiichiSounds`。
-   - 自家视图模型：`getSeatTurnOptions` / `getSeatClaimOptions` / 振听原因 / 听牌提示。听牌提示可以参照 git 历史里旧 `useRiichiDerived.ts` 中的 `tenpaiHint`，改用 `engine/evaluate.ts` 的 `evaluateSeatWin({ preview: true })`。
-2. **重写 `index.tsx` 的接线**
-   - 状态从 `useRiichiStore` 读取，操作改为 `dispatch(withElapsed(event))`。
-   - 立直改成两步：先点「立直」按钮，再点一张 `riichiDiscards` 中的牌。
-   - 过牌：`{ type: 'claim', seat: 0, response: { type: 'pass' } }`。
-   - 下一局：`{ type: 'nextRound' }`。
-3. **`Modals.tsx`**
-   - 和了结果改为 `round.result`：`wins[]` 可以有多个（双响）。
-   - 流局改为 `result.type === 'draw'`，原因是代码，另有 `nagashiSeats`。
-4. **`TableContextPanel.tsx`**：用 `getDecisionSeat` 替换原来的逻辑。
-5. **`Home.tsx`**：改为读 `useRiichiStore`。
-6. **补 i18n key（中英两套都要）**
-   - `riichi.log.*`：`roundStart`、`discard`、`riichi`、`chi`、`pon`、`minkan`、`ankan`、`kakan`、`tsumo`、`tsumoYakuman`、`ron`、`ronYakuman`、`ryuukyoku`、`nagashi`、`timeoutDiscard`、`timeoutPass`、`scoreLine`、`matchEnd`、`undo`。
-   - `riichi.drawReason.{exhaustive,kyuushu,suufon,suucha,suukaikan,sanchahou}`，以及同名的 `riichi.drawDesc.*`。
-   - `riichi.matchEndReason.{tobi,east4_end,south4_end,agari_yame,extension_end,default}`。
-   - `riichi.unit.points`（例如 `{points} 点`）。
-7. **移植旧测试到引擎**
-   - 失效的旧测试：`riichi-win-result`、`riichi-phase1-baseline`、`riichi-menzhen-waiting`、`riichi-next-round`、`riichi-ai`、`mahjong-rules`（保留赤五相关用例）、`riichi-game-end`（东 4 无人到 30000 时现在进入南入）、`riichi-furiten`、`riichi-abortive-draw`。
-   - 需要新增的规则用例：抢杠、海底 / 河底、立直后暗杠、双响、食替、一发自摸、四家立直先判荣和。
-8. **验收**：`pnpm run check` 和 `pnpm run test` 全部通过后，把阶段 1 标记为完成。
+- UI 的合法操作取自 `getSeatTurnOptions` / `getSeatClaimOptions`，立直需先点按钮再选宣言牌；过牌、下一局、回退均经引擎入口。
+- `round.result` 驱动和了、双响、流局及流局满贯展示；中英文日志、流局与终局原因 key 已补齐。
+- 旧测试已迁至现行规则与引擎入口；新增 `riichi-engine-regressions`、`riichi-modals`、`riichi-i18n-contract` 专项用例。
+- `pnpm run check`、`pnpm run test`、`pnpm run build` 均通过。浏览器验收使用 1920×1200 桌面视口，出牌、整局流局及下一局实际可用。`check` 保留 Biome 的非阻断警告。
+
+## 下一步
+
+- 阶段 2：按照原计划，把其余规则与已修的 12 个 bug 逐条补足专项回归用例，检查边界场景。已新增的抢杠、海底/河底、立直后暗杠、双响、食替、一发自摸、四家立直先判荣和等用例可复用。
+- 阶段 3：AI 已有确定性决策专项测试，仍需按实战结果调参与完成难度档位验收。
 
 ## 后续阶段要点
 
-- **阶段 3**：AI 已按新方案实现，还需要补测试，并调参。模拟统计（30 个半庄）：和了率约 78%，荒牌约 20%。
+- **阶段 3**：AI 已按新方案实现并有专项测试，还需调参与难度档位验收。先前模拟统计（30 个半庄）：和了率约 78%，荒牌约 20%。
 - **阶段 4**
   - 引擎已缓存 `turnOptions` 和结构分析。
   - 还需要：WASM 动态导入。

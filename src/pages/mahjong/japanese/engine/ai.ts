@@ -81,7 +81,7 @@ export function threatOf(state: RiichiGameState, opp: number): number {
   return threat;
 }
 
-function dangerFor(
+export function dangerFor(
   state: RiichiGameState,
   seat: number,
   tile: number,

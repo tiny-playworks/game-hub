@@ -1,0 +1,70 @@
+- generic [ref=e5]:
+  - banner [ref=e6]:
+    - link "返回首页" [ref=e7] [cursor=pointer]:
+      - /url: /
+    - generic [ref=e10]: TINY GAME HUB · RIICHI
+  - main [ref=e11]:
+    - generic [ref=e12]:
+      - generic [ref=e13]:
+        - generic [ref=e14]: DESKTOP BETA
+        - text: 规则引擎已接入
+      - paragraph [ref=e16]: RIICHI PRACTICE TABLE
+      - heading "日本立直麻将" [level=1] [ref=e17]
+      - paragraph [ref=e18]: 面向电脑大屏的完整练习牌桌。专注行牌、听牌与局面判断。
+      - generic [ref=e19]:
+        - generic [ref=e20]: 四人完整牌桌
+        - generic [ref=e23]: 规则引擎和牌判定
+        - generic [ref=e26]: 本地训练提示
+        - generic [ref=e29]: 无需账号与联网
+      - button "规则与新人指南" [ref=e32]
+    - region "对局设置" [ref=e35]:
+      - generic [ref=e36]:
+        - text: TABLE SETUP
+        - heading "准备开局" [level=2] [ref=e37]
+        - paragraph [ref=e38]: 设置只保存在当前浏览器中。
+      - group "场次" [ref=e39]:
+        - generic [ref=e41]:
+          - button "东风场 东一至东四" [pressed] [ref=e42]:
+            - strong [ref=e43]: 东风场
+            - generic [ref=e44]: 东一至东四
+          - button "南风场 东一至南四" [ref=e45]:
+            - strong [ref=e46]: 南风场
+            - generic [ref=e47]: 东一至南四
+      - group "对局偏好" [ref=e48]:
+        - generic [ref=e50]:
+          - generic [ref=e51] [cursor=pointer]:
+            - generic [ref=e52]: 自动和了
+            - checkbox "自动和了" [checked] [active] [ref=e53]
+          - generic [ref=e54] [cursor=pointer]:
+            - generic [ref=e55]: 不鸣牌
+            - checkbox "不鸣牌" [ref=e56]
+          - generic [ref=e57] [cursor=pointer]:
+            - generic [ref=e58]: 立直后自动摸切
+            - checkbox "立直后自动摸切" [checked] [ref=e59]
+          - generic [ref=e60] [cursor=pointer]:
+            - generic [ref=e61]: 鸣牌前确认
+            - checkbox "鸣牌前确认" [ref=e62]
+          - generic [ref=e63] [cursor=pointer]:
+            - generic [ref=e64]: 危险度提示
+            - checkbox "危险度提示" [checked] [ref=e65]
+        - generic [ref=e66] [cursor=pointer]:
+          - generic [ref=e67]: 电脑难度
+          - combobox "电脑难度" [ref=e68]:
+            - option "初级" [selected]
+            - option "标准"
+      - generic [ref=e69] [cursor=pointer]:
+        - text: 导入牌谱
+        - button "导入牌谱" [ref=e70]
+      - group "牌桌主题" [ref=e71]:
+        - generic [ref=e73]:
+          - button [pressed] [ref=e74]:
+            - strong [ref=e77]: 绿桌
+          - button [ref=e78]:
+            - strong [ref=e81]: 蓝桌
+          - button [ref=e82]:
+            - strong [ref=e85]: 暖桌
+      - generic [ref=e86]: 纯前端本地运行 · 不上传牌局数据
+      - button "开始游戏 东风场 · 四人完整牌桌" [ref=e91]:
+        - generic [ref=e92]:
+          - strong [ref=e93]: 开始游戏
+          - generic [ref=e94]: 东风场 · 四人完整牌桌

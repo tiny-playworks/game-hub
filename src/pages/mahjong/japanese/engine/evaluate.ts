@@ -48,7 +48,7 @@ export function evaluateSeatWin(
       lastTile,
       winnerSeat: seat,
       doubleRiichi: riichi && state.doubleRiichi[seat],
-      firstTake: !preview && isTsumo && state.firstTurn[seat],
+      firstTake: !preview && state.firstTurn[seat],
       allowDoubleYakuman: params.rules?.doubleYakuman ?? true,
     },
     isTsumo,

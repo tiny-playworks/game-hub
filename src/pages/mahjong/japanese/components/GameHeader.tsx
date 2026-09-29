@@ -8,13 +8,15 @@ import {
   Undo2,
   X,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLocale } from '@/contexts/LocaleContext';
 import { formatMessage } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { RIICHI_THEMES, type RiichiThemeId } from '../constants';
 import { formatPoints, toTileKeyedItems } from '../helpers';
 import type { RiichiGameState } from '../types';
+import { RiichiSettingsPanel } from './RiichiSettingsPanel';
 import { RiichiTile } from './Tile';
 
 type Props = {
@@ -28,6 +30,7 @@ type Props = {
   theme: RiichiThemeId;
   onThemeChange: (theme: RiichiThemeId) => void;
   onOpenGuide: () => void;
+  onOpenReplay: () => void;
 };
 
 export function GameHeader({
@@ -41,9 +44,15 @@ export function GameHeader({
   theme,
   onThemeChange,
   onOpenGuide,
+  onOpenReplay,
 }: Props) {
   const { locale, t } = useLocale();
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
+  const themeContainer =
+    typeof document === 'undefined'
+      ? undefined
+      : document.querySelector<HTMLElement>('[data-riichi-theme]');
   const roundText = formatMessage(locale, 'game.mahjong.roundTextFormat', {
     wind: t(`game.mahjong.winds.${game.roundWind}`),
     round: game.roundNumber,
@@ -70,7 +79,7 @@ export function GameHeader({
       <div className="riichi-header-round">
         <strong>{roundText}</strong>
         <span>
-          {t('game.mahjong.riichiStick')} {formatPoints(game.riichiPot)}
+          {t('game.mahjong.riichiStick')} {formatPoints(game.riichiPot, locale)}
         </span>
       </div>
 
@@ -86,6 +95,7 @@ export function GameHeader({
           </div>
         </div>
         <button
+          ref={menuTriggerRef}
           type="button"
           onClick={() => setMenuOpen(true)}
           className="riichi-header-menu"
@@ -96,19 +106,32 @@ export function GameHeader({
         </button>
       </div>
 
-      {menuOpen && (
-        <div className="riichi-menu-layer">
-          <button
-            type="button"
-            className="riichi-menu-backdrop"
-            onClick={() => setMenuOpen(false)}
-            aria-label={t('game.mahjong.closeMenu')}
-          />
-          <aside className="riichi-menu-drawer">
+      <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
+          <DialogContent
+            container={themeContainer}
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              menuTriggerRef.current?.focus();
+            }}
+            showCloseButton={false}
+            className="riichi-menu-drawer !max-w-none"
+            style={{
+              position: 'fixed',
+              top: 0,
+              right: 0,
+              left: 'auto',
+              height: '100vh',
+              transform: 'none',
+              margin: 0,
+            }}
+            aria-describedby={undefined}
+          >
             <header>
               <div>
-                <p>GAME CONTROL</p>
-                <h2>{t('game.mahjong.gameMenu')}</h2>
+                <p>{t('riichi.menu.kicker')}</p>
+                <DialogTitle asChild>
+                  <h2>{t('game.mahjong.gameMenu')}</h2>
+                </DialogTitle>
               </div>
               <button
                 type="button"
@@ -124,21 +147,21 @@ export function GameHeader({
                 <RotateCcw aria-hidden="true" size={18} />
                 <span>
                   <strong>{t('riichi.modal.matchEnd.playAgain')}</strong>
-                  <small>重新开始当前场次</small>
+                  <small>{t('riichi.menu.restartDetail')}</small>
                 </span>
               </button>
               <button type="button" onClick={() => closeAnd(onOpenGuide)}>
                 <BookOpen aria-hidden="true" size={18} />
                 <span>
-                  <strong>完整规则与新人指南</strong>
-                  <small>查看操作、和牌与结算说明</small>
+                  <strong>{t('riichi.guide.title')}</strong>
+                  <small>{t('riichi.menu.guideDetail')}</small>
                 </span>
               </button>
               <button type="button" onClick={() => closeAnd(onBackToRules)}>
                 <ChevronLeft aria-hidden="true" size={18} />
                 <span>
                   <strong>{returnRulesLabel}</strong>
-                  <small>回到场次与主题选择</small>
+                  <small>{t('riichi.menu.rulesDetail')}</small>
                 </span>
               </button>
               {historyLength > 0 && (
@@ -153,11 +176,20 @@ export function GameHeader({
               <button type="button" onClick={() => closeAnd(onOpenLog)}>
                 <ScrollText aria-hidden="true" size={18} />
                 <span>
-                  <strong>牌局记录</strong>
-                  <small>打开侧栏查看并复制日志</small>
+                  <strong>{t('riichi.rail.log')}</strong>
+                  <small>{t('riichi.menu.logDetail')}</small>
+                </span>
+              </button>
+              <button type="button" onClick={() => closeAnd(onOpenReplay)}>
+                <ScrollText aria-hidden="true" size={18} />
+                <span>
+                  <strong>{t('riichi.replay.open')}</strong>
+                  <small>{t('riichi.replay.export')}</small>
                 </span>
               </button>
             </div>
+
+            <RiichiSettingsPanel />
 
             <section className="riichi-menu-theme">
               <div className="riichi-menu-section-title">
@@ -179,9 +211,8 @@ export function GameHeader({
                 ))}
               </div>
             </section>
-          </aside>
-        </div>
-      )}
+          </DialogContent>
+      </Dialog>
     </header>
   );
 }

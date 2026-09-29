@@ -1,10 +1,16 @@
 import type { CSSProperties } from 'react';
-import tileAtlasUrl from '@/assets/riichi/tiles/riichi-tile-atlas.png';
+import tileAtlasUrl from '@/assets/riichi/tiles/riichi-tile-atlas.avif';
+import { getMessage, getStoredLocale } from '@/lib/i18n';
 import { getBaseTile, getTileLabel, isAkaFive } from '@/lib/mahjongRiichi';
 import { cn } from '@/lib/utils';
 
 export type RiichiTileVariant = 'hand' | 'river' | 'meld' | 'indicator';
-export type RiichiTileState = 'normal' | 'drawn' | 'last-discard' | 'disabled';
+export type RiichiTileState =
+  | 'normal'
+  | 'drawn'
+  | 'last-discard'
+  | 'riichi-discard'
+  | 'disabled';
 
 export type RiichiTileProps = {
   tile: number;
@@ -12,6 +18,13 @@ export type RiichiTileProps = {
   rotation?: 0 | 90 | 180 | -90;
   state?: RiichiTileState;
   onClick?: () => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
+  onPointerEnter?: () => void;
+  onPointerLeave?: () => void;
+  highlighted?: boolean;
+  danger?: 'safe' | 'medium' | 'high';
+  title?: string;
 };
 
 type AtlasCell = {
@@ -109,13 +122,23 @@ export function RiichiTile({
   rotation = 0,
   state = 'normal',
   onClick,
+  onFocus,
+  onBlur,
+  onPointerEnter,
+  onPointerLeave,
+  highlighted = false,
+  danger,
+  title,
 }: RiichiTileProps) {
   const className = cn(
     'riichi-tile',
     `riichi-tile--${variant}`,
     `riichi-tile--${state}`,
     onClick && 'riichi-tile--interactive',
+    highlighted && 'riichi-tile--matching',
+    danger && `riichi-tile--danger-${danger}`,
   );
+  const tileLabel = getTileLabel(tile, getStoredLocale());
   const face = (
     <span className="riichi-tile-rotator">
       <TileArtwork tile={tile} />
@@ -129,8 +152,13 @@ export function RiichiTile({
         className={className}
         data-rotation={rotation}
         onClick={onClick}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        onPointerEnter={onPointerEnter}
+        onPointerLeave={onPointerLeave}
         disabled={state === 'disabled'}
-        aria-label={getTileLabel(tile)}
+        aria-label={tileLabel}
+        title={title}
       >
         {face}
       </button>
@@ -142,7 +170,8 @@ export function RiichiTile({
       role="img"
       className={className}
       data-rotation={rotation}
-      aria-label={getTileLabel(tile)}
+      aria-label={tileLabel}
+      title={title}
     >
       {face}
     </span>
@@ -160,7 +189,7 @@ export function TileBack({
     <span
       className={cn('riichi-tile-back', className)}
       data-rotation={rotation}
-      title="牌背"
+      title={getMessage(getStoredLocale(), 'riichi.tile.back')}
     >
       <span className="riichi-tile-back-rotator">
         <span

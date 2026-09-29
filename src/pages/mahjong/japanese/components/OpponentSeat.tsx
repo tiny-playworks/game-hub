@@ -1,5 +1,6 @@
 import { useLocale } from '@/contexts/LocaleContext';
 import { formatMessage } from '@/lib/i18n';
+import { getBaseTile } from '@/lib/mahjongRiichi';
 import { cn } from '@/lib/utils';
 import {
   formatPoints,
@@ -21,6 +22,7 @@ type Props = {
   timerLabel: string;
   timerClassName: string;
   isCurrentTurn: boolean;
+  highlightedBase?: number | null;
 };
 
 export function OpponentSeat({
@@ -29,6 +31,7 @@ export function OpponentSeat({
   timerLabel,
   timerClassName,
   isCurrentTurn,
+  highlightedBase = null,
 }: Props) {
   const { locale, t } = useLocale();
   const rotation = tileRotation(seat);
@@ -39,7 +42,7 @@ export function OpponentSeat({
     seat: t(`game.mahjong.seats.${seat}`),
     wind: t(`game.mahjong.winds.${seatWind}`),
     count: game.hands[seat].length,
-    points: formatPoints(game.scores[seat]),
+    points: formatPoints(game.scores[seat], locale),
     timer: timerLabel,
   });
 
@@ -60,12 +63,20 @@ export function OpponentSeat({
           <span className="riichi-seat-name">
             {t(`game.mahjong.seats.${seat}`)}
           </span>
-          <strong>{formatPoints(game.scores[seat])}</strong>
+          <strong>{formatPoints(game.scores[seat], locale)}</strong>
         </div>
         <div className="riichi-seat-card-meta">
           <span className={timerClassName}>{timerLabel}</span>
-          {isCurrentTurn && <span className="riichi-seat-action">行动中</span>}
-          {isRiichi && <span className="riichi-seat-riichi">立直</span>}
+          {isCurrentTurn && (
+            <span className="riichi-seat-action">
+              {t('riichi.context.live')}
+            </span>
+          )}
+          {isRiichi && (
+            <span className="riichi-seat-riichi">
+              {t('riichi.state.riichi')}
+            </span>
+          )}
         </div>
       </div>
 
@@ -82,6 +93,11 @@ export function OpponentSeat({
           {toMeldKeyedItems(game.melds[seat], `opponent-${seat}-meld`).map(
             ({ meld, key }) => (
               <span className="riichi-seat-meld" key={key}>
+                {meld.fromPlayer !== undefined && (
+                  <small className="riichi-meld-source">
+                    {t(`game.mahjong.seats.${meld.fromPlayer}`)}
+                  </small>
+                )}
                 {toTileKeyedItems(meld.tiles, `${key}-tile`).map(
                   ({ tile, key: tileKey }) => (
                     <RiichiTile
@@ -89,6 +105,7 @@ export function OpponentSeat({
                       tile={tile}
                       variant="meld"
                       rotation={rotation}
+                      highlighted={getBaseTile(tile) === highlightedBase}
                     />
                   ),
                 )}

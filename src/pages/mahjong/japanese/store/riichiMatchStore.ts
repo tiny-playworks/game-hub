@@ -12,7 +12,12 @@ import {
   type RiichiRuleConfig,
   undoLastHumanAction,
 } from '../engine';
-import { clearSavedMatch, loadSavedMatch, saveMatch } from './persistence';
+import {
+  clearSavedMatch,
+  hasSavedMatch,
+  loadSavedMatch,
+  saveMatch,
+} from './persistence';
 
 export type RiichiView = 'rules' | 'game';
 
@@ -149,7 +154,7 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
 );
 
 export function hasResumableMatch(): boolean {
-  return loadSavedMatch() !== null;
+  return hasSavedMatch();
 }
 
 export function discardSavedMatch(): void {

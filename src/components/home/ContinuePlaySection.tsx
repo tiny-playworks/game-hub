@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 export type ContinuePlaySectionProps = {
   isRiichiActive: boolean;
   hasRecentMahjong: boolean;
+  hasSavedRiichi: boolean;
   recentPlayedText: string;
   className?: string;
 };
@@ -14,6 +15,7 @@ export type ContinuePlaySectionProps = {
 export function ContinuePlaySection({
   isRiichiActive,
   hasRecentMahjong,
+  hasSavedRiichi,
   recentPlayedText,
   className,
 }: ContinuePlaySectionProps) {
@@ -21,17 +23,19 @@ export function ContinuePlaySection({
 
   const primaryHref = isRiichiActive
     ? '/game/mahjong-japanese'
-    : '/game/mahjong-japanese?start=1';
+    : hasSavedRiichi
+      ? '/game/mahjong-japanese?resume=1'
+      : '/game/mahjong-japanese?start=1';
 
   const primaryLabel = isRiichiActive
     ? t('home.continue.cta.active')
-    : hasRecentMahjong
+    : hasSavedRiichi
       ? t('home.continue.cta.resume')
       : t('home.continue.cta.start');
 
   const description = isRiichiActive
     ? t('home.continue.activeDescription')
-    : hasRecentMahjong
+    : hasSavedRiichi && hasRecentMahjong
       ? `${t('home.continue.lastPlayedPrefix')}${recentPlayedText}`
       : t('home.continue.emptyDescription');
 

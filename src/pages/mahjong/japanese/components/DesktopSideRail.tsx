@@ -5,6 +5,7 @@ import {
   ReceiptText,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { useLocale } from '@/contexts/LocaleContext';
 import { cn } from '@/lib/utils';
 
 export type DesktopPanelId = 'hint' | 'settlement' | 'log';
@@ -12,14 +13,13 @@ export type ActiveDesktopPanel = DesktopPanelId | null;
 
 type PanelDefinition = {
   id: DesktopPanelId;
-  label: string;
   icon: typeof Lightbulb;
 };
 
 const PANELS: PanelDefinition[] = [
-  { id: 'hint', label: '训练提示', icon: Lightbulb },
-  { id: 'settlement', label: '上一局', icon: ReceiptText },
-  { id: 'log', label: '牌局记录', icon: FileClock },
+  { id: 'hint', icon: Lightbulb },
+  { id: 'settlement', icon: ReceiptText },
+  { id: 'log', icon: FileClock },
 ];
 
 type Props = {
@@ -39,6 +39,7 @@ export function DesktopSideRail({
   settlementContent,
   logContent,
 }: Props) {
+  const { t } = useLocale();
   const content =
     activePanel === 'hint'
       ? hintContent
@@ -54,10 +55,14 @@ export function DesktopSideRail({
         'riichi-desktop-rail',
         activePanel && 'riichi-desktop-rail--open',
       )}
-      aria-label="训练侧栏"
+      aria-label={t('riichi.rail.label')}
     >
-      <nav className="riichi-desktop-rail-nav" aria-label="训练工具">
-        {PANELS.map(({ id, label, icon: Icon }) => {
+      <nav
+        className="riichi-desktop-rail-nav"
+        aria-label={t('riichi.rail.tools')}
+      >
+        {PANELS.map(({ id, icon: Icon }) => {
+          const label = t(`riichi.rail.${id}`);
           const selected = activePanel === id;
           return (
             <button
@@ -77,7 +82,7 @@ export function DesktopSideRail({
                 <span
                   className="riichi-desktop-rail-dot"
                   role="img"
-                  aria-label="有新提示"
+                  aria-label={t('riichi.rail.newHint')}
                 />
               )}
             </button>
@@ -90,14 +95,14 @@ export function DesktopSideRail({
           <header className="riichi-desktop-panel-header">
             <div>
               <p className="riichi-desktop-panel-kicker">RIICHI TRAINING</p>
-              <h2>{PANELS.find((panel) => panel.id === activePanel)?.label}</h2>
+              <h2>{t(`riichi.rail.${activePanel}`)}</h2>
             </div>
             <button
               type="button"
               onClick={() => onPanelChange(null)}
               className="riichi-desktop-panel-close"
-              aria-label="收起侧栏"
-              title="收起侧栏"
+              aria-label={t('riichi.rail.close')}
+              title={t('riichi.rail.close')}
             >
               <PanelRightClose aria-hidden="true" size={20} />
             </button>

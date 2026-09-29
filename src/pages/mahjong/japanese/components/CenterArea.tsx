@@ -1,14 +1,16 @@
 import { useLocale } from '@/contexts/LocaleContext';
 import { formatMessage } from '@/lib/i18n';
+import { getBaseTile } from '@/lib/mahjongRiichi';
 import { toTileKeyedItems } from '../helpers';
 import type { RiichiGameState } from '../types';
 import { RiichiTile } from './Tile';
 
 type Props = {
   game: RiichiGameState;
+  highlightedBase?: number | null;
 };
 
-export function CenterArea({ game }: Props) {
+export function CenterArea({ game, highlightedBase = null }: Props) {
   const { locale, t } = useLocale();
 
   return (
@@ -19,11 +21,12 @@ export function CenterArea({ game }: Props) {
           `discard-${seat}`,
         );
         return (
-          <div
+          <section
             key={seat}
             className={`riichi-river riichi-river--seat-${seat}`}
-            role="group"
-            aria-label={`${t(`game.mahjong.seats.${seat}`)}舍牌`}
+            aria-label={formatMessage(locale, 'riichi.table.river', {
+              seat: t(`game.mahjong.seats.${seat}`),
+            })}
           >
             <div
               className={`riichi-river-grid riichi-river-grid--seat-${seat}${tiles.length > 24 ? ' is-dense' : ''}`}
@@ -36,12 +39,19 @@ export function CenterArea({ game }: Props) {
                     key={key}
                     tile={tile}
                     variant="river"
-                    state={isLastDiscard ? 'last-discard' : 'normal'}
+                    state={
+                      game.riichiDiscardIndex[seat] === index
+                        ? 'riichi-discard'
+                        : isLastDiscard
+                          ? 'last-discard'
+                          : 'normal'
+                    }
+                    highlighted={getBaseTile(tile) === highlightedBase}
                   />
                 );
               })}
             </div>
-          </div>
+          </section>
         );
       })}
 
@@ -49,7 +59,9 @@ export function CenterArea({ game }: Props) {
         <div className="riichi-center-round">
           <span>{t(`game.mahjong.winds.${game.roundWind}`)}</span>
           <strong>{game.roundNumber}</strong>
-          <small>{game.honba} 本场</small>
+          <small>
+            {formatMessage(locale, 'riichi.table.honba', { count: game.honba })}
+          </small>
         </div>
         <p className="riichi-center-wall">
           {formatMessage(locale, 'game.mahjong.wallLength', {
@@ -59,7 +71,12 @@ export function CenterArea({ game }: Props) {
         <div className="riichi-center-indicators">
           {toTileKeyedItems(game.doraIndicators, 'center-dora').map(
             ({ tile, key }) => (
-              <RiichiTile key={key} tile={tile} variant="indicator" />
+              <RiichiTile
+                key={key}
+                tile={tile}
+                variant="indicator"
+                highlighted={getBaseTile(tile) === highlightedBase}
+              />
             ),
           )}
         </div>

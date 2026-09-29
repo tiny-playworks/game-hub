@@ -26,7 +26,10 @@ import {
 import { getRecentMahjongEntry } from '@/lib/recentMahjong';
 import { getTitleById, resolveActiveTitle } from '@/lib/titles';
 import { cn } from '@/lib/utils';
-import { useRiichiStore } from '@/pages/mahjong/japanese/store/riichiMatchStore';
+import {
+  hasResumableMatch,
+  useRiichiStore,
+} from '@/pages/mahjong/japanese/store/riichiMatchStore';
 
 function formatGrowthFeedLine(
   item: GrowthFeedItem,
@@ -184,6 +187,7 @@ const Home = () => {
             className="order-1 md:order-2"
             isRiichiActive={isRiichiActive}
             hasRecentMahjong={Boolean(recentMahjong)}
+            hasSavedRiichi={hasResumableMatch()}
             recentPlayedText={recentPlayedText}
           />
         </section>

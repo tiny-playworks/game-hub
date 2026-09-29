@@ -905,11 +905,9 @@ body {
       rgba(255, 255, 255, 0.115),
       transparent 43%
     ),
-    url("./assets/riichi/table-felt.webp"),
     url("./assets/riichi/table-felt.svg"), var(--riichi-table);
   background-size:
     cover,
-    190px 190px,
     190px 190px,
     auto;
   box-shadow:
@@ -1383,8 +1381,17 @@ body {
   padding: 0 4px 5px;
 }
 
+.riichi-self-clock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 13px;
+  font-size: 9px;
+  color: var(--riichi-text-muted);
+}
+
 .riichi-self-timer {
-  width: 100%;
+  flex: 1;
   height: 3px;
   overflow: hidden;
   border-radius: 99px;
@@ -3386,5 +3393,271 @@ body {
   .animate-overlay-card-in,
   .animate-card-deal {
     animation: none;
+  }
+}
+
+.riichi-settings-panel {
+  margin-top: 20px;
+}
+
+.riichi-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.riichi-settings-grid label,
+.riichi-settings-level {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--riichi-border) 25%, transparent);
+  border-radius: 8px;
+  color: var(--riichi-text);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.riichi-settings-grid input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--riichi-accent);
+}
+
+.riichi-settings-level {
+  margin-top: 8px;
+}
+
+.riichi-settings-level select,
+.riichi-replay-toolbar select {
+  min-height: 44px;
+  padding: 0 8px;
+  border: 1px solid var(--riichi-border);
+  border-radius: 6px;
+  color: var(--riichi-text);
+  background: var(--riichi-bg);
+}
+
+.riichi-lobby-secondary-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.riichi-lobby-secondary-actions button,
+.riichi-lobby-import {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid var(--riichi-border);
+  border-radius: 8px;
+  color: var(--riichi-text);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.riichi-lobby-import {
+  margin-top: 8px;
+}
+
+.riichi-lobby-import input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.riichi-guide-dialog-content {
+  margin: 0;
+}
+
+.riichi-replay-dialog {
+  width: min(1120px, calc(100vw - 40px));
+  max-width: none;
+  max-height: min(92vh, 1000px);
+  overflow: auto;
+  color: var(--riichi-text);
+  background: var(--riichi-bg);
+  border-color: var(--riichi-border);
+}
+
+.riichi-replay-header,
+.riichi-replay-toolbar,
+.riichi-replay-board section > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.riichi-replay-toolbar {
+  flex-wrap: wrap;
+}
+
+.riichi-replay-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.riichi-replay-header button,
+.riichi-replay-toolbar button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--riichi-border);
+  border-radius: 8px;
+}
+
+.riichi-replay-toolbar button:disabled {
+  opacity: 0.45;
+}
+
+.riichi-replay-event {
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--riichi-table-inner);
+}
+
+.riichi-replay-board {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.riichi-replay-board section {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--riichi-border);
+  border-radius: 8px;
+}
+
+.riichi-replay-tiles {
+  display: flex;
+  min-height: 48px;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 8px;
+}
+
+.riichi-replay-footer {
+  justify-content: center;
+}
+
+.riichi-action-button {
+  min-height: 44px;
+}
+
+.riichi-guide-header button {
+  width: 44px;
+  height: 44px;
+}
+
+.riichi-tile--hand {
+  --riichi-tile-width: 44px;
+}
+
+.riichi-tile--matching .riichi-tile-rotator {
+  outline: 3px solid var(--riichi-accent);
+  outline-offset: 2px;
+}
+
+.riichi-tile--danger-safe .riichi-tile-rotator {
+  border-color: #4ade80;
+}
+
+.riichi-tile--danger-medium .riichi-tile-rotator {
+  border-color: #facc15;
+}
+
+.riichi-tile--danger-high .riichi-tile-rotator {
+  border-color: #fb7185;
+  box-shadow: 0 0 0 2px rgba(251, 113, 133, 0.55);
+}
+
+.riichi-tile--riichi-discard {
+  z-index: 5;
+}
+
+.riichi-tile--riichi-discard[data-rotation="0"] .riichi-tile-rotator {
+  transform: translate(-50%, -50%) rotate(90deg) scale(0.82);
+  border-color: var(--riichi-accent);
+}
+
+.riichi-meld-source {
+  position: absolute;
+  bottom: -14px;
+  left: 0;
+  min-width: 44px;
+  font-size: 9px;
+  color: var(--riichi-accent);
+  white-space: nowrap;
+}
+
+.riichi-seat-meld {
+  position: relative;
+}
+
+.riichi-river-grid .riichi-tile--river {
+  animation: riichi-discard-arrive 0.18s ease-out both;
+}
+
+.riichi-seat-meld .riichi-tile--meld {
+  animation: riichi-call-reveal 0.2s ease-out both;
+}
+
+.riichi-center-indicators .riichi-tile--indicator {
+  animation: riichi-dora-flip 0.22s ease-out both;
+}
+
+@keyframes riichi-discard-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(1.15);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes riichi-call-reveal {
+  from {
+    opacity: 0;
+    transform: scaleX(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes riichi-dora-flip {
+  from {
+    opacity: 0;
+    transform: rotateY(90deg);
+  }
+  to {
+    opacity: 1;
+    transform: rotateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .riichi-river-grid .riichi-tile--river,
+  .riichi-seat-meld .riichi-tile--meld,
+  .riichi-center-indicators .riichi-tile--indicator {
+    animation: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .riichi-replay-board,
+  .riichi-settings-grid {
+    grid-template-columns: 1fr;
   }
 }

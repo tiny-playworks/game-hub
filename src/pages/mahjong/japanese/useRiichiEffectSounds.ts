@@ -18,6 +18,8 @@ export function useRiichiEffectSounds(): void {
       ryuukyoku: sounds.playRyuukyoku,
     };
     return subscribeRiichiEffects((effects) => {
+      // URL 自动开局没有用户手势；浏览器禁止此时播放声音。
+      if (navigator.userActivation?.hasBeenActive === false) return;
       for (const effect of effects) {
         if (effect.type === 'sound') players[effect.sound]();
       }

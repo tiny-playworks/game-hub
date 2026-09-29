@@ -1,4 +1,4 @@
-import { calc, type RiichiResult } from 'riichi-rs-bundlers';
+import type { RiichiResult } from 'riichi-rs-bundlers';
 import { getBaseTile } from '@/lib/mahjongRiichi';
 import {
   buildRiichiHairiInput,
@@ -69,6 +69,33 @@ export class RiichiRulesError extends Error {
     super(message);
     this.cause = cause;
   }
+}
+
+type Calc = typeof import('riichi-rs-bundlers')['calc'];
+let calcImpl: Calc | null = null;
+let loadPromise: Promise<void> | null = null;
+
+/** 在开局或恢复牌谱前预热 WASM；其它页面无需下载算分内核。 */
+export function preloadRiichiRules(): Promise<void> {
+  if (calcImpl) return Promise.resolve();
+  loadPromise ??= import('riichi-rs-bundlers')
+    .then((module) => {
+      calcImpl = module.calc;
+    })
+    .catch((error) => {
+      loadPromise = null;
+      throw error;
+    });
+  return loadPromise;
+}
+
+function calc(input: Parameters<Calc>[0]): ReturnType<Calc> {
+  if (!calcImpl) {
+    throw new RiichiRulesError(
+      'riichi-rs must be preloaded before starting a match',
+    );
+  }
+  return calcImpl(input);
 }
 
 function normalizeHairiResult(result: RiichiResult): {
