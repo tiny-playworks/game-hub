@@ -81,6 +81,8 @@ export function useRiichiAutomation(settings: RiichiPlayerSettings): void {
   const match = useRiichiStore((s) => s.match);
   const view = useRiichiStore((s) => s.view);
   const replayOpen = useRiichiStore((s) => s.replay !== null);
+  const guideOpen = useRiichiStore((s) => s.showGuide);
+  const menuOpen = useRiichiStore((s) => s.showMenu);
 
   useEffect(() => {
     const store = useRiichiStore.getState();
@@ -89,6 +91,8 @@ export function useRiichiAutomation(settings: RiichiPlayerSettings): void {
       !current ||
       view !== 'game' ||
       replayOpen ||
+      guideOpen ||
+      menuOpen ||
       current.status !== 'playing'
     ) {
       return;
@@ -186,12 +190,15 @@ export function useRiichiAutomation(settings: RiichiPlayerSettings): void {
       for (const id of timers) window.clearTimeout(id);
     };
     // match 变化即代表局面推进；settings 变化时重新评估自动操作
-  }, [match, view, replayOpen, settings]);
+  }, [match, view, replayOpen, guideOpen, menuOpen, settings]);
 }
 
 /** 自家操作时附带本次决策用时（秒） */
 export function withElapsed<T extends RiichiEvent>(event: T): T {
   const clock = useRiichiStore.getState().decisionClock;
   if (!clock || event.type === 'nextRound') return event;
-  return { ...event, elapsed: (Date.now() - clock.startedAt) / 1000 };
+  return {
+    ...event,
+    elapsed: ((clock.pausedAt ?? Date.now()) - clock.startedAt) / 1000,
+  };
 }

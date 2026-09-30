@@ -46,7 +46,7 @@ function quietRound() {
 
 const waitWhite = () => tiles('123456m123p789s5z');
 
-describe('日麻阶段 1 规则专项回归', () => {
+describe('日麻引擎规则专项回归', () => {
   test('开局保留完整十四张死壁，庄家摸牌后活牌山为 69 张', () => {
     const { round } = createMatch({ seed: 1, matchLength: 'south' }).match;
     expect(round.wall).toHaveLength(69);
@@ -185,6 +185,78 @@ describe('日麻阶段 1 规则专项回归', () => {
     expect(
       applyEvent(match, { type: 'ankan', seat: 0, tiles: tiles('1111m') }),
     ).toBeNull();
+  });
+
+  test('立直宣言必须打出允许的听牌舍牌，立直后拒绝换牌', () => {
+    const state = quietRound();
+    state.hands[0] = tiles('123456m234p678s5p1z');
+    state.drawnTile = tile('1z');
+    let match = matchWithRound(state);
+    expect(
+      applyEvent(match, { type: 'riichi', seat: 0, tile: tile('1m') }),
+    ).toBeNull();
+    match = answerClaims(
+      play(match, { type: 'riichi', seat: 0, tile: tile('1z') }),
+    );
+    expect(match.round.riichiDiscardIndex[0]).toBe(0);
+    state.wall = tiles('123m');
+    expect(matchWithRound(state).round.turnOptions?.riichiDiscards).toEqual([]);
+    state.riichiDeclared[0] = true;
+    expect(
+      applyEvent(matchWithRound(state), {
+        type: 'discard',
+        seat: 0,
+        tile: tile('1m'),
+      }),
+    ).toBeNull();
+  });
+
+  test('暗杠只能被国士抢和，普通牌型不能抢暗杠', () => {
+    const state = quietRound();
+    state.hands[0] = tiles('1111m234p678s222s5z');
+    state.hands[1] = tiles('9m19p19s1234567z5z');
+    state.hands[2] = tiles('23m123p123s789s55z');
+    state.riichiDeclared[2] = true;
+    const window = play(matchWithRound(state), {
+      type: 'ankan',
+      seat: 0,
+      tiles: tiles('1111m'),
+    });
+    expect(window.round.claim?.kind).toBe('ankan');
+    expect(window.round.claim?.options[1]?.ron).toBe(true);
+    expect(window.round.claim?.options[2]?.ron).toBeFalsy();
+    expect(
+      answerClaims(window, { 1: { type: 'ron' } }).round.result,
+    ).toMatchObject({ type: 'win', wins: [{ winner: 1 }] });
+  });
+
+  test('开杠把活牌山末牌移入死壁，新增里宝参与同一次立直和牌', () => {
+    const state = quietRound();
+    state.hands[0] = tiles('1111m234p678s222s5z');
+    state.drawnTile = tile('1m');
+    state.riichiDeclared[0] = true;
+    state.rinshanTiles[0] = tile('5z');
+    state.uraPool = tiles('9p1s123m');
+    state.uraDoraIndicators = state.uraPool.slice(0, 1);
+    const supplement = state.wall[state.wall.length - 1];
+    const match = answerClaims(
+      play(matchWithRound(state), {
+        type: 'ankan',
+        seat: 0,
+        tiles: tiles('1111m'),
+      }),
+    );
+    expect(match.round.deadWallSupplements).toEqual([supplement]);
+    expect(
+      match.round.rinshanTiles.length +
+        match.round.deadWallSupplements.length +
+        match.round.doraPool.length +
+        match.round.uraPool.length,
+    ).toBe(14);
+    const end = play(match, { type: 'tsumo', seat: 0 });
+    if (end.round.result?.type !== 'win') throw new Error('岭上未和牌');
+    expect(end.round.result.wins[0].uraHan).toBe(3);
+    expect(end.round.result.wins[0].uraDoraIndicators).toHaveLength(2);
   });
 
   test('已有副露时暗杠后的门前牌按面子数计算', () => {
@@ -331,6 +403,79 @@ describe('日麻阶段 1 规则专项回归', () => {
     const end = answerClaims(window, { 1: { type: 'ron' } });
     expect(end.round.result?.type).toBe('win');
     expect(end.round.riichiPot).toBe(0);
+  });
+
+  test('四开杠途中流局须先允许下一张舍牌被荣和', () => {
+    const state = quietRound();
+    state.currentPlayer = 3;
+    state.hands[3] = state.hands[0];
+    state.hands[0] = tiles('123456m123p789s1z');
+    state.riichiDeclared[0] = true;
+    state.suukaikanPending = true;
+    const window = play(matchWithRound(state), {
+      type: 'discard',
+      seat: 3,
+      tile: tile('1z'),
+    });
+    expect(
+      answerClaims(window, { 0: { type: 'ron' } }).round.result,
+    ).toMatchObject({ type: 'win', wins: [{ winner: 0 }] });
+  });
+
+  test('四风连打在鸣牌响应结束后流局，不再推进下一次摸牌', () => {
+    const state = quietRound();
+    state.currentPlayer = 3;
+    state.hands[3] = state.hands[0];
+    state.hands[1] = tiles('11z123m456p789s22p');
+    state.discardPiles = [tiles('1z'), tiles('1z'), tiles('1z'), []];
+    const window = play(matchWithRound(state), {
+      type: 'discard',
+      seat: 3,
+      tile: tile('1z'),
+    });
+    expect(window.round.phase).toBe('claim');
+    const end = answerClaims(window);
+    expect(end.round.result).toMatchObject({ type: 'draw', reason: 'suufon' });
+    expect(end.round.wall).toEqual(state.wall);
+  });
+
+  test('第三组三元牌副露记录包牌责任者；荒牌时识别流局满贯', () => {
+    const state = quietRound();
+    state.hands[1] = tiles('55z123m22p');
+    state.melds[1] = [
+      { type: 'peng', tiles: tiles('666z'), fromPlayer: 2 },
+      { type: 'peng', tiles: tiles('777z'), fromPlayer: 3 },
+    ];
+    const window = play(matchWithRound(state), {
+      type: 'discard',
+      seat: 0,
+      tile: tile('5z'),
+    });
+    expect(answerClaims(window, { 1: { type: 'pon' } }).round.paoSeat[1]).toBe(
+      0,
+    );
+
+    const exhausted = quietRound();
+    exhausted.wall = [];
+    exhausted.discardPiles = [
+      tiles('19m'),
+      tiles('2m'),
+      tiles('2p'),
+      tiles('2s'),
+    ];
+    const end = answerClaims(
+      play(matchWithRound(exhausted), {
+        type: 'discard',
+        seat: 0,
+        tile: tile('1z'),
+      }),
+    );
+    expect(end.round.result).toMatchObject({ type: 'draw', nagashiSeats: [0] });
+    expect(
+      end.round.result?.settlement.payments.every(
+        (payment) => payment.reason === 'nagashi',
+      ),
+    ).toBe(true);
   });
 
   test('局结束后拒绝摸打和鸣牌，只有下一局事件可推进', () => {

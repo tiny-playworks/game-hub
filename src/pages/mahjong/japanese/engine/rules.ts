@@ -45,3 +45,31 @@ export function resolveRules(
     matchEnd: { ...DEFAULT_RIICHI_RULES.matchEnd, ...partial?.matchEnd },
   };
 }
+
+export function isRiichiRuleConfig(value: unknown): value is RiichiRuleConfig {
+  if (!value || typeof value !== 'object') return false;
+  const rules = value as Record<string, unknown>;
+  const booleanKeys = [
+    'doubleRon',
+    'sanchahouDraw',
+    'pao',
+    'doubleYakuman',
+    'kuikae',
+    'nagashiMangan',
+    'kokushiChankanAnkan',
+  ];
+  if (!booleanKeys.every((key) => typeof rules[key] === 'boolean'))
+    return false;
+  if (rules.aiLevel !== 'beginner' && rules.aiLevel !== 'standard')
+    return false;
+  if (!rules.matchEnd || typeof rules.matchEnd !== 'object') return false;
+  const end = rules.matchEnd as Record<string, unknown>;
+  return (
+    typeof end.returnScore === 'number' &&
+    Number.isFinite(end.returnScore) &&
+    end.returnScore > 0 &&
+    ['extension', 'agariYame', 'tenpaiYame', 'tobi'].every(
+      (key) => typeof end[key] === 'boolean',
+    )
+  );
+}

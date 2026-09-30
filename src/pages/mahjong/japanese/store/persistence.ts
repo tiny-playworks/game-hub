@@ -30,6 +30,23 @@ function storage(): Storage | null {
   }
 }
 
+function savedReplay(data: unknown): RiichiReplayFile | null {
+  if (!data || typeof data !== 'object') return null;
+  const saved = data as Record<string, unknown>;
+  if (isReplayFile(saved.replay)) return saved.replay;
+  // 阶段 1 存档曾包含完整快照；只取事件字段重放，避免依赖旧状态结构。
+  const legacy = saved.match as Partial<RiichiMatchState> | undefined;
+  if (!legacy || typeof legacy !== 'object') return null;
+  const replay = {
+    version: legacy.version,
+    seed: legacy.seed,
+    rules: legacy.rules,
+    matchLength: legacy.matchLength,
+    events: legacy.events,
+  };
+  return isReplayFile(replay) ? replay : null;
+}
+
 export function loadSavedMatch(): LoadedRiichiSave | null {
   const s = storage();
   if (!s) return null;
@@ -37,7 +54,7 @@ export function loadSavedMatch(): LoadedRiichiSave | null {
     const raw = s.getItem(RIICHI_SAVE_STORAGE_KEY);
     if (!raw) return null;
     const data = JSON.parse(raw) as Partial<RiichiSaveData>;
-    const replay = data.replay;
+    const replay = savedReplay(data);
     if (!isReplayFile(replay) || replay.version !== RIICHI_MATCH_VERSION)
       return null;
     const match = restoreMatch(replay);
@@ -45,7 +62,9 @@ export function loadSavedMatch(): LoadedRiichiSave | null {
     return {
       match,
       processedProgress: Array.isArray(data.processedProgress)
-        ? data.processedProgress
+        ? data.processedProgress.filter(
+            (key): key is string => typeof key === 'string',
+          )
         : [],
       savedAt: typeof data.savedAt === 'number' ? data.savedAt : 0,
     };
@@ -58,7 +77,7 @@ export function hasSavedMatch(): boolean {
   try {
     const raw = storage()?.getItem(RIICHI_SAVE_STORAGE_KEY);
     if (!raw) return false;
-    return isReplayFile((JSON.parse(raw) as Partial<RiichiSaveData>).replay);
+    return savedReplay(JSON.parse(raw)) !== null;
   } catch {
     return false;
   }

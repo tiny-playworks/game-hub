@@ -115,6 +115,8 @@ const messages: Record<Locale, Record<string, string>> = {
     'riichi.danger.medium': '中等风险',
     'riichi.danger.high': '高风险',
     'riichi.tile.back': '牌背',
+    'riichi.tile.red': '赤{tile}',
+    'riichi.state.roundFinished': '本局已结束',
     'riichi.lobby.badge': '规则引擎已接入',
     'riichi.lobby.title': '日本立直麻将',
     'riichi.lobby.lead':
@@ -1115,6 +1117,8 @@ const messages: Record<Locale, Record<string, string>> = {
     'riichi.danger.medium': 'Medium risk',
     'riichi.danger.high': 'High risk',
     'riichi.tile.back': 'Tile back',
+    'riichi.tile.red': 'Red {tile}',
+    'riichi.state.roundFinished': 'Round finished',
     'riichi.lobby.badge': 'Rules engine connected',
     'riichi.lobby.title': 'Japanese Riichi Mahjong',
     'riichi.lobby.lead':

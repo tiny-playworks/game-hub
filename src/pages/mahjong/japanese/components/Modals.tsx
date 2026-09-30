@@ -24,6 +24,7 @@ import {
   summarizeWinnerPayments,
 } from '../helpers';
 import type { RiichiWinResult, RoundResult } from '../types';
+import { useRiichiDialogFocus } from '../useRiichiDialogFocus';
 
 export type WinResultState = RiichiWinResult;
 
@@ -34,6 +35,7 @@ function ResultDialog({
   children: ReactNode;
   onClose: () => void;
 }) {
+  const restoreFocus = useRiichiDialogFocus();
   const container =
     typeof document === 'undefined'
       ? undefined
@@ -42,6 +44,7 @@ function ResultDialog({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         container={container}
+        onCloseAutoFocus={restoreFocus}
         className="riichi-result-modal !w-[min(740px,calc(100vw-40px))] !max-w-none animate-riichi-modal-in"
         showCloseButton={false}
         aria-describedby={undefined}

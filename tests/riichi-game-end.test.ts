@@ -5,6 +5,36 @@ import {
 } from '../src/lib/riichiGameEnd';
 
 describe('日麻终局判定', () => {
+  test.each([
+    { round: 1, scores: [31000, 23000, 24000, 22000], end: true },
+    { round: 1, scores: [28000, 24000, 26000, 22000], end: false },
+    { round: 4, scores: [28000, 24000, 26000, 22000], end: true },
+  ])('西场第 $round 局按返点线和延长场上限终局', ({ round, scores, end }) => {
+    const result = resolveRiichiMatchEnd({
+      scores,
+      roundWind: 2,
+      roundNumber: round,
+      dealer: round - 1,
+      dealerStays: false,
+      matchLength: 'south',
+    });
+    expect(result.end).toBe(end);
+    if (end) expect(result.reason).toBe('extension_end');
+  });
+
+  test('南四流局庄家听牌且头名时继续，不能当作和了止め', () => {
+    expect(
+      resolveRiichiMatchEnd({
+        scores: [18000, 22000, 23000, 37000],
+        roundWind: 1,
+        roundNumber: 4,
+        dealer: 3,
+        dealerStays: true,
+        dealerWon: false,
+        matchLength: 'south',
+      }),
+    ).toEqual({ end: false });
+  });
   test('任意玩家被击飞（负分）时立即终局', () => {
     const out = resolveRiichiMatchEnd({
       scores: [32000, -300, 25000, 43300],

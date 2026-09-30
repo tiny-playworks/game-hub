@@ -3,6 +3,40 @@ import { ourTileToRs, rsHairiTileToOur } from '../src/lib/riichiRsAdapter';
 import { analyzeRiichiHand, evaluateRiichiWin } from '../src/lib/riichiRules';
 
 describe('riichi rule facade', () => {
+  test('缓存算分结果不会被调用方修改，改变立直条件时重新算分', () => {
+    const input = {
+      state: {
+        hand: [0, 1, 2, 3, 4, 5, 18, 19, 20, 15, 16, 17, 27],
+        melds: [],
+        doraIndicators: [],
+        roundWind: 1,
+        dealer: 1,
+        riichiDeclared: [true, false, false, false],
+        wallLength: 40,
+        lastDiscard: 27,
+        winnerSeat: 0,
+      },
+      isTsumo: false,
+      winningTile: 27,
+    };
+    const first = evaluateRiichiWin(input);
+    expect(first.legalWin).toBe(true);
+    const expected = structuredClone(first);
+    first.yaku.length = 0;
+    first.totalPoints = 999999;
+    expect(
+      evaluateRiichiWin({
+        ...input,
+        state: { ...input.state, hand: [...input.state.hand].reverse() },
+      }),
+    ).toEqual(expected);
+    expect(
+      evaluateRiichiWin({
+        ...input,
+        state: { ...input.state, riichiDeclared: [false, false, false, false] },
+      }).legalWin,
+    ).toBe(false);
+  });
   test('normalizes project tiles and zero-based hairi tiles across suit orders', () => {
     expect(ourTileToRs(0)).toBe(1);
     expect(ourTileToRs(9)).toBe(19);

@@ -3,6 +3,7 @@ import { formatMessage } from '@/lib/i18n';
 import { getTileLabel } from '@/lib/mahjongRiichi';
 
 type Props = {
+  roundEnded: boolean;
   isClaimPhase: boolean;
   isMyClaim: boolean | null;
   hasAnyClaimOption: boolean | null;
@@ -17,6 +18,7 @@ type Props = {
 };
 
 export function StatusPanel({
+  roundEnded,
   isClaimPhase,
   isMyClaim,
   hasAnyClaimOption,
@@ -36,24 +38,26 @@ export function StatusPanel({
         })
       : t('game.mahjong.waitingForAction');
 
-  const mainLine = isClaimPhase
-    ? isMyClaim
-      ? hasAnyClaimOption
-        ? formatMessage(locale, 'game.mahjong.status.myClaimOptions', {
+  const mainLine = roundEnded
+    ? t('riichi.state.roundFinished')
+    : isClaimPhase
+      ? isMyClaim
+        ? hasAnyClaimOption
+          ? formatMessage(locale, 'game.mahjong.status.myClaimOptions', {
+              discardLine,
+            })
+          : formatMessage(locale, 'game.mahjong.status.myClaimWait', {
+              discardLine,
+            })
+        : formatMessage(locale, 'game.mahjong.status.otherClaim', {
             discardLine,
+            seat: t(`game.mahjong.seats.${claimPlayer ?? 0}`),
           })
-        : formatMessage(locale, 'game.mahjong.status.myClaimWait', {
-            discardLine,
-          })
-      : formatMessage(locale, 'game.mahjong.status.otherClaim', {
-          discardLine,
-          seat: t(`game.mahjong.seats.${claimPlayer ?? 0}`),
-        })
-    : isMyTurn
-      ? t('game.mahjong.status.yourTurn')
-      : formatMessage(locale, 'game.mahjong.status.waitingForSeat', {
-          seat: t(`game.mahjong.seats.${currentPlayer}`),
-        });
+      : isMyTurn
+        ? t('game.mahjong.status.yourTurn')
+        : formatMessage(locale, 'game.mahjong.status.waitingForSeat', {
+            seat: t(`game.mahjong.seats.${currentPlayer}`),
+          });
 
   return (
     <div className="riichi-status-ribbon" aria-live="polite">

@@ -15,6 +15,7 @@ import {
   emptyVisibleCounts,
   evaluateDiscards,
   getShanten,
+  remainingOf,
   type VisibleCounts,
 } from '@/lib/riichiShanten';
 import type {
@@ -199,7 +200,7 @@ function hasYakuWithoutRiichi(
   });
 }
 
-/** 立直判断：好形或无役时立直；残枚过少且终盘时默听 */
+/** 按可见待牌加权比较默听与立直打点，并考虑余巡、庄位与末局点差。 */
 function shouldDeclareRiichi(
   state: RiichiGameState,
   seat: number,
@@ -209,10 +210,75 @@ function shouldDeclareRiichi(
 ): boolean {
   if (waitRemaining <= 0) return false;
   if (level === 'beginner') return true;
-  const hasYaku = hasYakuWithoutRiichi(state, seat, hand13);
-  if (!hasYaku) return true;
-  if (waitRemaining >= 4) return true;
-  return waitRemaining >= 2 && state.wall.length >= 12;
+  const visible = visibleCountsFor(state, seat);
+  const preview = {
+    ...state,
+    hands: state.hands.map((hand, index) => (index === seat ? hand13 : hand)),
+  };
+  const declared = {
+    ...preview,
+    riichiDeclared: state.riichiDeclared.map(
+      (value, index) => index === seat || value,
+    ),
+    doubleRiichi: state.doubleRiichi.map((value, index) =>
+      index === seat ? state.firstTurn[seat] : value,
+    ),
+  };
+  let damaPoints = 0;
+  let riichiPoints = 0;
+  let legalDamaCopies = 0;
+  for (const winningTile of getWaits(hand13, state.melds[seat])) {
+    const copies = remainingOf(getBaseTile(winningTile), visible);
+    if (copies === 0) continue;
+    const dama = evaluateSeatWin({
+      state: preview,
+      seat,
+      isTsumo: false,
+      winningTile,
+      preview: true,
+    });
+    const riichi = evaluateSeatWin({
+      state: declared,
+      seat,
+      isTsumo: false,
+      winningTile,
+      preview: true,
+    });
+    damaPoints += dama.totalPoints * copies;
+    riichiPoints += riichi.totalPoints * copies;
+    if (dama.legalWin) legalDamaCopies += copies;
+  }
+  if (legalDamaCopies === 0) return true;
+  damaPoints /= waitRemaining;
+  riichiPoints /= waitRemaining;
+
+  const lastWind = state.matchLength === 'east' ? 0 : 1;
+  const allLast =
+    state.roundWind > lastWind ||
+    (state.roundWind === lastWind && state.roundNumber === 4);
+  const score = state.scores[seat];
+  const otherScores = state.scores.filter((_, index) => index !== seat);
+  const lead = score - Math.max(...otherScores);
+  const threat = totalThreat(state, seat);
+  if (allLast && lead >= 8000 && threat > 0) return false;
+
+  const unseen = Math.max(
+    waitRemaining,
+    136 - visible.reduce((sum, count) => sum + count, 0),
+  );
+  // 仅使用公开信息估计后续摸牌与他家舍牌机会；不读取他家手牌内容。
+  const winChance =
+    1 - Math.exp((-waitRemaining * state.wall.length * 0.4) / unseen);
+  const nextScore = Math.min(...otherScores.filter((points) => points > score));
+  const gap = nextScore - score;
+  if (allLast && damaPoints < gap && riichiPoints >= gap && winChance >= 0.1)
+    return true;
+  const valueWeight =
+    (seat === state.dealer ? 1.15 : 1) * (allLast && lead < 0 ? 1.35 : 1);
+  const addedValue = (riichiPoints - damaPoints) * winChance * valueWeight;
+  const stickRisk = 1000 * (1 - winChance);
+  const flexibilityCost = threat * (state.wall.length < 20 ? 600 : 300);
+  return addedValue > stickRisk + flexibilityCost;
 }
 
 export function decideAiTurn(
@@ -309,7 +375,7 @@ function tanyaoPossible(
 ): boolean {
   const meldTiles = tiles.slice(hand.length);
   if (meldTiles.some(isYaochuu)) return false;
-  return hand.filter(isYaochuu).length <= 1;
+  return !hand.some(isYaochuu);
 }
 
 function honitsuTendency(tiles: readonly number[]): boolean {
@@ -320,7 +386,7 @@ function honitsuTendency(tiles: readonly number[]): boolean {
   }
   const main = suitCounts.indexOf(Math.max(...suitCounts));
   const others = suitCounts.reduce((s, c, i) => (i === main ? s : s + c), 0);
-  return others <= 1;
+  return others === 0;
 }
 
 interface CallPlan {
@@ -341,9 +407,15 @@ function evaluateCall(
   if (!rest) return null;
   const melds = [...state.melds[seat], meld];
   const forbiddenSet = new Set(forbidden);
-  const cands = evaluateDiscards(rest, melds, visible).filter(
-    (c) => !forbiddenSet.has(c.base),
-  );
+  const cands = evaluateDiscards(rest, melds, visible).filter((candidate) => {
+    if (forbiddenSet.has(candidate.base)) return false;
+    const discarded = rest.find((tile) => getBaseTile(tile) === candidate.base);
+    if (discarded === undefined) return false;
+    const hand = removeTiles(rest, [discarded]);
+    return (
+      hand !== null && callHasYaku(state, seat, hand, melds, candidate.shanten)
+    );
+  });
   if (cands.length === 0) return null;
   const best = cands.reduce((a, b) =>
     a.shanten !== b.shanten
@@ -360,15 +432,23 @@ function evaluateCall(
 function callHasYaku(
   state: RiichiGameState,
   seat: number,
-  tile: number,
-  consumed: number[],
-  meld: RiichiMeld,
+  hand: number[],
+  melds: RiichiMeld[],
+  shanten: number,
 ): boolean {
-  const base = getBaseTile(tile);
+  if (shanten === 0) {
+    const preview = {
+      ...state,
+      hands: state.hands.map((original, index) =>
+        index === seat ? hand : original,
+      ),
+      melds: state.melds.map((original, index) =>
+        index === seat ? melds : original,
+      ),
+    };
+    return hasYakuWithoutRiichi(preview, seat, hand);
+  }
   const seatWind = getSeatWindOf(state, seat);
-  if (meld.type !== 'chi' && isYakuhaiBase(base, seatWind, state.roundWind))
-    return true;
-  const hand = state.hands[seat];
   if (
     hand.some(
       (t) =>
@@ -379,7 +459,7 @@ function callHasYaku(
     return true;
   }
   if (
-    state.melds[seat].some(
+    melds.some(
       (m) =>
         m.type !== 'chi' &&
         isYakuhaiBase(getBaseTile(m.tiles[0]), seatWind, state.roundWind),
@@ -387,9 +467,8 @@ function callHasYaku(
   ) {
     return true;
   }
-  const rest = removeTiles(hand, consumed) ?? [];
-  const tiles = allTilesOf(rest, [...state.melds[seat], meld]);
-  return tanyaoPossible(tiles, rest) || honitsuTendency(tiles);
+  const tiles = allTilesOf(hand, melds);
+  return tanyaoPossible(tiles, hand) || honitsuTendency(tiles);
 }
 
 export function decideAiClaim(
@@ -430,11 +509,7 @@ export function decideAiClaim(
         getKuikaeForbiddenBases(tile, null),
         visible,
       );
-      if (
-        result &&
-        (level === 'beginner' ||
-          callHasYaku(state, seat, tile, taken.taken, meld))
-      ) {
+      if (result) {
         plans.push({ response: { type: 'pon' }, ...result });
       }
     }
@@ -453,10 +528,7 @@ export function decideAiClaim(
       getKuikaeForbiddenBases(tile, pair),
       visible,
     );
-    if (
-      result &&
-      (level === 'beginner' || callHasYaku(state, seat, tile, pair, meld))
-    ) {
+    if (result) {
       plans.push({ response: { type: 'chi', tiles: pair }, ...result });
     }
   }

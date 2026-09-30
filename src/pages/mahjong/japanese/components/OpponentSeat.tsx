@@ -1,15 +1,10 @@
 import { useLocale } from '@/contexts/LocaleContext';
 import { formatMessage } from '@/lib/i18n';
-import { getBaseTile } from '@/lib/mahjongRiichi';
 import { cn } from '@/lib/utils';
-import {
-  formatPoints,
-  getSeatWind,
-  toMeldKeyedItems,
-  toTileKeyedItems,
-} from '../helpers';
+import { formatPoints, getSeatWind, toMeldKeyedItems } from '../helpers';
 import type { RiichiGameState } from '../types';
-import { RiichiTile, TileBack } from './Tile';
+import { MeldTiles } from './MeldTiles';
+import { TileBack } from './Tile';
 
 function tileRotation(seat: 1 | 2 | 3): 0 | 90 | -90 {
   if (seat === 2) return 0;
@@ -98,17 +93,12 @@ export function OpponentSeat({
                     {t(`game.mahjong.seats.${meld.fromPlayer}`)}
                   </small>
                 )}
-                {toTileKeyedItems(meld.tiles, `${key}-tile`).map(
-                  ({ tile, key: tileKey }) => (
-                    <RiichiTile
-                      key={tileKey}
-                      tile={tile}
-                      variant="meld"
-                      rotation={rotation}
-                      highlighted={getBaseTile(tile) === highlightedBase}
-                    />
-                  ),
-                )}
+                <MeldTiles
+                  meld={meld}
+                  seat={seat}
+                  rotation={rotation}
+                  highlightedBase={highlightedBase}
+                />
               </span>
             ),
           )}

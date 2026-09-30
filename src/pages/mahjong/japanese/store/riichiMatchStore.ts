@@ -25,6 +25,7 @@ export type RiichiView = 'rules' | 'game';
 export interface DecisionClock {
   key: string;
   startedAt: number;
+  pausedAt?: number;
 }
 
 type RiichiStore = {
@@ -32,12 +33,14 @@ type RiichiStore = {
   matchLength: 'east' | 'south';
   match: RiichiMatchState | null;
   showGuide: boolean;
+  showMenu: boolean;
   decisionClock: DecisionClock | null;
   processedProgress: string[];
   replay: RiichiReplayFile | null;
   setView: (view: RiichiView) => void;
   setMatchLength: (matchLength: 'east' | 'south') => void;
   setShowGuide: (show: boolean) => void;
+  setShowMenu: (show: boolean) => void;
   setDecisionClock: (clock: DecisionClock | null) => void;
   openReplay: (file: RiichiReplayFile | null) => void;
   startMatch: (options?: {
@@ -84,72 +87,103 @@ function emit(effects: RiichiEffect[]): void {
 }
 
 export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
-  (set, get) => ({
-    view: 'rules',
-    matchLength: 'east',
-    match: null,
-    showGuide: false,
-    decisionClock: null,
-    processedProgress: [],
-    replay: null,
-    setView: (view) => set({ view }),
-    setMatchLength: (matchLength) => set({ matchLength }),
-    setShowGuide: (showGuide) => set({ showGuide }),
-    setDecisionClock: (decisionClock) => set({ decisionClock }),
-    openReplay: (replay) => set({ replay }),
-    startMatch: (options) => {
-      const { match, effects } = createMatch({
-        seed: options?.seed ?? randomSeed(),
-        matchLength: get().matchLength,
-        rules: options?.rules,
-      });
-      const processedProgress = processProgress(match, effects, []);
-      set({
-        match,
-        processedProgress,
-        decisionClock: null,
-        view: 'game',
-      });
-      saveMatch(match, processedProgress);
-      emit(effects);
-    },
-    dispatch: (event) => {
-      const current = get().match;
-      if (!current) return false;
-      const step = applyEvent(current, event);
-      if (!step) return false;
-      const processedProgress = processProgress(
-        step.match,
-        step.effects,
-        get().processedProgress,
-      );
-      set({ match: step.match, processedProgress });
-      saveMatch(step.match, processedProgress);
-      emit(step.effects);
-      return true;
-    },
-    undo: () => {
-      const current = get().match;
-      if (!current) return false;
-      const reverted = undoLastHumanAction(current);
-      if (!reverted) return false;
-      set({ match: reverted, decisionClock: null });
-      saveMatch(reverted, get().processedProgress);
-      return true;
-    },
-    resumeSaved: () => {
-      const saved = loadSavedMatch();
-      if (!saved) return false;
-      set({
-        match: { ...saved.match, turn: saved.match.turn + 1 },
-        matchLength: saved.match.matchLength,
-        processedProgress: saved.processedProgress,
-        decisionClock: null,
-        view: 'game',
-      });
-      return true;
-    },
-  }),
+  (set, get) => {
+    const changeVisibility = (
+      changes: Partial<
+        Pick<RiichiStore, 'view' | 'showGuide' | 'showMenu' | 'replay'>
+      >,
+    ) => {
+      const state = { ...get(), ...changes };
+      const paused =
+        state.view !== 'game' ||
+        state.showGuide ||
+        state.showMenu ||
+        state.replay !== null;
+      const clock = state.decisionClock;
+      const now = Date.now();
+      const decisionClock = !clock
+        ? null
+        : paused
+          ? { ...clock, pausedAt: clock.pausedAt ?? now }
+          : clock.pausedAt === undefined
+            ? clock
+            : {
+                key: clock.key,
+                startedAt: clock.startedAt + now - clock.pausedAt,
+              };
+      set({ ...changes, decisionClock });
+    };
+    return {
+      view: 'rules',
+      matchLength: 'east',
+      match: null,
+      showGuide: false,
+      showMenu: false,
+      decisionClock: null,
+      processedProgress: [],
+      replay: null,
+      setView: (view) => changeVisibility({ view }),
+      setMatchLength: (matchLength) => set({ matchLength }),
+      setShowGuide: (showGuide) => changeVisibility({ showGuide }),
+      setShowMenu: (showMenu) => changeVisibility({ showMenu }),
+      setDecisionClock: (decisionClock) => set({ decisionClock }),
+      openReplay: (replay) => changeVisibility({ replay }),
+      startMatch: (options) => {
+        const { match, effects } = createMatch({
+          seed: options?.seed ?? randomSeed(),
+          matchLength: get().matchLength,
+          rules: options?.rules,
+        });
+        const processedProgress = processProgress(match, effects, []);
+        set({
+          match,
+          processedProgress,
+          decisionClock: null,
+          view: 'game',
+          showMenu: false,
+        });
+        saveMatch(match, processedProgress);
+        emit(effects);
+      },
+      dispatch: (event) => {
+        const current = get().match;
+        if (!current) return false;
+        const step = applyEvent(current, event);
+        if (!step) return false;
+        const processedProgress = processProgress(
+          step.match,
+          step.effects,
+          get().processedProgress,
+        );
+        set({ match: step.match, processedProgress });
+        saveMatch(step.match, processedProgress);
+        emit(step.effects);
+        return true;
+      },
+      undo: () => {
+        const current = get().match;
+        if (!current) return false;
+        const reverted = undoLastHumanAction(current);
+        if (!reverted) return false;
+        set({ match: reverted, decisionClock: null });
+        saveMatch(reverted, get().processedProgress);
+        return true;
+      },
+      resumeSaved: () => {
+        const saved = loadSavedMatch();
+        if (!saved) return false;
+        set({
+          match: { ...saved.match, turn: saved.match.turn + 1 },
+          matchLength: saved.match.matchLength,
+          processedProgress: saved.processedProgress,
+          decisionClock: null,
+          view: 'game',
+          showMenu: false,
+        });
+        return true;
+      },
+    };
+  },
   shallow,
 );
 

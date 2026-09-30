@@ -5,6 +5,7 @@ import {
   getBaseTile,
   getDoraFromIndicator,
   isAkaFive,
+  isYaochuu,
 } from '@/lib/mahjongRiichi';
 import type { VisibleCounts } from '@/lib/riichiShanten';
 
@@ -56,6 +57,19 @@ function isKabeSafe(base: number, visible: VisibleCounts): boolean {
   );
 }
 
+function sujiRiskMultiplier(base: number, opp: OpponentView): number {
+  if (!opp.riichi) return 1;
+  const supporting = opp.discards.flatMap((tile, index) => {
+    const discarded = getBaseTile(tile);
+    return Math.floor(discarded / 9) === Math.floor(base / 9) &&
+      Math.abs(discarded - base) === 3
+      ? [index]
+      : [];
+  });
+  if (supporting.includes(opp.riichiIndex ?? -1)) return 1.3;
+  return supporting.some((index) => index < 2) ? 1.15 : 1;
+}
+
 /**
  * 估算某张牌对单个对手的放铳危险度：0 为现物，1 约为无筋中张。
  * 考虑现物、字牌可见枚数、筋 / 半筋、壁与幺九。
@@ -77,11 +91,20 @@ export function evaluateTileDanger(
   const isTerminal = num === 0 || num === 8;
   if (isKabeSafe(base, visible)) return isTerminal ? 0.1 : 0.2;
   const suji = sujiState(base, opp);
-  if (isTerminal) return suji === 'none' ? 0.6 : 0.2;
+  const multiplier = sujiRiskMultiplier(base, opp);
+  if (isTerminal) return suji === 'none' ? 0.6 : 0.2 * multiplier;
   if (num === 1 || num === 7) {
-    return suji === 'full' ? 0.3 : suji === 'half' ? 0.55 : 0.8;
+    return suji === 'full'
+      ? 0.3 * multiplier
+      : suji === 'half'
+        ? 0.55 * multiplier
+        : 0.8;
   }
-  return suji === 'full' ? 0.4 : suji === 'half' ? 0.75 : 1;
+  return suji === 'full'
+    ? 0.4 * multiplier
+    : suji === 'half'
+      ? Math.min(1, 0.75 * multiplier)
+      : 1;
 }
 
 export interface TileValueContext {
@@ -107,6 +130,21 @@ export function evaluateTileValue(
     const count = hand.filter((t) => getBaseTile(t) === base).length;
     if (yakuhai && count >= 2) value += 1.2;
   }
+  const simpleCount = hand.filter((t) => !isYaochuu(t)).length;
+  if (simpleCount >= hand.length - 2 && !isYaochuu(tile)) value += 0.25;
+  const suits = [0, 0, 0];
+  for (const t of hand) {
+    const b = getBaseTile(t);
+    if (b < 27) suits[Math.floor(b / 9)]++;
+  }
+  const suitedCount = suits.reduce((sum, count) => sum + count, 0);
+  const mainSuit = suits.indexOf(Math.max(...suits));
+  if (
+    suitedCount >= 6 &&
+    suits[mainSuit] >= suitedCount - 2 &&
+    (base >= 27 || Math.floor(base / 9) === mainSuit)
+  )
+    value += 0.35;
   return value;
 }
 

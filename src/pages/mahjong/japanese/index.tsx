@@ -18,6 +18,7 @@ import {
 } from './components/DesktopSideRail';
 import { GameHeader } from './components/GameHeader';
 import { GuidePanel } from './components/GuidePanel';
+import { MeldTiles } from './components/MeldTiles';
 import { MatchEndModal, RyuukyokuModal, WinModal } from './components/Modals';
 import { OpponentSeat } from './components/OpponentSeat';
 import { ReplayViewer } from './components/ReplayViewer';
@@ -49,6 +50,7 @@ import {
   useRiichiAutomation,
   withElapsed,
 } from './useRiichiAutomation';
+import { useRiichiDialogFocus } from './useRiichiDialogFocus';
 import { useRiichiEffectSounds } from './useRiichiEffectSounds';
 import { useRiichiTheme } from './useRiichiTheme';
 import { useRiichiViewModel } from './useRiichiViewModel';
@@ -280,11 +282,13 @@ function RiichiActionPanel({
 
 function GuideDialog({ onClose }: { onClose: () => void }) {
   const { t } = useLocale();
+  const restoreFocus = useRiichiDialogFocus();
   const container = document.querySelector<HTMLElement>('[data-riichi-theme]');
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         container={container}
+        onCloseAutoFocus={restoreFocus}
         className="riichi-guide-dialog-content !w-[min(1120px,calc(100vw-40px))] !max-w-none"
         showCloseButton={false}
         aria-describedby={undefined}
@@ -469,16 +473,11 @@ function SelfSeat({
                   {t(`game.mahjong.seats.${meld.fromPlayer}`)}
                 </small>
               )}
-              {toTileKeyedItems(meld.tiles, `${key}-tile`).map(
-                ({ tile, key: tileKey }) => (
-                  <RiichiTile
-                    key={tileKey}
-                    tile={tile}
-                    variant="meld"
-                    highlighted={getBaseTile(tile) === highlightedBase}
-                  />
-                ),
-              )}
+              <MeldTiles
+                meld={meld}
+                seat={0}
+                highlightedBase={highlightedBase}
+              />
             </span>
           ))}
         </div>
@@ -542,6 +541,7 @@ function RiichiTable({
   return (
     <div className="riichi-table-surface">
       <StatusPanel
+        roundEnded={game.phase === 'end'}
         isClaimPhase={bag.isClaimPhase}
         isMyClaim={bag.isMyClaim}
         hasAnyClaimOption={bag.hasAnyClaimOption}
@@ -898,7 +898,12 @@ const GameMahjongJapanese = () => {
   const openLastReplay = async () => {
     try {
       await preloadRiichiRules();
-      openReplay(loadLastReplay());
+      const saved = loadLastReplay();
+      if (!saved || !restoreMatch(saved)) {
+        setLoadError(true);
+        return;
+      }
+      openReplay(saved);
     } catch {
       setLoadError(true);
     }

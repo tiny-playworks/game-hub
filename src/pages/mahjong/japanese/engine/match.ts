@@ -20,7 +20,11 @@ import {
   respondClaim,
   type StepContext,
 } from './round';
-import { type RiichiRuleConfig, resolveRules } from './rules';
+import {
+  isRiichiRuleConfig,
+  type RiichiRuleConfig,
+  resolveRules,
+} from './rules';
 
 export const RIICHI_MATCH_VERSION = 1;
 export const MAX_LOG_ENTRIES = 200;
@@ -360,7 +364,7 @@ export function undoLastHumanAction(
   };
   for (let i = start; i < target; i++) {
     const step = applyEvent(replayed, match.events[i]);
-    if (!step) break;
+    if (!step) return null;
     replayed = step.match;
   }
   return {
@@ -398,7 +402,10 @@ export function replayMatch(file: RiichiReplayFile): RiichiMatchState[] {
   const frames = [match];
   for (const event of file.events) {
     const step = applyEvent(match, event);
-    if (!step) break;
+    if (!step)
+      throw new Error(
+        `Invalid replay event at step ${frames.length}: ${event.type}`,
+      );
     match = step.match;
     frames.push(match);
   }
@@ -432,6 +439,14 @@ export function isReplayFile(value: unknown): value is RiichiReplayFile {
     const e = item as Record<string, unknown>;
     if (e.type === 'nextRound') return true;
     if (!seat(e.seat)) return false;
+    if (
+      e.elapsed !== undefined &&
+      (typeof e.elapsed !== 'number' ||
+        !Number.isFinite(e.elapsed) ||
+        e.elapsed < 0)
+    )
+      return false;
+    if (e.timeout !== undefined && typeof e.timeout !== 'boolean') return false;
     switch (e.type) {
       case 'discard':
       case 'riichi':
@@ -447,6 +462,7 @@ export function isReplayFile(value: unknown): value is RiichiReplayFile {
         return (
           Number.isInteger(e.meldIndex) &&
           Number(e.meldIndex) >= 0 &&
+          Number(e.meldIndex) < 4 &&
           tile(e.tile)
         );
       case 'claim': {
@@ -472,7 +488,6 @@ export function isReplayFile(value: unknown): value is RiichiReplayFile {
     Array.isArray(v.events) &&
     v.events.length <= 20000 &&
     v.events.every(eventIsValid) &&
-    !!v.rules &&
-    typeof v.rules === 'object'
+    isRiichiRuleConfig(v.rules)
   );
 }

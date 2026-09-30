@@ -6,6 +6,7 @@ import {
   applyEvent,
   createMatch,
   isReplayFile,
+  replayMatch,
   restoreMatch,
   toReplayFile,
 } from '../src/pages/mahjong/japanese/engine';
@@ -48,12 +49,49 @@ test('牌谱拒绝无效动作，也不能把不完整回放当作存档', () =>
   };
   expect(isReplayFile(illegal)).toBe(true);
   expect(restoreMatch(illegal)).toBeNull();
+  expect(() => replayMatch(illegal)).toThrow(/Invalid replay event/);
   localStorage.setItem(
     RIICHI_SAVE_STORAGE_KEY,
     JSON.stringify({ replay: illegal, processedProgress: [], savedAt: 1 }),
   );
   expect(loadSavedMatch()).toBeNull();
   localStorage.removeItem(RIICHI_SAVE_STORAGE_KEY);
+});
+
+test('旧快照存档从种子和事件重建，不信任快照中的手牌', () => {
+  const match = createMatch({ seed: 908, matchLength: 'east' }).match;
+  localStorage.setItem(
+    RIICHI_SAVE_STORAGE_KEY,
+    JSON.stringify({
+      match: { ...match, round: { hands: [] } },
+      processedProgress: ['908:enter-game', 123],
+    }),
+  );
+  expect(hasSavedMatch()).toBe(true);
+  expect(loadSavedMatch()?.match.round).toEqual(match.round);
+  expect(loadSavedMatch()?.processedProgress).toEqual(['908:enter-game']);
+  localStorage.removeItem(RIICHI_SAVE_STORAGE_KEY);
+});
+
+test('牌谱拒绝缺少规则、负用时和错误标记，不能污染重放结果', () => {
+  const file = toReplayFile(createMatch({ seed: 907 }).match);
+  expect(isReplayFile({ ...file, rules: {} })).toBe(false);
+  expect(
+    isReplayFile({ ...file, rules: { ...file.rules, aiLevel: 'unknown' } }),
+  ).toBe(false);
+  for (const meta of [
+    { elapsed: -1 },
+    { elapsed: '5' },
+    { elapsed: Infinity },
+    { timeout: 'yes' },
+  ]) {
+    expect(
+      isReplayFile({
+        ...file,
+        events: [{ type: 'discard', seat: 0, tile: 1, ...meta }],
+      }),
+    ).toBe(false);
+  }
 });
 
 test('牌谱查看器支持逐步前进和跳到本局', () => {

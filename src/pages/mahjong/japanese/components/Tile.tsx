@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
-import tileAtlasUrl from '@/assets/riichi/tiles/riichi-tile-atlas.avif';
-import { getMessage, getStoredLocale } from '@/lib/i18n';
+import tileAtlasUrl from '@/assets/riichi/tiles/riichi-tile-atlas.webp';
+import { formatMessage, getMessage, getStoredLocale } from '@/lib/i18n';
 import { getBaseTile, getTileLabel, isAkaFive } from '@/lib/mahjongRiichi';
 import { cn } from '@/lib/utils';
 
@@ -138,7 +138,11 @@ export function RiichiTile({
     highlighted && 'riichi-tile--matching',
     danger && `riichi-tile--danger-${danger}`,
   );
-  const tileLabel = getTileLabel(tile, getStoredLocale());
+  const locale = getStoredLocale();
+  const label = getTileLabel(tile, locale);
+  const tileLabel = isAkaFive(tile)
+    ? formatMessage(locale, 'riichi.tile.red', { tile: label })
+    : label;
   const face = (
     <span className="riichi-tile-rotator">
       <TileArtwork tile={tile} />

@@ -15,6 +15,19 @@ export function CenterArea({ game, highlightedBase = null }: Props) {
 
   return (
     <div className="riichi-center-board">
+      {game.riichiDeclared.map(
+        (declared, seat) =>
+          declared && (
+            <span
+              className={`riichi-center-stick riichi-center-stick--${seat}`}
+              key={seat}
+              role="img"
+              aria-label={`${t(`game.mahjong.seats.${seat}`)} ${t('game.mahjong.riichiStick')}`}
+            >
+              <i className="riichi-riichi-stick" />
+            </span>
+          ),
+      )}
       {([2, 1, 0, 3] as const).map((seat) => {
         const tiles = toTileKeyedItems(
           game.discardPiles[seat],

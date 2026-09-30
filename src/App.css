@@ -3602,6 +3602,97 @@ body {
   position: relative;
 }
 
+.riichi-meld-call-slot {
+  position: relative;
+  display: inline-flex;
+  align-items: flex-end;
+}
+
+.riichi-meld-added {
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 0;
+}
+
+.riichi-replay-melds,
+.riichi-replay-indicators {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.riichi-replay-melds:not(:empty) {
+  padding-top: 30px;
+}
+
+.riichi-center-board {
+  position: relative;
+}
+
+.riichi-center-stick {
+  position: absolute;
+  z-index: 10;
+  width: 46px;
+  height: 6px;
+}
+
+.riichi-center-stick--0 {
+  top: calc(50% + 88px);
+  left: calc(50% - 23px);
+}
+
+.riichi-center-stick--2 {
+  bottom: calc(50% + 88px);
+  left: calc(50% - 23px);
+}
+
+.riichi-center-stick--1 {
+  top: calc(50% - 3px);
+  left: calc(50% + 68px);
+  transform: rotate(90deg);
+}
+
+.riichi-center-stick--3 {
+  top: calc(50% - 3px);
+  right: calc(50% + 68px);
+  transform: rotate(90deg);
+}
+
+.riichi-riichi-stick {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 2px;
+  background:
+    radial-gradient(circle at center, #cf2543 0 2px, transparent 2px), #fff6df;
+  box-shadow: 0 2px 3px #0006;
+  animation: riichi-stick-drop 0.25s ease-out both;
+}
+
+@keyframes riichi-stick-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+[data-riichi-theme] button:not(.riichi-tile),
+.riichi-lobby button,
+.riichi-lobby-header a {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.riichi-lobby-import:focus-within {
+  outline: 2px solid var(--riichi-accent);
+  outline-offset: 2px;
+}
+
 .riichi-river-grid .riichi-tile--river {
   animation: riichi-discard-arrive 0.18s ease-out both;
 }
@@ -3652,6 +3743,14 @@ body {
   .riichi-seat-meld .riichi-tile--meld,
   .riichi-center-indicators .riichi-tile--indicator {
     animation: none;
+  }
+  .riichi-riichi-stick,
+  [data-riichi-theme] [data-slot="dialog-content"],
+  [data-riichi-theme] [data-slot="dialog-overlay"] {
+    animation: none !important;
+  }
+  [data-riichi-theme] .riichi-tile {
+    transition: none;
   }
 }
 

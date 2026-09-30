@@ -36,7 +36,11 @@ export function TableContextPanel({ game }: Props) {
         </div>
         <span className="riichi-table-context-live">
           <Activity aria-hidden="true" size={13} />
-          {t('riichi.context.live')}
+          {t(
+            game.phase === 'end'
+              ? 'riichi.state.roundFinished'
+              : 'riichi.context.live',
+          )}
         </span>
       </header>
 
@@ -126,9 +130,11 @@ export function TableContextPanel({ game }: Props) {
           })}
           {' · '}
           {t(
-            game.phase === 'claim'
-              ? 'riichi.context.claimPhase'
-              : 'riichi.context.drawPhase',
+            game.phase === 'end'
+              ? 'riichi.state.roundFinished'
+              : game.phase === 'claim'
+                ? 'riichi.context.claimPhase'
+                : 'riichi.context.drawPhase',
           )}
         </span>
       </footer>

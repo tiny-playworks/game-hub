@@ -91,6 +91,43 @@ describe('日麻确定性 AI 决策回归', () => {
     });
   });
 
+  test('初级保持进攻，标准在远手面对立直时防守，两者都只返回合法动作', () => {
+    const state = createTestRound();
+    state.hands[0] = tiles('147m147p147s12345z');
+    state.riichiDeclared[1] = true;
+    state.discardPiles[1] = [tile('1z')];
+    const match = matchWithRound(state);
+    const beginner = decideAiTurn(match.round, 0, 'beginner');
+    const standard = decideAiTurn(match.round, 0, 'standard');
+    expect(beginner).not.toEqual(standard);
+    expect(applyEvent(match, beginner!)).not.toBeNull();
+    expect(applyEvent(match, standard!)).not.toBeNull();
+  });
+
+  test('已有倍满役且立直不提升打点时，标准保留默听，初级选择立直', () => {
+    const state = createTestRound();
+    state.hands[0] = tiles('1122445577889m1z');
+    state.drawnTile = tile('1z');
+    state.doraIndicators = [tile('9p')];
+    state.wall = Array.from({ length: 16 }, () => tile('9p'));
+    const match = matchWithRound(state);
+    expect(decideAiTurn(match.round, 0, 'standard')?.type).toBe('discard');
+    expect(decideAiTurn(match.round, 0, 'beginner')?.type).toBe('riichi');
+  });
+
+  test('最后一局领先足够且有人立直时，已有役的标准 AI 保留换牌余地', () => {
+    const state = createTestRound(0, 1, 4);
+    state.hands[0] = tiles('123456m345p67s22p1z');
+    state.drawnTile = tile('1z');
+    state.scores = [43000, 27000, 20000, 10000];
+    state.riichiDeclared[1] = true;
+    state.discardPiles[1] = [tile('1z')];
+    state.wall = Array.from({ length: 16 }, () => tile('9p'));
+    expect(decideAiTurn(matchWithRound(state).round, 0, 'standard')?.type).toBe(
+      'discard',
+    );
+  });
+
   test('现物和立直后安全牌的危险度为零', () => {
     expect(evaluateTileDanger(4, opponent, emptyVisibleCounts())).toBe(0);
     expect(evaluateTileDanger(34, opponent, emptyVisibleCounts())).toBe(0);
@@ -112,6 +149,19 @@ describe('日麻确定性 AI 决策回归', () => {
     visible[27] = 3;
     expect(evaluateTileDanger(27, plain, visible)).toBeLessThan(
       evaluateTileDanger(28, plain, visible),
+    );
+  });
+
+  test('宣言牌形成的筋与早巡筋采用更保守的危险估计', () => {
+    const visible = emptyVisibleCounts();
+    const later = { ...opponent, discards: tiles('12z4m9p9s'), riichiIndex: 4 };
+    const declaration = { ...later, riichiIndex: 2 };
+    const early = { ...later, discards: tiles('4m12z9p9s') };
+    expect(
+      evaluateTileDanger(tile('1m'), declaration, visible),
+    ).toBeGreaterThan(evaluateTileDanger(tile('1m'), later, visible));
+    expect(evaluateTileDanger(tile('1m'), early, visible)).toBeGreaterThan(
+      evaluateTileDanger(tile('1m'), later, visible),
     );
   });
 
@@ -167,6 +217,7 @@ describe('日麻确定性 AI 决策回归', () => {
     const state = claimState('22m456p789s11z89p4z', '2m');
     expect(state.claim!.options[2]?.pon).toBe(true);
     expect(decideAiClaim(state, 2, 'standard')).toEqual({ type: 'pass' });
+    expect(decideAiClaim(state, 2, 'beginner')).toEqual({ type: 'pass' });
   });
 
   test('他家立直且自己未听牌时不冒险鸣牌', () => {

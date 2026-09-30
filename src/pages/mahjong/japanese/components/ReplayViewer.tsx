@@ -4,12 +4,15 @@ import { useLocale } from '@/contexts/LocaleContext';
 import { formatMessage } from '@/lib/i18n';
 import { type RiichiReplayFile, replayMatch } from '../engine';
 import { formatLogEntry, formatPoints, toTileKeyedItems } from '../helpers';
+import { useRiichiDialogFocus } from '../useRiichiDialogFocus';
+import { MeldTiles } from './MeldTiles';
 import { RiichiTile } from './Tile';
 
 type Props = { file: RiichiReplayFile; onClose: () => void };
 
 export function ReplayViewer({ file, onClose }: Props) {
   const { locale, t } = useLocale();
+  const restoreFocus = useRiichiDialogFocus();
   const frames = useMemo(() => replayMatch(file), [file]);
   const [index, setIndex] = useState(0);
   const roundStarts = useMemo(
@@ -44,6 +47,7 @@ export function ReplayViewer({ file, onClose }: Props) {
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         container={container}
+        onCloseAutoFocus={restoreFocus}
         showCloseButton={false}
         className="riichi-replay-dialog"
         aria-describedby={undefined}
@@ -95,12 +99,28 @@ export function ReplayViewer({ file, onClose }: Props) {
               ? formatLogEntry(frame.log[frame.log.length - 1], locale)
               : file.events[index - 1]?.type}
         </p>
+        <div className="riichi-replay-indicators">
+          <span>{t('game.mahjong.dora')}</span>
+          {toTileKeyedItems(game.doraIndicators, 'replay-dora').map(
+            ({ tile, key }) => (
+              <RiichiTile tile={tile} key={key} variant="indicator" />
+            ),
+          )}
+          <span>
+            {formatMessage(locale, 'game.mahjong.wallLength', {
+              count: game.wall.length,
+            })}
+          </span>
+        </div>
         <div className="riichi-replay-board">
           {[0, 1, 2, 3].map((seat) => (
             <section key={seat}>
               <header>
                 <strong>{t(`game.mahjong.seats.${seat}`)}</strong>
                 <span>{formatPoints(game.scores[seat], locale)}</span>
+                {game.riichiDeclared[seat] && (
+                  <small>{t('riichi.state.riichi')}</small>
+                )}
                 {game.currentPlayer === seat && frame.status === 'playing' && (
                   <small>{t('riichi.replay.currentTurn')}</small>
                 )}
@@ -111,6 +131,13 @@ export function ReplayViewer({ file, onClose }: Props) {
                     <RiichiTile key={key} tile={tile} variant="indicator" />
                   ),
                 )}
+              </div>
+              <div className="riichi-replay-melds">
+                {game.melds[seat].map((meld, meldIndex) => (
+                  <span className="riichi-seat-meld" key={meldIndex}>
+                    <MeldTiles meld={meld} seat={seat} />
+                  </span>
+                ))}
               </div>
               <div className="riichi-replay-tiles">
                 {toTileKeyedItems(

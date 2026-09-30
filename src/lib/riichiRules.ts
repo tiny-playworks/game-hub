@@ -240,7 +240,7 @@ function isNoYakuError(error: unknown): boolean {
  * 精确判定和牌并直接返回 WASM 的役、符、番、总点数及自摸支付。
  * 本函数不会调用旧 TypeScript 役种或点数公式作为回退。
  */
-export function evaluateRiichiWin(
+function calculateRiichiWin(
   input: EvaluateRiichiWinInput,
 ): RiichiWinEvaluation {
   const preWinHand = normalizePreWinHand(input.state, input.winningTile);
@@ -317,6 +317,28 @@ export function evaluateRiichiWin(
         ? { dealerOrAll: outgoing[0], nonDealer: outgoing[1] }
         : null,
   };
+}
+
+const WIN_CACHE_LIMIT = 5000;
+const winCache = new Map<string, RiichiWinEvaluation>();
+
+/** 按完整算分输入缓存，保留赤牌、偶发役和里宝差异；不暴露可变缓存对象。 */
+export function evaluateRiichiWin(
+  input: EvaluateRiichiWinInput,
+): RiichiWinEvaluation {
+  const key = JSON.stringify({
+    ...input,
+    state: {
+      ...input.state,
+      hand: [...input.state.hand].sort((a, b) => a - b),
+    },
+  });
+  const cached = winCache.get(key);
+  if (cached) return structuredClone(cached);
+  const result = calculateRiichiWin(input);
+  if (winCache.size >= WIN_CACHE_LIMIT) winCache.clear();
+  winCache.set(key, structuredClone(result));
+  return result;
 }
 
 export const RiichiRules = {

@@ -8,7 +8,11 @@ export function useHumanRemainingSeconds(): number | null {
   const clock = useRiichiStore((s) => s.decisionClock);
   const bank = useRiichiStore((s) => s.match?.round.timeBanks[0] ?? 0);
   const active = useRiichiStore((s) =>
-    s.view === 'game' && !s.replay && s.match?.status === 'playing'
+    s.view === 'game' &&
+    !s.replay &&
+    !s.showGuide &&
+    !s.showMenu &&
+    s.match?.status === 'playing'
       ? getPendingSeats(s.match.round).includes(0)
       : false,
   );
