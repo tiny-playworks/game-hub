@@ -87,7 +87,7 @@ function formatGrowthFeedLine(
     const character = item.characterId
       ? getCharacterById(item.characterId)
       : null;
-    return `${character?.name ?? t('growth.feed.characterFallback')} ${t('growth.feed.characterStageVerb')} ${item.stage ?? 0}`;
+    return `${character ? t(character.nameKey) : t('growth.feed.characterFallback')} ${t('growth.feed.characterStageVerb')} ${item.stage ?? 0}`;
   }
   const title = t(item.titleKey);
   if (item.points && item.points > 0) {
@@ -104,10 +104,18 @@ function getCharacterUnlockText(
   if (character.unlockRule.type === 'default') {
     return t('profile.companion.unlock.default');
   }
-  if (character.unlockRule.type === 'riichi-rounds') {
-    return `${t('profile.companion.unlock.riichiRoundsPrefix')} ${stats.riichiRounds}/${character.unlockRule.target}`;
+  const rankBand =
+    character.unlockRule.type === 'rank-band'
+      ? character.unlockRule.target
+      : character.unlockRule.rankBand;
+  const rankText = `${t('profile.companion.unlock.rankPrefix')} ${t(`character.rank.${rankBand}`)}`;
+  if (character.unlockRule.type === 'rank-band') {
+    return `${rankText} · ${t('profile.companion.unlock.rankPending')}`;
   }
-  return `${t('profile.companion.unlock.winsPrefix')} ${stats.riichiWins}/${character.unlockRule.target}`;
+  if (character.unlockRule.type === 'riichi-rounds') {
+    return `${t('profile.companion.unlock.riichiRoundsPrefix')} ${stats.riichiRounds}/${character.unlockRule.target} · ${t('profile.companion.unlock.or')} ${rankText}`;
+  }
+  return `${t('profile.companion.unlock.winsPrefix')} ${stats.riichiWins}/${character.unlockRule.target} · ${t('profile.companion.unlock.or')} ${rankText}`;
 }
 
 const Profile = () => {
@@ -513,27 +521,22 @@ const Profile = () => {
               {t('profile.companion.section')}
             </p>
             <div className="mt-4 rounded-[24px] bg-[linear-gradient(135deg,#13243b,#173226_58%,#234036)] p-4 text-white">
-              <div className="flex items-start gap-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                 <CharacterPortraitSlot
                   character={activeCharacter}
                   size="lg"
-                  label={`${activeCharacter.name} · ${t('character.portrait.placeholder')}`}
+                  label={t(activeCharacter.nameKey)}
                   className="border-white/25"
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-2xl font-semibold">
-                        {activeCharacter.name}
+                        {t(activeCharacter.nameKey)}
                       </p>
                       <p className="mt-2 text-sm leading-6 text-slate-200">
-                        {activeCharacter.tagline}
+                        {t(activeCharacter.taglineKey)}
                       </p>
-                      {activeCharacter.bioKey ? (
-                        <p className="mt-2 text-xs leading-5 text-slate-300/95">
-                          {t(activeCharacter.bioKey)}
-                        </p>
-                      ) : null}
                     </div>
                     <span className="shrink-0 rounded-full bg-card/10 px-3 py-1 text-xs text-slate-100">
                       {t('profile.companion.currentBadge')}
@@ -541,6 +544,11 @@ const Profile = () => {
                   </div>
                 </div>
               </div>
+              {activeCharacter.bioKey ? (
+                <p className="mt-3 text-xs leading-5 text-slate-300/95">
+                  {t(activeCharacter.bioKey)}
+                </p>
+              ) : null}
               <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
                 <div className="rounded-2xl bg-card/10 px-3 py-2">
                   <p className="text-xs text-slate-300">
@@ -571,21 +579,35 @@ const Profile = () => {
                   <div
                     key={character.id}
                     className="rounded-2xl border border-border bg-card p-3"
+                    data-character-id={character.id}
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex min-w-0 flex-1 items-start gap-3">
                         <CharacterPortraitSlot
                           character={character}
                           size="md"
-                          label={`${character.name} · ${t('character.portrait.placeholder')}`}
+                          label={t(character.nameKey)}
                         />
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-foreground">
-                            {character.name}
+                            {t(character.nameKey)}
                           </p>
                           <p className="mt-1 text-xs text-muted-foreground">
-                            {character.tagline}
+                            {t(character.taglineKey)}
                           </p>
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary">
+                              {t(`character.rank.${character.rankBand}`)}
+                            </span>
+                            {character.styleTagKeys.map((key) => (
+                              <span
+                                key={key}
+                                className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
+                              >
+                                {t(key)}
+                              </span>
+                            ))}
+                          </div>
                           {character.bioKey ? (
                             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                               {t(character.bioKey)}
@@ -600,11 +622,6 @@ const Profile = () => {
                                   t,
                                 )}
                           </p>
-                          {unlocked ? (
-                            <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                              {t('profile.companion.mountsPlaceholder')}
-                            </p>
-                          ) : null}
                         </div>
                       </div>
                       {unlocked ? (
@@ -612,11 +629,12 @@ const Profile = () => {
                           type="button"
                           size="sm"
                           variant={isActive ? 'default' : 'outline'}
-                          className={
+                          className={cn(
+                            'self-end sm:self-auto',
                             isActive
                               ? 'bg-emerald-700 text-white hover:bg-emerald-600'
-                              : 'border-border'
-                          }
+                              : 'border-border',
+                          )}
                           onClick={() => switchCharacter(character.id)}
                         >
                           {isActive
@@ -624,7 +642,7 @@ const Profile = () => {
                             : t('profile.companion.setActive')}
                         </Button>
                       ) : (
-                        <span className="rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">
+                        <span className="self-end rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground sm:self-auto">
                           {t('profile.companion.locked')}
                         </span>
                       )}

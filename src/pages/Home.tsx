@@ -176,20 +176,18 @@ const Home = () => {
               />
               <CharacterPortraitSlot
                 character={character}
-                size="lg"
-                label={`${t(`lobby.character.${character.id}.name`)} · ${t('character.portrait.placeholder')}`}
-                className="h-64 w-44 rounded-t-[80px] rounded-b-3xl border-gold/30 text-6xl shadow-xl"
+                size="xl"
+                label={t(character.nameKey)}
+                className="max-w-full"
               />
             </div>
             <div className="relative">
               <p className="text-xs tracking-[0.2em] text-gold">
                 {t('lobby.yourCompanion')}
               </p>
-              <h2 className="mt-2 text-3xl">
-                {t(`lobby.character.${character.id}.name`)}
-              </h2>
+              <h2 className="mt-2 text-3xl">{t(character.nameKey)}</h2>
               <p className="mt-3 border-l-2 border-gold/60 pl-3 text-sm leading-7 text-paper/85">
-                {t(`lobby.character.${character.id}.line`)}
+                {t(character.taglineKey)}
               </p>
               <Link
                 to="/profile"

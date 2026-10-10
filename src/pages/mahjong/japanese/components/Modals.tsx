@@ -6,6 +6,7 @@ import { useLocale } from '@/contexts/LocaleContext';
 import { getGrowthOverview } from '@/lib/growth';
 import { formatMessage } from '@/lib/i18n';
 import { getTileLabel } from '@/lib/mahjongRiichi';
+import { getCharacterById } from '@/lib/playerCharacters';
 import type { MatchEndReason } from '@/lib/riichiGameEnd';
 import type {
   RiichiAchievementRewardSummary,
@@ -227,7 +228,7 @@ function RoundGrowthSummary({
         <div className="space-y-1 text-[11px] text-[#f1faee]/85">
           <p className="text-[#a8dadc]">{t('riichi.modal.growth.companion')}</p>
           <p>
-            {characterProgress.characterName}{' '}
+            {t(getCharacterById(characterProgress.characterId).nameKey)}{' '}
             {t('riichi.modal.growth.affinityLabel')}{' '}
             {characterProgress.previousAffinity} →{' '}
             {characterProgress.currentAffinity}
