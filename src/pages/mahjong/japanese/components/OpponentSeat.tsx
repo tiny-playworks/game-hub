@@ -1,9 +1,13 @@
+import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
 import { useLocale } from '@/contexts/LocaleContext';
 import { formatMessage } from '@/lib/i18n';
+import type { CharacterDef } from '@/lib/playerCharacters';
 import { cn } from '@/lib/utils';
+import type { CharacterMoment } from '../characterMoments';
 import { formatPoints, getSeatWind, toMeldKeyedItems } from '../helpers';
 import type { RiichiGameState } from '../types';
 import { MeldTiles } from './MeldTiles';
+import { SpeechBubble } from './SpeechBubble';
 import { TileBack } from './Tile';
 
 function tileRotation(seat: 1 | 2 | 3): 0 | 90 | -90 {
@@ -18,6 +22,8 @@ type Props = {
   timerClassName: string;
   isCurrentTurn: boolean;
   highlightedBase?: number | null;
+  character: CharacterDef;
+  moment?: CharacterMoment;
 };
 
 export function OpponentSeat({
@@ -27,6 +33,8 @@ export function OpponentSeat({
   timerClassName,
   isCurrentTurn,
   highlightedBase = null,
+  character,
+  moment,
 }: Props) {
   const { locale, t } = useLocale();
   const rotation = tileRotation(seat);
@@ -49,8 +57,25 @@ export function OpponentSeat({
         isCurrentTurn && 'riichi-seat--active',
       )}
       aria-label={ariaLabelText}
+      data-seat={seat}
+      data-character-id={character.id}
     >
       <div className="riichi-seat-card">
+        <div className="riichi-character-heading">
+          <CharacterPortraitSlot
+            character={character}
+            size="sm"
+            label={t(character.nameKey)}
+            className={cn(
+              'riichi-character-avatar',
+              isCurrentTurn && 'is-acting',
+            )}
+          />
+          <div>
+            <strong>{t(character.nameKey)}</strong>
+            <small>{t(character.styleTagKeys[0])}</small>
+          </div>
+        </div>
         <div className="riichi-seat-card-main">
           <span className="riichi-seat-wind">
             {t(`game.mahjong.winds.${seatWind}`)}
@@ -74,6 +99,7 @@ export function OpponentSeat({
           )}
         </div>
       </div>
+      <SpeechBubble moment={moment} />
 
       <div className="riichi-opponent-hand" aria-hidden="true">
         {Array.from({ length: game.hands[seat].length }, (_, index) => (

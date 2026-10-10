@@ -114,18 +114,19 @@ function defineCharacter(
       frustrated: `${path}/frustrated.webp`,
     },
     avatar: `${path}/avatar.webp`,
-    // 第三批接入事件台词；先固定触发类型，空数组表示该时机不发言。
-    lines: {
-      'match-start': [],
-      riichi: [],
-      ron: [],
-      tsumo: [],
-      'deal-in': [],
-      call: [],
-      'ryuukyoku-tenpai': [],
-      'match-top': [],
-      'match-last': [],
-    },
+    lines: Object.fromEntries(
+      CHARACTER_LINE_TRIGGERS.map((kind) => [
+        kind,
+        Array.from(
+          {
+            length: ['match-start', 'riichi', 'ron', 'tsumo'].includes(kind)
+              ? 3
+              : 2,
+          },
+          (_, index) => `character.line.${definition.id}.${kind}.${index}`,
+        ),
+      ]),
+    ) as Record<LineTrigger, string[]>,
   };
 }
 

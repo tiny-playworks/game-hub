@@ -51,6 +51,24 @@ export function RiichiSettingsPanel() {
           <option value="standard">{t('riichi.settings.standard')}</option>
         </select>
       </label>
+      <label className="riichi-settings-level">
+        <span>{t('riichi.settings.presentation')}</span>
+        <select
+          value={riichiSettings.presentation}
+          onChange={(event) =>
+            set(
+              'presentation',
+              event.target.value as RiichiPlayerSettings['presentation'],
+            )
+          }
+        >
+          <option value="full">{t('riichi.settings.presentation.full')}</option>
+          <option value="simple">
+            {t('riichi.settings.presentation.simple')}
+          </option>
+          <option value="off">{t('riichi.settings.presentation.off')}</option>
+        </select>
+      </label>
     </fieldset>
   );
 }

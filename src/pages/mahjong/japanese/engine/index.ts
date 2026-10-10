@@ -5,6 +5,12 @@ export {
   threatOf,
   visibleCountsFor,
 } from './ai';
+export {
+  normalizeSeatCharacters,
+  type OpponentSelection,
+  type RiichiSeatCharacters,
+  selectSeatCharacters,
+} from './characters';
 export { evaluateSeatWin } from './evaluate';
 export {
   applyEvent,

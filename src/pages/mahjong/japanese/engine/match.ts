@@ -8,6 +8,10 @@ import type {
   RiichiMatchEnd,
 } from '../types';
 import {
+  normalizeSeatCharacters,
+  type RiichiSeatCharacters,
+} from './characters';
+import {
   type ActionMeta,
   createRound,
   createStepContext,
@@ -51,6 +55,7 @@ export interface RiichiMatchState {
   seed: number;
   rules: RiichiRuleConfig;
   matchLength: 'east' | 'south';
+  seatCharacters: RiichiSeatCharacters;
   round: RiichiGameState;
   status: RiichiMatchStatus;
   matchEnd: RiichiMatchEnd | null;
@@ -75,6 +80,7 @@ export interface CreateMatchOptions {
   seed: number;
   matchLength: 'east' | 'south';
   rules?: Partial<RiichiRuleConfig>;
+  seatCharacters?: RiichiSeatCharacters;
 }
 
 const INITIAL_SCORES = [
@@ -110,6 +116,8 @@ export function createMatch(options: CreateMatchOptions): StepResult {
     event: 'enter-game',
     key: 'enter-game',
   });
+  for (let seat = 0; seat < 4; seat++)
+    ctx.effects.push({ type: 'moment', kind: 'match-start', seat });
   const round = createRound(
     {
       matchSeed: options.seed,
@@ -132,6 +140,7 @@ export function createMatch(options: CreateMatchOptions): StepResult {
       seed: options.seed,
       rules,
       matchLength: options.matchLength,
+      seatCharacters: normalizeSeatCharacters(options.seatCharacters),
       round,
       status: statusOf(round),
       matchEnd: null,
@@ -225,6 +234,9 @@ function advanceRound(
     rules: match.rules.matchEnd,
   });
   if (end.end && end.reason) {
+    const ranking = rankSeatsByScore(settlement.newScores);
+    ctx.effects.push({ type: 'moment', kind: 'match-top', seat: ranking[0] });
+    ctx.effects.push({ type: 'moment', kind: 'match-last', seat: ranking[3] });
     ctx.logs.push({
       key: 'riichi.log.matchEnd',
       params: { reasonKey: `riichi.matchEndReason.${end.reason}` },
@@ -235,7 +247,7 @@ function advanceRound(
       matchEnd: {
         reason: end.reason,
         finalScores: [...settlement.newScores],
-        ranking: rankSeatsByScore(settlement.newScores),
+        ranking,
       },
     };
   }
@@ -379,6 +391,8 @@ export interface RiichiReplayFile {
   seed: number;
   matchLength: 'east' | 'south';
   rules: RiichiRuleConfig;
+  /** 缺省表示 P2 之前的回放，恢复为澪 / 凛 / 空。 */
+  seatCharacters?: RiichiSeatCharacters;
   events: RiichiEvent[];
 }
 
@@ -388,6 +402,7 @@ export function toReplayFile(match: RiichiMatchState): RiichiReplayFile {
     seed: match.seed,
     matchLength: match.matchLength,
     rules: match.rules,
+    seatCharacters: [...match.seatCharacters],
     events: match.events,
   };
 }
@@ -398,6 +413,7 @@ export function replayMatch(file: RiichiReplayFile): RiichiMatchState[] {
     seed: file.seed,
     matchLength: file.matchLength,
     rules: file.rules,
+    seatCharacters: file.seatCharacters,
   }).match;
   const frames = [match];
   for (const event of file.events) {
@@ -418,6 +434,7 @@ export function restoreMatch(file: RiichiReplayFile): RiichiMatchState | null {
     seed: file.seed,
     matchLength: file.matchLength,
     rules: file.rules,
+    seatCharacters: file.seatCharacters,
   }).match;
   for (const event of file.events) {
     const step = applyEvent(match, event);
@@ -488,6 +505,11 @@ export function isReplayFile(value: unknown): value is RiichiReplayFile {
     Array.isArray(v.events) &&
     v.events.length <= 20000 &&
     v.events.every(eventIsValid) &&
+    (v.seatCharacters === undefined ||
+      (Array.isArray(v.seatCharacters) &&
+        v.seatCharacters.length === 4 &&
+        v.seatCharacters[0] === null &&
+        v.seatCharacters.slice(1).every((id) => typeof id === 'string'))) &&
     isRiichiRuleConfig(v.rules)
   );
 }

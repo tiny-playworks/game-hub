@@ -1,4 +1,5 @@
 import { createRiichiDeck, getBaseTile, isYaochuu } from '@/lib/mahjongRiichi';
+import type { LineTrigger } from '@/lib/playerCharacters';
 import {
   type AbortiveDrawReason,
   countKans,
@@ -53,7 +54,8 @@ export type RiichiSound =
 
 export type RiichiEffect =
   | { type: 'sound'; sound: RiichiSound; seat: number }
-  | { type: 'progress'; event: RiichiProgressEvent; key: string };
+  | { type: 'progress'; event: RiichiProgressEvent; key: string }
+  | { type: 'moment'; kind: LineTrigger; seat: number };
 
 /** 一次状态推进中累积的副作用与日志 */
 export interface StepContext {
@@ -85,6 +87,10 @@ function progress(
 
 function sound(ctx: StepContext, s: RiichiSound, seat: number): void {
   ctx.effects.push({ type: 'sound', sound: s, seat });
+  if (s === 'riichi')
+    ctx.effects.push({ type: 'moment', kind: 'riichi', seat });
+  if (s === 'chi' || s === 'pon' || s === 'kan')
+    ctx.effects.push({ type: 'moment', kind: 'call', seat });
 }
 
 const replaceAt = <T>(arr: readonly T[], index: number, value: T): T[] =>
@@ -876,6 +882,14 @@ function endWithWins(
     }
   }
   if (wins.length === 0) return state;
+  for (const win of wins)
+    ctx.effects.push({
+      type: 'moment',
+      kind: isTsumo ? 'tsumo' : 'ron',
+      seat: win.winner,
+    });
+  if (!isTsumo)
+    ctx.effects.push({ type: 'moment', kind: 'deal-in', seat: from });
   sound(ctx, isTsumo ? 'tsumo' : 'ron', wins[0].winner);
   progress(ctx, state, 'finish-round');
   const settlement = settleWins({
@@ -967,6 +981,8 @@ function finishDraw(
     params: { reasonKey: `riichi.drawReason.${reason}` },
   });
   sound(ctx, 'ryuukyoku', state.currentPlayer);
+  for (const seat of tenpaiSeats)
+    ctx.effects.push({ type: 'moment', kind: 'ryuukyoku-tenpai', seat });
   progress(ctx, state, 'finish-round');
   return {
     ...state,

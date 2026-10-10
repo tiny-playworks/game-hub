@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { getCharacterById } from '@/lib/playerCharacters';
 import type { RiichiPlayerSettings } from '@/lib/playerProfile';
 import { getTurnTotalSeconds } from '@/lib/riichiClock';
 import {
@@ -83,6 +84,7 @@ export function useRiichiAutomation(settings: RiichiPlayerSettings): void {
   const replayOpen = useRiichiStore((s) => s.replay !== null);
   const guideOpen = useRiichiStore((s) => s.showGuide);
   const menuOpen = useRiichiStore((s) => s.showMenu);
+  const presenting = useRiichiStore((s) => s.cutIns.length > 0);
 
   useEffect(() => {
     const store = useRiichiStore.getState();
@@ -93,6 +95,7 @@ export function useRiichiAutomation(settings: RiichiPlayerSettings): void {
       replayOpen ||
       guideOpen ||
       menuOpen ||
+      presenting ||
       current.status !== 'playing'
     ) {
       return;
@@ -104,7 +107,8 @@ export function useRiichiAutomation(settings: RiichiPlayerSettings): void {
     const later = (ms: number, fn: () => void) => {
       timers.push(
         window.setTimeout(() => {
-          if (useRiichiStore.getState().match?.turn !== token) return;
+          const latest = useRiichiStore.getState();
+          if (latest.match?.turn !== token || latest.cutIns.length > 0) return;
           fn();
         }, ms),
       );
@@ -117,7 +121,13 @@ export function useRiichiAutomation(settings: RiichiPlayerSettings): void {
       later(AI_TURN_DELAY_MS, () => {
         const latest = useRiichiStore.getState().match;
         if (!latest) return;
-        const event = decideAiTurn(latest.round, seat, level);
+        const id = latest.seatCharacters[seat];
+        const event = decideAiTurn(
+          latest.round,
+          seat,
+          level,
+          id ? getCharacterById(id).style : undefined,
+        );
         if (event) {
           useRiichiStore
             .getState()
@@ -130,12 +140,21 @@ export function useRiichiAutomation(settings: RiichiPlayerSettings): void {
       later(AI_CLAIM_DELAY_MS, () => {
         for (const seat of aiSeats) {
           const latest = useRiichiStore.getState().match;
-          if (!latest || latest.round.phase !== 'claim') return;
+          if (
+            latest?.round.phase !== 'claim' ||
+            useRiichiStore.getState().cutIns.length > 0
+          )
+            return;
           if (!getSeatClaimOptions(latest.round, seat)) continue;
           useRiichiStore.getState().dispatch({
             type: 'claim',
             seat,
-            response: decideAiClaim(latest.round, seat, level),
+            response: decideAiClaim(
+              latest.round,
+              seat,
+              level,
+              getCharacterById(latest.seatCharacters[seat] ?? 'mio').style,
+            ),
             elapsed: AI_CLAIM_DELAY_MS / 1000,
           });
         }
@@ -190,7 +209,7 @@ export function useRiichiAutomation(settings: RiichiPlayerSettings): void {
       for (const id of timers) window.clearTimeout(id);
     };
     // match 变化即代表局面推进；settings 变化时重新评估自动操作
-  }, [match, view, replayOpen, guideOpen, menuOpen, settings]);
+  }, [match, view, replayOpen, guideOpen, menuOpen, presenting, settings]);
 }
 
 /** 自家操作时附带本次决策用时（秒） */

@@ -42,6 +42,7 @@ function savedReplay(data: unknown): RiichiReplayFile | null {
     seed: legacy.seed,
     rules: legacy.rules,
     matchLength: legacy.matchLength,
+    seatCharacters: legacy.seatCharacters,
     events: legacy.events,
   };
   return isReplayFile(replay) ? replay : null;
@@ -92,13 +93,7 @@ export function saveMatch(
   try {
     if (match.status === 'matchEnd') {
       s.removeItem(RIICHI_SAVE_STORAGE_KEY);
-      saveLastReplay({
-        version: match.version,
-        seed: match.seed,
-        matchLength: match.matchLength,
-        rules: match.rules,
-        events: match.events,
-      });
+      saveLastReplay(toReplayFile(match));
       return;
     }
     const data: RiichiSaveData = {

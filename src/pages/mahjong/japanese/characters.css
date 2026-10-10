@@ -1,0 +1,366 @@
+.riichi-character-avatar {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 10px;
+}
+
+.riichi-character-avatar.is-acting {
+  outline: 2px solid var(--riichi-accent);
+  outline-offset: 3px;
+  animation: riichi-avatar-breathe 1.6s ease-in-out infinite;
+}
+
+.riichi-seat--opponent .riichi-seat-card {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.riichi-character-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.riichi-character-heading > div:last-child {
+  min-width: 0;
+}
+
+.riichi-character-heading strong {
+  display: block;
+  color: var(--riichi-text);
+  font-size: 14px;
+}
+
+.riichi-character-heading small {
+  display: block;
+  color: var(--riichi-text-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.riichi-speech-bubble {
+  position: absolute;
+  z-index: 25;
+  top: calc(100% - 4px);
+  left: 50%;
+  width: max-content;
+  max-width: 220px;
+  margin: 0;
+  padding: 10px 13px;
+  transform: translateX(-50%);
+  border: 1px solid #dac49a;
+  border-radius: 14px;
+  color: #3f3021;
+  background: #fff8e9;
+  box-shadow: 0 6px 20px #0004;
+  font-size: 13px;
+  line-height: 1.5;
+  pointer-events: none;
+  animation: riichi-speech-appear 0.15s ease-out;
+}
+
+.riichi-seat--side .riichi-speech-bubble {
+  top: 78px;
+  left: calc(100% - 4px);
+  transform: none;
+}
+
+.riichi-seat--self .riichi-speech-bubble {
+  top: -4px;
+  transform: translate(-50%, -100%);
+}
+
+.riichi-seat[data-seat="1"] .riichi-speech-bubble {
+  right: calc(100% - 4px);
+  left: auto;
+}
+
+.riichi-character-quotes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.riichi-character-quotes:empty {
+  display: none;
+}
+
+.riichi-character-quotes blockquote {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1 1 220px;
+  margin: 0 0 16px;
+  padding: 12px;
+  border: 1px solid var(--riichi-border);
+  border-radius: 12px;
+  background: var(--riichi-bg);
+}
+
+.riichi-character-quotes strong {
+  font-size: 12px;
+  color: var(--riichi-accent);
+}
+
+.riichi-character-quotes p {
+  margin: 3px 0 0;
+  font-size: 13px;
+  color: var(--riichi-text);
+}
+
+.riichi-opponent-picker > p {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--riichi-text-muted);
+}
+
+.riichi-opponent-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.riichi-opponent-options label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--riichi-border);
+  border-radius: 12px;
+  background: var(--riichi-bg);
+  color: var(--riichi-text);
+  font-size: 12px;
+}
+
+.riichi-opponent-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+}
+
+.riichi-opponent-preview small {
+  min-width: 0;
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--riichi-text-muted);
+}
+
+.riichi-random-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  color: var(--riichi-accent);
+  background: var(--riichi-accent-soft);
+}
+
+.riichi-opponent-options select {
+  width: 100%;
+  min-width: 0;
+  padding: 6px;
+  border: 1px solid var(--riichi-border);
+  border-radius: 6px;
+  color: var(--riichi-text);
+  background: var(--riichi-bg);
+}
+
+.riichi-opponent-randomize {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 5px 0;
+  color: var(--riichi-accent);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.riichi-character-cutin {
+  position: fixed;
+  z-index: 150;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 24px;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  background: #06130c94;
+  color: #332714;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.riichi-character-cutin-band {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  width: min(1120px, 110vw);
+  height: 300px;
+  overflow: hidden;
+  border-block: 3px solid #b78b40;
+  clip-path: polygon(5% 0, 100% 0, 95% 100%, 0 100%);
+  animation: riichi-character-cutin 0.9s ease-out both;
+}
+
+.riichi-cutin-portrait {
+  align-self: flex-end;
+  width: 220px;
+  height: 294px;
+  max-height: 100%;
+}
+
+.riichi-cutin-copy {
+  display: grid;
+  gap: 10px;
+  text-align: left;
+  max-width: 520px;
+}
+
+.riichi-cutin-name {
+  font-size: 23px;
+  font-weight: 700;
+}
+
+.riichi-cutin-copy strong {
+  font-size: 74px;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: 0.06em;
+  text-shadow: 2px 3px #fff9;
+}
+
+.riichi-cutin-line {
+  font-size: 20px;
+  line-height: 1.5;
+}
+
+.riichi-cutin-skip {
+  color: #fff5dc;
+  font-size: 13px;
+}
+
+.riichi-character-cutin-band.is-simple {
+  height: 200px;
+}
+
+@keyframes riichi-avatar-breathe {
+  50% {
+    box-shadow: 0 0 20px 4px var(--riichi-accent-soft);
+  }
+}
+
+@keyframes riichi-speech-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes riichi-character-cutin {
+  0% {
+    transform: translateX(-100vw);
+    opacity: 0;
+  }
+  16%,
+  78% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100vw);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 1519px) {
+  .riichi-lobby {
+    min-width: 0;
+  }
+  .riichi-lobby-main {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 510px);
+    gap: 40px;
+  }
+}
+
+@media (max-width: 900px) {
+  .riichi-lobby-header {
+    padding-inline: 20px;
+  }
+  .riichi-lobby-main {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+    padding: 32px 16px;
+  }
+  .riichi-lobby-intro h1 {
+    font-size: clamp(36px, 8vw, 64px);
+  }
+  .riichi-lobby-kicker {
+    margin-top: 24px;
+  }
+  .riichi-lobby-capabilities {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 11px;
+  }
+  .riichi-lobby-setup {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 600px) {
+  .riichi-opponent-options {
+    grid-template-columns: 1fr;
+  }
+  .riichi-opponent-options label {
+    grid-template-columns: 1fr 1.5fr;
+    align-items: center;
+  }
+  .riichi-opponent-preview {
+    grid-column: 2;
+    grid-row: 1 / 3;
+  }
+  .riichi-character-cutin-band {
+    gap: 12px;
+    height: 240px;
+    padding: 0 30px;
+  }
+  .riichi-cutin-portrait {
+    width: 145px;
+    height: 240px;
+  }
+  .riichi-cutin-copy {
+    min-width: 0;
+    gap: 8px;
+  }
+  .riichi-cutin-copy strong {
+    font-size: 40px;
+  }
+  .riichi-cutin-name {
+    font-size: 16px;
+  }
+  .riichi-cutin-line {
+    font-size: 13px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .riichi-character-avatar.is-acting,
+  .riichi-speech-bubble,
+  .riichi-character-cutin-band {
+    animation: none;
+  }
+}

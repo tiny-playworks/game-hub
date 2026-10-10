@@ -1,17 +1,25 @@
 import { Copy, TimerReset } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLocale } from '@/contexts/LocaleContext';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { formatMessage, type Locale } from '@/lib/i18n';
 import { getBaseTile, getTileLabel } from '@/lib/mahjongRiichi';
+import {
+  type CharacterDef,
+  getCharacterById,
+  getPlayerCharacterState,
+} from '@/lib/playerCharacters';
 import { markRecentMahjongPlayed } from '@/lib/recentMahjong';
 import { getTurnTotalSeconds } from '@/lib/riichiClock';
 import { getCurrentRiichiRoundProgressSummary } from '@/lib/riichiProgress';
 import { preloadRiichiRules } from '@/lib/riichiRules';
 import { cn } from '@/lib/utils';
+import type { CharacterMoment } from './characterMoments';
 import { CenterArea } from './components/CenterArea';
+import { CharacterCutIn } from './components/CharacterCutIn';
 import {
   type ActiveDesktopPanel,
   DesktopSideRail,
@@ -24,13 +32,16 @@ import { OpponentSeat } from './components/OpponentSeat';
 import { ReplayViewer } from './components/ReplayViewer';
 import { RiichiDesktopStage } from './components/RiichiDesktopStage';
 import { RulesView } from './components/RulesView';
+import { SpeechBubble } from './components/SpeechBubble';
 import { StatusPanel } from './components/StatusPanel';
 import { TableContextPanel } from './components/TableContextPanel';
 import { RiichiTile } from './components/Tile';
 import { TrainingPanel } from './components/TrainingPanel';
 import {
   isReplayFile,
+  type OpponentSelection,
   type RiichiEvent,
+  type RiichiSeatCharacters,
   restoreMatch,
   toReplayFile,
 } from './engine';
@@ -58,6 +69,7 @@ import {
 import { useRiichiEffectSounds } from './useRiichiEffectSounds';
 import { useRiichiTheme } from './useRiichiTheme';
 import { useRiichiViewModel } from './useRiichiViewModel';
+import './characters.css';
 
 export { getNextRound } from './helpers';
 
@@ -340,6 +352,8 @@ function HumanTurnTimer({ timeBank }: { timeBank: number }) {
 }
 
 type SelfSeatProps = {
+  character: CharacterDef;
+  moment?: CharacterMoment;
   game: RiichiGameState;
   locale: Locale;
   decisionSeat: number | null;
@@ -353,6 +367,8 @@ type SelfSeatProps = {
 };
 
 function SelfSeat({
+  character,
+  moment,
   game,
   locale,
   decisionSeat,
@@ -432,10 +448,19 @@ function SelfSeat({
 
       <div className="riichi-self-meta">
         <div className="riichi-seat-card-main">
+          <CharacterPortraitSlot
+            character={character}
+            size="sm"
+            label={t(character.nameKey)}
+            className={cn(
+              'riichi-character-avatar',
+              (actionState.isMyTurn || actionState.isMyClaim) && 'is-acting',
+            )}
+          />
           <span className="riichi-seat-wind">
             {t(`game.mahjong.winds.${seatWind}`)}
           </span>
-          <span className="riichi-seat-name">{t('game.mahjong.seats.0')}</span>
+          <span className="riichi-seat-name">{t(character.nameKey)}</span>
           <strong>{formatPoints(game.scores[0], locale)}</strong>
         </div>
         <div className="riichi-seat-card-meta">
@@ -466,6 +491,7 @@ function SelfSeat({
           )}
         </div>
       </div>
+      <SpeechBubble moment={moment} />
 
       <HumanTurnTimer timeBank={game.timeBanks[0]} />
 
@@ -511,6 +537,9 @@ function SelfSeat({
 }
 
 type RiichiTableProps = {
+  seatCharacters: RiichiSeatCharacters;
+  playerCharacterId: string;
+  moments: CharacterMoment[];
   game: RiichiGameState;
   bag: RiichiGameBag;
   locale: Locale;
@@ -522,6 +551,9 @@ type RiichiTableProps = {
 };
 
 function RiichiTable({
+  seatCharacters,
+  playerCharacterId,
+  moments,
   game,
   bag,
   locale,
@@ -543,6 +575,8 @@ function RiichiTable({
       timerClassName=""
       isCurrentTurn={bag.decisionSeat === seat}
       highlightedBase={highlightedBase}
+      character={getCharacterById(seatCharacters[seat])}
+      moment={moments.find((moment) => moment.seat === seat)}
     />
   );
 
@@ -573,6 +607,8 @@ function RiichiTable({
         <div className="riichi-table-seat-right">{opponent(1)}</div>
         <div className="riichi-table-seat-self">
           <SelfSeat
+            character={getCharacterById(playerCharacterId)}
+            moment={moments.find((moment) => moment.seat === 0)}
             game={game}
             locale={locale}
             decisionSeat={bag.decisionSeat}
@@ -759,6 +795,14 @@ const GameMahjongJapanese = () => {
   const resumeSaved = useRiichiStore((s) => s.resumeSaved);
   const replay = useRiichiStore((s) => s.replay);
   const openReplay = useRiichiStore((s) => s.openReplay);
+  const playerCharacterId = useRiichiStore((s) => s.playerCharacterId);
+  const moments = useRiichiStore((s) => s.moments);
+  const presenting = useRiichiStore((s) => s.cutIns.length > 0);
+  const [opponents, setOpponents] = useState<OpponentSelection>([
+    null,
+    null,
+    null,
+  ]);
   const { riichiSettings } = usePlayerProfile();
   useRiichiAutomation(riichiSettings);
   useRiichiEffectSounds();
@@ -788,6 +832,7 @@ const GameMahjongJapanese = () => {
       ? callConfirmation.response
       : null;
   const act = (event: RiichiEvent) => {
+    if (useRiichiStore.getState().cutIns.length > 0) return;
     if (dispatch(withElapsed(event))) {
       setRiichiSelection(null);
       setCallConfirmation(null);
@@ -817,7 +862,10 @@ const GameMahjongJapanese = () => {
     try {
       await preloadRiichiRules();
       setLoadError(false);
-      startGame({ rules: { aiLevel: riichiSettings.aiLevel } });
+      startGame({
+        rules: { aiLevel: riichiSettings.aiLevel },
+        opponentSelection: opponents,
+      });
     } catch {
       setLoadError(true);
     }
@@ -922,6 +970,9 @@ const GameMahjongJapanese = () => {
           onResume={resumeDesktopGame}
           onOpenReplay={openLastReplay}
           onImportReplay={importReplay}
+          mainCharacterId={getPlayerCharacterState().activeCharacterId}
+          opponents={opponents}
+          onOpponentsChange={setOpponents}
         />
         {replay && (
           <ReplayViewer file={replay} onClose={() => openReplay(null)} />
@@ -930,7 +981,7 @@ const GameMahjongJapanese = () => {
     );
   }
 
-  if (!game) return null;
+  if (!game || !match) return null;
 
   const roundProgressSummary = getCurrentRiichiRoundProgressSummary();
   const actionState: RiichiActionState = {
@@ -974,7 +1025,9 @@ const GameMahjongJapanese = () => {
         <RiichiKeyboardShortcuts
           state={actionState}
           handlers={actionHandlers}
-          enabled={match?.status === 'playing' && !showGuide && !replay}
+          enabled={
+            match?.status === 'playing' && !showGuide && !replay && !presenting
+          }
         />
         <GameHeader
           game={game}
@@ -1002,6 +1055,9 @@ const GameMahjongJapanese = () => {
           <TableContextPanel game={game} />
           <div className="riichi-table-zone">
             <RiichiTable
+              seatCharacters={match.seatCharacters}
+              playerCharacterId={playerCharacterId}
+              moments={moments}
               game={game}
               bag={bag}
               locale={locale}
@@ -1043,29 +1099,36 @@ const GameMahjongJapanese = () => {
 
         {showGuide && <GuideDialog onClose={() => setShowGuide(false)} />}
 
-        {match?.status === 'roundEnd' && result?.type === 'win' && (
-          <WinModal
-            result={result}
-            roundProgressSummary={roundProgressSummary}
-            timeoutEvents={game.timeoutEvents.map((entry) =>
-              formatLogEntry(entry, locale),
-            )}
-            onNext={() => act({ type: 'nextRound' })}
-          />
-        )}
-        {match?.status === 'roundEnd' && result?.type === 'draw' && (
-          <RyuukyokuModal
-            result={result}
-            roundProgressSummary={roundProgressSummary}
-            timeoutEvents={game.timeoutEvents.map((entry) =>
-              formatLogEntry(entry, locale),
-            )}
-            onNext={() => act({ type: 'nextRound' })}
-          />
-        )}
-        {match?.status === 'matchEnd' && match.matchEnd && (
+        {match?.status === 'roundEnd' &&
+          result?.type === 'win' &&
+          !presenting && (
+            <WinModal
+              result={result}
+              moments={moments}
+              roundProgressSummary={roundProgressSummary}
+              timeoutEvents={game.timeoutEvents.map((entry) =>
+                formatLogEntry(entry, locale),
+              )}
+              onNext={() => act({ type: 'nextRound' })}
+            />
+          )}
+        {match?.status === 'roundEnd' &&
+          result?.type === 'draw' &&
+          !presenting && (
+            <RyuukyokuModal
+              result={result}
+              moments={moments}
+              roundProgressSummary={roundProgressSummary}
+              timeoutEvents={game.timeoutEvents.map((entry) =>
+                formatLogEntry(entry, locale),
+              )}
+              onNext={() => act({ type: 'nextRound' })}
+            />
+          )}
+        {match?.status === 'matchEnd' && match.matchEnd && !presenting && (
           <MatchEndModal
             matchEnd={match.matchEnd}
+            moments={moments}
             roundProgressSummary={roundProgressSummary}
             onRestart={startDesktopGame}
             homeLabel={t('common.backHome')}
@@ -1074,6 +1137,7 @@ const GameMahjongJapanese = () => {
         {replay && (
           <ReplayViewer file={replay} onClose={() => openReplay(null)} />
         )}
+        <CharacterCutIn mode={riichiSettings.presentation} />
       </div>
     </RiichiDesktopStage>
   );

@@ -3,6 +3,7 @@
  * 纯函数、无随机：相同局面总是给出相同决策，便于回放与测试。
  */
 import { getBaseTile, isMenzhen, isYaochuu } from '@/lib/mahjongRiichi';
+import type { CharacterStyle } from '@/lib/playerCharacters';
 import {
   evaluateTileDanger,
   evaluateTileValue,
@@ -119,14 +120,42 @@ function chooseStance(
   seat: number,
   bestShanten: number,
   level: RiichiAiLevel,
+  style?: CharacterStyle,
 ): Stance {
-  if (level === 'beginner') return 'attack';
+  if (level === 'beginner' && !style) return 'attack';
   const threat = totalThreat(state, seat);
   if (threat <= 0) return 'attack';
-  if (bestShanten <= 0) return threat >= 2.2 ? 'balanced' : 'attack';
-  if (bestShanten === 1) {
-    return state.wall.length >= 24 && threat < 1.2 ? 'balanced' : 'fold';
+  // 只看自己的牌与公开信息；打点高时稍晚弃和，防守型角色更早收手。
+  const value = style
+    ? state.hands[seat].reduce(
+        (sum, tile) =>
+          sum +
+          evaluateTileValue(tile, state.hands[seat], {
+            doraIndicators: state.doraIndicators,
+            seatWind: getSeatWindOf(state, seat),
+            roundWind: state.roundWind,
+          }),
+        0,
+      )
+    : 0;
+  const valueSupport = style
+    ? Math.min(value / 6, 1) * style.valueBias * 0.4
+    : 0;
+  if (bestShanten <= 0) {
+    if (style && style.defenseBias >= 0.8 && threat >= 1.2 && value < 2)
+      return 'fold';
+    return threat >= 2.2 - (style?.defenseBias ?? 0) * 1.4 + valueSupport
+      ? 'balanced'
+      : 'attack';
   }
+  if (bestShanten === 1) {
+    const threshold = style
+      ? 1.7 - style.defenseBias * 1.2 + valueSupport
+      : 1.2;
+    return state.wall.length >= 24 && threat < threshold ? 'balanced' : 'fold';
+  }
+  if (style && style.defenseBias < 0.35 && threat < 1.25)
+    return level === 'beginner' ? 'attack' : 'balanced';
   return 'fold';
 }
 
@@ -138,12 +167,16 @@ function pickDiscard(
   stance: Stance,
   visible: VisibleCounts,
   level: RiichiAiLevel,
+  style?: CharacterStyle,
 ): number {
   const hand = state.hands[seat];
   const valueCtx = {
     doraIndicators: state.doraIndicators,
     seatWind: getSeatWindOf(state, seat),
     roundWind: state.roundWind,
+    meldTiles: style
+      ? state.melds[seat].flatMap((meld) => meld.tiles)
+      : undefined,
   };
   let best = tiles[0];
   let bestScore = Number.NEGATIVE_INFINITY;
@@ -153,19 +186,23 @@ function pickDiscard(
     const ukeire = cand?.ukeire ?? 0;
     const efficiency = -shanten * 100 + ukeire;
     const value =
-      level === 'beginner' ? 0 : evaluateTileValue(tile, hand, valueCtx);
+      level === 'beginner' && !style
+        ? 0
+        : evaluateTileValue(tile, hand, valueCtx, style);
     const edgeBonus = isYaochuu(tile) ? 0.5 : 0;
-    const attackScore = efficiency - value * 4 + edgeBonus;
+    const attackScore =
+      efficiency - value * (level === 'beginner' ? 2.5 : 4) + edgeBonus;
     const danger =
-      stance === 'attack' && level === 'beginner'
+      stance === 'attack' && level === 'beginner' && !style
         ? 0
         : dangerFor(state, seat, tile, visible);
+    const defenseWeight = style ? 0.4 + style.defenseBias * 1.4 : 1;
     const score =
       stance === 'fold'
         ? -danger * 1000 + attackScore * 0.01
         : stance === 'balanced'
-          ? attackScore - danger * 60
-          : attackScore - danger * 8;
+          ? attackScore - danger * 60 * defenseWeight
+          : attackScore - danger * 8 * defenseWeight;
     if (score > bestScore || (score === bestScore && tile > best)) {
       bestScore = score;
       best = tile;
@@ -207,9 +244,10 @@ function shouldDeclareRiichi(
   hand13: number[],
   waitRemaining: number,
   level: RiichiAiLevel,
+  style?: CharacterStyle,
 ): boolean {
   if (waitRemaining <= 0) return false;
-  if (level === 'beginner') return true;
+  if (level === 'beginner' && !style) return true;
   const visible = visibleCountsFor(state, seat);
   const preview = {
     ...state,
@@ -278,6 +316,17 @@ function shouldDeclareRiichi(
   const addedValue = (riichiPoints - damaPoints) * winChance * valueWeight;
   const stickRisk = 1000 * (1 - winChance);
   const flexibilityCost = threat * (state.wall.length < 20 ? 600 : 300);
+  if (style) {
+    const aggression = style.riichiAggression;
+    const poorWaitCost =
+      Math.max(0, 4 - waitRemaining) * 250 * (1 - aggression);
+    return (
+      addedValue + (aggression - 0.5) * 800 >
+      stickRisk * (1.8 - aggression * 1.5) +
+        flexibilityCost * (1.6 - aggression) +
+        poorWaitCost
+    );
+  }
   return addedValue > stickRisk + flexibilityCost;
 }
 
@@ -285,6 +334,7 @@ export function decideAiTurn(
   state: RiichiGameState,
   seat: number,
   level: RiichiAiLevel,
+  style?: CharacterStyle,
 ): TurnEvent | null {
   const opts = state.turnOptions;
   if (state.phase !== 'discard' || state.currentPlayer !== seat || !opts) {
@@ -311,7 +361,7 @@ export function decideAiTurn(
     return { type: 'discard', seat, tile: discardable[0] };
   }
 
-  const stance = chooseStance(state, seat, bestShanten, level);
+  const stance = chooseStance(state, seat, bestShanten, level, style);
 
   if (stance !== 'fold') {
     for (const option of opts.ankan) {
@@ -342,10 +392,14 @@ export function decideAiTurn(
       stance,
       visible,
       level,
+      style,
     );
     const hand13 = removeTiles(hand, [choice]);
     const remaining = cands.get(getBaseTile(choice))?.ukeire ?? 0;
-    if (hand13 && shouldDeclareRiichi(state, seat, hand13, remaining, level)) {
+    if (
+      hand13 &&
+      shouldDeclareRiichi(state, seat, hand13, remaining, level, style)
+    ) {
       return { type: 'riichi', seat, tile: choice };
     }
   }
@@ -358,6 +412,7 @@ export function decideAiTurn(
     stance,
     visible,
     level,
+    style,
   );
   return { type: 'discard', seat, tile };
 }
@@ -475,6 +530,7 @@ export function decideAiClaim(
   state: RiichiGameState,
   seat: number,
   level: RiichiAiLevel,
+  style?: CharacterStyle,
 ): ClaimResponse {
   const claim = state.claim;
   const options: SeatClaimOptions | null = claim?.options[seat] ?? null;
@@ -485,7 +541,12 @@ export function decideAiClaim(
   const hand = state.hands[seat];
   const melds = state.melds[seat];
   const current = getShanten(hand, melds);
-  if (level === 'standard' && totalThreat(state, seat) >= 1 && current >= 1) {
+  if (
+    current >= 1 &&
+    (style
+      ? chooseStance(state, seat, current, level, style) === 'fold'
+      : level === 'standard' && totalThreat(state, seat) >= 1)
+  ) {
     return { type: 'pass' };
   }
   const visible = visibleCountsFor(state, seat);
@@ -533,15 +594,44 @@ export function decideAiClaim(
     }
   }
 
-  const improving = plans.filter((p) => p.shanten < current);
+  const improving = plans.filter((p) => {
+    if (!style) return p.shanten < current;
+    if (p.shanten > current) return false;
+    if (p.shanten === current)
+      return style.callAggression >= 0.8 && p.ukeire >= 12;
+    // 门清型只为听牌、明确役牌或显著提速副露；速攻型接受所有有役计划。
+    return (
+      !isMenzhen(melds) ||
+      style.callAggression >= 0.5 ||
+      p.shanten === 0 ||
+      current - p.shanten >= 2 ||
+      (style.callAggression >= 0.25 &&
+        isYakuhaiBase(base, getSeatWindOf(state, seat), state.roundWind))
+    );
+  });
   if (improving.length === 0) {
+    const taken = options.minkan ? takeByBase(hand, base, 3) : null;
+    const nextMelds: RiichiMeld[] = taken
+      ? [...melds, { type: 'mingang', tiles: [...taken.taken, tile] }]
+      : melds;
+    const kanHasYaku = style
+      ? style.callAggression >= 0.5 &&
+        taken !== null &&
+        callHasYaku(
+          state,
+          seat,
+          taken.rest,
+          nextMelds,
+          getShanten(taken.rest, nextMelds),
+        )
+      : isYakuhaiBase(base, getSeatWindOf(state, seat), state.roundWind) &&
+        !isMenzhen(melds);
     if (
       options.minkan &&
-      level === 'standard' &&
-      current <= 1 &&
+      (level === 'standard' || style) &&
+      current <= (style && style.callAggression >= 0.75 ? 2 : 1) &&
       totalThreat(state, seat) === 0 &&
-      isYakuhaiBase(base, getSeatWindOf(state, seat), state.roundWind) &&
-      !isMenzhen(melds)
+      kanHasYaku
     ) {
       return { type: 'minkan' };
     }

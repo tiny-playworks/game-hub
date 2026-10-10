@@ -8,6 +8,7 @@ import {
   isYaochuu,
 } from '@/lib/mahjongRiichi';
 import type { VisibleCounts } from '@/lib/riichiShanten';
+import type { CharacterStyle } from './playerCharacters';
 
 /** 一名对手的可观察信息 */
 export interface OpponentView {
@@ -111,6 +112,7 @@ export interface TileValueContext {
   doraIndicators: number[];
   seatWind: number;
   roundWind: number;
+  meldTiles?: readonly number[];
 }
 
 /** 牌本身的打点价值：宝牌、赤宝、役牌对子 */
@@ -118,6 +120,7 @@ export function evaluateTileValue(
   tile: number,
   hand: readonly number[],
   ctx: TileValueContext,
+  style?: Pick<CharacterStyle, 'valueBias' | 'flushBias'>,
 ): number {
   const base = getBaseTile(tile);
   const doras = ctx.doraIndicators.map(getDoraFromIndicator);
@@ -132,19 +135,27 @@ export function evaluateTileValue(
   }
   const simpleCount = hand.filter((t) => !isYaochuu(t)).length;
   if (simpleCount >= hand.length - 2 && !isYaochuu(tile)) value += 0.25;
+  if (style) value *= 0.5 + style.valueBias * 2.5;
   const suits = [0, 0, 0];
-  for (const t of hand) {
+  for (const t of [...hand, ...(ctx.meldTiles ?? [])]) {
     const b = getBaseTile(t);
     if (b < 27) suits[Math.floor(b / 9)]++;
   }
   const suitedCount = suits.reduce((sum, count) => sum + count, 0);
   const mainSuit = suits.indexOf(Math.max(...suits));
+  const flushPossible = !ctx.meldTiles?.some((t) => {
+    const b = getBaseTile(t);
+    return b < 27 && Math.floor(b / 9) !== mainSuit;
+  });
   if (
     suitedCount >= 6 &&
-    suits[mainSuit] >= suitedCount - 2 &&
+    flushPossible &&
+    (style
+      ? suits[mainSuit] / suitedCount >= 0.9 - style.flushBias * 0.3
+      : suits[mainSuit] >= suitedCount - 2) &&
     (base >= 27 || Math.floor(base / 9) === mainSuit)
   )
-    value += 0.35;
+    value += style ? 0.35 + style.flushBias * 4 : 0.35;
   return value;
 }
 

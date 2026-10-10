@@ -30,6 +30,7 @@ export interface RiichiPlayerSettings {
   /** 他家立直或多副露时，为手牌标注放铳危险度 */
   dangerHint: boolean;
   aiLevel: 'beginner' | 'standard';
+  presentation: 'full' | 'simple' | 'off';
 }
 
 export const DEFAULT_RIICHI_SETTINGS: RiichiPlayerSettings = {
@@ -39,6 +40,7 @@ export const DEFAULT_RIICHI_SETTINGS: RiichiPlayerSettings = {
   callConfirm: false,
   dangerHint: true,
   aiLevel: 'standard',
+  presentation: 'full',
 };
 
 export interface PlayerProfile {
@@ -149,6 +151,10 @@ export function normalizeRiichiSettings(raw: unknown): RiichiPlayerSettings {
     callConfirm: bool(o.callConfirm, d.callConfirm),
     dangerHint: bool(o.dangerHint, d.dangerHint),
     aiLevel: o.aiLevel === 'beginner' ? 'beginner' : 'standard',
+    presentation:
+      o.presentation === 'simple' || o.presentation === 'off'
+        ? o.presentation
+        : d.presentation,
   };
 }
 

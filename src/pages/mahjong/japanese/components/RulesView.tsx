@@ -5,8 +5,10 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLocale } from '@/contexts/LocaleContext';
 import { cn } from '@/lib/utils';
 import { RIICHI_THEMES, type RiichiThemeId } from '../constants';
+import type { OpponentSelection } from '../engine';
 import { useRiichiDialogContainer } from '../useRiichiDialogFocus';
 import { GuidePanel } from './GuidePanel';
+import { OpponentSelector } from './OpponentSelector';
 import { RiichiSettingsPanel } from './RiichiSettingsPanel';
 
 type MatchLength = 'east' | 'south';
@@ -23,6 +25,9 @@ type Props = {
   onResume: () => void;
   onOpenReplay: () => void;
   onImportReplay: (file: File) => Promise<boolean>;
+  mainCharacterId: string;
+  opponents: OpponentSelection;
+  onOpponentsChange: (value: OpponentSelection) => void;
 };
 
 export function RulesView({
@@ -37,6 +42,9 @@ export function RulesView({
   onResume,
   onOpenReplay,
   onImportReplay,
+  mainCharacterId,
+  opponents,
+  onOpponentsChange,
 }: Props) {
   const { t } = useLocale();
   const [guideOpen, setGuideOpen] = useState(false);
@@ -123,6 +131,11 @@ export function RulesView({
             </div>
           </fieldset>
 
+          <OpponentSelector
+            mainCharacterId={mainCharacterId}
+            value={opponents}
+            onChange={onOpponentsChange}
+          />
           <RiichiSettingsPanel />
 
           {(hasSaved || hasReplay) && (

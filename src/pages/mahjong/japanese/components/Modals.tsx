@@ -17,6 +17,7 @@ import {
   getNextLockedTitle,
   getUnlockedTitles,
 } from '@/lib/titles';
+import type { CharacterMoment } from '../characterMoments';
 import {
   formatPoints,
   getMatchEndReasonText,
@@ -29,6 +30,7 @@ import {
   useRiichiDialogContainer,
   useRiichiDialogFocus,
 } from '../useRiichiDialogFocus';
+import { CharacterQuotes } from './SpeechBubble';
 
 export type WinResultState = RiichiWinResult;
 
@@ -76,6 +78,7 @@ function getMaxGainSeat(deltas: number[]): number {
 }
 
 type WinModalProps = {
+  moments?: CharacterMoment[];
   result: Extract<RoundResult, { type: 'win' }>;
   roundProgressSummary: RiichiRoundProgressSummary;
   timeoutEvents: string[];
@@ -295,6 +298,7 @@ function RoundGrowthSummary({
 }
 
 export function WinModal({
+  moments = [],
   result,
   roundProgressSummary,
   timeoutEvents,
@@ -320,6 +324,7 @@ export function WinModal({
           </DialogTitle>
         </div>
       </header>
+      <CharacterQuotes moments={moments} kinds={['ron', 'tsumo', 'deal-in']} />
       <div className="riichi-result-grid">
         <section className="riichi-result-section">
           {wins.map((win) => {
@@ -423,6 +428,7 @@ export function WinModal({
   );
 }
 type RyuukyokuModalProps = {
+  moments?: CharacterMoment[];
   result: Extract<RoundResult, { type: 'draw' }>;
   roundProgressSummary: RiichiRoundProgressSummary;
   timeoutEvents: string[];
@@ -430,6 +436,7 @@ type RyuukyokuModalProps = {
 };
 
 export function RyuukyokuModal({
+  moments = [],
   result,
   roundProgressSummary,
   timeoutEvents,
@@ -473,6 +480,7 @@ export function RyuukyokuModal({
         </div>
       </header>
 
+      <CharacterQuotes moments={moments} kinds={['ryuukyoku-tenpai']} />
       <div className="riichi-result-grid">
         <section className="riichi-result-section">
           <p className="riichi-result-section-label">
@@ -554,6 +562,7 @@ export function RyuukyokuModal({
   );
 }
 type MatchEndModalProps = {
+  moments?: CharacterMoment[];
   matchEnd: MatchEndState;
   roundProgressSummary: RiichiRoundProgressSummary;
   onRestart: () => void;
@@ -561,6 +570,7 @@ type MatchEndModalProps = {
 };
 
 export function MatchEndModal({
+  moments = [],
   matchEnd,
   roundProgressSummary,
   onRestart,
@@ -585,6 +595,7 @@ export function MatchEndModal({
           <span>{t('riichi.modal.matchEnd.summary')}</span>
         </div>
       </header>
+      <CharacterQuotes moments={moments} kinds={['match-top', 'match-last']} />
 
       <div className="riichi-result-grid">
         <section className="riichi-result-section">

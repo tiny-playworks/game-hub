@@ -12,6 +12,7 @@ export function useHumanRemainingSeconds(): number | null {
     !s.replay &&
     !s.showGuide &&
     !s.showMenu &&
+    s.cutIns.length === 0 &&
     s.match?.status === 'playing'
       ? getPendingSeats(s.match.round).includes(0)
       : false,
