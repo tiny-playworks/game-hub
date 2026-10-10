@@ -9,8 +9,9 @@ import {
   getSeatClaimOptions,
   getSeatTurnOptions,
 } from './engine';
+import { visibleCountsFor } from './engine/ai';
 import { getWaits, removeTiles } from './engine/hand';
-import { countVisibleTilesByBase } from './helpers';
+import { getTrainingAdvice } from './trainingAdvice';
 import type { RiichiGameState } from './types';
 
 type HintOption = { discardTile: number; waiting: number[]; line: string };
@@ -51,7 +52,7 @@ export function getTenpaiHint(
   if (state.phase === 'end') return null;
   const hand = state.hands[0];
   const melds = state.melds[0];
-  const visible = countVisibleTilesByBase(state);
+  const visible = visibleCountsFor(state, 0);
   const remaining = (tile: number) =>
     Math.max(0, 4 - visible[getBaseTile(tile)]);
   const waits = getWaits(hand, melds);
@@ -89,6 +90,7 @@ export function useRiichiViewModel(
   game: RiichiGameState | null,
   hintsOpen: boolean,
   locale: Locale,
+  riichiSelecting = false,
 ) {
   return useMemo(() => {
     const turn = game ? getSeatTurnOptions(game, 0) : null;
@@ -118,6 +120,8 @@ export function useRiichiViewModel(
         ? getMessage(locale, `riichi.furiten.${reason}`)
         : null,
       tenpaiHint: game && hintsOpen ? getTenpaiHint(game, locale) : null,
+      trainingAdvice:
+        game && hintsOpen ? getTrainingAdvice(game, riichiSelecting) : null,
     };
-  }, [game, hintsOpen, locale]);
+  }, [game, hintsOpen, locale, riichiSelecting]);
 }

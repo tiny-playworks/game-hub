@@ -1,4 +1,12 @@
-import { useMemo, useState } from 'react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Pause,
+  Play,
+  SkipBack,
+  SkipForward,
+} from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLocale } from '@/contexts/LocaleContext';
 import { formatMessage } from '@/lib/i18n';
@@ -15,6 +23,22 @@ export function ReplayViewer({ file, onClose }: Props) {
   const restoreFocus = useRiichiDialogFocus();
   const frames = useMemo(() => replayMatch(file), [file]);
   const [index, setIndex] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [speed, setSpeed] = useState(1);
+  const lastIndex = frames.length - 1;
+  const atEnd = index >= lastIndex;
+  const seek = (next: number) => {
+    setPlaying(false);
+    setIndex(Math.max(0, Math.min(lastIndex, next)));
+  };
+
+  useEffect(() => {
+    if (!playing || atEnd) return;
+    const timer = window.setInterval(() => {
+      setIndex((current) => Math.min(current + 1, lastIndex));
+    }, 1000 / speed);
+    return () => window.clearInterval(timer);
+  }, [playing, atEnd, speed, lastIndex]);
   const roundStarts = useMemo(
     () =>
       frames.flatMap((frame, i) =>
@@ -70,7 +94,7 @@ export function ReplayViewer({ file, onClose }: Props) {
                 (last, item) => (item.index <= index ? item.index : last),
                 0,
               )}
-              onChange={(event) => setIndex(Number(event.target.value))}
+              onChange={(event) => seek(Number(event.target.value))}
             >
               {roundStarts.map(({ index: start, round }) => (
                 <option key={start} value={start}>
@@ -150,21 +174,105 @@ export function ReplayViewer({ file, onClose }: Props) {
             </section>
           ))}
         </div>
-        <div className="riichi-replay-toolbar riichi-replay-footer">
-          <button
-            type="button"
-            disabled={index === 0}
-            onClick={() => setIndex((i) => i - 1)}
-          >
-            {t('riichi.replay.previous')}
-          </button>
-          <button
-            type="button"
-            disabled={index === frames.length - 1}
-            onClick={() => setIndex((i) => i + 1)}
-          >
-            {t('riichi.replay.next')}
-          </button>
+        <div className="riichi-replay-transport">
+          <label className="riichi-replay-progress">
+            <span>
+              {t('riichi.replay.progress')}
+              <output>
+                {index} / {lastIndex}
+              </output>
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={lastIndex}
+              value={index}
+              disabled={lastIndex === 0}
+              onChange={(event) => seek(Number(event.target.value))}
+              aria-valuetext={formatMessage(locale, 'riichi.replay.step', {
+                current: index,
+                total: lastIndex,
+              })}
+            />
+          </label>
+          <div className="riichi-replay-toolbar riichi-replay-footer">
+            <button
+              type="button"
+              disabled={index === 0}
+              onClick={() => seek(0)}
+              aria-label={t('riichi.replay.first')}
+              title={t('riichi.replay.first')}
+            >
+              <SkipBack size={18} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              disabled={index === 0}
+              onClick={() => seek(index - 1)}
+              aria-label={t('riichi.replay.previous')}
+              title={t('riichi.replay.previous')}
+            >
+              <ChevronLeft size={18} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className="riichi-replay-play"
+              disabled={lastIndex === 0}
+              onClick={() => {
+                if (atEnd) setIndex(0);
+                setPlaying(atEnd || !playing);
+              }}
+              aria-label={t(
+                playing && !atEnd
+                  ? 'riichi.replay.pause'
+                  : 'riichi.replay.play',
+              )}
+            >
+              {playing && !atEnd ? (
+                <Pause size={18} aria-hidden="true" />
+              ) : (
+                <Play size={18} aria-hidden="true" />
+              )}
+              {t(
+                playing && !atEnd
+                  ? 'riichi.replay.pause'
+                  : atEnd
+                    ? 'riichi.replay.replay'
+                    : 'riichi.replay.play',
+              )}
+            </button>
+            <button
+              type="button"
+              disabled={index === frames.length - 1}
+              onClick={() => seek(index + 1)}
+              aria-label={t('riichi.replay.next')}
+              title={t('riichi.replay.next')}
+            >
+              <ChevronRight size={18} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              disabled={atEnd}
+              onClick={() => seek(lastIndex)}
+              aria-label={t('riichi.replay.last')}
+              title={t('riichi.replay.last')}
+            >
+              <SkipForward size={18} aria-hidden="true" />
+            </button>
+            <label className="riichi-replay-speed">
+              {t('riichi.replay.speed')}
+              <select
+                value={speed}
+                onChange={(event) => setSpeed(Number(event.target.value))}
+              >
+                {[0.5, 1, 2, 4].map((value) => (
+                  <option key={value} value={value}>
+                    {value}×
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

@@ -1,4 +1,4 @@
-import { ArrowRight, Copy, Info, TimerReset } from 'lucide-react';
+import { Copy, TimerReset } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -27,6 +27,7 @@ import { RulesView } from './components/RulesView';
 import { StatusPanel } from './components/StatusPanel';
 import { TableContextPanel } from './components/TableContextPanel';
 import { RiichiTile } from './components/Tile';
+import { TrainingPanel } from './components/TrainingPanel';
 import {
   isReplayFile,
   type RiichiEvent,
@@ -513,6 +514,7 @@ type RiichiTableProps = {
   actionHandlers: RiichiActionHandlers;
   discard: (seat: number, tile: number) => void;
   dangerHint: boolean;
+  previewBase: number | null;
 };
 
 function RiichiTable({
@@ -523,8 +525,10 @@ function RiichiTable({
   actionHandlers,
   discard,
   dangerHint,
+  previewBase,
 }: RiichiTableProps) {
-  const [highlightedBase, setHighlightedBase] = useState<number | null>(null);
+  const [hoveredBase, setHighlightedBase] = useState<number | null>(null);
+  const highlightedBase = hoveredBase ?? previewBase;
   const opponent = (seat: 1 | 2 | 3) => (
     <OpponentSeat
       seat={seat}
@@ -577,74 +581,6 @@ function RiichiTable({
             dangerHint={dangerHint}
           />
         </div>
-      </div>
-    </div>
-  );
-}
-
-function HintPanel({ hint }: { hint: RiichiGameBag['tenpaiHint'] }) {
-  const { t, locale } = useLocale();
-  if (!hint) {
-    return (
-      <div className="riichi-panel-empty">
-        <Info aria-hidden="true" size={22} />
-        <strong>{t('riichi.hint.emptyTitle')}</strong>
-        <p>{t('riichi.hint.emptyDesc')}</p>
-      </div>
-    );
-  }
-
-  if (hint.kind === 'current') {
-    return (
-      <div className="riichi-hint-content">
-        <p className="riichi-panel-description">
-          {t('riichi.hint.currentWaits')}
-        </p>
-        <div className="riichi-wait-list">
-          {hint.waiting.map((tile) => (
-            <div className="riichi-wait-item" key={tile}>
-              <RiichiTile tile={tile} variant="indicator" />
-              <span>
-                {formatMessage(locale, 'riichi.hint.remaining', {
-                  count: hint.remaining(tile),
-                })}
-              </span>
-            </div>
-          ))}
-        </div>
-        <p className="riichi-hint-line">{hint.line}</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="riichi-hint-content">
-      <p className="riichi-panel-description">
-        {t('riichi.hint.discardCandidates')}
-      </p>
-      <div className="riichi-discard-candidates">
-        {hint.options.map((option) => (
-          <article key={`${option.discardTile}-${option.line}`}>
-            <div className="riichi-candidate-discard">
-              <span>{t('riichi.hint.discard')}</span>
-              <RiichiTile tile={option.discardTile} variant="indicator" />
-              <ArrowRight aria-hidden="true" size={16} />
-            </div>
-            <div className="riichi-candidate-waits">
-              {option.waiting.map((tile) => (
-                <div key={tile}>
-                  <RiichiTile tile={tile} variant="indicator" />
-                  <small>
-                    {formatMessage(locale, 'riichi.hint.remaining', {
-                      count: hint.remaining(tile),
-                    })}
-                  </small>
-                </div>
-              ))}
-            </div>
-            <p>{option.line}</p>
-          </article>
-        ))}
       </div>
     </div>
   );
@@ -823,8 +759,10 @@ const GameMahjongJapanese = () => {
   useRiichiAutomation(riichiSettings);
   useRiichiEffectSounds();
   const game = match?.round ?? null;
-  const bag = useRiichiViewModel(game, activePanel === 'hint', locale);
-  const { turn, claim, tenpaiHint } = bag;
+  const [trainingPreview, setTrainingPreview] = useState<{
+    key: string | null;
+    base: number | null;
+  } | null>(null);
   const [riichiSelection, setRiichiSelection] = useState<string | null>(null);
   const [callConfirmation, setCallConfirmation] = useState<{
     key: string;
@@ -833,6 +771,13 @@ const GameMahjongJapanese = () => {
   const decisionKey = match ? `${match.seed}:${match.turn}` : null;
   const riichiSelecting =
     decisionKey !== null && riichiSelection === decisionKey;
+  const bag = useRiichiViewModel(
+    game,
+    activePanel === 'hint',
+    locale,
+    riichiSelecting,
+  );
+  const { turn, claim, tenpaiHint, trainingAdvice } = bag;
   const claimKey = game ? humanDecisionKey(game) : null;
   const pendingCall =
     claimKey !== null && callConfirmation?.key === claimKey
@@ -1060,13 +1005,27 @@ const GameMahjongJapanese = () => {
               actionHandlers={actionHandlers}
               discard={discard}
               dangerHint={riichiSettings.dangerHint}
+              previewBase={
+                activePanel === 'hint' && trainingPreview?.key === decisionKey
+                  ? trainingPreview.base
+                  : null
+              }
             />
           </div>
           <DesktopSideRail
             activePanel={activePanel}
             onPanelChange={setActivePanel}
-            hasHint={Boolean(tenpaiHint)}
-            hintContent={<HintPanel hint={tenpaiHint} />}
+            hasHint={Boolean(turn)}
+            hintContent={
+              <TrainingPanel
+                advice={trainingAdvice}
+                hint={tenpaiHint}
+                dangerEnabled={riichiSettings.dangerHint}
+                onPreview={(base) =>
+                  setTrainingPreview({ key: decisionKey, base })
+                }
+              />
+            }
             settlementContent={<SettlementPanel game={game} />}
             logContent={
               <GameLogPanel

@@ -651,9 +651,9 @@ body {
   min-height: 996px;
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(320px, 1fr) 960px minmax(320px, 1fr);
+  grid-template-columns: minmax(276px, 1fr) 960px minmax(360px, 1fr);
   align-items: start;
-  gap: 24px;
+  gap: 18px;
   padding: 18px 24px;
   background: linear-gradient(
     90deg,
@@ -2131,6 +2131,9 @@ body {
 }
 
 .riichi-menu-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
   position: absolute;
   top: 0;
   right: 0;
@@ -2151,7 +2154,7 @@ body {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 24px;
+  margin-bottom: 0;
   padding-bottom: 17px;
   border-bottom: 1px solid
     color-mix(in srgb, var(--riichi-border) 20%, transparent);
@@ -3546,6 +3549,237 @@ body {
 
 .riichi-replay-footer {
   justify-content: center;
+}
+
+.riichi-training-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.riichi-training-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 16px 12px;
+  border: 1px solid color-mix(in srgb, var(--riichi-accent) 30%, transparent);
+  border-radius: 12px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--riichi-accent) 10%, transparent),
+    transparent
+  );
+}
+
+.riichi-training-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.riichi-training-summary > div + div {
+  padding-left: 12px;
+  border-left: 1px solid
+    color-mix(in srgb, var(--riichi-border) 25%, transparent);
+}
+
+.riichi-training-summary span,
+.riichi-training-choice-stats span {
+  color: var(--riichi-text-muted);
+  font-size: 11px;
+}
+
+.riichi-training-summary strong {
+  color: var(--riichi-accent);
+  font-size: 23px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.riichi-training-summary small {
+  margin-left: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.riichi-training-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--riichi-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.riichi-training-note,
+.riichi-training-footnote {
+  color: var(--riichi-text-muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.riichi-training-note {
+  margin-top: -6px;
+}
+
+.riichi-training-footnote {
+  padding-top: 12px;
+  border-top: 1px solid
+    color-mix(in srgb, var(--riichi-border) 20%, transparent);
+  font-size: 10px;
+}
+
+.riichi-training-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.riichi-training-choice {
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--riichi-border) 23%, transparent);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.riichi-training-choice--best {
+  border-color: color-mix(in srgb, var(--riichi-accent) 48%, transparent);
+  background: color-mix(in srgb, var(--riichi-accent) 5%, transparent);
+}
+
+.riichi-training-choice-top {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.riichi-training-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 5px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.riichi-training-preview:hover,
+.riichi-training-preview:focus-visible {
+  background: color-mix(in srgb, var(--riichi-accent) 12%, transparent);
+  outline: 1px solid var(--riichi-accent);
+}
+
+.riichi-training-preview > span:first-child {
+  color: var(--riichi-accent);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.riichi-training-choice-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.riichi-training-choice-stats strong {
+  color: var(--riichi-text);
+  font-size: 15px;
+}
+
+.riichi-training-risk {
+  font-size: 10px;
+  color: #d1decf;
+}
+
+.riichi-training-risk--medium {
+  color: #e6cb83;
+}
+.riichi-training-risk--high {
+  color: #f0a5ac;
+}
+
+.riichi-training-effective {
+  margin-top: 10px;
+  border-top: 1px solid
+    color-mix(in srgb, var(--riichi-border) 18%, transparent);
+}
+
+.riichi-training-effective summary {
+  min-height: 36px;
+  padding-top: 10px;
+  cursor: pointer;
+  color: var(--riichi-text-muted);
+  font-size: 11px;
+}
+
+.riichi-training-effective summary > span {
+  float: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.riichi-training-effective .riichi-wait-list {
+  padding-top: 6px;
+  gap: 8px;
+}
+
+.riichi-training-current {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.riichi-replay-transport {
+  padding: 14px 18px;
+  border: 1px solid color-mix(in srgb, var(--riichi-border) 35%, transparent);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.riichi-replay-progress {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--riichi-text-muted);
+  font-size: 12px;
+}
+
+.riichi-replay-progress > span {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.riichi-replay-progress output {
+  color: var(--riichi-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.riichi-replay-progress input {
+  width: 100%;
+  height: 20px;
+  accent-color: var(--riichi-accent);
+  cursor: pointer;
+}
+
+.riichi-replay-footer button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--riichi-text);
+}
+
+.riichi-replay-footer .riichi-replay-play {
+  min-width: 122px;
+  background: var(--riichi-accent);
+  color: var(--riichi-bg);
+  border-color: var(--riichi-accent);
+  font-weight: 700;
+}
+
+.riichi-replay-speed {
+  margin-left: auto;
+  color: var(--riichi-text-muted);
+  font-size: 12px;
 }
 
 .riichi-action-button {
