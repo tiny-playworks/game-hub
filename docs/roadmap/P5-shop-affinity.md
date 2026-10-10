@@ -1,0 +1,106 @@
+# P5 外观商店 + 角色好感故事
+
+> 依赖：P1（雀币）、P2（角色/立绘）、P4（和牌演出，供特效变体挂载）。先读 [README](./README.md)。
+> 目标：雀币有地方花；角色好感有回报。
+
+## 涉及文件（先读）
+
+- P1 的 `wallet.ts`；[playerCharacters.ts](../../src/lib/playerCharacters.ts)（`CHARACTER_AFFINITY_THRESHOLDS`、`addActiveCharacterAffinity`）
+- [riichiProgress.ts](../../src/lib/riichiProgress.ts)（目前每局 `finish-round` +1 主角色好感）
+- [useRiichiTheme.ts](../../src/pages/mahjong/japanese/useRiichiTheme.ts)、[constants.ts](../../src/pages/mahjong/japanese/constants.ts)、`src/assets/riichi/*`（现有桌布/牌背）
+- [components/Tile.tsx](../../src/pages/mahjong/japanese/components/Tile.tsx)（`TileBack`）
+- [Profile.tsx](../../src/pages/Profile.tsx)、[App.tsx](../../src/App.tsx)
+
+---
+
+## 5.1 外观物品
+
+```ts
+type CosmeticCategory = 'tile-back' | 'table-felt' | 'riichi-effect' | 'win-effect' | 'avatar-frame';
+
+interface CosmeticDef {
+  id: string;
+  category: CosmeticCategory;
+  nameKey: string;
+  descKey: string;
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  price: number | null;            // null = 不可购买
+  unlock?: { type: 'affinity'; characterId: string; stage: number }
+         | { type: 'rank'; band: RankBand }
+         | { type: 'achievement'; achievementId: string };
+  preview: string;                 // 预览资源或 CSS 类名
+}
+```
+
+首批 25 件（每类 5 件），价格参考：common 300 / rare 800 / epic 1800 / legendary 3000。
+
+| 类别 | 实现方式 | 示例 |
+|------|---------|------|
+| 牌背 | CSS/SVG 图案，替换 `TileBack` 背面 | 默认蓝、朱漆、樱花纹、青海波、金箔（雀圣解锁） |
+| 桌布 | CSS 渐变 + noise / SVG，替换牌桌底 | 默认绿毡、深蓝、酒红、榻榻米、夜空（雀豪解锁） |
+| 立直特效 | 立直宣言时立直棒落下动画变体 | 默认、火花、樱花飘落、雷光、水墨 |
+| 和牌特效 | 挂到 P4 `WinPresentation` 步骤 6 的特效层 | 默认、烟花、樱吹雪、金龙、星河 |
+| 头像框 | 头像外圈 CSS 装饰 | 木框、金框、樱环、段位框（各段位解锁）、角色专属框 |
+
+每名角色的好感 3 阶段专属外观（共 8 件，`price: null`）计入上述类别或额外追加。
+
+## 5.2 商店与装备
+
+- 新路由 `/shop`，大厅顶栏雀币旁加入口。
+- 布局：左侧类别页签；中间物品网格（预览、名字、稀有度边框、价格/解锁条件/已拥有）；右侧大预览区（牌背/桌布显示一个迷你牌桌，特效可点「播放预览」）。
+- 购买：确认弹窗 → 扣雀币 → 「已获得」动画 → 可直接装备。
+- 不可购买物品显示锁和解锁条件（如「与 夜 好感达到 3 阶段」）。
+- 存储 `game-hub-cosmetics-v1`：`{ owned: string[]; equipped: Record<CosmeticCategory, string> }`；默认物品自动拥有并装备。
+- 应用：日麻牌桌读取装备的牌背/桌布/特效；头像框用于大厅、Profile、日麻玩家座位。现有 `useRiichiTheme` 若与桌布冲突，以桌布装备为准，主题只控制 UI 色调。
+
+## 5.3 好感规则调整
+
+- 获取：
+  - 主角色：完成一整场对局 +2（替换现有「每局 finish-round +1」，避免东风/半庄差距过大）；
+  - 对手角色：每场与其同桌 +1，且名次在其之上额外 +1。
+- 阈值：沿用 `CHARACTER_AFFINITY_THRESHOLDS = [5, 15, 30]`，新增第 4 档 50 作为「满好感」纪念（只解锁头像框）。
+- 老存档好感值保留，按新阈值重新计算阶段，不回退已获奖励。
+
+## 5.4 阶段奖励
+
+| 阶段 | 解锁 |
+|------|------|
+| 1（5） | 故事 1 |
+| 2（15） | 故事 2 + 新台词组（每个触发多 1–2 句）+ 表情可在大厅轮换 |
+| 3（30） | 故事 3 + 角色专属外观（牌背或和牌特效） |
+| 4（50） | 角色专属头像框 |
+
+## 5.5 角色故事与档案页
+
+**故事格式**：每段 3–5 句对话，纯文字 + 立绘表情切换。
+
+```ts
+interface StoryLine { speaker: 'character' | 'player'; textKey: string; expression?: 'normal' | 'happy' | 'frustrated'; }
+interface CharacterStory { id: string; characterId: string; stage: 1 | 2 | 3; titleKey: string; lines: StoryLine[]; }
+```
+
+- 内容：8 角色 × 3 段 × 3–5 句，zh + en，执行方按 P2 人设撰写。主题建议：阶段 1 初识（为什么来雀庄）、阶段 2 牌风来源、阶段 3 心事/约定。
+- 故事播放器：底部对话框 + 立绘居中，点击/空格推进，可回看，可跳过。
+
+**角色档案页** `/characters` 与 `/characters/:id`：
+- 列表：8 张角色卡（未遇到的显示剪影 + 「？？？」，遇到但未解锁的显示立绘但标「未解锁」）。
+- 详情：大立绘（可切表情）、名字、段位带、风格标签、bio；好感进度条与 4 个阶段节点时间线（已解锁可点开故事/查看奖励）；对战记录（同桌场次、你在其之上的比例）；「设为主角色」按钮（需已解锁）。
+- 大厅主角色立绘点击 → 跳转其档案页。
+- 好感升阶时弹出「好感提升！解锁新故事」提示，可直接阅读。
+
+---
+
+## 验收
+
+1. 大厅进入商店，雀币足够时购买牌背并装备，进入日麻牌背已更换；桌布、头像框同理。
+2. 立直特效、和牌特效在商店可预览，装备后对局中生效。
+3. 段位/好感专属物品在商店显示锁与条件；达到条件后自动进入「已拥有」。
+4. 与某角色同桌若干场后好感升至阶段 1，弹窗提示并可阅读故事 1；档案页时间线正确。
+5. 角色列表区分「未遇到 / 已遇到未解锁 / 已解锁」三种状态。
+6. 导出/导入后商店拥有与装备状态保留。
+
+## 不做
+
+- 不做抽卡、限时折扣、付费。
+- 不做角色服装换装（只做表情）。
+- 不做语音、不做故事分支选择。
