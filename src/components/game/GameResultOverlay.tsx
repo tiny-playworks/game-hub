@@ -22,11 +22,14 @@ interface GameResultOverlayProps {
 
 const TONE_STYLE: Record<ResultTone, { ring: string; badge: string }> = {
   win: {
-    ring: 'ring-emerald-400/60',
-    badge: 'bg-emerald-500/12 text-emerald-700',
+    ring: 'ring-gold/60',
+    badge: 'bg-gold/20 text-foreground',
   },
-  lose: { ring: 'ring-rose-400/60', badge: 'bg-rose-500/12 text-rose-700' },
-  draw: { ring: 'ring-slate-400/60', badge: 'bg-slate-500/12 text-slate-700' },
+  lose: {
+    ring: 'ring-destructive/60',
+    badge: 'bg-destructive/15 text-destructive',
+  },
+  draw: { ring: 'ring-wood/60', badge: 'bg-wood/15 text-foreground' },
 };
 
 /**
@@ -57,7 +60,7 @@ export const GameResultOverlay = ({
     >
       <div
         className={cn(
-          'animate-overlay-card-in w-full max-w-xs rounded-2xl bg-white p-6 text-center shadow-2xl ring-4',
+          'animate-overlay-card-in w-full max-w-xs rounded-2xl paper-texture bg-card p-6 text-center shadow-2xl ring-4',
           style.ring,
         )}
       >
@@ -69,12 +72,12 @@ export const GameResultOverlay = ({
         >
           {t('common.gameResult')}
         </p>
-        <h2 className="text-xl font-bold text-slate-900">{title}</h2>
+        <h2 className="text-xl font-bold text-foreground">{title}</h2>
         {description && (
-          <p className="mt-1.5 text-sm text-slate-600">{description}</p>
+          <p className="mt-1.5 text-sm text-muted-foreground">{description}</p>
         )}
         {detail && (
-          <div className="mt-4 rounded-xl bg-slate-50 p-3 text-left text-sm text-slate-600">
+          <div className="mt-4 rounded-xl bg-muted/40 p-3 text-left text-sm text-muted-foreground">
             {detail}
           </div>
         )}

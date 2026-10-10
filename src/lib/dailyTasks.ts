@@ -1,4 +1,5 @@
 import { addGrowthPoints } from '@/lib/growth';
+import { addCoins } from '@/lib/wallet';
 
 export const DAILY_TASK_STORAGE_KEY = 'game-hub-daily-tasks';
 export const DAILY_TASK_COUNT = 3;
@@ -35,7 +36,7 @@ export interface TaskRewardSummary {
   titleKey: string;
   descKey: string;
   rewardPoints: number;
-  scope: 'daily';
+  scope: 'daily' | 'weekly';
 }
 
 export interface RecordDailyTaskEventResult {
@@ -244,6 +245,7 @@ export function recordDailyTaskEvent(
   );
   if (awardedPoints > 0) {
     addGrowthPoints(awardedPoints);
+    addCoins(40 * autoClaimedRewards.length, 'wallet.reason.daily', now);
   }
   return {
     state: savedState,
@@ -273,6 +275,7 @@ export function claimDailyTask(
   saveDailyTaskState(next);
   if (awardedPoints > 0) {
     addGrowthPoints(awardedPoints);
+    addCoins(40, 'wallet.reason.daily', now);
   }
   return {
     ok: awardedPoints > 0,

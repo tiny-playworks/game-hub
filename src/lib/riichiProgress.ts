@@ -10,13 +10,14 @@ import {
   type RiichiDailyEvent,
   recordDailyTaskEvent,
 } from '@/lib/dailyTasks';
+import { emitGameEvent } from '@/lib/gameEvents';
 import { getGrowthOverview } from '@/lib/growth';
 import { appendGrowthFeedItem, type GrowthFeedItem } from '@/lib/growthFeed';
 import {
   addActiveCharacterAffinity,
   type CharacterAffinityProgress,
 } from '@/lib/playerCharacters';
-import { recordGameStart, recordRiichiStatEvent } from '@/lib/playerStats';
+import { recordRiichiStatEvent } from '@/lib/playerStats';
 import { recordWeeklyTaskEvent } from '@/lib/weeklyTasks';
 
 export type RiichiProgressEvent = RiichiDailyEvent;
@@ -220,18 +221,23 @@ export function recordRiichiProgressEvent(
     };
   }
 
-  const dailyResult = recordDailyTaskEvent(event);
-  const weeklyResult = recordWeeklyTaskEvent(event);
+  const startResult =
+    event === 'enter-game'
+      ? emitGameEvent({ gameId: 'mahjong-japanese', type: 'start' })
+      : null;
   recordRiichiStatEvent(event);
-  if (event === 'enter-game') {
-    recordGameStart('mahjong-japanese');
-  }
-
-  const unlockedAchievements = getNewlyUnlockedAchievements();
-  const autoClaimedTaskRewards = [
-    ...dailyResult.autoClaimedRewards,
-    ...weeklyResult.autoClaimedRewards,
+  const autoClaimedTaskRewards = startResult?.taskRewards ?? [
+    ...recordDailyTaskEvent(event).autoClaimedRewards,
+    ...recordWeeklyTaskEvent(event).autoClaimedRewards,
   ];
+  const unlockedAchievements = startResult
+    ? startResult.unlockedAchievements.map((reward) => ({
+        id: reward.id,
+        nameKey: reward.nameKey ?? reward.id,
+        rarity: reward.rarity ?? 'common',
+        points: reward.points ?? 0,
+      }))
+    : getNewlyUnlockedAchievements();
   const rewardPoints = autoClaimedTaskRewards.reduce(
     (total, reward) => total + reward.rewardPoints,
     0,
@@ -277,4 +283,16 @@ export function recordRiichiProgressEvent(
     recordedGrowthItems,
     characterProgress,
   };
+}
+
+/** Whole-match settlement; the store guards this against undo/resume duplicates. */
+export function recordRiichiMatchFinish(
+  placement: number,
+  matchLength: 'east' | 'south',
+) {
+  return emitGameEvent({
+    gameId: 'mahjong-japanese',
+    type: 'finish',
+    meta: { placement, matchLength },
+  });
 }

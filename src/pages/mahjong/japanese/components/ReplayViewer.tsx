@@ -12,7 +12,10 @@ import { useLocale } from '@/contexts/LocaleContext';
 import { formatMessage } from '@/lib/i18n';
 import { type RiichiReplayFile, replayMatch } from '../engine';
 import { formatLogEntry, formatPoints, toTileKeyedItems } from '../helpers';
-import { useRiichiDialogFocus } from '../useRiichiDialogFocus';
+import {
+  useRiichiDialogContainer,
+  useRiichiDialogFocus,
+} from '../useRiichiDialogFocus';
 import { MeldTiles } from './MeldTiles';
 import { RiichiTile } from './Tile';
 
@@ -50,10 +53,7 @@ export function ReplayViewer({ file, onClose }: Props) {
   );
   const frame = frames[Math.min(index, frames.length - 1)];
   const game = frame.round;
-  const container =
-    typeof document === 'undefined'
-      ? undefined
-      : document.querySelector<HTMLElement>('[data-riichi-theme]');
+  const container = useRiichiDialogContainer();
 
   const exportReplay = () => {
     const blob = new Blob([JSON.stringify(file, null, 2)], {
@@ -67,6 +67,7 @@ export function ReplayViewer({ file, onClose }: Props) {
     URL.revokeObjectURL(url);
   };
 
+  if (!container) return null;
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent

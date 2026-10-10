@@ -1,423 +1,457 @@
-import { Check, Compass, ScrollText, Sparkles, UserRound } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ArrowRight,
+  CalendarCheck,
+  Check,
+  ChevronRight,
+  Coins,
+  Crown,
+  Gamepad2,
+  Leaf,
+  Play,
+  ScrollText,
+  Trophy,
+} from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
-import { ContinuePlaySection } from '@/components/home/ContinuePlaySection';
-import { MainPlayerCard } from '@/components/home/MainPlayerCard';
-import { QuickAccessPanel } from '@/components/home/QuickAccessPanel';
+import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
+import { ThemeSwitcher } from '@/components/common/ThemeSwitcher';
+import { PlayerAvatar } from '@/components/home/PlayerAvatar';
 import { Button } from '@/components/ui/button';
+import { WalletBadge } from '@/components/WalletBadge';
 import { useLocale } from '@/contexts/LocaleContext';
 import { categories } from '@/data/categories';
 import { games } from '@/data/games';
-import { type DailyTaskState, ensureDailyTaskState } from '@/lib/dailyTasks';
+import {
+  checkinToday,
+  ensureCheckinState,
+  getBeijingDateKey,
+} from '@/lib/checkin';
+import { ensureDailyTaskState } from '@/lib/dailyTasks';
 import { getGrowthOverview } from '@/lib/growth';
-import { type GrowthFeedItem, getRecentGrowthFeed } from '@/lib/growthFeed';
+import { getRecentGrowthFeed } from '@/lib/growthFeed';
 import {
   getCharacterAffinityStage,
   getCharacterById,
-  type PlayerCharacterState,
   syncPlayerCharacterUnlocks,
 } from '@/lib/playerCharacters';
-import {
-  getPlayerProfile,
-  type PlayerProfile,
-  updatePlayerProfile,
-} from '@/lib/playerProfile';
-import { getRecentMahjongEntry } from '@/lib/recentMahjong';
+import { getPlayerProfile, updatePlayerProfile } from '@/lib/playerProfile';
 import { getTitleById, resolveActiveTitle } from '@/lib/titles';
 import { cn } from '@/lib/utils';
+import { ensureWeeklyTaskState } from '@/lib/weeklyTasks';
 import {
   hasResumableMatch,
   useRiichiStore,
 } from '@/pages/mahjong/japanese/store/riichiMatchStore';
 
-function formatGrowthFeedLine(
-  item: GrowthFeedItem,
-  t: (key: string) => string,
-): string {
-  if (item.type === 'character-stage') {
-    const character = item.characterId
-      ? getCharacterById(item.characterId)
-      : null;
-    return `${character?.name ?? t('growth.feed.characterFallback')} ${t('growth.feed.characterStageVerb')} ${item.stage ?? 0}`;
-  }
-  const title = t(item.titleKey);
-  if (item.points && item.points > 0) {
-    return `${title} +${item.points}`;
-  }
-  return title;
-}
-
-const categoryIconMap = {
-  mini: Compass,
-  board: ScrollText,
-  poker: Sparkles,
-} as const;
-
 const Home = () => {
-  const { t, locale } = useLocale();
-  const view = useRiichiStore((state) => state.view);
-  const match = useRiichiStore((state) => state.match);
-  const [playerProfile, setPlayerProfile] = useState<PlayerProfile>(() =>
-    getPlayerProfile(),
+  const { t } = useLocale();
+  const isActive = useRiichiStore(
+    (state) =>
+      state.view === 'game' &&
+      state.match !== null &&
+      state.match.status !== 'matchEnd',
   );
-  const [dailyTaskState, setDailyTaskState] = useState<DailyTaskState>(() =>
-    ensureDailyTaskState(),
-  );
-  const [growthOverview, setGrowthOverview] = useState(() =>
-    getGrowthOverview(),
-  );
-  const [recentFeed, setRecentFeed] = useState(() => getRecentGrowthFeed(4));
-  const [characterState, setCharacterState] = useState<PlayerCharacterState>(
+  const [profile, setProfile] = useState(getPlayerProfile);
+  const [daily, setDaily] = useState(ensureDailyTaskState);
+  const [weekly, setWeekly] = useState(ensureWeeklyTaskState);
+  const [checkin, setCheckin] = useState(ensureCheckinState);
+  const [growth, setGrowth] = useState(getGrowthOverview);
+  const [characters, setCharacters] = useState(
     () => syncPlayerCharacterUnlocks().state,
   );
-
-  const recentMahjong = getRecentMahjongEntry();
-  const isRiichiActive = Boolean(
-    view === 'game' && match && match.status !== 'matchEnd',
+  const [feed, setFeed] = useState(() => getRecentGrowthFeed(3));
+  const [categoryId, setCategoryId] = useState('mini');
+  const character = getCharacterById(characters.activeCharacterId);
+  const title = getTitleById(
+    resolveActiveTitle(profile.activeTitle, growth.totalPoints),
   );
-  const riichiGame = games.find((item) => item.id === 'mahjong-japanese');
-  const activeCharacter = getCharacterById(characterState.activeCharacterId);
-  const activeAffinity =
-    characterState.affinityByCharacter[activeCharacter.id] ?? 0;
-  const activeStage = getCharacterAffinityStage(activeAffinity);
-
-  const titleLabel = useMemo(() => {
-    const resolvedId = resolveActiveTitle(
-      playerProfile.activeTitle,
-      growthOverview.totalPoints,
-    );
-    const def = getTitleById(resolvedId);
-    return def ? t(def.nameKey) : t('profile.titles.none');
-  }, [growthOverview.totalPoints, playerProfile.activeTitle, t]);
-
-  const dailyTasksDisplay = useMemo(() => {
-    const items = [...dailyTaskState.items];
-    items.sort((a, b) => {
-      if (a.completed === b.completed) return 0;
-      return a.completed ? 1 : -1;
-    });
-    return items.slice(0, 3);
-  }, [dailyTaskState.items]);
-
-  const recentGrowthListPoints = useMemo(
-    () => recentFeed.reduce((sum, item) => sum + (item.points ?? 0), 0),
-    [recentFeed],
-  );
-
-  const recentGrowthCardMeta = useMemo(
-    () =>
-      t('home.recentGrowth.cardMeta')
-        .replace('{{count}}', String(recentFeed.length))
-        .replace('{{points}}', String(recentGrowthListPoints)),
-    [recentFeed.length, recentGrowthListPoints, t],
-  );
-
-  const refreshHallState = useCallback(() => {
-    setDailyTaskState(ensureDailyTaskState());
+  const signedToday = checkin.dateKey === getBeijingDateKey();
+  const canResume = isActive || hasResumableMatch();
+  const refresh = useCallback(() => {
+    setDaily(ensureDailyTaskState());
+    setWeekly(ensureWeeklyTaskState());
+    setCheckin(ensureCheckinState());
     const nextGrowth = getGrowthOverview();
-    setGrowthOverview(nextGrowth);
-    setRecentFeed(getRecentGrowthFeed(4));
-    setCharacterState(syncPlayerCharacterUnlocks().state);
-
-    const currentProfile = getPlayerProfile();
-    const nextTitleId = resolveActiveTitle(
-      currentProfile.activeTitle,
+    setGrowth(nextGrowth);
+    const current = getPlayerProfile();
+    const nextTitle = resolveActiveTitle(
+      current.activeTitle,
       nextGrowth.totalPoints,
     );
-    const syncedProfile =
-      nextTitleId === currentProfile.activeTitle
-        ? currentProfile
-        : updatePlayerProfile({ activeTitle: nextTitleId });
-    setPlayerProfile(syncedProfile);
-  }, []);
-
-  useEffect(() => {
-    refreshHallState();
-  }, [refreshHallState]);
-
-  const recentPlayedText = useMemo(() => {
-    if (!recentMahjong) return '';
-    return new Date(recentMahjong.playedAt).toLocaleString(
-      locale === 'zh' ? 'zh-CN' : 'en-US',
-      {
-        month: 'numeric',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      },
+    setProfile(
+      nextTitle === current.activeTitle
+        ? current
+        : updatePlayerProfile({ activeTitle: nextTitle }),
     );
-  }, [locale, recentMahjong]);
-
-  if (!riichiGame) return null;
+    setCharacters(syncPlayerCharacterUnlocks().state);
+    setFeed(getRecentGrowthFeed(3));
+  }, []);
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   return (
-    <div className="min-h-screen bg-home-ambient font-['Avenir_Next','PingFang_SC','Hiragino_Sans_GB','Microsoft_YaHei',sans-serif] text-slate-900 transition-colors duration-500 dark:text-slate-100">
-      <header className="relative z-50 border-b border-emerald-100/30 bg-white/40 px-4 py-4 backdrop-blur-md dark:border-slate-800/50 dark:bg-slate-900/40">
-        <div className="mx-auto flex max-w-6xl items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-medium tracking-[0.24em] text-emerald-700/80 uppercase dark:text-emerald-400/80">
-              Game Hub
-            </p>
-            <h1 className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
-              {t('home.title')}
-            </h1>
-            <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-              {t('home.subtitle')}
-            </p>
+    <div className="lobby-page min-h-screen bg-background text-foreground">
+      <header className="border-b border-wood/20 bg-card/90 px-4 py-3 backdrop-blur sm:px-8">
+        <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3">
+          <Link
+            to="/profile"
+            className="flex min-w-0 items-center gap-3"
+            aria-label={t('home.quick.profile')}
+          >
+            <PlayerAvatar profile={profile} size="sm" />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">
+                {profile.nickname}
+              </p>
+              <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                {title ? t(title.nameKey) : t('profile.titles.none')}
+              </p>
+            </div>
+          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <WalletBadge />
+            <Button
+              variant="outline"
+              disabled={signedToday}
+              onClick={() => {
+                checkinToday();
+                refresh();
+              }}
+            >
+              <CalendarCheck className="size-4" />
+              {t(
+                signedToday
+                  ? 'profile.checkin.checkedIn'
+                  : 'home.quick.checkin',
+              )}
+            </Button>
+            <Link
+              to="/achievements"
+              className="flex size-9 items-center justify-center rounded-full border bg-card text-primary"
+              aria-label={t('home.quick.achievements')}
+              title={t('home.quick.achievements')}
+            >
+              <Trophy className="size-4" />
+            </Link>
+            <LanguageSwitcher />
+            <ThemeSwitcher />
           </div>
-          <QuickAccessPanel
-            withLocaleSwitcher
-            onHallRefresh={refreshHallState}
-          />
         </div>
       </header>
-
-      <main className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-8 md:py-10">
-        <section className="grid gap-4 md:grid-cols-2">
-          <MainPlayerCard
-            className="order-2 md:order-1"
-            profile={playerProfile}
-            titleLabel={titleLabel}
-            totalPoints={growthOverview.totalPoints}
-            unlockedAchievements={growthOverview.unlockedAchievements}
-            unlockedCharacterCount={characterState.unlockedCharacterIds.length}
-          />
-          <ContinuePlaySection
-            className="order-1 md:order-2"
-            isRiichiActive={isRiichiActive}
-            hasRecentMahjong={Boolean(recentMahjong)}
-            hasSavedRiichi={hasResumableMatch()}
-            recentPlayedText={recentPlayedText}
-          />
-        </section>
-
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <article
-            className="home-glass-panel home-hover-lift rounded-[26px] p-5 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both"
-            style={{ animationDelay: '150ms' }}
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                {t('home.daily.title')}
-              </p>
-              <span className="text-xs text-slate-500 dark:text-slate-400">
-                {dailyTaskState.dateKey}
-              </span>
-            </div>
-            <div className="mt-4 space-y-3">
-              {dailyTasksDisplay.map((task) => (
-                <div
-                  key={task.id}
-                  className={cn(
-                    'rounded-2xl border p-3 transition-colors',
-                    task.completed
-                      ? 'border-emerald-200/90 bg-emerald-50/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]'
-                      : 'border-slate-100 bg-slate-50/80',
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        {task.completed ? (
-                          <span
-                            className="flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm"
-                            title={t('home.daily.claimed')}
-                          >
-                            <Check className="size-3.5" strokeWidth={2.5} />
-                          </span>
-                        ) : null}
-                        <p
-                          className={cn(
-                            'text-sm font-medium',
-                            task.completed
-                              ? 'text-emerald-950'
-                              : 'text-slate-900',
-                          )}
-                        >
-                          {t(task.titleKey)}
-                        </p>
-                      </div>
-                      <p
-                        className={cn(
-                          'mt-1 text-xs',
-                          task.completed
-                            ? 'text-emerald-800/80'
-                            : 'text-slate-500',
-                        )}
-                      >
-                        {t(task.descKey)}
-                      </p>
-                    </div>
-                    <span
-                      className={cn(
-                        'shrink-0 rounded-full px-2 py-1 text-xs tabular-nums',
-                        task.completed
-                          ? 'bg-white/90 text-emerald-800 ring-1 ring-emerald-200/80'
-                          : 'bg-white text-slate-600',
-                      )}
-                    >
-                      {task.progress}/{task.target}
-                    </span>
-                  </div>
-                  <p
-                    className={cn(
-                      'mt-2 text-xs',
-                      task.completed
-                        ? 'font-medium text-emerald-800'
-                        : 'text-slate-600',
-                    )}
-                  >
-                    {task.completed
-                      ? `${t('home.daily.settledPrefix')}${task.rewardPoints}`
-                      : `${t('home.daily.pendingRewardPrefix')}${task.rewardPoints}`}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </article>
-
-          <article
-            className="home-glass-panel home-hover-lift rounded-[26px] p-5 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both"
-            style={{ animationDelay: '200ms' }}
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                {t('home.recentGrowth.title')}
-              </p>
-              <span
-                className="text-xs text-slate-500 dark:text-slate-400"
-                title={t('home.recentGrowth.cardMetaHint')}
-              >
-                {recentGrowthCardMeta}
-              </span>
-            </div>
-            <div className="mt-4 space-y-3">
-              {recentFeed.length > 0 ? (
-                recentFeed.map((item) => (
-                  <div
-                    key={item.id}
-                    className="rounded-2xl border border-slate-100 bg-slate-50/80 p-3"
-                  >
-                    <p className="text-sm text-slate-900">
-                      {formatGrowthFeedLine(item, t)}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-3 text-sm text-slate-500">
-                  {t('home.recentGrowth.empty')}
-                </div>
-              )}
-            </div>
-          </article>
-
-          <article
-            className="home-glass-panel home-hover-lift rounded-[26px] p-5 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both md:col-span-2 xl:col-span-1"
-            style={{ animationDelay: '250ms' }}
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                {t('home.characters.title')}
-              </p>
-              <UserRound className="size-4 text-emerald-700 dark:text-emerald-400" />
-            </div>
-            <div className="mt-4 rounded-[24px] bg-[linear-gradient(135deg,#13243b,#173226_58%,#234036)] p-4 text-white">
-              <div className="flex items-start gap-3">
-                <CharacterPortraitSlot
-                  character={activeCharacter}
-                  size="sm"
-                  label={`${activeCharacter.name} · ${t('character.portrait.placeholder')}`}
-                  className="border-white/25"
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="text-2xl font-semibold">
-                    {activeCharacter.name}
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-slate-200">
-                    {activeCharacter.tagline}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-                <div className="rounded-2xl bg-white/10 px-3 py-2">
-                  <p className="text-xs text-slate-300">
-                    {t('home.characters.currentStage')}
-                  </p>
-                  <p className="mt-1 font-semibold">{activeStage}</p>
-                </div>
-                <div className="rounded-2xl bg-white/10 px-3 py-2">
-                  <p className="text-xs text-slate-300">
-                    {t('home.characters.affinity')}
-                  </p>
-                  <p className="mt-1 font-semibold">{activeAffinity}</p>
-                </div>
-              </div>
-            </div>
-            <p className="mt-3 text-sm text-slate-600">
-              {t('home.characters.unlockedPrefix')}
-              {characterState.unlockedCharacterIds.length}
-              {t('home.characters.unlockedSuffix')}
+      <main className="mx-auto max-w-[1440px] px-4 py-6 sm:px-8 sm:py-8">
+        <div className="mb-6 flex items-end justify-between gap-4">
+          <div>
+            <p className="flex items-center gap-2 text-xs tracking-[0.2em] text-primary">
+              <Leaf className="size-3.5" />
+              {t('lobby.brand')}
             </p>
-            <Button asChild variant="outline" className="mt-4 border-slate-200">
-              <Link to="/profile">{t('home.characters.viewProfile')}</Link>
-            </Button>
-          </article>
-        </section>
-
-        <section
-          className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both"
-          style={{ animationDelay: '300ms' }}
-        >
-          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-            <div className="space-y-2">
-              <p className="text-xs font-medium tracking-[0.26em] text-emerald-700/80 uppercase dark:text-emerald-400/80">
-                {t('home.other.shelfLabel')}
-              </p>
-              <h2 className="text-2xl font-semibold text-slate-900 md:text-3xl dark:text-white">
-                {t('home.other.title')}
-              </h2>
-            </div>
-            <p className="max-w-3xl text-sm leading-6 text-slate-600 md:text-right dark:text-slate-400">
-              {t('home.other.subtitle')}
-            </p>
+            <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">
+              {t('lobby.title')}
+            </h1>
           </div>
-
-          <div className="grid gap-4 md:grid-cols-3">
-            {categories.map((category, index) => {
-              const Icon =
-                categoryIconMap[category.id as keyof typeof categoryIconMap];
-              return (
-                <Link
-                  key={category.id}
-                  to={category.path}
-                  className="group home-glass-panel home-hover-lift rounded-[24px] p-5 animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both"
-                  style={{ animationDelay: `${350 + index * 50}ms` }}
+          <p className="hidden text-sm text-muted-foreground sm:block">
+            {t('lobby.welcome')}
+          </p>
+        </div>
+        <section
+          className="lobby-main-grid grid gap-5"
+          aria-label={t('lobby.title')}
+        >
+          <article className="felt-surface relative flex min-h-[400px] flex-col overflow-hidden rounded-[28px] border border-gold/40 p-6 text-paper">
+            <div className="flex items-center justify-between text-xs text-paper/70">
+              <span>{t('lobby.companion')}</span>
+              <span className="rounded-full border border-gold/40 px-2.5 py-1 text-gold">
+                {t('home.characters.currentStage')}{' '}
+                {getCharacterAffinityStage(
+                  characters.affinityByCharacter[character.id] ?? 0,
+                )}
+              </span>
+            </div>
+            <div className="relative my-7 flex flex-1 items-center justify-center">
+              <span
+                className="lobby-portrait-ring absolute size-56 rounded-full border border-gold/20"
+                aria-hidden="true"
+              />
+              <CharacterPortraitSlot
+                character={character}
+                size="lg"
+                label={`${t(`lobby.character.${character.id}.name`)} · ${t('character.portrait.placeholder')}`}
+                className="h-64 w-44 rounded-t-[80px] rounded-b-3xl border-gold/30 text-6xl shadow-xl"
+              />
+            </div>
+            <div className="relative">
+              <p className="text-xs tracking-[0.2em] text-gold">
+                {t('lobby.yourCompanion')}
+              </p>
+              <h2 className="mt-2 text-3xl">
+                {t(`lobby.character.${character.id}.name`)}
+              </h2>
+              <p className="mt-3 border-l-2 border-gold/60 pl-3 text-sm leading-7 text-paper/85">
+                {t(`lobby.character.${character.id}.line`)}
+              </p>
+              <Link
+                to="/profile"
+                className="mt-5 inline-flex items-center gap-2 text-xs text-paper/70 hover:text-gold"
+              >
+                {t('home.characters.viewProfile')}
+                <ChevronRight className="size-3.5" />
+              </Link>
+            </div>
+          </article>
+          <div className="flex min-w-0 flex-col gap-4">
+            <article className="paper-texture flex flex-1 flex-col rounded-[28px] border border-wood/25 bg-card p-6 sm:p-8">
+              <div className="flex items-center justify-between">
+                <span className="text-xs tracking-[0.16em] text-muted-foreground">
+                  {t('lobby.rankedLabel')}
+                </span>
+                <Crown className="size-5 text-wood" />
+              </div>
+              <div className="my-6 flex flex-1 flex-col items-center justify-center text-center">
+                <div className="lobby-rank-emblem flex size-24 items-center justify-center rounded-[28px] border border-gold/50 bg-gold/10">
+                  <Crown className="size-11 text-wood" strokeWidth={1.25} />
+                </div>
+                <h2 className="mt-5 text-2xl font-semibold">
+                  {t('lobby.rankedSoon')}
+                </h2>
+                <p className="mt-3 max-w-xs text-sm leading-7 text-muted-foreground">
+                  {t('lobby.rankedDescription')}
+                </p>
+              </div>
+              <Button disabled size="lg" className="w-full rounded-xl">
+                <Crown className="size-4" />
+                {t('lobby.startRanked')}
+              </Button>
+            </article>
+            <article className="felt-surface rounded-[24px] border border-gold/30 p-5 text-paper">
+              <div className="flex items-center gap-3">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-gold/30 bg-paper/10">
+                  <Play className="size-5 text-gold" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold">
+                    {t('lobby.freePlay')}
+                  </h2>
+                  <p className="mt-1 text-xs text-paper/65">
+                    {t('lobby.freeDescription')}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button
+                  asChild
+                  className="flex-1 rounded-xl bg-gold text-[#24362a] hover:bg-gold/90"
                 >
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs tracking-[0.2em] text-emerald-700/80 uppercase dark:text-emerald-400/80">
-                      {t('home.other.sideLabel')}
-                    </p>
-                    {Icon && (
-                      <span className="inline-flex size-8 items-center justify-center rounded-full border border-emerald-200/50 bg-emerald-50/80 text-emerald-700 shadow-sm transition-colors group-hover:bg-emerald-100 dark:border-emerald-800/50 dark:bg-emerald-900/40 dark:text-emerald-400 dark:group-hover:bg-emerald-900/60">
-                        <Icon className="size-4" />
+                  <Link to="/game/mahjong-japanese">
+                    {t('lobby.freePlay')}
+                    <ArrowRight className="size-4" />
+                  </Link>
+                </Button>
+                {canResume ? (
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="flex-1 rounded-xl border-paper/25 bg-transparent text-paper hover:bg-paper/10 hover:text-paper"
+                  >
+                    <Link
+                      to={
+                        isActive
+                          ? '/game/mahjong-japanese'
+                          : '/game/mahjong-japanese?resume=1'
+                      }
+                    >
+                      {t('lobby.resume')}
+                    </Link>
+                  </Button>
+                ) : null}
+              </div>
+            </article>
+          </div>
+          <aside className="paper-texture rounded-[28px] border border-wood/25 bg-card p-5">
+            <div className="flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-base font-semibold">
+                <ScrollText className="size-4 text-primary" />
+                {t('home.daily.title')}
+              </h2>
+              <span className="text-xs text-muted-foreground">
+                {daily.items.filter((task) => task.completed).length}/3
+              </span>
+            </div>
+            <ul className="mt-3 divide-y">
+              {daily.items.map((task) => (
+                <li key={task.id} className="py-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium">{t(task.titleKey)}</p>
+                    {task.completed ? (
+                      <Check className="size-4 shrink-0 text-primary" />
+                    ) : (
+                      <span className="text-xs tabular-nums text-muted-foreground">
+                        {task.progress}/{task.target}
                       </span>
                     )}
                   </div>
-                  <h3 className="mt-4 text-lg font-semibold text-slate-900 transition-colors group-hover:text-emerald-700 dark:text-slate-100 dark:group-hover:text-emerald-400">
-                    {t(`category.${category.id}.name`)}
-                  </h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
-                    {t(`category.${category.id}.description`)}
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    {t(task.descKey)}
                   </p>
-                </Link>
-              );
-            })}
-          </div>
+                  <p className="mt-1.5 flex items-center gap-1 text-xs text-primary">
+                    <Coins className="size-3" />
+                    40 {t('wallet.coins')} · {task.rewardPoints}{' '}
+                    {t('lobby.growthPoints')}
+                    {task.completed ? ` · ${t('home.daily.claimed')}` : ''}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            <h3 className="mt-3 border-t pt-4 text-sm font-semibold">
+              {t('lobby.weekly')}
+            </h3>
+            <div className="mt-3 space-y-3">
+              {weekly.items.map((task) => (
+                <div key={task.id}>
+                  <div className="flex justify-between gap-2 text-xs">
+                    <span>{t(task.titleKey)}</span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {task.progress}/{task.target}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 h-1 rounded-full bg-muted">
+                    <div
+                      className="h-1 rounded-full bg-primary"
+                      style={{
+                        width: `${(task.progress / task.target) * 100}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-5 border-t pt-4">
+              <h3 className="text-sm font-semibold">
+                {t('home.recentGrowth.title')}
+              </h3>
+              {feed.length ? (
+                <ul className="mt-2 space-y-2">
+                  {feed.map((item) => (
+                    <li
+                      key={item.id}
+                      className="flex justify-between gap-2 text-xs text-muted-foreground"
+                    >
+                      <span className="truncate">{t(item.titleKey)}</span>
+                      {item.points ? (
+                        <span className="shrink-0 text-primary">
+                          +{item.points}
+                        </span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                  {t('home.recentGrowth.empty')}
+                </p>
+              )}
+            </div>
+          </aside>
         </section>
+        <section className="mt-8" aria-labelledby="arcade-heading">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Gamepad2 className="size-5 text-wood" />
+              <h2 id="arcade-heading" className="text-xl font-semibold">
+                {t('lobby.arcade')}
+              </h2>
+              <span className="text-xs text-muted-foreground">
+                16 {t('lobby.games')}
+              </span>
+            </div>
+            <div
+              role="tablist"
+              aria-label={t('lobby.arcade')}
+              className="flex gap-1 rounded-full border bg-card p-1"
+            >
+              {categories.map((category) => (
+                <button
+                  key={category.id}
+                  id={`arcade-tab-${category.id}`}
+                  type="button"
+                  role="tab"
+                  aria-controls="arcade-panel"
+                  aria-selected={categoryId === category.id}
+                  className={cn(
+                    'rounded-full px-4 py-1.5 text-xs transition',
+                    categoryId === category.id
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-muted',
+                  )}
+                  onClick={() => setCategoryId(category.id)}
+                >
+                  {t(`category.${category.id}.name`)}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div
+            id="arcade-panel"
+            role="tabpanel"
+            aria-labelledby={`arcade-tab-${categoryId}`}
+            className="mt-4 flex gap-4 overflow-x-auto pb-3"
+          >
+            {games
+              .filter((game) => game.categoryId === categoryId)
+              .map((game) => (
+                <Link
+                  key={game.id}
+                  to={game.path}
+                  className="paper-texture group flex w-[230px] shrink-0 flex-col rounded-[22px] border border-wood/20 bg-card p-5 transition hover:-translate-y-1 hover:border-primary/40 hover:shadow-md"
+                >
+                  <div className="flex items-center justify-between">
+                    <Gamepad2 className="size-5 text-primary" />
+                    <span
+                      role="img"
+                      aria-label={`${t('lobby.difficulty')} ${game.difficulty}`}
+                      className="text-xs tracking-widest text-wood"
+                    >
+                      {'★'.repeat(game.difficulty)}
+                      {'☆'.repeat(4 - game.difficulty)}
+                    </span>
+                  </div>
+                  <h3 className="mt-4 text-lg font-semibold group-hover:text-primary">
+                    {t(`game.${game.id}.name`)}
+                  </h3>
+                  <p className="mt-2 line-clamp-2 min-h-10 text-xs leading-5 text-muted-foreground">
+                    {t(`game.${game.id}.description`)}
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-1.5">
+                    {game.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full bg-muted px-2 py-1 text-[10px] text-muted-foreground"
+                      >
+                        {t(`game.tag.${tag}`)}
+                      </span>
+                    ))}
+                  </div>
+                </Link>
+              ))}
+          </div>
+          <Link
+            to={`/category/${categoryId}`}
+            className="mt-2 inline-flex items-center gap-1 text-xs text-primary"
+          >
+            {t('lobby.viewCategory')}
+            <ArrowRight className="size-3.5" />
+          </Link>
+        </section>
+        <footer className="mt-8 flex flex-wrap items-center justify-between gap-2 border-t border-wood/20 pt-5 text-xs text-muted-foreground">
+          <span>{t('lobby.footer')}</span>
+          <Link to="/profile">
+            {t('save.title')}
+            <ChevronRight className="ml-1 inline size-3" />
+          </Link>
+        </footer>
       </main>
     </div>
   );
 };
-
 export default Home;

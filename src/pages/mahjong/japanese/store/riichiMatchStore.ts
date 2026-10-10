@@ -1,6 +1,9 @@
 import { shallow } from 'zustand/shallow';
 import { createWithEqualityFn } from 'zustand/traditional';
-import { recordRiichiProgressEvent } from '@/lib/riichiProgress';
+import {
+  recordRiichiMatchFinish,
+  recordRiichiProgressEvent,
+} from '@/lib/riichiProgress';
 import { randomSeed } from '@/lib/seededRandom';
 import {
   applyEvent,
@@ -76,6 +79,20 @@ function processProgress(
       recordRiichiProgressEvent(effect.event);
     } catch {
       // 成长系统写入失败不影响对局
+    }
+  }
+  if (match.status === 'matchEnd' && match.matchEnd) {
+    const key = `${match.seed}:finish-match`;
+    if (!next.includes(key)) {
+      try {
+        recordRiichiMatchFinish(
+          match.matchEnd.ranking.indexOf(0) + 1,
+          match.matchLength,
+        );
+        next = [...next, key].slice(-400);
+      } catch {
+        // A failed wallet write must not interrupt the match.
+      }
     }
   }
   return next;

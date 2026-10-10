@@ -1,5 +1,6 @@
 import type { RiichiDailyEvent, TaskRewardSummary } from '@/lib/dailyTasks';
 import { addGrowthPoints } from '@/lib/growth';
+import { addCoins } from '@/lib/wallet';
 
 export const WEEKLY_TASK_STORAGE_KEY = 'game-hub-weekly-tasks';
 
@@ -205,6 +206,7 @@ export function recordWeeklyTaskEvent(
   );
   if (awardedPoints > 0) {
     addGrowthPoints(awardedPoints);
+    addCoins(150 * autoClaimedRewards.length, 'wallet.reason.weekly', now);
   }
   return {
     state: savedState,
@@ -234,6 +236,7 @@ export function claimWeeklyTask(
   saveWeeklyTaskState(next);
   if (awardedPoints > 0) {
     addGrowthPoints(awardedPoints);
+    addCoins(150, 'wallet.reason.weekly', now);
   }
   return {
     ok: awardedPoints > 0,

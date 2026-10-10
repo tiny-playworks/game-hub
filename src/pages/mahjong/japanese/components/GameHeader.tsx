@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useRef } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { WalletBadge } from '@/components/WalletBadge';
 import { useLocale } from '@/contexts/LocaleContext';
 import { formatMessage } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -17,6 +18,7 @@ import { RIICHI_THEMES, type RiichiThemeId } from '../constants';
 import { formatPoints, toTileKeyedItems } from '../helpers';
 import { useRiichiStore } from '../store/riichiMatchStore';
 import type { RiichiGameState } from '../types';
+import { useRiichiDialogContainer } from '../useRiichiDialogFocus';
 import { RiichiSettingsPanel } from './RiichiSettingsPanel';
 import { RiichiTile } from './Tile';
 
@@ -51,10 +53,7 @@ export function GameHeader({
   const menuOpen = useRiichiStore((state) => state.showMenu);
   const setMenuOpen = useRiichiStore((state) => state.setShowMenu);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
-  const themeContainer =
-    typeof document === 'undefined'
-      ? undefined
-      : document.querySelector<HTMLElement>('[data-riichi-theme]');
+  const themeContainer = useRiichiDialogContainer();
   const roundText = formatMessage(locale, 'game.mahjong.roundTextFormat', {
     wind: t(`game.mahjong.winds.${game.roundWind}`),
     round: game.roundNumber,
@@ -86,6 +85,7 @@ export function GameHeader({
       </div>
 
       <div className="riichi-header-actions">
+        <WalletBadge />
         <div className="riichi-header-dora">
           <span>{t('game.mahjong.dora')}</span>
           <div>

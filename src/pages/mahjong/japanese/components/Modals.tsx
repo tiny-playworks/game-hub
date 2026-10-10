@@ -24,7 +24,10 @@ import {
   summarizeWinnerPayments,
 } from '../helpers';
 import type { RiichiWinResult, RoundResult } from '../types';
-import { useRiichiDialogFocus } from '../useRiichiDialogFocus';
+import {
+  useRiichiDialogContainer,
+  useRiichiDialogFocus,
+} from '../useRiichiDialogFocus';
 
 export type WinResultState = RiichiWinResult;
 
@@ -36,10 +39,8 @@ function ResultDialog({
   onClose: () => void;
 }) {
   const restoreFocus = useRiichiDialogFocus();
-  const container =
-    typeof document === 'undefined'
-      ? undefined
-      : document.querySelector<HTMLElement>('[data-riichi-theme]');
+  const container = useRiichiDialogContainer();
+  if (!container) return null;
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent

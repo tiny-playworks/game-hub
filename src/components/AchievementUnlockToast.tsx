@@ -77,12 +77,12 @@ export default function AchievementUnlockToast() {
 
   const rarityClass = current.rarity
     ? rarityClassMap[current.rarity]
-    : 'bg-emerald-500/90';
+    : 'bg-primary';
 
   return (
     <div className="pointer-events-none fixed left-1/2 top-20 z-[55] -translate-x-1/2 animate-in fade-in slide-in-from-top-2 duration-200">
-      <div className="min-w-[260px] rounded-2xl border border-white/20 bg-slate-900/95 px-4 py-3 text-white shadow-2xl">
-        <p className="text-xs tracking-[0.16em] text-emerald-200 uppercase">
+      <div className="min-w-[260px] rounded-2xl border border-gold/30 bg-felt px-4 py-3 text-white shadow-2xl">
+        <p className="text-xs tracking-[0.16em] text-gold uppercase">
           {t('achievement.toast.unlocked')}
         </p>
         <p className="mt-1 text-sm font-semibold">
@@ -95,7 +95,7 @@ export default function AchievementUnlockToast() {
             </span>
           )}
           {typeof current.points === 'number' && (
-            <span className="rounded-full bg-emerald-600/90 px-2 py-0.5">
+            <span className="rounded-full bg-paper/15 px-2 py-0.5">
               {t('achievement.toast.points')}
               {current.points}
             </span>

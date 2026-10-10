@@ -91,15 +91,15 @@ const Category = () => {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="premium-panel-soft rounded-[22px] p-4">
                   <p className="text-xs tracking-[0.2em] text-muted-foreground uppercase">
-                    Mode
+                    {t('category.mode')}
                   </p>
                   <p className="mt-3 text-lg font-semibold text-foreground">
-                    Side Content
+                    {t('category.sideContent')}
                   </p>
                 </div>
                 <div className="premium-panel-soft rounded-[22px] p-4">
                   <p className="text-xs tracking-[0.2em] text-muted-foreground uppercase">
-                    Games
+                    {t('category.gameCount')}
                   </p>
                   <p className="mt-3 text-lg font-semibold text-foreground">
                     {String(categoryGames.length).padStart(2, '0')}
@@ -141,12 +141,9 @@ const Category = () => {
                           'rounded-full px-3 py-1 text-xs font-medium',
                           game.difficulty >= 4 &&
                             'bg-destructive/20 text-destructive',
-                          game.difficulty === 3 &&
-                            'bg-amber-500/20 text-amber-700',
-                          game.difficulty === 2 &&
-                            'bg-blue-500/20 text-blue-700',
-                          game.difficulty === 1 &&
-                            'bg-green-500/20 text-green-700',
+                          game.difficulty === 3 && 'bg-gold/20 text-wood',
+                          game.difficulty === 2 && 'bg-primary/15 text-primary',
+                          game.difficulty === 1 && 'bg-primary/10 text-primary',
                         )}
                       >
                         {difficultyLabel(game.difficulty)}

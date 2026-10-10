@@ -1,9 +1,10 @@
-import { lazy, type ReactElement, Suspense, useEffect } from 'react';
+import { lazy, type ReactElement, Suspense, useEffect, useRef } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import AchievementUnlockToast from '@/components/AchievementUnlockToast';
+import CoinsToast from '@/components/CoinsToast';
 import GrowthPointToast from '@/components/GrowthPointToast';
 import { LocaleProvider } from '@/contexts/LocaleContext';
-import { recordGameStart } from '@/lib/playerStats';
+import { emitGameEvent } from '@/lib/gameEvents';
 import Home from '@/pages/Home';
 import './App.css';
 
@@ -43,8 +44,11 @@ function TrackedPage({
   gameId: string;
   children: ReactElement;
 }) {
+  const tracked = useRef<string | null>(null);
   useEffect(() => {
-    recordGameStart(gameId);
+    if (tracked.current === gameId) return;
+    tracked.current = gameId;
+    emitGameEvent({ gameId, type: 'start' });
   }, [gameId]);
   return children;
 }
@@ -55,6 +59,7 @@ const App = () => {
       <LocaleProvider>
         <AchievementUnlockToast />
         <GrowthPointToast />
+        <CoinsToast />
         <Suspense fallback={<PageFallback />}>
           <Routes>
             <Route path="/" element={<Home />} />

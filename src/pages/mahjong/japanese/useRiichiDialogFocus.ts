@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
 /** 自动出现的对话框没有 Radix Trigger；关闭时恢复可用的原焦点。 */
 export function useRiichiDialogFocus() {
@@ -26,4 +26,13 @@ export function useRiichiDialogFocus() {
         ?.focus();
     }
   };
+}
+
+/** Resolve the portal host after commit: rules-to-game navigation replaces the old host. */
+export function useRiichiDialogContainer() {
+  const [container, setContainer] = useState<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    setContainer(document.querySelector<HTMLElement>('[data-riichi-theme]'));
+  }, []);
+  return container;
 }

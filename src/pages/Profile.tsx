@@ -9,6 +9,9 @@ import {
 import { Link } from 'react-router-dom';
 import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
+import { ThemeSwitcher } from '@/components/common/ThemeSwitcher';
+import { DataManagementCard } from '@/components/profile/DataManagementCard';
+import { WalletCard } from '@/components/profile/WalletCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -60,14 +63,14 @@ function ProfileAvatar({ profile }: { profile: PlayerProfile }) {
       <img
         src={profile.avatarUploadDataUrl}
         alt="avatar"
-        className="h-16 w-16 rounded-2xl border border-slate-200 object-cover"
+        className="h-16 w-16 rounded-2xl border border-border object-cover"
       />
     );
   }
   const preset = getAvatarPresetById(profile.avatarPresetId);
   return (
     <div
-      className={`flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-200 text-2xl font-semibold ${preset.bgClass} ${preset.fgClass}`}
+      className={`flex h-16 w-16 items-center justify-center rounded-2xl border border-border text-2xl font-semibold ${preset.bgClass} ${preset.fgClass}`}
       role="img"
       aria-label={preset.label}
     >
@@ -224,7 +227,7 @@ const Profile = () => {
     refreshDashboard();
     setCheckinFeedback(
       result.ok
-        ? `${t('profile.checkin.feedback.daily')}${result.awardedPoints}`
+        ? `${t('profile.checkin.feedback.daily')}${result.awardedPoints} · +${result.awardedCoins} ${t('wallet.coins')}`
         : t('profile.checkin.feedback.already'),
     );
   };
@@ -303,38 +306,43 @@ const Profile = () => {
     checkinState.totalDays >= monthMilestone && !monthClaimed;
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_18%_0%,#f7f2e4_0,#edf4e8_46%,#dce8dd_100%)] font-['Avenir_Next','PingFang_SC','Hiragino_Sans_GB','Microsoft_YaHei',sans-serif] text-slate-900">
-      <header className="border-b border-emerald-100/80 bg-white/78 px-4 py-4 backdrop-blur">
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="border-b border-wood/20 bg-card/90 px-4 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-start justify-between gap-4">
           <div>
             <Link
               to="/"
-              className="text-sm text-slate-600 hover:text-slate-900"
+              className="text-sm text-muted-foreground hover:text-foreground"
             >
               ← {t('common.backHome')}
             </Link>
-            <h1 className="mt-2 text-2xl font-bold text-slate-900">
+            <h1 className="mt-2 text-2xl font-bold text-foreground">
               {t('profile.title')}
             </h1>
-            <p className="mt-1 max-w-2xl text-sm text-slate-600">
+            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
               {t('profile.heroSubtitle')}
             </p>
           </div>
-          <LanguageSwitcher />
+          <div className="flex gap-2">
+            <LanguageSwitcher />
+            <ThemeSwitcher />
+          </div>
         </div>
       </header>
 
       <main className="mx-auto grid max-w-6xl gap-4 px-4 py-8 md:grid-cols-[0.92fr_1.08fr] md:py-10">
         <div className="space-y-4">
-          <section className="rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
-            <p className="text-xs font-medium tracking-[0.2em] text-emerald-700/70 uppercase">
+          <WalletCard />
+          <DataManagementCard />
+          <section className="rounded-3xl border border-border paper-texture bg-card p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+            <p className="text-xs font-medium tracking-[0.2em] text-primary/80 uppercase">
               {t('home.player.title')}
             </p>
             <div className="mt-3 flex items-start gap-4">
               <ProfileAvatar profile={profile} />
               <div className="min-w-0 flex-1 space-y-2">
                 <label
-                  className="text-xs text-slate-500"
+                  className="text-xs text-muted-foreground"
                   htmlFor="nickname-input"
                 >
                   {t('home.player.nickname')}
@@ -346,20 +354,20 @@ const Profile = () => {
                     value={nicknameDraft}
                     onChange={(event) => setNicknameDraft(event.target.value)}
                     onBlur={saveNickname}
-                    className="h-10 border-slate-200 bg-white"
+                    className="h-10 border-border bg-card"
                   />
                   <Button
                     type="button"
                     variant="outline"
-                    className="border-slate-200"
+                    className="border-border"
                     onClick={saveNickname}
                   >
                     {t('home.player.save')}
                   </Button>
                 </div>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   {t('home.player.currentTitle')}：
-                  <span className="ml-1 font-medium text-slate-900">
+                  <span className="ml-1 font-medium text-foreground">
                     {activeTitle
                       ? t(activeTitle.nameKey)
                       : t('profile.titles.none')}
@@ -369,7 +377,7 @@ const Profile = () => {
             </div>
 
             <div className="mt-4 space-y-2">
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 {t('home.player.avatarPreset')}
               </p>
               <div className="flex flex-wrap gap-2">
@@ -393,10 +401,10 @@ const Profile = () => {
             </div>
 
             <div className="mt-4 space-y-2">
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 {t('home.player.avatarUpload')}
               </p>
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-muted-foreground hover:bg-muted/40">
                 <Upload className="size-4" />
                 {avatarUploading
                   ? t('home.player.avatarUploading')
@@ -416,11 +424,11 @@ const Profile = () => {
               )}
             </div>
 
-            <div className="mt-4 space-y-3 rounded-xl border border-slate-200 bg-white p-3">
-              <p className="text-sm font-medium text-slate-900">
+            <div className="mt-4 space-y-3 rounded-xl border border-border bg-card p-3">
+              <p className="text-sm font-medium text-foreground">
                 {t('profile.audio.section')}
               </p>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 {t('profile.audio.hint')}
               </p>
               {(
@@ -435,7 +443,7 @@ const Profile = () => {
                   className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3"
                 >
                   <label
-                    className="shrink-0 text-xs text-slate-600 sm:w-28"
+                    className="shrink-0 text-xs text-muted-foreground sm:w-28"
                     htmlFor={`audio-${key}`}
                   >
                     {t(labelKey)}
@@ -454,19 +462,19 @@ const Profile = () => {
                     }}
                     className="h-2 w-full flex-1 cursor-pointer accent-emerald-600"
                   />
-                  <span className="shrink-0 text-right text-xs tabular-nums text-slate-500 sm:w-10">
+                  <span className="shrink-0 text-right text-xs tabular-nums text-muted-foreground sm:w-10">
                     {Math.round(profile.audioVolumes[key] * 100)}%
                   </span>
                 </div>
               ))}
             </div>
 
-            <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">
-              <p className="text-sm font-medium text-slate-900">
+            <div className="mt-4 rounded-xl border border-border bg-card p-3">
+              <p className="text-sm font-medium text-foreground">
                 {t('profile.titles.section')}
               </p>
               {nextLockedTitle && (
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-muted-foreground">
                   {t('profile.nextTitlePrefix')}
                   {t(nextLockedTitle.nameKey)} · {t('profile.nextTitleNeed')}{' '}
                   {nextLockedTitle.minPoints}
@@ -484,7 +492,7 @@ const Profile = () => {
                         className={`rounded-full px-3 py-1 text-xs transition ${
                           selected
                             ? 'bg-emerald-700 text-white'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            : 'bg-muted text-muted-foreground hover:bg-muted'
                         }`}
                       >
                         {t(title.nameKey)}
@@ -492,7 +500,7 @@ const Profile = () => {
                     );
                   })
                 ) : (
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-500">
+                  <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
                     {t('profile.titles.none')}
                   </span>
                 )}
@@ -500,8 +508,8 @@ const Profile = () => {
             </div>
           </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
-            <p className="text-xs font-medium tracking-[0.2em] text-emerald-700/70 uppercase">
+          <section className="rounded-3xl border border-border paper-texture bg-card p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+            <p className="text-xs font-medium tracking-[0.2em] text-primary/80 uppercase">
               {t('profile.companion.section')}
             </p>
             <div className="mt-4 rounded-[24px] bg-[linear-gradient(135deg,#13243b,#173226_58%,#234036)] p-4 text-white">
@@ -527,20 +535,20 @@ const Profile = () => {
                         </p>
                       ) : null}
                     </div>
-                    <span className="shrink-0 rounded-full bg-white/10 px-3 py-1 text-xs text-slate-100">
+                    <span className="shrink-0 rounded-full bg-card/10 px-3 py-1 text-xs text-slate-100">
                       {t('profile.companion.currentBadge')}
                     </span>
                   </div>
                 </div>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-                <div className="rounded-2xl bg-white/10 px-3 py-2">
+                <div className="rounded-2xl bg-card/10 px-3 py-2">
                   <p className="text-xs text-slate-300">
                     {t('profile.companion.stageLabel')}
                   </p>
                   <p className="mt-1 font-semibold">{activeStage}</p>
                 </div>
-                <div className="rounded-2xl bg-white/10 px-3 py-2">
+                <div className="rounded-2xl bg-card/10 px-3 py-2">
                   <p className="text-xs text-slate-300">
                     {t('profile.companion.affinityLabel')}
                   </p>
@@ -562,7 +570,7 @@ const Profile = () => {
                 return (
                   <div
                     key={character.id}
-                    className="rounded-2xl border border-slate-200 bg-white p-3"
+                    className="rounded-2xl border border-border bg-card p-3"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 flex-1 items-start gap-3">
@@ -572,18 +580,18 @@ const Profile = () => {
                           label={`${character.name} · ${t('character.portrait.placeholder')}`}
                         />
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-slate-900">
+                          <p className="text-sm font-medium text-foreground">
                             {character.name}
                           </p>
-                          <p className="mt-1 text-xs text-slate-500">
+                          <p className="mt-1 text-xs text-muted-foreground">
                             {character.tagline}
                           </p>
                           {character.bioKey ? (
-                            <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                               {t(character.bioKey)}
                             </p>
                           ) : null}
-                          <p className="mt-2 text-xs text-slate-600">
+                          <p className="mt-2 text-xs text-muted-foreground">
                             {unlocked
                               ? `${t('profile.companion.stageLabel')} ${stage} · ${t('profile.companion.affinityLabel')} ${affinity}`
                               : getCharacterUnlockText(
@@ -593,7 +601,7 @@ const Profile = () => {
                                 )}
                           </p>
                           {unlocked ? (
-                            <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
+                            <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
                               {t('profile.companion.mountsPlaceholder')}
                             </p>
                           ) : null}
@@ -607,7 +615,7 @@ const Profile = () => {
                           className={
                             isActive
                               ? 'bg-emerald-700 text-white hover:bg-emerald-600'
-                              : 'border-slate-200'
+                              : 'border-border'
                           }
                           onClick={() => switchCharacter(character.id)}
                         >
@@ -616,7 +624,7 @@ const Profile = () => {
                             : t('profile.companion.setActive')}
                         </Button>
                       ) : (
-                        <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-500">
+                        <span className="rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">
                           {t('profile.companion.locked')}
                         </span>
                       )}
@@ -627,22 +635,22 @@ const Profile = () => {
             </div>
           </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
-            <p className="text-xs font-medium tracking-[0.2em] text-emerald-700/70 uppercase">
+          <section className="rounded-3xl border border-border paper-texture bg-card p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+            <p className="text-xs font-medium tracking-[0.2em] text-primary/80 uppercase">
               {t('profile.checkin.title')}
             </p>
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-muted-foreground">
               {t('profile.checkin.date')} {checkinState.dateKey || '-'}
             </p>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-slate-700">
-              <div className="rounded-xl border border-slate-200 bg-white p-3">
-                <p className="text-xs text-slate-500">
+            <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+              <div className="rounded-xl border border-border bg-card p-3">
+                <p className="text-xs text-muted-foreground">
                   {t('profile.checkin.streak')}
                 </p>
                 <p className="mt-1 font-semibold">{checkinState.streakDays}</p>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-3">
-                <p className="text-xs text-slate-500">
+              <div className="rounded-xl border border-border bg-card p-3">
+                <p className="text-xs text-muted-foreground">
                   {t('profile.checkin.total')}
                 </p>
                 <p className="mt-1 font-semibold">{checkinState.totalDays}</p>
@@ -664,7 +672,7 @@ const Profile = () => {
                 type="button"
                 size="sm"
                 variant="outline"
-                className="border-slate-200"
+                className="border-border"
                 onClick={claimWeekRewardAction}
                 disabled={!canClaimWeek || weekClaimed}
               >
@@ -676,7 +684,7 @@ const Profile = () => {
                 type="button"
                 size="sm"
                 variant="outline"
-                className="border-slate-200"
+                className="border-border"
                 onClick={claimMonthRewardAction}
                 disabled={!canClaimMonth || monthClaimed}
               >
@@ -686,7 +694,7 @@ const Profile = () => {
               </Button>
             </div>
             {checkinFeedback && (
-              <p className="mt-2 text-xs text-emerald-700" role="status">
+              <p className="mt-2 text-xs text-primary" role="status">
                 {checkinFeedback}
               </p>
             )}
@@ -694,48 +702,48 @@ const Profile = () => {
         </div>
 
         <div className="space-y-4">
-          <section className="rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
-            <p className="text-xs font-medium tracking-[0.2em] text-emerald-700/70 uppercase">
+          <section className="rounded-3xl border border-border paper-texture bg-card p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+            <p className="text-xs font-medium tracking-[0.2em] text-primary/80 uppercase">
               {t('home.growth.title')}
             </p>
             <div className="mt-3 grid grid-cols-3 gap-3">
-              <div className="rounded-xl border border-slate-200 bg-white p-3">
-                <p className="text-xs text-slate-500">
+              <div className="rounded-xl border border-border bg-card p-3">
+                <p className="text-xs text-muted-foreground">
                   {t('home.growth.totalPoints')}
                 </p>
-                <p className="mt-1 text-xl font-semibold text-slate-900">
+                <p className="mt-1 text-xl font-semibold text-foreground">
                   {growthOverview.totalPoints}
                 </p>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-3">
-                <p className="text-xs text-slate-500">
+              <div className="rounded-xl border border-border bg-card p-3">
+                <p className="text-xs text-muted-foreground">
                   {t('home.growth.achievementPoints')}
                 </p>
-                <p className="mt-1 text-xl font-semibold text-slate-900">
+                <p className="mt-1 text-xl font-semibold text-foreground">
                   {growthOverview.achievementPoints}
                 </p>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-3">
-                <p className="text-xs text-slate-500">
+              <div className="rounded-xl border border-border bg-card p-3">
+                <p className="text-xs text-muted-foreground">
                   {t('home.growth.taskPoints')}
                 </p>
-                <p className="mt-1 text-xl font-semibold text-slate-900">
+                <p className="mt-1 text-xl font-semibold text-foreground">
                   {growthOverview.taskPoints}
                 </p>
               </div>
             </div>
-            <p className="mt-3 text-xs text-slate-500">
+            <p className="mt-3 text-xs text-muted-foreground">
               {t('home.growth.achievementProgress')}
               {growthOverview.unlockedAchievements}/
               {growthOverview.totalAchievements}
             </p>
 
-            <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">
+            <div className="mt-4 rounded-xl border border-border bg-card p-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-slate-900">
+                <p className="text-sm font-medium text-foreground">
                   {t('profile.growthHistory.title')}
                 </p>
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-muted-foreground">
                   {growthHistoryMeta}
                 </span>
               </div>
@@ -744,15 +752,15 @@ const Profile = () => {
                   recentFeed.map((item) => (
                     <div
                       key={item.id}
-                      className="rounded-xl border border-slate-100 bg-slate-50/80 p-3"
+                      className="rounded-xl border border-border bg-muted/40/80 p-3"
                     >
-                      <p className="text-sm text-slate-900">
+                      <p className="text-sm text-foreground">
                         {formatGrowthFeedLine(item, t)}
                       </p>
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-muted-foreground">
                     {t('profile.recentGrowth.empty')}
                   </p>
                 )}
@@ -760,16 +768,16 @@ const Profile = () => {
             </div>
           </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+          <section className="rounded-3xl border border-border paper-texture bg-card p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-slate-900">
+              <p className="text-sm font-medium text-foreground">
                 {t('home.daily.title')}
               </p>
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-muted-foreground">
                 {dailyTaskState.dateKey}
               </span>
             </div>
-            <p className="mt-2 text-xs text-slate-600">
+            <p className="mt-2 text-xs text-muted-foreground">
               {t('profile.task.completedPrefix')} {completedTaskCount}/
               {dailyTaskState.items.length}
             </p>
@@ -780,8 +788,8 @@ const Profile = () => {
                   className={cn(
                     'rounded-2xl border p-3 transition-colors',
                     task.completed
-                      ? 'border-emerald-200/90 bg-emerald-50/75 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]'
-                      : 'border-slate-100 bg-slate-50/80',
+                      ? 'border-primary/30 bg-primary/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]'
+                      : 'border-border bg-muted/40/80',
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -799,8 +807,8 @@ const Profile = () => {
                           className={cn(
                             'text-sm font-medium',
                             task.completed
-                              ? 'text-emerald-950'
-                              : 'text-slate-900',
+                              ? 'text-foreground'
+                              : 'text-foreground',
                           )}
                         >
                           {t(task.titleKey)}
@@ -810,8 +818,8 @@ const Profile = () => {
                         className={cn(
                           'mt-1 text-xs',
                           task.completed
-                            ? 'text-emerald-800/80'
-                            : 'text-slate-500',
+                            ? 'text-primary/80'
+                            : 'text-muted-foreground',
                         )}
                       >
                         {t(task.descKey)}
@@ -821,8 +829,8 @@ const Profile = () => {
                       className={cn(
                         'shrink-0 rounded-full px-2 py-1 text-xs tabular-nums',
                         task.completed
-                          ? 'bg-white/90 text-emerald-800 ring-1 ring-emerald-200/80'
-                          : 'bg-white text-slate-600',
+                          ? 'bg-card/90 text-primary ring-1 ring-primary/30'
+                          : 'bg-card text-muted-foreground',
                       )}
                     >
                       {task.progress}/{task.target}
@@ -832,29 +840,29 @@ const Profile = () => {
                     className={cn(
                       'mt-2 text-xs',
                       task.completed
-                        ? 'font-medium text-emerald-800'
-                        : 'text-slate-600',
+                        ? 'font-medium text-primary'
+                        : 'text-muted-foreground',
                     )}
                   >
                     {task.completed
-                      ? `${t('home.daily.settledPrefix')}${task.rewardPoints}`
-                      : `${t('home.daily.pendingRewardPrefix')}${task.rewardPoints}`}
+                      ? `${t('home.daily.settledPrefix')}${task.rewardPoints} · +40 ${t('wallet.coins')}`
+                      : `${t('home.daily.pendingRewardPrefix')}${task.rewardPoints} · 40 ${t('wallet.coins')}`}
                   </p>
                 </li>
               ))}
             </ul>
           </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+          <section className="rounded-3xl border border-border paper-texture bg-card p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-slate-900">
+              <p className="text-sm font-medium text-foreground">
                 {t('profile.weekly.title')}
               </p>
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-muted-foreground">
                 {weeklyTaskState.weekKey}
               </span>
             </div>
-            <p className="mt-2 text-xs text-slate-600">
+            <p className="mt-2 text-xs text-muted-foreground">
               {t('profile.task.completedPrefix')} {completedWeeklyTaskCount}/
               {weeklyTaskState.items.length}
             </p>
@@ -862,26 +870,26 @@ const Profile = () => {
               {weeklyTaskState.items.map((task) => (
                 <li
                   key={task.id}
-                  className="rounded-xl border border-slate-200 bg-white p-3"
+                  className="rounded-xl border border-border bg-card p-3"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-900">
+                      <p className="text-sm font-medium text-foreground">
                         {t(task.titleKey)}
                       </p>
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-xs text-muted-foreground">
                         {t(task.descKey)}
                       </p>
-                      <p className="mt-2 text-xs text-slate-600">
+                      <p className="mt-2 text-xs text-muted-foreground">
                         {t('profile.task.progressPrefix')} {task.progress}/
                         {task.target} · {t('profile.task.rewardPrefix')}{' '}
-                        {task.rewardPoints}
+                        {task.rewardPoints} · 150 {t('wallet.coins')}
                       </p>
                     </div>
                     <span
                       className={`rounded-full px-2 py-1 text-xs ${
                         task.completed
-                          ? 'bg-emerald-100 text-emerald-700'
+                          ? 'bg-primary/15 text-primary'
                           : 'bg-amber-50 text-amber-700'
                       }`}
                     >
@@ -895,41 +903,41 @@ const Profile = () => {
             </ul>
           </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
-            <p className="text-sm font-medium text-slate-900">
+          <section className="rounded-3xl border border-border paper-texture bg-card p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+            <p className="text-sm font-medium text-foreground">
               {t('profile.stats.title')}
             </p>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-slate-700">
-              <div className="rounded-xl border border-slate-200 bg-white p-3">
-                <p className="text-xs text-slate-500">
+            <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+              <div className="rounded-xl border border-border bg-card p-3">
+                <p className="text-xs text-muted-foreground">
                   {t('profile.stats.totalPlayCount')}
                 </p>
                 <p className="mt-1 font-semibold">
                   {playerStats.totalPlayCount}
                 </p>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-3">
-                <p className="text-xs text-slate-500">
+              <div className="rounded-xl border border-border bg-card p-3">
+                <p className="text-xs text-muted-foreground">
                   {t('profile.stats.riichiRounds')}
                 </p>
                 <p className="mt-1 font-semibold">{playerStats.riichiRounds}</p>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-3">
-                <p className="text-xs text-slate-500">
+              <div className="rounded-xl border border-border bg-card p-3">
+                <p className="text-xs text-muted-foreground">
                   {t('profile.stats.riichiWins')}
                 </p>
                 <p className="mt-1 font-semibold">{playerStats.riichiWins}</p>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-3">
-                <p className="text-xs text-slate-500">
+              <div className="rounded-xl border border-border bg-card p-3">
+                <p className="text-xs text-muted-foreground">
                   {t('profile.stats.riichiRiichiCount')}
                 </p>
                 <p className="mt-1 font-semibold">
                   {playerStats.riichiRiichiCount}
                 </p>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-3 md:col-span-2">
-                <p className="text-xs text-slate-500">
+              <div className="rounded-xl border border-border bg-card p-3 md:col-span-2">
+                <p className="text-xs text-muted-foreground">
                   {t('profile.stats.riichiTsumoCount')}
                 </p>
                 <p className="mt-1 font-semibold">
@@ -957,11 +965,11 @@ const Profile = () => {
               ).map(({ labelKey, pct }) => (
                 <div
                   key={labelKey}
-                  className="rounded-xl border border-slate-200 bg-white p-3"
+                  className="rounded-xl border border-border bg-card p-3"
                 >
-                  <p className="text-xs text-slate-500">{t(labelKey)}</p>
+                  <p className="text-xs text-muted-foreground">{t(labelKey)}</p>
                   <p className="mt-1 font-semibold">{pct.toFixed(1)}%</p>
-                  <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
                     <div
                       className="h-full rounded-full bg-emerald-600/90"
                       style={{ width: `${Math.min(100, pct)}%` }}
@@ -971,12 +979,12 @@ const Profile = () => {
               ))}
             </div>
 
-            <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">
-              <p className="text-xs text-slate-600">
+            <div className="mt-4 rounded-xl border border-border bg-card p-3">
+              <p className="text-xs text-muted-foreground">
                 {t('profile.stats.gamePlayCounts')}
               </p>
               {sortedGamePlayCounts.length > 0 ? (
-                <ul className="mt-2 space-y-1 text-xs text-slate-700">
+                <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
                   {sortedGamePlayCounts.map(([gameId, count]) => (
                     <li
                       key={gameId}
@@ -988,7 +996,7 @@ const Profile = () => {
                   ))}
                 </ul>
               ) : (
-                <p className="mt-2 text-xs text-slate-500">
+                <p className="mt-2 text-xs text-muted-foreground">
                   {t('profile.stats.noGameData')}
                 </p>
               )}

@@ -43,7 +43,7 @@ export default function GrowthPointToast() {
 
   return (
     <div className="pointer-events-none fixed left-1/2 top-4 z-50 -translate-x-1/2">
-      <div className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-lg">
+      <div className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-lg">
         {t('growth.toast.gain')}
         {points}
       </div>

@@ -51,7 +51,10 @@ import {
   useRiichiAutomation,
   withElapsed,
 } from './useRiichiAutomation';
-import { useRiichiDialogFocus } from './useRiichiDialogFocus';
+import {
+  useRiichiDialogContainer,
+  useRiichiDialogFocus,
+} from './useRiichiDialogFocus';
 import { useRiichiEffectSounds } from './useRiichiEffectSounds';
 import { useRiichiTheme } from './useRiichiTheme';
 import { useRiichiViewModel } from './useRiichiViewModel';
@@ -284,7 +287,8 @@ function RiichiActionPanel({
 function GuideDialog({ onClose }: { onClose: () => void }) {
   const { t } = useLocale();
   const restoreFocus = useRiichiDialogFocus();
-  const container = document.querySelector<HTMLElement>('[data-riichi-theme]');
+  const container = useRiichiDialogContainer();
+  if (!container) return null;
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent

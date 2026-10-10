@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLocale } from '@/contexts/LocaleContext';
 import { cn } from '@/lib/utils';
 import { RIICHI_THEMES, type RiichiThemeId } from '../constants';
+import { useRiichiDialogContainer } from '../useRiichiDialogFocus';
 import { GuidePanel } from './GuidePanel';
 import { RiichiSettingsPanel } from './RiichiSettingsPanel';
 
@@ -41,10 +42,7 @@ export function RulesView({
   const [guideOpen, setGuideOpen] = useState(false);
   const guideTriggerRef = useRef<HTMLButtonElement>(null);
   const [importError, setImportError] = useState(false);
-  const themeContainer =
-    typeof document === 'undefined'
-      ? undefined
-      : document.querySelector<HTMLElement>('[data-riichi-theme]');
+  const themeContainer = useRiichiDialogContainer();
 
   return (
     <div className="riichi-lobby">

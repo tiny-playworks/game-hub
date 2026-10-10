@@ -1,6 +1,7 @@
 import { ChevronLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { WalletBadge } from '@/components/WalletBadge';
 import { useLocale } from '@/contexts/LocaleContext';
 import { cn } from '@/lib/utils';
 
@@ -41,7 +42,7 @@ export const GameShell = ({
           <Link
             to="/"
             aria-label={t('common.backToList')}
-            className="-ml-1 flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-black/5 hover:text-foreground active:scale-95"
+            className="-ml-1 flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-gold/15 text-wood transition hover:bg-gold/30 hover:text-foreground active:scale-95"
           >
             <ChevronLeft className="size-5" />
           </Link>
@@ -57,11 +58,10 @@ export const GameShell = ({
             )}
           </div>
 
-          {status && (
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-              {status}
-            </div>
-          )}
+          <div className="flex max-w-[60%] shrink-0 flex-wrap items-center justify-end gap-1.5 sm:max-w-none">
+            <WalletBadge />
+            {status}
+          </div>
         </div>
 
         {toolbar && (
@@ -93,9 +93,9 @@ interface StatPillProps {
 
 const TONE_CLASS: Record<NonNullable<StatPillProps['tone']>, string> = {
   default: 'text-muted-foreground',
-  active: 'border-emerald-500/45 bg-emerald-50/90 text-emerald-700',
-  danger: 'border-rose-500/45 bg-rose-50/90 text-rose-700',
-  success: 'border-sky-500/45 bg-sky-50/90 text-sky-700',
+  active: 'border-primary/40 bg-primary/10 text-primary',
+  danger: 'border-destructive/40 bg-destructive/10 text-destructive',
+  success: 'border-gold/40 bg-gold/15 text-wood',
 };
 
 /** 标题栏里的状态胶囊：左标签右数值，数字等宽避免跳动 */

@@ -1,5 +1,6 @@
 import { addGrowthPoints } from '@/lib/growth';
 import { appendGrowthFeedItem } from '@/lib/growthFeed';
+import { addCoins } from '@/lib/wallet';
 
 export const CHECKIN_STORAGE_KEY = 'game-hub-checkin-state';
 export const CHECKIN_DAILY_REWARD_POINTS = 10;
@@ -156,13 +157,14 @@ export function hasCheckedInToday(now = Date.now()): boolean {
 
 export function checkinToday(now = Date.now()): {
   ok: boolean;
+  awardedCoins: number;
   awardedPoints: number;
   state: CheckinState;
 } {
   const today = getBeijingDateKey(now);
   const current = ensureCheckinState();
   if (current.dateKey === today) {
-    return { ok: false, awardedPoints: 0, state: current };
+    return { ok: false, awardedCoins: 0, awardedPoints: 0, state: current };
   }
 
   const streakDays = isYesterdayDateKey(current.dateKey, today)
@@ -179,6 +181,9 @@ export function checkinToday(now = Date.now()): {
     totalDays: current.totalDays + 1,
     signedDateKeys,
   });
+  let awardedCoins = addCoins(30, 'wallet.reason.checkin', now);
+  if (streakDays === 7)
+    awardedCoins += addCoins(200, 'wallet.reason.checkinSeven', now);
   addGrowthPoints(CHECKIN_DAILY_REWARD_POINTS);
   appendGrowthFeedItem({
     type: 'check-in',
@@ -187,7 +192,12 @@ export function checkinToday(now = Date.now()): {
     points: CHECKIN_DAILY_REWARD_POINTS,
     value: streakDays,
   });
-  return { ok: true, awardedPoints: CHECKIN_DAILY_REWARD_POINTS, state: next };
+  return {
+    ok: true,
+    awardedCoins,
+    awardedPoints: CHECKIN_DAILY_REWARD_POINTS,
+    state: next,
+  };
 }
 
 export function claimWeekMilestone(
