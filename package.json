@@ -20,6 +20,7 @@
     "build": "rsbuild build",
     "build:analyze": "RSDOCTOR=true rsbuild build",
     "check": "pnpm run typecheck && biome check --write",
+    "deploy:nas": "powershell -ExecutionPolicy Bypass -File ./scripts/deploy-to-nas.ps1",
     "dev": "rsbuild dev --open",
     "format": "biome format --write",
     "preview": "rsbuild preview",
