@@ -36,6 +36,7 @@ export interface RiichiPlayerSettings {
   dangerHint: boolean;
   aiLevel: RiichiAiLevel;
   presentation: 'full' | 'simple' | 'off';
+  chatter: boolean;
 }
 
 export const DEFAULT_RIICHI_SETTINGS: RiichiPlayerSettings = {
@@ -46,6 +47,7 @@ export const DEFAULT_RIICHI_SETTINGS: RiichiPlayerSettings = {
   dangerHint: true,
   aiLevel: 'standard',
   presentation: 'full',
+  chatter: true,
 };
 
 export interface PlayerProfile {
@@ -155,6 +157,7 @@ export function normalizeRiichiSettings(raw: unknown): RiichiPlayerSettings {
     autoTsumogiri: bool(o.autoTsumogiri, d.autoTsumogiri),
     callConfirm: bool(o.callConfirm, d.callConfirm),
     dangerHint: bool(o.dangerHint, d.dangerHint),
+    chatter: bool(o.chatter, d.chatter),
     aiLevel: isRiichiAiLevel(o.aiLevel) ? o.aiLevel : 'standard',
     presentation:
       o.presentation === 'simple' || o.presentation === 'off'

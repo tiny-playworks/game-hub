@@ -2,6 +2,173 @@ export type Locale = 'zh' | 'en';
 
 const messages: Record<Locale, Record<string, string>> = {
   zh: {
+    'character.chatter.koharu.other-riichi.0': '哇，立直了！我也得加把劲。',
+    'character.chatter.koharu.other-riichi.1': '先看看牌河……这次我记得！',
+    'character.chatter.koharu.stalled.0': '好牌是不是绕路了呀？',
+    'character.chatter.koharu.stalled.1': '再摸一张，就一张！',
+    'character.chatter.koharu.other-win.0': '好快！我还没理好呢。',
+    'character.chatter.koharu.other-win.1': '下局让我追上你！',
+    'character.chatter.koharu.last-place.0': '最后一名？还有机会啦！',
+    'character.chatter.koharu.last-place.1': '南场开始，我要认真了！',
+    'character.chatter.koharu.big-win.0': '这么多点！我也想和一次！',
+    'character.chatter.koharu.big-win.1': '满贯以上，好厉害呀。',
+    'character.chatter.koharu.double-draw.0': '又流局了，大家都差一点吧？',
+    'character.chatter.koharu.double-draw.1': '牌山今天有点害羞。',
+    'character.chatter.koharu.danger-survived.0': '呼，过了！下次记得看清楚。',
+    'character.chatter.koharu.danger-survived.1': '胆子真大，我都屏住气了！',
+    'character.chatter.mio.other-riichi.0': '先数现物，再决定进攻。',
+    'character.chatter.mio.other-riichi.1': '立直了，牌河要重新看。',
+    'character.chatter.mio.stalled.0': '暂时没进张，别急着拆搭子。',
+    'character.chatter.mio.stalled.1': '把能接上的牌留好。',
+    'character.chatter.mio.other-win.0': '这手很扎实。下一局继续。',
+    'character.chatter.mio.other-win.1': '记住这一巡的牌河。',
+    'character.chatter.mio.last-place.0': '点差还在可追的范围。',
+    'character.chatter.mio.last-place.1': '南场，少失误比着急更有用。',
+    'character.chatter.mio.big-win.0': '打点够高，之前的副露值得注意。',
+    'character.chatter.mio.big-win.1': '这手的宝牌利用得很好。',
+    'character.chatter.mio.double-draw.0': '两局流局，节奏慢下来了。',
+    'character.chatter.mio.double-draw.1': '看看听牌形，下一局再调整。',
+    'character.chatter.mio.danger-survived.0': '通过了，但无筋仍要慎重。',
+    'character.chatter.mio.danger-survived.1': '这次没被荣，不等于安全。',
+    'character.chatter.rin.other-riichi.0': '立直？那就看看谁更快！',
+    'character.chatter.rin.other-riichi.1': '我这边也快准备好了。',
+    'character.chatter.rin.stalled.0': '摸牌别磨蹭，来张有用的！',
+    'character.chatter.rin.stalled.1': '这么久没动静，得换个节奏。',
+    'character.chatter.rin.other-win.0': '抢先了啊，下局换我。',
+    'character.chatter.rin.other-win.1': '这速度，值得再比一局！',
+    'character.chatter.rin.last-place.0': '落后了？那就加速追！',
+    'character.chatter.rin.last-place.1': '南场还有牌，别急着下结论。',
+    'character.chatter.rin.big-win.0': '一手追回来了，痛快！',
+    'character.chatter.rin.big-win.1': '大牌也能这么快？有意思！',
+    'character.chatter.rin.double-draw.0': '连着流局，下一手得快点了。',
+    'character.chatter.rin.double-draw.1': '大家都不肯先让一步啊。',
+    'character.chatter.rin.danger-survived.0': '冲过去了！不过别每次都赌。',
+    'character.chatter.rin.danger-survived.1': '刚才那张，我也捏了把汗。',
+    'character.chatter.chitose.other-riichi.0': '有人立直了，慢慢看清再出牌。',
+    'character.chatter.chitose.other-riichi.1': '茶还温着，不必慌张。',
+    'character.chatter.chitose.stalled.0': '等不到进张，也先把心放稳。',
+    'character.chatter.chitose.stalled.1': '手牌会有转机的，再等等。',
+    'character.chatter.chitose.other-win.0': '好好完成一手，很让人安心。',
+    'character.chatter.chitose.other-win.1': '这一局就收在这里吧。',
+    'character.chatter.chitose.last-place.0': '末位也有末位的打法，慢慢来。',
+    'character.chatter.chitose.last-place.1': '南场了，先把下一手打好。',
+    'character.chatter.chitose.big-win.0': '这手收得漂亮，茶都更香了。',
+    'character.chatter.chitose.big-win.1': '大牌不常来，这一手值得记住。',
+    'character.chatter.chitose.double-draw.0': '两次流局，歇一口茶再继续。',
+    'character.chatter.chitose.double-draw.1': '谁也没让步，倒也是好对局。',
+    'character.chatter.chitose.danger-survived.0':
+      '平安过去了，下一张仍要留心。',
+    'character.chatter.chitose.danger-survived.1': '刚才那一瞬，茶杯都停住了。',
+    'character.chatter.sora.other-riichi.0': '立直让节奏变了，接下来有意思。',
+    'character.chatter.sora.other-riichi.1': '听牌只是开始，看看打点吧。',
+    'character.chatter.sora.stalled.0': '停得久了，也许是在等转折。',
+    'character.chatter.sora.stalled.1': '先留住价值，节奏迟早会来。',
+    'character.chatter.sora.other-win.0': '这一手，把节奏拿走了。',
+    'character.chatter.sora.other-win.1': '和得不错，下一局怎么接？',
+    'character.chatter.sora.last-place.0': '点差是线索，还不是答案。',
+    'character.chatter.sora.last-place.1': '南场，找一手能改变节奏的牌。',
+    'character.chatter.sora.big-win.0': '这一击很有分量。',
+    'character.chatter.sora.big-win.1': '打点与时机，都接上了。',
+    'character.chatter.sora.double-draw.0': '两局留白，下一手更值得看。',
+    'character.chatter.sora.double-draw.1': '谁会先打破这个节奏？',
+    'character.chatter.sora.danger-survived.0': '这一张通过，节奏还没结束。',
+    'character.chatter.sora.danger-survived.1': '风险过了这一巡，仍在牌桌上。',
+    'character.chatter.aya.other-riichi.0': '有人先立直了？那我也要追。',
+    'character.chatter.aya.other-riichi.1': '这下牌桌终于热起来了。',
+    'character.chatter.aya.stalled.0': '还没进张？下一张就给个答案！',
+    'character.chatter.aya.stalled.1': '这手还没结束，我等得住。',
+    'character.chatter.aya.other-win.0': '好吧，这次你先交卷。',
+    'character.chatter.aya.other-win.1': '下局听牌后，我可不会客气。',
+    'character.chatter.aya.last-place.0': '末位更该抓住机会！',
+    'character.chatter.aya.last-place.1': '南场了，该来一记漂亮的立直。',
+    'character.chatter.aya.big-win.0': '漂亮！这种打点才够痛快。',
+    'character.chatter.aya.big-win.1': '大牌一开，牌桌就亮了。',
+    'character.chatter.aya.double-draw.0': '连着两次流局，下一手不想再等！',
+    'character.chatter.aya.double-draw.1': '大家都听得太晚了吗？',
+    'character.chatter.aya.danger-survived.0': '过了！这份胆量我懂。',
+    'character.chatter.aya.danger-survived.1': '敢打也要算好，别只靠运气。',
+    'character.chatter.mahiru.other-riichi.0': '立直那家，牌河是什么颜色呢？',
+    'character.chatter.mahiru.other-riichi.1': '先看花色，再看下一张。',
+    'character.chatter.mahiru.stalled.0': '想要的颜色，还没轮到我。',
+    'character.chatter.mahiru.stalled.1': '这幅手牌，还差一点颜色。',
+    'character.chatter.mahiru.other-win.0': '收得清爽，牌色也很漂亮。',
+    'character.chatter.mahiru.other-win.1': '这一手完成了，换张新画纸吧。',
+    'character.chatter.mahiru.last-place.0': '末位也能画出漂亮的逆转。',
+    'character.chatter.mahiru.last-place.1': '南场，挑一手值得染色的牌。',
+    'character.chatter.mahiru.big-win.0': '这么亮的打点，像一整幅完成的画。',
+    'character.chatter.mahiru.big-win.1': '宝牌给这一手添了好颜色。',
+    'character.chatter.mahiru.double-draw.0': '两张空白画纸，下一局再落笔。',
+    'character.chatter.mahiru.double-draw.1': '颜色都藏在牌山里了呀。',
+    'character.chatter.mahiru.danger-survived.0': '那张颜色很危险，好在过了。',
+    'character.chatter.mahiru.danger-survived.1': '先别松懈，牌河还在变色。',
+    'character.chatter.yoru.other-riichi.0': '立直。看河。',
+    'character.chatter.yoru.other-riichi.1': '风向变了。',
+    'character.chatter.yoru.stalled.0': '没进张。留形。',
+    'character.chatter.yoru.stalled.1': '再等。',
+    'character.chatter.yoru.other-win.0': '收得好。',
+    'character.chatter.yoru.other-win.1': '记住这手。',
+    'character.chatter.yoru.last-place.0': '末位。还有牌。',
+    'character.chatter.yoru.last-place.1': '南场。算点差。',
+    'character.chatter.yoru.big-win.0': '够重。',
+    'character.chatter.yoru.big-win.1': '这一手，值。',
+    'character.chatter.yoru.double-draw.0': '又流局。',
+    'character.chatter.yoru.double-draw.1': '都在等。',
+    'character.chatter.yoru.danger-survived.0': '过了。别忘风险。',
+    'character.chatter.yoru.danger-survived.1': '这次而已。',
+    'riichi.settings.chatter': '牌桌闲聊',
+    'riichi.presentation.roundResult': '本局结算',
+    'riichi.presentation.winningTile': '和了牌',
+    'riichi.presentation.skip': '跳过演出',
+    'riichi.presentation.clickSkip': '点击任意处跳过，再次点击继续',
+    'riichi.presentation.noBonus': '无宝牌加番',
+    'riichi.presentation.rewards': '查看本局成长与奖励',
+    'riichi.presentation.noten': '不听',
+    'riichi.presentation.tier.mangan': '满贯',
+    'riichi.presentation.tier.haneman': '跳满',
+    'riichi.presentation.tier.baiman': '倍满',
+    'riichi.presentation.tier.sanbaiman': '三倍满',
+    'riichi.presentation.tier.yakuman': '役满',
+    'riichi.presentation.tier.doubleYakuman': '双倍役满',
+    'riichi.review.open': '复盘',
+    'riichi.review.eyebrow': '回到那一巡',
+    'riichi.review.title': '本场关键决策',
+    'riichi.review.computing': '正在还原局面并分析决策…',
+    'riichi.review.error': '这份回放尚未终局或数据不完整，暂时无法复盘。',
+    'riichi.review.roundTurn': '{wind}{round}局 · {honba}本场 · 第{turn}巡',
+    'riichi.review.hand': '当时的手牌',
+    'riichi.review.played': '你的打牌',
+    'riichi.review.recommended': 'Expert 建议',
+    'riichi.review.viewReplay': '在回放中查看',
+    'riichi.review.notRiichi': '未立直',
+    'riichi.review.opponent': '{seat}：{status} · {calls}副露 · 第{turn}巡',
+    'riichi.review.lowerRisk': '建议牌在当时可见信息下风险更低。',
+    'riichi.review.noSafeTile':
+      '当时没有更低风险的合法舍牌；此处保留 Expert 的选择。',
+    'riichi.review.note':
+      '统计仅限本场已结束的{count}局；建议依据当时可见信息，不代表另一种选择一定会和牌。',
+    'riichi.review.empty': '没有明显的关键分歧',
+    'riichi.review.emptyDescription':
+      '本场没有达到筛选阈值的决策，仍可查看完整回放。',
+    'riichi.review.stat.winRate': '和了率',
+    'riichi.review.stat.dealInRate': '放铳率',
+    'riichi.review.stat.riichiRate': '立直率',
+    'riichi.review.stat.callRate': '副露率',
+    'riichi.review.stat.averageWin': '平均和了打点',
+    'riichi.review.kind.shanten': '手牌推进',
+    'riichi.review.kind.ukeire': '有效进张',
+    'riichi.review.kind.dealIn': '放铳关键手',
+    'riichi.review.kind.riichi': '立直与默听',
+    'riichi.review.kind.dama': '保留变化空间',
+    'riichi.review.reason.shanten':
+      '改打{tile}可少{shanten}向听，更快接近听牌。',
+    'riichi.review.reason.ukeire':
+      '改打{tile}，当时可见信息下有效进张多{count}张。',
+    'riichi.review.reason.dealIn':
+      '这张舍牌被荣和；回看对手牌河与立直时机，再比较{tile}的风险。',
+    'riichi.review.reason.riichi':
+      'Expert 倾向此时立直：增加打点，并利用听牌施压。',
+    'riichi.review.reason.dama':
+      'Expert 倾向默听：保留换牌和防守空间，避免过早锁定手牌。',
     'lobby.brand': 'GAME HUB · 雀庄',
     'lobby.title': '坐下来，打两圈。',
     'lobby.welcome': '一方牌桌，片刻闲暇。',
@@ -12,7 +179,8 @@ const messages: Record<Locale, Record<string, string>> = {
     'lobby.rankedDescription':
       '从初心到雀圣，一步一段。先在自由对局中，找到自己的牌风。',
     'lobby.startRanked': '开始段位战',
-    'ranked.description': '按名次与终局点数得失 pt，攒满即可晋级。段位越高，对手越强。',
+    'ranked.description':
+      '按名次与终局点数得失 pt，攒满即可晋级。段位越高，对手越强。',
     'ranked.rankName': '{band} {level} 级',
     'ranked.points': '段位 pt',
     'ranked.length.east': '东风战',
@@ -26,7 +194,8 @@ const messages: Record<Locale, Record<string, string>> = {
       '段位战尚未结束。现在离开将按第 4 名结算并扣除 pt，确定离开吗？',
     'ranked.newTable': '放弃本局',
     'ranked.exitDetail': '按第 4 名结算后返回首页',
-    'ranked.fixedRules': '段位战使用固定默认规则，悔棋、训练提示与危险牌提示均不可用。',
+    'ranked.fixedRules':
+      '段位战使用固定默认规则，悔棋、训练提示与危险牌提示均不可用。',
     'ranked.result': '段位战结算',
     'ranked.placement': '第 {n} 位',
     'ranked.you': '你',
@@ -1353,6 +1522,244 @@ const messages: Record<Locale, Record<string, string>> = {
     'game.mahjong.discardAndTenpai': '打 {discard} 听 {waits}',
   },
   en: {
+    'character.chatter.koharu.other-riichi.0':
+      'Whoa, riichi! Time to step it up.',
+    'character.chatter.koharu.other-riichi.1':
+      'Check the river first… I remembered this time!',
+    'character.chatter.koharu.stalled.0': 'Are the good tiles taking a detour?',
+    'character.chatter.koharu.stalled.1': 'One more draw. Just one!',
+    'character.chatter.koharu.other-win.0':
+      'So fast! I was still sorting mine.',
+    'character.chatter.koharu.other-win.1': 'Let me catch up next round!',
+    'character.chatter.koharu.last-place.0':
+      'Last place? There’s still a chance!',
+    'character.chatter.koharu.last-place.1':
+      'South round! Now I’m getting serious!',
+    'character.chatter.koharu.big-win.0':
+      'So many points! I want a hand like that!',
+    'character.chatter.koharu.big-win.1': 'Mangan or better! That was amazing.',
+    'character.chatter.koharu.double-draw.0':
+      'Another draw. Were we all close?',
+    'character.chatter.koharu.double-draw.1': 'The wall is feeling shy today.',
+    'character.chatter.koharu.danger-survived.0':
+      'Phew, it passed! Look carefully next time.',
+    'character.chatter.koharu.danger-survived.1':
+      'That was bold! I held my breath!',
+    'character.chatter.mio.other-riichi.0':
+      'Count the safe tiles before pushing.',
+    'character.chatter.mio.other-riichi.1': 'Riichi. Read the river again.',
+    'character.chatter.mio.stalled.0':
+      'No improvement yet. Keep the useful shapes.',
+    'character.chatter.mio.stalled.1': 'Keep the tiles that can connect.',
+    'character.chatter.mio.other-win.0': 'A solid hand. On to the next.',
+    'character.chatter.mio.other-win.1': 'Remember what the river looked like.',
+    'character.chatter.mio.last-place.0': 'The gap can still be closed.',
+    'character.chatter.mio.last-place.1':
+      'In South, fewer mistakes help more than haste.',
+    'character.chatter.mio.big-win.0':
+      'A valuable hand. Those earlier calls mattered.',
+    'character.chatter.mio.big-win.1': 'That hand used its dora well.',
+    'character.chatter.mio.double-draw.0': 'Two draws. The pace has slowed.',
+    'character.chatter.mio.double-draw.1':
+      'Review the waits and adjust next round.',
+    'character.chatter.mio.danger-survived.0':
+      'It passed, but unsuji still needs care.',
+    'character.chatter.mio.danger-survived.1':
+      'No ron this time doesn’t make it safe.',
+    'character.chatter.rin.other-riichi.0': 'Riichi? Let’s see who’s faster!',
+    'character.chatter.rin.other-riichi.1': 'I’m nearly ready over here too.',
+    'character.chatter.rin.stalled.0': 'Come on, give me a useful draw!',
+    'character.chatter.rin.stalled.1':
+      'Nothing for this long? Time for a new pace.',
+    'character.chatter.rin.other-win.0':
+      'You got there first. My turn next round.',
+    'character.chatter.rin.other-win.1': 'That speed deserves a rematch!',
+    'character.chatter.rin.last-place.0': 'Behind? Then I’ll chase faster!',
+    'character.chatter.rin.last-place.1':
+      'South still has hands to play. Don’t count me out.',
+    'character.chatter.rin.big-win.0': 'A comeback in one hand. Nice!',
+    'character.chatter.rin.big-win.1': 'A big hand that fast? Interesting!',
+    'character.chatter.rin.double-draw.0':
+      'Back-to-back draws. Let’s speed up the next one.',
+    'character.chatter.rin.double-draw.1': 'Nobody wants to yield first.',
+    'character.chatter.rin.danger-survived.0':
+      'You pushed through! Don’t bet on it every time.',
+    'character.chatter.rin.danger-survived.1': 'That tile had me worried too.',
+    'character.chatter.chitose.other-riichi.0':
+      'Someone’s in riichi. Take a moment before discarding.',
+    'character.chatter.chitose.other-riichi.1':
+      'The tea is still warm. No need to panic.',
+    'character.chatter.chitose.stalled.0':
+      'No improving draw yet. Keep a steady mind.',
+    'character.chatter.chitose.stalled.1':
+      'The hand may turn around. A little patience.',
+    'character.chatter.chitose.other-win.0':
+      'A neatly finished hand is reassuring.',
+    'character.chatter.chitose.other-win.1':
+      'A good place to close this round.',
+    'character.chatter.chitose.last-place.0':
+      'Last place calls for its own approach. Take your time.',
+    'character.chatter.chitose.last-place.1':
+      'South round. Focus on playing the next hand well.',
+    'character.chatter.chitose.big-win.0':
+      'A lovely finish. Even the tea smells sweeter.',
+    'character.chatter.chitose.big-win.1':
+      'Big hands are rare. Remember this one.',
+    'character.chatter.chitose.double-draw.0':
+      'Two draws. A sip of tea before we continue.',
+    'character.chatter.chitose.double-draw.1':
+      'Nobody yielded. A fine contest all the same.',
+    'character.chatter.chitose.danger-survived.0':
+      'It passed peacefully. Stay mindful of the next tile.',
+    'character.chatter.chitose.danger-survived.1':
+      'My teacup paused for a moment there.',
+    'character.chatter.sora.other-riichi.0':
+      'Riichi changes the rhythm. Now it gets interesting.',
+    'character.chatter.sora.other-riichi.1':
+      'Tenpai is only the beginning. Let’s see the value.',
+    'character.chatter.sora.stalled.0':
+      'A long pause may be waiting for a turning point.',
+    'character.chatter.sora.stalled.1': 'Keep the value. The rhythm will come.',
+    'character.chatter.sora.other-win.0':
+      'That hand took control of the rhythm.',
+    'character.chatter.sora.other-win.1':
+      'A good finish. How will the next round follow?',
+    'character.chatter.sora.last-place.0':
+      'The point gap is a clue, not an answer yet.',
+    'character.chatter.sora.last-place.1':
+      'In South, find a hand that changes the rhythm.',
+    'character.chatter.sora.big-win.0': 'That hit carried real weight.',
+    'character.chatter.sora.big-win.1': 'Value and timing came together.',
+    'character.chatter.sora.double-draw.0':
+      'Two blank rounds. The next hand is worth watching.',
+    'character.chatter.sora.double-draw.1': 'Who will break this rhythm first?',
+    'character.chatter.sora.danger-survived.0':
+      'That tile passed. The rhythm continues.',
+    'character.chatter.sora.danger-survived.1':
+      'The risk passed this turn. It’s still on the table.',
+    'character.chatter.aya.other-riichi.0':
+      'Someone declared first? I’ll chase them.',
+    'character.chatter.aya.other-riichi.1': 'Now the table is heating up.',
+    'character.chatter.aya.stalled.0':
+      'No improvement? Give me an answer on the next draw!',
+    'character.chatter.aya.stalled.1': 'This hand isn’t over. I can wait.',
+    'character.chatter.aya.other-win.0': 'Fine, you finished first this time.',
+    'character.chatter.aya.other-win.1':
+      'Next round, I won’t hesitate at tenpai.',
+    'character.chatter.aya.last-place.0':
+      'Last place is all the more reason to seize a chance!',
+    'character.chatter.aya.last-place.1':
+      'South round. Time for a beautiful riichi.',
+    'character.chatter.aya.big-win.0': 'Beautiful! That’s a satisfying score.',
+    'character.chatter.aya.big-win.1': 'A big hand lights up the table.',
+    'character.chatter.aya.double-draw.0':
+      'Two draws in a row. I don’t want to wait again!',
+    'character.chatter.aya.double-draw.1':
+      'Did everyone reach tenpai too late?',
+    'character.chatter.aya.danger-survived.0':
+      'It passed! I understand that nerve.',
+    'character.chatter.aya.danger-survived.1':
+      'Be bold, but calculate. Don’t rely on luck alone.',
+    'character.chatter.mahiru.other-riichi.0':
+      'What colors are in the riichi player’s river?',
+    'character.chatter.mahiru.other-riichi.1':
+      'Look at the suits, then the next draw.',
+    'character.chatter.mahiru.stalled.0':
+      'My chosen suit hasn’t come around yet.',
+    'character.chatter.mahiru.stalled.1':
+      'This hand needs a little more color.',
+    'character.chatter.mahiru.other-win.0':
+      'A clean finish, with lovely tile colors.',
+    'character.chatter.mahiru.other-win.1':
+      'That hand is finished. Time for a fresh canvas.',
+    'character.chatter.mahiru.last-place.0':
+      'Even last place can paint a lovely comeback.',
+    'character.chatter.mahiru.last-place.1':
+      'In South, find a hand worth coloring.',
+    'character.chatter.mahiru.big-win.0':
+      'That score shines like a finished painting.',
+    'character.chatter.mahiru.big-win.1':
+      'Dora gave that hand some lovely color.',
+    'character.chatter.mahiru.double-draw.0':
+      'Two blank canvases. We’ll paint next round.',
+    'character.chatter.mahiru.double-draw.1':
+      'All the colors stayed in the wall.',
+    'character.chatter.mahiru.danger-survived.0':
+      'That color was risky. Luckily it passed.',
+    'character.chatter.mahiru.danger-survived.1':
+      'Stay alert. The river is still changing colors.',
+    'character.chatter.yoru.other-riichi.0': 'Riichi. Read the river.',
+    'character.chatter.yoru.other-riichi.1': 'The wind has changed.',
+    'character.chatter.yoru.stalled.0': 'No improvement. Keep the shape.',
+    'character.chatter.yoru.stalled.1': 'Wait.',
+    'character.chatter.yoru.other-win.0': 'Well finished.',
+    'character.chatter.yoru.other-win.1': 'Remember this hand.',
+    'character.chatter.yoru.last-place.0': 'Last. Still hands to play.',
+    'character.chatter.yoru.last-place.1': 'South. Count the gap.',
+    'character.chatter.yoru.big-win.0': 'A heavy hit.',
+    'character.chatter.yoru.big-win.1': 'That hand had value.',
+    'character.chatter.yoru.double-draw.0': 'Another draw.',
+    'character.chatter.yoru.double-draw.1': 'Everyone is waiting.',
+    'character.chatter.yoru.danger-survived.0': 'Passed. Remember the risk.',
+    'character.chatter.yoru.danger-survived.1': 'Just this time.',
+    'riichi.settings.chatter': 'Table chatter',
+    'riichi.presentation.roundResult': 'ROUND RESULT',
+    'riichi.presentation.winningTile': 'Winning tile',
+    'riichi.presentation.skip': 'Skip presentation',
+    'riichi.presentation.clickSkip':
+      'Click anywhere to skip; click again to continue',
+    'riichi.presentation.noBonus': 'No dora bonus',
+    'riichi.presentation.rewards': 'Round progress and rewards',
+    'riichi.presentation.noten': 'Noten',
+    'riichi.presentation.tier.mangan': 'Mangan',
+    'riichi.presentation.tier.haneman': 'Haneman',
+    'riichi.presentation.tier.baiman': 'Baiman',
+    'riichi.presentation.tier.sanbaiman': 'Sanbaiman',
+    'riichi.presentation.tier.yakuman': 'Yakuman',
+    'riichi.presentation.tier.doubleYakuman': 'Double Yakuman',
+    'riichi.review.open': 'Review match',
+    'riichi.review.eyebrow': 'BACK TO THE DECISION',
+    'riichi.review.title': 'Key decisions this match',
+    'riichi.review.computing': 'Replaying the match and analyzing decisions…',
+    'riichi.review.error':
+      'This replay is unfinished or incomplete and cannot be reviewed.',
+    'riichi.review.roundTurn': '{wind} {round} · Honba {honba} · Turn {turn}',
+    'riichi.review.hand': 'Hand at the decision',
+    'riichi.review.played': 'Your discard',
+    'riichi.review.recommended': 'Expert suggestion',
+    'riichi.review.viewReplay': 'View in replay',
+    'riichi.review.notRiichi': 'Not in riichi',
+    'riichi.review.opponent':
+      '{seat}: {status} · {calls} open melds · Turn {turn}',
+    'riichi.review.lowerRisk':
+      'The suggested tile had lower risk based on information visible then.',
+    'riichi.review.noSafeTile':
+      'No legal discard had lower estimated risk; the Expert choice is shown.',
+    'riichi.review.note':
+      'Rates cover the {count} completed rounds of this match. Suggestions use information visible then and do not guarantee a different outcome.',
+    'riichi.review.empty': 'No major decision differences',
+    'riichi.review.emptyDescription':
+      'No decisions crossed the review thresholds. You can still explore the full replay.',
+    'riichi.review.stat.winRate': 'Win rate',
+    'riichi.review.stat.dealInRate': 'Deal-in rate',
+    'riichi.review.stat.riichiRate': 'Riichi rate',
+    'riichi.review.stat.callRate': 'Call rate',
+    'riichi.review.stat.averageWin': 'Average win value',
+    'riichi.review.kind.shanten': 'Hand progress',
+    'riichi.review.kind.ukeire': 'Tile efficiency',
+    'riichi.review.kind.dealIn': 'Deal-in decision',
+    'riichi.review.kind.riichi': 'Riichi or dama',
+    'riichi.review.kind.dama': 'Keeping flexibility',
+    'riichi.review.reason.shanten':
+      'Discarding {tile} leaves the hand {shanten} shanten closer to tenpai.',
+    'riichi.review.reason.ukeire':
+      'Discarding {tile} provides {count} more available improving tiles.',
+    'riichi.review.reason.dealIn':
+      'This discard dealt in. Compare the opponent’s river and riichi timing with the risk of {tile}.',
+    'riichi.review.reason.riichi':
+      'Expert favors riichi here to increase value and apply pressure from tenpai.',
+    'riichi.review.reason.dama':
+      'Expert favors dama here to retain flexibility and defensive options.',
     'lobby.brand': 'GAME HUB · MAHJONG PARLOR',
     'lobby.title': 'A seat at the table.',
     'lobby.welcome': 'Good company. One more hand.',
@@ -1371,7 +1778,8 @@ const messages: Record<Locale, Record<string, string>> = {
     'ranked.length.south': 'Half game',
     'ranked.resume': 'Resume ranked match in progress',
     'ranked.matching': 'Finding opponents…',
-    'ranked.matchingDescription': 'Three opponents near your rank are taking their seats.',
+    'ranked.matchingDescription':
+      'Three opponents near your rank are taking their seats.',
     'ranked.again': 'Play again',
     'ranked.failed': 'Matchmaking failed. Please try again.',
     'ranked.forfeitConfirm':
@@ -1831,7 +2239,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'riichi.opponents.random': 'Random',
     'riichi.opponents.seat': '{seat} character',
     'riichi.opponents.reset': 'Randomize all',
-    'riichi.settings.presentation': 'Character presentation',
+    'riichi.settings.presentation': 'Presentation intensity',
     'riichi.settings.presentation.full': 'Full',
     'riichi.settings.presentation.simple': 'Simple',
     'riichi.settings.presentation.off': 'Off',

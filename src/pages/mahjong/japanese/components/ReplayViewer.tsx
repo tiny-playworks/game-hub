@@ -10,22 +10,43 @@ import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLocale } from '@/contexts/LocaleContext';
 import { formatMessage } from '@/lib/i18n';
-import { type RiichiReplayFile, replayMatch } from '../engine';
+import {
+  type RiichiMatchState,
+  type RiichiReplayFile,
+  replayMatch,
+} from '../engine';
 import { formatLogEntry, formatPoints, toTileKeyedItems } from '../helpers';
 import {
   useRiichiDialogContainer,
   useRiichiDialogFocus,
 } from '../useRiichiDialogFocus';
+import { useRiichiTheme } from '../useRiichiTheme';
 import { MeldTiles } from './MeldTiles';
 import { RiichiTile } from './Tile';
 
-type Props = { file: RiichiReplayFile; onClose: () => void };
+type Props = {
+  file: RiichiReplayFile;
+  onClose: () => void;
+  initialIndex?: number;
+  frames?: RiichiMatchState[];
+};
 
-export function ReplayViewer({ file, onClose }: Props) {
+export function ReplayViewer({
+  file,
+  onClose,
+  initialIndex = 0,
+  frames: suppliedFrames,
+}: Props) {
   const { locale, t } = useLocale();
+  const { theme } = useRiichiTheme();
   const restoreFocus = useRiichiDialogFocus();
-  const frames = useMemo(() => replayMatch(file), [file]);
-  const [index, setIndex] = useState(0);
+  const frames = useMemo(
+    () => suppliedFrames ?? replayMatch(file),
+    [file, suppliedFrames],
+  );
+  const [index, setIndex] = useState(() =>
+    Math.max(0, Math.min(frames.length - 1, initialIndex)),
+  );
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
   const lastIndex = frames.length - 1;
@@ -72,6 +93,7 @@ export function ReplayViewer({ file, onClose }: Props) {
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         container={container}
+        data-riichi-theme={theme}
         onCloseAutoFocus={restoreFocus}
         showCloseButton={false}
         className="riichi-replay-dialog"

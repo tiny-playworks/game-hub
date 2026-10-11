@@ -1,13 +1,13 @@
 import { Copy, TimerReset } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
 import { RankedResult } from '@/components/ranked/RankedResult';
 import { confirmRankedExit } from '@/components/ranked/RankedStartButton';
-import { useRankedState } from '@/hooks/useRankedState';
-import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLocale } from '@/contexts/LocaleContext';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
+import { useRankedState } from '@/hooks/useRankedState';
 import { formatMessage, type Locale } from '@/lib/i18n';
 import { getBaseTile, getTileLabel } from '@/lib/mahjongRiichi';
 import {
@@ -21,6 +21,7 @@ import { getCurrentRiichiRoundProgressSummary } from '@/lib/riichiProgress';
 import { preloadRiichiRules } from '@/lib/riichiRules';
 import { cn } from '@/lib/utils';
 import type { CharacterMoment } from './characterMoments';
+import { useRiichiChatter } from './chatter';
 import { CenterArea } from './components/CenterArea';
 import { CharacterCutIn } from './components/CharacterCutIn';
 import {
@@ -30,7 +31,7 @@ import {
 import { GameHeader } from './components/GameHeader';
 import { GuidePanel } from './components/GuidePanel';
 import { MeldTiles } from './components/MeldTiles';
-import { MatchEndModal, RyuukyokuModal, WinModal } from './components/Modals';
+import { MatchEndModal, RyuukyokuModal } from './components/Modals';
 import { OpponentSeat } from './components/OpponentSeat';
 import { ReplayViewer } from './components/ReplayViewer';
 import { RiichiDesktopStage } from './components/RiichiDesktopStage';
@@ -40,6 +41,7 @@ import { StatusPanel } from './components/StatusPanel';
 import { TableContextPanel } from './components/TableContextPanel';
 import { RiichiTile } from './components/Tile';
 import { TrainingPanel } from './components/TrainingPanel';
+import { WinPresentation } from './components/WinPresentation';
 import {
   isReplayFile,
   type OpponentSelection,
@@ -812,6 +814,7 @@ const GameMahjongJapanese = () => {
   const { riichiSettings } = usePlayerProfile();
   useRiichiAutomation(riichiSettings);
   useRiichiEffectSounds();
+  useRiichiChatter(riichiSettings.chatter);
   const game = match?.round ?? null;
   const [trainingPreview, setTrainingPreview] = useState<{
     key: string | null;
@@ -864,7 +867,10 @@ const GameMahjongJapanese = () => {
     });
   const startDesktopGame = async () => {
     if (!confirmRankedExit(t)) return;
-    if (isRanked) { navigate('/'); return; }
+    if (isRanked) {
+      navigate('/');
+      return;
+    }
     setActivePanel(null);
     setRiichiSelection(null);
     try {
@@ -937,7 +943,8 @@ const GameMahjongJapanese = () => {
     void preloadRiichiRules()
       .then(() => {
         if (shouldResume) setLoadError(!resumeSaved());
-        else if (confirmRankedExit(t)) startGame({ rules: { aiLevel: riichiSettings.aiLevel } });
+        else if (confirmRankedExit(t))
+          startGame({ rules: { aiLevel: riichiSettings.aiLevel } });
         else resumeSaved();
       })
       .catch(() => setLoadError(true));
@@ -995,8 +1002,12 @@ const GameMahjongJapanese = () => {
 
   if (!game || !match) return null;
 
-  const rankedResult = isRanked && match.status === 'matchEnd' ? rankedState.history.find((entry) => entry.id === match.ranked?.id) : null;
-  if (rankedResult && !presenting) return <RankedResult key={rankedResult.id} result={rankedResult} />;
+  const rankedResult =
+    isRanked && match.status === 'matchEnd'
+      ? rankedState.history.find((entry) => entry.id === match.ranked?.id)
+      : null;
+  if (rankedResult && !presenting)
+    return <RankedResult key={rankedResult.id} result={rankedResult} />;
 
   const roundProgressSummary = getCurrentRiichiRoundProgressSummary();
   const actionState: RiichiActionState = {
@@ -1060,7 +1071,9 @@ const GameMahjongJapanese = () => {
           }}
           onOpenLog={() => setActivePanel('log')}
           onBackToRules={returnToLobby}
-          returnRulesLabel={t(isRanked ? 'common.backHome' : 'common.returnRules')}
+          returnRulesLabel={t(
+            isRanked ? 'common.backHome' : 'common.returnRules',
+          )}
           theme={theme}
           onThemeChange={setTheme}
           onOpenGuide={() => setShowGuide(true)}
@@ -1082,7 +1095,9 @@ const GameMahjongJapanese = () => {
               discard={discard}
               dangerHint={!isRanked && riichiSettings.dangerHint}
               previewBase={
-                !isRanked && activePanel === 'hint' && trainingPreview?.key === decisionKey
+                !isRanked &&
+                activePanel === 'hint' &&
+                trainingPreview?.key === decisionKey
                   ? trainingPreview.base
                   : null
               }
@@ -1090,7 +1105,9 @@ const GameMahjongJapanese = () => {
           </div>
           <DesktopSideRail
             ranked={isRanked}
-            activePanel={isRanked && activePanel === 'hint' ? null : activePanel}
+            activePanel={
+              isRanked && activePanel === 'hint' ? null : activePanel
+            }
             onPanelChange={setActivePanel}
             hasHint={Boolean(turn)}
             hintContent={
@@ -1119,8 +1136,11 @@ const GameMahjongJapanese = () => {
         {match?.status === 'roundEnd' &&
           result?.type === 'win' &&
           !presenting && (
-            <WinModal
+            <WinPresentation
+              key={game.roundId}
               result={result}
+              doraIndicators={game.doraIndicators}
+              mode={riichiSettings.presentation}
               moments={moments}
               roundProgressSummary={roundProgressSummary}
               timeoutEvents={game.timeoutEvents.map((entry) =>
@@ -1134,6 +1154,7 @@ const GameMahjongJapanese = () => {
           !presenting && (
             <RyuukyokuModal
               result={result}
+              game={game}
               moments={moments}
               roundProgressSummary={roundProgressSummary}
               timeoutEvents={game.timeoutEvents.map((entry) =>
@@ -1142,15 +1163,19 @@ const GameMahjongJapanese = () => {
               onNext={() => act({ type: 'nextRound' })}
             />
           )}
-        {!isRanked && match?.status === 'matchEnd' && match.matchEnd && !presenting && (
-          <MatchEndModal
-            matchEnd={match.matchEnd}
-            moments={moments}
-            roundProgressSummary={roundProgressSummary}
-            onRestart={startDesktopGame}
-            homeLabel={t('common.backHome')}
-          />
-        )}
+        {!isRanked &&
+          match?.status === 'matchEnd' &&
+          match.matchEnd &&
+          !presenting && (
+            <MatchEndModal
+              matchEnd={match.matchEnd}
+              moments={moments}
+              roundProgressSummary={roundProgressSummary}
+              onRestart={startDesktopGame}
+              homeLabel={t('common.backHome')}
+              replayFile={toReplayFile(match)}
+            />
+          )}
         {replay && (
           <ReplayViewer file={replay} onClose={() => openReplay(null)} />
         )}

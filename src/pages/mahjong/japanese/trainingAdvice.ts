@@ -59,3 +59,27 @@ export function getTrainingAdvice(
 }
 
 export type TrainingAdvice = ReturnType<typeof getTrainingAdvice>;
+
+/** The replay uses only the player's hand and information visible at that step. */
+export function getDiscardAdvice(
+  state: RiichiGameState,
+  tile: number,
+  analysis = analyzeRiichiHand({ hand: state.hands[0], melds: state.melds[0] }),
+) {
+  const option = analysis.discardOptions.find(
+    (item) => item.discard === getBaseTile(tile),
+  );
+  if (!option) return null;
+  const visible = visibleCountsFor(state, 0);
+  return {
+    shanten: option.shanten,
+    ukeire: countRemaining(option.effectiveTiles, visible),
+    danger: dangerFor(state, 0, tile, visible, 'expert'),
+  };
+}
+
+export type ReviewReason = 'shanten' | 'ukeire' | 'dealIn' | 'riichi' | 'dama';
+
+export function reviewReasonMessage(reason: ReviewReason) {
+  return `riichi.review.reason.${reason}`;
+}

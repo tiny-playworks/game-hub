@@ -12,7 +12,7 @@ export const CUT_IN_DURATION_MS = 900;
 export interface CharacterMoment {
   id: string;
   seat: number;
-  kind: LineTrigger;
+  kind: LineTrigger | 'chatter';
   characterId: string;
   lineKey: string;
 }

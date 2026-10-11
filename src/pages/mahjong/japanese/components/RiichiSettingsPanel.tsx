@@ -11,6 +11,7 @@ const switches = [
   'autoTsumogiri',
   'callConfirm',
   'dangerHint',
+  'chatter',
 ] as const;
 
 export function RiichiSettingsPanel({ ranked = false }: { ranked?: boolean }) {
@@ -25,34 +26,38 @@ export function RiichiSettingsPanel({ ranked = false }: { ranked?: boolean }) {
     <fieldset className="riichi-settings-panel">
       <legend>{t('riichi.settings.title')}</legend>
       <div className="riichi-settings-grid">
-        {switches.filter((key) => !ranked || key !== 'dangerHint').map((key) => (
-          <label key={key}>
-            <span>{t(`riichi.settings.${key}`)}</span>
-            <input
-              type="checkbox"
-              checked={riichiSettings[key]}
-              onChange={(event) => set(key, event.target.checked)}
-            />
-          </label>
-        ))}
+        {switches
+          .filter((key) => !ranked || key !== 'dangerHint')
+          .map((key) => (
+            <label key={key}>
+              <span>{t(`riichi.settings.${key}`)}</span>
+              <input
+                type="checkbox"
+                checked={riichiSettings[key]}
+                onChange={(event) => set(key, event.target.checked)}
+              />
+            </label>
+          ))}
       </div>
-      {!ranked && <label className="riichi-settings-level">
-        <span>{t('riichi.settings.aiLevel')}</span>
-        <select
-          value={riichiSettings.aiLevel}
-          onChange={(event) =>
-            set(
-              'aiLevel',
-              event.target.value as RiichiPlayerSettings['aiLevel'],
-            )
-          }
-        >
-          <option value="beginner">{t('riichi.settings.beginner')}</option>
-          <option value="standard">{t('riichi.settings.standard')}</option>
-          <option value="strong">{t('riichi.settings.strong')}</option>
-          <option value="expert">{t('riichi.settings.expert')}</option>
-        </select>
-      </label>}
+      {!ranked && (
+        <label className="riichi-settings-level">
+          <span>{t('riichi.settings.aiLevel')}</span>
+          <select
+            value={riichiSettings.aiLevel}
+            onChange={(event) =>
+              set(
+                'aiLevel',
+                event.target.value as RiichiPlayerSettings['aiLevel'],
+              )
+            }
+          >
+            <option value="beginner">{t('riichi.settings.beginner')}</option>
+            <option value="standard">{t('riichi.settings.standard')}</option>
+            <option value="strong">{t('riichi.settings.strong')}</option>
+            <option value="expert">{t('riichi.settings.expert')}</option>
+          </select>
+        </label>
+      )}
       {ranked && <p className="text-sm">{t('ranked.fixedRules')}</p>}
       <label className="riichi-settings-level">
         <span>{t('riichi.settings.presentation')}</span>

@@ -35,7 +35,7 @@ export function CharacterQuotes({
   kinds,
 }: {
   moments: CharacterMoment[];
-  kinds: LineTrigger[];
+  kinds: (LineTrigger | 'chatter')[];
 }) {
   const { t } = useLocale();
   return (
