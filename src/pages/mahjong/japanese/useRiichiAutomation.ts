@@ -102,7 +102,6 @@ export function useRiichiAutomation(settings: RiichiPlayerSettings): void {
     }
     const round = current.round;
     const token = current.turn;
-    const level = current.rules.aiLevel;
     const timers: number[] = [];
     const later = (ms: number, fn: () => void) => {
       timers.push(
@@ -125,8 +124,9 @@ export function useRiichiAutomation(settings: RiichiPlayerSettings): void {
         const event = decideAiTurn(
           latest.round,
           seat,
-          level,
+          latest.seatAiLevels[seat] ?? latest.rules.aiLevel,
           id ? getCharacterById(id).style : undefined,
+          latest.rules,
         );
         if (event) {
           useRiichiStore
@@ -152,8 +152,9 @@ export function useRiichiAutomation(settings: RiichiPlayerSettings): void {
             response: decideAiClaim(
               latest.round,
               seat,
-              level,
+              latest.seatAiLevels[seat] ?? latest.rules.aiLevel,
               getCharacterById(latest.seatCharacters[seat] ?? 'mio').style,
+              latest.rules,
             ),
             elapsed: AI_CLAIM_DELAY_MS / 1000,
           });

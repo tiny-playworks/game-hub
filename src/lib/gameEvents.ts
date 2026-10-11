@@ -39,14 +39,17 @@ export function emitGameEvent(event: GameEvent): GameEventResult {
   // start currently means entering a game; P6 moves arcade reporting to actual rounds.
   if (event.type === 'start') recordGameStart(event.gameId);
   if (event.gameId === 'mahjong-japanese' && event.type === 'finish') {
-    const { placement, matchLength } = event.meta ?? {};
+    const { placement, matchLength, ranked, matchId, forfeit } = event.meta ?? {};
     if (
       typeof placement === 'number' &&
+      forfeit !== true &&
       (matchLength === 'east' || matchLength === 'south')
     ) {
       result.coinsEarned = addCoins(
-        getRiichiMatchCoins(placement, matchLength),
+        Math.round(getRiichiMatchCoins(placement, matchLength) * (ranked === true ? 1.2 : 1)),
         `wallet.reason.riichi.${matchLength}`,
+        Date.now(),
+        typeof matchId === 'string' ? matchId : undefined,
       );
     }
   }

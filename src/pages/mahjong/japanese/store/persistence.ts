@@ -43,6 +43,8 @@ function savedReplay(data: unknown): RiichiReplayFile | null {
     rules: legacy.rules,
     matchLength: legacy.matchLength,
     seatCharacters: legacy.seatCharacters,
+    seatAiLevels: legacy.seatAiLevels,
+    ranked: legacy.ranked,
     events: legacy.events,
   };
   return isReplayFile(replay) ? replay : null;
@@ -59,7 +61,7 @@ export function loadSavedMatch(): LoadedRiichiSave | null {
     if (!isReplayFile(replay) || replay.version !== RIICHI_MATCH_VERSION)
       return null;
     const match = restoreMatch(replay);
-    if (!match || match.status === 'matchEnd') return null;
+    if (!match || (match.status === 'matchEnd' && !match.ranked)) return null;
     return {
       match,
       processedProgress: Array.isArray(data.processedProgress)
@@ -91,11 +93,12 @@ export function saveMatch(
   const s = storage();
   if (!s) return;
   try {
-    if (match.status === 'matchEnd') {
+    if (match.status === 'matchEnd' && !match.ranked) {
       s.removeItem(RIICHI_SAVE_STORAGE_KEY);
       saveLastReplay(toReplayFile(match));
       return;
     }
+    if (match.status === 'matchEnd') saveLastReplay(toReplayFile(match));
     const data: RiichiSaveData = {
       replay: toReplayFile(match),
       processedProgress,

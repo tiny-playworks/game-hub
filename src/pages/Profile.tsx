@@ -12,6 +12,8 @@ import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
 import { ThemeSwitcher } from '@/components/common/ThemeSwitcher';
 import { DataManagementCard } from '@/components/profile/DataManagementCard';
 import { WalletCard } from '@/components/profile/WalletCard';
+import { RankedProfilePanel } from '@/components/ranked/RankedProfilePanel';
+import { getRankedState } from '@/lib/ranked';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -140,7 +142,7 @@ const Profile = () => {
     getPlayerStats(),
   );
   const [characterState, setCharacterState] = useState<PlayerCharacterState>(
-    () => syncPlayerCharacterUnlocks().state,
+    () => syncPlayerCharacterUnlocks(getRankedState().peak.band).state,
   );
   const [recentFeed, setRecentFeed] = useState(() => getFullGrowthFeed());
   const growthHistoryMeta = useMemo(
@@ -161,7 +163,7 @@ const Profile = () => {
     const nextCheckin = ensureCheckinState();
     const nextGrowth = getGrowthOverview();
     const nextStats = getPlayerStats();
-    const nextCharacterState = syncPlayerCharacterUnlocks().state;
+    const nextCharacterState = syncPlayerCharacterUnlocks(getRankedState().peak.band).state;
     const currentProfile = getPlayerProfile();
     const resolvedTitleId = resolveActiveTitle(
       currentProfile.activeTitle,
@@ -341,6 +343,7 @@ const Profile = () => {
       <main className="mx-auto grid max-w-6xl gap-4 px-4 py-8 md:grid-cols-[0.92fr_1.08fr] md:py-10">
         <div className="space-y-4">
           <WalletCard />
+          <RankedProfilePanel />
           <DataManagementCard />
           <section className="rounded-3xl border border-border paper-texture bg-card p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
             <p className="text-xs font-medium tracking-[0.2em] text-primary/80 uppercase">

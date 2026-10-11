@@ -103,7 +103,9 @@ test('牌谱查看器支持逐步前进和跳到本局', () => {
   })!.match;
   render(
     <LocaleProvider>
-      <ReplayViewer file={toReplayFile(match)} onClose={() => {}} />
+      <div data-riichi-theme="felt">
+        <ReplayViewer file={toReplayFile(match)} onClose={() => {}} />
+      </div>
     </LocaleProvider>,
   );
   expect(screen.getByText('第 0 / 1 步')).toBeInTheDocument();

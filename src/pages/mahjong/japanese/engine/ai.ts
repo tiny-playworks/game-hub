@@ -2,9 +2,15 @@
  * 日麻 AI：按向听数 / 进张选牌，按期望综合判断立直、鸣牌与攻守。
  * 纯函数、无随机：相同局面总是给出相同决策，便于回放与测试。
  */
-import { getBaseTile, isMenzhen, isYaochuu } from '@/lib/mahjongRiichi';
+import {
+  getBaseTile,
+  getDoraFromIndicator,
+  isMenzhen,
+  isYaochuu,
+} from '@/lib/mahjongRiichi';
 import type { CharacterStyle } from '@/lib/playerCharacters';
 import {
+  evaluateDefensiveDanger,
   evaluateTileDanger,
   evaluateTileValue,
   isYakuhaiBase,
@@ -25,11 +31,26 @@ import type {
   RiichiMeld,
   SeatClaimOptions,
 } from '../types';
+import {
+  advancedStance,
+  attackOutlook,
+  estimateHandPoints,
+  positionOutlook,
+  suspectedFlushSuit,
+} from './aiStrategy';
 import { evaluateSeatWin } from './evaluate';
 import { getWaits, removeTiles, takeByBase } from './hand';
 import type { RiichiEvent } from './match';
 import { getKuikaeForbiddenBases } from './options';
-import type { RiichiAiLevel } from './rules';
+import {
+  DEFAULT_RIICHI_RULES,
+  type RiichiAiLevel,
+  type RiichiRuleConfig,
+} from './rules';
+
+function isAdvanced(level: RiichiAiLevel): boolean {
+  return level === 'strong' || level === 'expert';
+}
 
 type TurnEvent = Extract<
   RiichiEvent,
@@ -69,7 +90,11 @@ export function opponentViewOf(
 }
 
 /** 对手威胁度：立直 1；多副露 0.3~0.6；庄家加权 */
-export function threatOf(state: RiichiGameState, opp: number): number {
+export function threatOf(
+  state: RiichiGameState,
+  opp: number,
+  level: RiichiAiLevel = 'standard',
+): number {
   let threat = 0;
   if (state.riichiDeclared[opp]) {
     threat = 1;
@@ -78,6 +103,8 @@ export function threatOf(state: RiichiGameState, opp: number): number {
     if (open.length >= 2) threat = 0.3 + 0.15 * (open.length - 2);
     if (open.length >= 3) threat += 0.15;
   }
+  if (level === 'expert' && suspectedFlushSuit(state, opp) !== null)
+    threat = Math.max(threat, 0.75);
   if (threat > 0 && opp === state.dealer) threat *= 1.3;
   if (threat > 0 && state.wall.length < 20) threat *= 1.15;
   return threat;
@@ -88,22 +115,58 @@ export function dangerFor(
   seat: number,
   tile: number,
   visible: VisibleCounts,
+  level: RiichiAiLevel = 'standard',
 ): number {
   let danger = 0;
   for (let opp = 0; opp < 4; opp++) {
     if (opp === seat) continue;
-    const threat = threatOf(state, opp);
+    const threat = threatOf(state, opp, level);
     if (threat <= 0) continue;
-    danger +=
-      threat * evaluateTileDanger(tile, opponentViewOf(state, opp), visible);
+    let risk = (
+      isAdvanced(level) ? evaluateDefensiveDanger : evaluateTileDanger
+    )(tile, opponentViewOf(state, opp), visible);
+    if (level === 'expert' && risk > 0) {
+      const base = getBaseTile(tile);
+      const suit = base < 27 ? Math.floor(base / 9) : null;
+      const flush = suspectedFlushSuit(state, opp);
+      if (flush !== null && (suit === flush || base >= 27)) risk *= 1.5;
+      for (const indicator of state.doraIndicators) {
+        const dora = getDoraFromIndicator(indicator);
+        if (base === dora) risk *= 1.4;
+        else if (
+          base < 27 &&
+          dora < 27 &&
+          Math.floor(dora / 9) === suit &&
+          Math.abs(base - dora) <= 2
+        )
+          risk *= 1.15;
+      }
+      if (
+        base < 27 &&
+        state.discardPiles[opp].slice(0, 4).some((early) => {
+          const discarded = getBaseTile(early);
+          return (
+            discarded < 27 &&
+            Math.floor(discarded / 9) === suit &&
+            Math.abs(discarded - base) <= 2
+          );
+        })
+      )
+        risk *= 0.85;
+    }
+    danger += threat * risk;
   }
   return danger;
 }
 
-function totalThreat(state: RiichiGameState, seat: number): number {
+function totalThreat(
+  state: RiichiGameState,
+  seat: number,
+  level: RiichiAiLevel = 'standard',
+): number {
   let sum = 0;
   for (let opp = 0; opp < 4; opp++)
-    if (opp !== seat) sum += threatOf(state, opp);
+    if (opp !== seat) sum += threatOf(state, opp, level);
   return sum;
 }
 
@@ -168,6 +231,7 @@ function pickDiscard(
   visible: VisibleCounts,
   level: RiichiAiLevel,
   style?: CharacterStyle,
+  rules: RiichiRuleConfig = DEFAULT_RIICHI_RULES,
 ): number {
   const hand = state.hands[seat];
   const valueCtx = {
@@ -180,6 +244,10 @@ function pickDiscard(
   };
   let best = tiles[0];
   let bestScore = Number.NEGATIVE_INFINITY;
+  const position =
+    level === 'expert'
+      ? positionOutlook(state, seat, estimateHandPoints(state, seat), rules)
+      : null;
   for (const tile of tiles) {
     const cand = cands.get(getBaseTile(tile));
     const shanten = cand?.shanten ?? 8;
@@ -190,15 +258,23 @@ function pickDiscard(
         ? 0
         : evaluateTileValue(tile, hand, valueCtx, style);
     const edgeBonus = isYaochuu(tile) ? 0.5 : 0;
-    const attackScore =
-      efficiency - value * (level === 'beginner' ? 2.5 : 4) + edgeBonus;
+    // 强档全押时严格按向听 → 进张 → 打点排序；价值项有界，不越过一枚进张。
+    const retainedValue = -value / (1 + Math.abs(value));
+    const attackScore = isAdvanced(level)
+      ? -shanten * 10000 + ukeire * 10 + retainedValue + edgeBonus * 0.01
+      : efficiency - value * (level === 'beginner' ? 2.5 : 4) + edgeBonus;
     const danger =
       stance === 'attack' && level === 'beginner' && !style
         ? 0
-        : dangerFor(state, seat, tile, visible);
+        : dangerFor(state, seat, tile, visible, level);
     const defenseWeight = style ? 0.4 + style.defenseBias * 1.4 : 1;
-    const score =
-      stance === 'fold'
+    const score = isAdvanced(level)
+      ? stance === 'fold'
+        ? -danger * 1e9 + attackScore
+        : attackScore -
+          danger * (stance === 'balanced' ? 250 : 0) * defenseWeight +
+          (position?.needsValue ? retainedValue * 45 : 0)
+      : stance === 'fold'
         ? -danger * 1000 + attackScore * 0.01
         : stance === 'balanced'
           ? attackScore - danger * 60 * defenseWeight
@@ -245,6 +321,7 @@ function shouldDeclareRiichi(
   waitRemaining: number,
   level: RiichiAiLevel,
   style?: CharacterStyle,
+  rules: RiichiRuleConfig = DEFAULT_RIICHI_RULES,
 ): boolean {
   if (waitRemaining <= 0) return false;
   if (level === 'beginner' && !style) return true;
@@ -265,15 +342,18 @@ function shouldDeclareRiichi(
   let damaPoints = 0;
   let riichiPoints = 0;
   let legalDamaCopies = 0;
+  let waitTypes = 0;
   for (const winningTile of getWaits(hand13, state.melds[seat])) {
     const copies = remainingOf(getBaseTile(winningTile), visible);
     if (copies === 0) continue;
+    waitTypes++;
     const dama = evaluateSeatWin({
       state: preview,
       seat,
       isTsumo: false,
       winningTile,
       preview: true,
+      rules,
     });
     const riichi = evaluateSeatWin({
       state: declared,
@@ -281,14 +361,44 @@ function shouldDeclareRiichi(
       isTsumo: false,
       winningTile,
       preview: true,
+      rules,
     });
     damaPoints += dama.totalPoints * copies;
     riichiPoints += riichi.totalPoints * copies;
     if (dama.legalWin) legalDamaCopies += copies;
   }
+  if (
+    level === 'expert' &&
+    state.wall.length < 16 &&
+    (waitTypes < 2 || waitRemaining < 4)
+  )
+    return false;
   if (legalDamaCopies === 0) return true;
   damaPoints /= waitRemaining;
   riichiPoints /= waitRemaining;
+  if (isAdvanced(level)) {
+    const position = positionOutlook(state, seat, damaPoints, rules);
+    const needsRiichi =
+      level === 'expert' &&
+      (position.needsValue || position.unchangedFinish) &&
+      riichiPoints > damaPoints;
+    if (
+      !needsRiichi &&
+      (damaPoints >= (seat === state.dealer ? 12000 : 8000) ||
+        (waitTypes >= 2 && damaPoints >= (seat === state.dealer ? 5800 : 3900)))
+    )
+      return false;
+    if (level === 'expert') {
+      if (position.leading) return false;
+      if (needsRiichi && state.wall.length >= 16) return true;
+      if (
+        totalThreat(state, seat, level) === 0 &&
+        waitTypes >= 2 &&
+        state.wall.length >= 24
+      )
+        return true;
+    }
+  }
 
   const lastWind = state.matchLength === 'east' ? 0 : 1;
   const allLast =
@@ -335,6 +445,7 @@ export function decideAiTurn(
   seat: number,
   level: RiichiAiLevel,
   style?: CharacterStyle,
+  rules: RiichiRuleConfig = DEFAULT_RIICHI_RULES,
 ): TurnEvent | null {
   const opts = state.turnOptions;
   if (state.phase !== 'discard' || state.currentPlayer !== seat || !opts) {
@@ -361,9 +472,38 @@ export function decideAiTurn(
     return { type: 'discard', seat, tile: discardable[0] };
   }
 
-  const stance = chooseStance(state, seat, bestShanten, level, style);
+  const attackChoice = isAdvanced(level)
+    ? pickDiscard(
+        state,
+        seat,
+        discardable,
+        cands,
+        'attack',
+        visible,
+        level,
+        style,
+        rules,
+      )
+    : null;
+  const attackHand =
+    attackChoice === null ? null : removeTiles(hand, [attackChoice]);
+  const stance = attackHand
+    ? advancedStance(
+        state,
+        seat,
+        bestShanten,
+        attackOutlook(state, seat, attackHand, bestShanten, visible, rules),
+        totalThreat(state, seat, level),
+        level === 'expert',
+        style,
+        rules,
+      )
+    : chooseStance(state, seat, bestShanten, level, style);
 
-  if (stance !== 'fold') {
+  if (
+    stance !== 'fold' &&
+    (!isAdvanced(level) || totalThreat(state, seat, level) === 0)
+  ) {
     for (const option of opts.ankan) {
       const rest = removeTiles(hand, option);
       if (!rest) continue;
@@ -393,12 +533,13 @@ export function decideAiTurn(
       visible,
       level,
       style,
+      rules,
     );
     const hand13 = removeTiles(hand, [choice]);
     const remaining = cands.get(getBaseTile(choice))?.ukeire ?? 0;
     if (
       hand13 &&
-      shouldDeclareRiichi(state, seat, hand13, remaining, level, style)
+      shouldDeclareRiichi(state, seat, hand13, remaining, level, style, rules)
     ) {
       return { type: 'riichi', seat, tile: choice };
     }
@@ -413,6 +554,7 @@ export function decideAiTurn(
     visible,
     level,
     style,
+    rules,
   );
   return { type: 'discard', seat, tile };
 }
@@ -448,6 +590,7 @@ interface CallPlan {
   response: ClaimResponse;
   shanten: number;
   ukeire: number;
+  points: number;
 }
 
 function evaluateCall(
@@ -457,7 +600,7 @@ function evaluateCall(
   meld: RiichiMeld,
   forbidden: number[],
   visible: VisibleCounts,
-): { shanten: number; ukeire: number } | null {
+): { shanten: number; ukeire: number; points: number } | null {
   const rest = removeTiles(state.hands[seat], consumed);
   if (!rest) return null;
   const melds = [...state.melds[seat], meld];
@@ -481,7 +624,15 @@ function evaluateCall(
         ? a
         : b,
   );
-  return { shanten: best.shanten, ukeire: best.ukeire };
+  const discarded = rest.find((tile) => getBaseTile(tile) === best.base);
+  if (discarded === undefined) return null;
+  const after = removeTiles(rest, [discarded]);
+  if (!after) return null;
+  return {
+    shanten: best.shanten,
+    ukeire: best.ukeire,
+    points: estimateHandPoints(state, seat, after, melds),
+  };
 }
 
 function callHasYaku(
@@ -531,6 +682,7 @@ export function decideAiClaim(
   seat: number,
   level: RiichiAiLevel,
   style?: CharacterStyle,
+  rules: RiichiRuleConfig = DEFAULT_RIICHI_RULES,
 ): ClaimResponse {
   const claim = state.claim;
   const options: SeatClaimOptions | null = claim?.options[seat] ?? null;
@@ -541,7 +693,23 @@ export function decideAiClaim(
   const hand = state.hands[seat];
   const melds = state.melds[seat];
   const current = getShanten(hand, melds);
+  const visible = visibleCountsFor(state, seat);
   if (
+    isAdvanced(level) &&
+    advancedStance(
+      state,
+      seat,
+      current,
+      attackOutlook(state, seat, hand, current, visible, rules),
+      totalThreat(state, seat, level),
+      level === 'expert',
+      style,
+      rules,
+    ) === 'fold'
+  )
+    return { type: 'pass' };
+  if (
+    !isAdvanced(level) &&
     current >= 1 &&
     (style
       ? chooseStance(state, seat, current, level, style) === 'fold'
@@ -549,7 +717,6 @@ export function decideAiClaim(
   ) {
     return { type: 'pass' };
   }
-  const visible = visibleCountsFor(state, seat);
   const tile = claim.tile;
   const base = getBaseTile(tile);
   const plans: CallPlan[] = [];
@@ -595,6 +762,13 @@ export function decideAiClaim(
   }
 
   const improving = plans.filter((p) => {
+    if (level === 'expert') {
+      // 末位保留门清打点路线；领先允许有役鸣牌提速。不会拒绝已经合法的和了。
+      const position = positionOutlook(state, seat, p.points, rules);
+      if (isMenzhen(melds) && (position.needsValue || position.unchangedFinish))
+        return false;
+      if (position.leading && p.shanten < current) return true;
+    }
     if (!style) return p.shanten < current;
     if (p.shanten > current) return false;
     if (p.shanten === current)
@@ -628,9 +802,9 @@ export function decideAiClaim(
         !isMenzhen(melds);
     if (
       options.minkan &&
-      (level === 'standard' || style) &&
+      (level !== 'beginner' || style) &&
       current <= (style && style.callAggression >= 0.75 ? 2 : 1) &&
-      totalThreat(state, seat) === 0 &&
+      totalThreat(state, seat, level) === 0 &&
       kanHasYaku
     ) {
       return { type: 'minkan' };

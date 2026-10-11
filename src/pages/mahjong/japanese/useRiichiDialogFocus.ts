@@ -32,7 +32,10 @@ export function useRiichiDialogFocus() {
 export function useRiichiDialogContainer() {
   const [container, setContainer] = useState<HTMLElement | null>(null);
   useLayoutEffect(() => {
-    setContainer(document.querySelector<HTMLElement>('[data-riichi-theme]'));
+    setContainer(
+      document.querySelector<HTMLElement>('[data-riichi-theme]') ??
+        (typeof document !== 'undefined' ? document.body : null),
+    );
   }, []);
   return container;
 }

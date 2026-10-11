@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import AchievementUnlockToast from '@/components/AchievementUnlockToast';
 import CoinsToast from '@/components/CoinsToast';
 import GrowthPointToast from '@/components/GrowthPointToast';
+import { RankedNavigationGuard } from '@/components/ranked/RankedNavigationGuard';
 import { LocaleProvider } from '@/contexts/LocaleContext';
 import { emitGameEvent } from '@/lib/gameEvents';
 import Home from '@/pages/Home';
@@ -57,6 +58,7 @@ const App = () => {
   return (
     <BrowserRouter>
       <LocaleProvider>
+        <RankedNavigationGuard />
         <AchievementUnlockToast />
         <GrowthPointToast />
         <CoinsToast />

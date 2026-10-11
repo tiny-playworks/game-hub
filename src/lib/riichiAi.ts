@@ -108,6 +108,24 @@ export function evaluateTileDanger(
       : 1;
 }
 
+/** 强档弃和排序；仅是相对风险，筋与壁均不保证绝对安全。 */
+export function evaluateDefensiveDanger(
+  tile: number,
+  opp: OpponentView,
+  visible: VisibleCounts,
+): number {
+  const base = getBaseTile(tile);
+  if (isGenbutsu(base, opp)) return 0;
+  const seen = visible[base] ?? 0;
+  if (base >= 27) return seen >= 3 ? 0.05 : seen === 2 ? 0.6 : 0.8;
+  const suji = sujiState(base, opp);
+  const trap = sujiRiskMultiplier(base, opp);
+  if (suji === 'full' && seen >= 2) return 0.15 * trap;
+  if (isKabeSafe(base, visible)) return 0.25;
+  if (suji !== 'none') return (suji === 'full' ? 0.35 : 0.45) * trap;
+  return base % 9 === 0 || base % 9 === 8 ? 0.85 : 1;
+}
+
 export interface TileValueContext {
   doraIndicators: number[];
   seatWind: number;

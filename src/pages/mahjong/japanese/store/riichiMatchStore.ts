@@ -2,6 +2,8 @@ import { shallow } from 'zustand/shallow';
 import { createWithEqualityFn } from 'zustand/traditional';
 import { getPlayerCharacterState } from '@/lib/playerCharacters';
 import { getPlayerProfile } from '@/lib/playerProfile';
+import { getRankedState, saveRankedState, type RankedTicket } from '@/lib/ranked';
+import { settleRankedMatch } from '@/lib/rankedSettlement';
 import {
   recordRiichiMatchFinish,
   recordRiichiProgressEvent,
@@ -21,6 +23,7 @@ import {
   type RiichiMatchState,
   type RiichiReplayFile,
   type RiichiRuleConfig,
+  type RiichiSeatAiLevels,
   type RiichiSeatCharacters,
   selectSeatCharacters,
   undoLastHumanAction,
@@ -63,14 +66,17 @@ type RiichiStore = {
   setDecisionClock: (clock: DecisionClock | null) => void;
   openReplay: (file: RiichiReplayFile | null) => void;
   startMatch: (options?: {
+    ranked?: RankedTicket;
     seed?: number;
     rules?: Partial<RiichiRuleConfig>;
     seatCharacters?: RiichiSeatCharacters;
+    seatAiLevels?: Partial<RiichiSeatAiLevels>;
     opponentSelection?: OpponentSelection;
   }) => void;
   dispatch: (event: RiichiEvent) => boolean;
   undo: () => boolean;
   resumeSaved: () => boolean;
+  abandonRanked: () => boolean;
 };
 
 type EffectListener = (effects: RiichiEffect[]) => void;
@@ -99,7 +105,7 @@ function processProgress(
       // 成长系统写入失败不影响对局
     }
   }
-  if (match.status === 'matchEnd' && match.matchEnd) {
+  if (match.status === 'matchEnd' && match.matchEnd && !match.ranked) {
     const key = `${match.seed}:finish-match`;
     if (!next.includes(key)) {
       try {
@@ -221,23 +227,32 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
       setShowMenu: (showMenu) => changeVisibility({ showMenu }),
       setDecisionClock: (decisionClock) => set({ decisionClock }),
       openReplay: (replay) =>
-        changeVisibility({ replay, cutIns: [], moments: [] }),
+        { if (get().match?.ranked && get().match?.status !== 'matchEnd' && replay) return;
+          changeVisibility({ replay, cutIns: [], moments: [] }); },
       startMatch: (options) => {
+        // UI 必须先确认并结算旧段位战，不能直接覆盖正在进行的存档。
+        const rankedState = getRankedState();
+        if (rankedState.activeMatchId) throw new Error('Ranked match still active');
         const seed = options?.seed ?? randomSeed();
-        const playerCharacterId = getPlayerCharacterState().activeCharacterId;
+        const ticket = options?.ranked;
+        const playerCharacterId = ticket?.characterId ?? getPlayerCharacterState().activeCharacterId;
         const { match, effects } = createMatch({
-          seed,
-          matchLength: get().matchLength,
+          seed: ticket?.seed ?? seed,
+          matchLength: ticket?.matchLength ?? get().matchLength,
+          ranked: ticket,
           rules: options?.rules,
+          seatAiLevels: options?.seatAiLevels,
           seatCharacters: selectSeatCharacters(
             seed,
             playerCharacterId,
             options?.seatCharacters?.slice(1) ?? options?.opponentSelection,
           ),
         });
+        if (ticket) saveRankedState({ ...rankedState, activeMatchId: ticket.id, activeTicket: ticket });
         const processedProgress = processProgress(match, effects, []);
         changeVisibility({
           match,
+          matchLength: match.matchLength,
           processedProgress,
           decisionClock: null,
           view: 'game',
@@ -253,11 +268,17 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
         if (!current || get().cutIns.length > 0) return false;
         const step = applyEvent(current, event);
         if (!step) return false;
+        if (current.ranked && getRankedState().activeMatchId !== current.ranked.id) return false;
         const processedProgress = processProgress(
           step.match,
           step.effects,
           get().processedProgress,
         );
+        // 先保存终局事件；刷新时可以从同一收据继续完成结算。
+        if (step.match.ranked && step.match.matchEnd) {
+          saveMatch(step.match, processedProgress);
+          settleRankedMatch(step.match.ranked, step.match.matchEnd.finalScores);
+        }
         changeVisibility({
           match: step.match,
           processedProgress,
@@ -269,7 +290,7 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
       },
       undo: () => {
         const current = get().match;
-        if (!current) return false;
+        if (!current || current.ranked) return false;
         const reverted = undoLastHumanAction(current);
         if (!reverted) return false;
         changeVisibility({
@@ -284,6 +305,12 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
       resumeSaved: () => {
         const saved = loadSavedMatch();
         if (!saved) return false;
+        if (saved.match.ranked) {
+          const ranked = getRankedState();
+          if (saved.match.status === 'matchEnd' && saved.match.matchEnd) {
+            if (!settleRankedMatch(saved.match.ranked, saved.match.matchEnd.finalScores)) return false;
+          } else if (ranked.activeMatchId !== saved.match.ranked.id) return false;
+        }
         changeVisibility({
           match: { ...saved.match, turn: saved.match.turn + 1 },
           matchLength: saved.match.matchLength,
@@ -291,10 +318,22 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
           decisionClock: null,
           view: 'game',
           showMenu: false,
-          playerCharacterId: getPlayerCharacterState().activeCharacterId,
+          playerCharacterId: saved.match.ranked?.characterId ?? getPlayerCharacterState().activeCharacterId,
           cutIns: [],
           moments: [],
         });
+        return true;
+      },
+      abandonRanked: () => {
+        const ranked = getRankedState();
+        if (!ranked.activeMatchId) return true;
+        const current = get().match?.ranked?.id === ranked.activeMatchId ? get().match : loadSavedMatch()?.match;
+        const ticket = ranked.activeTicket ?? current?.ranked;
+        if (!ticket) return false;
+        const scores = current?.ranked?.id === ticket.id ? current.matchEnd?.finalScores ?? current.round.result?.settlement.newScores ?? current.round.scores : [25000,25000,25000,25000];
+        settleRankedMatch(ticket, scores, current?.status !== 'matchEnd');
+        clearSavedMatch();
+        changeVisibility({ match: null, view: 'rules', cutIns: [], moments: [], decisionClock: null, replay: null, showMenu: false, showGuide: false });
         return true;
       },
     };

@@ -33,6 +33,7 @@ export {
   DEFAULT_RIICHI_RULES,
   type RiichiAiLevel,
   type RiichiRuleConfig,
+  type RiichiSeatAiLevels,
   resolveRules,
 } from './rules';
 export {

@@ -13,7 +13,7 @@ const switches = [
   'dangerHint',
 ] as const;
 
-export function RiichiSettingsPanel() {
+export function RiichiSettingsPanel({ ranked = false }: { ranked?: boolean }) {
   const { t } = useLocale();
   const { riichiSettings } = usePlayerProfile();
   const set = <K extends keyof RiichiPlayerSettings>(
@@ -25,7 +25,7 @@ export function RiichiSettingsPanel() {
     <fieldset className="riichi-settings-panel">
       <legend>{t('riichi.settings.title')}</legend>
       <div className="riichi-settings-grid">
-        {switches.map((key) => (
+        {switches.filter((key) => !ranked || key !== 'dangerHint').map((key) => (
           <label key={key}>
             <span>{t(`riichi.settings.${key}`)}</span>
             <input
@@ -36,7 +36,7 @@ export function RiichiSettingsPanel() {
           </label>
         ))}
       </div>
-      <label className="riichi-settings-level">
+      {!ranked && <label className="riichi-settings-level">
         <span>{t('riichi.settings.aiLevel')}</span>
         <select
           value={riichiSettings.aiLevel}
@@ -49,8 +49,11 @@ export function RiichiSettingsPanel() {
         >
           <option value="beginner">{t('riichi.settings.beginner')}</option>
           <option value="standard">{t('riichi.settings.standard')}</option>
+          <option value="strong">{t('riichi.settings.strong')}</option>
+          <option value="expert">{t('riichi.settings.expert')}</option>
         </select>
-      </label>
+      </label>}
+      {ranked && <p className="text-sm">{t('ranked.fixedRules')}</p>}
       <label className="riichi-settings-level">
         <span>{t('riichi.settings.presentation')}</span>
         <select

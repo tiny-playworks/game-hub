@@ -1,3 +1,8 @@
+import {
+  isRiichiAiLevel,
+  type RiichiAiLevel,
+} from '@/pages/mahjong/japanese/engine/rules';
+
 export const PLAYER_PROFILE_STORAGE_KEY = 'game-hub-player-profile';
 export const PLAYER_NICKNAME_MAX_LENGTH = 16;
 export const PLAYER_NICKNAME_FALLBACK = '牌友';
@@ -29,7 +34,7 @@ export interface RiichiPlayerSettings {
   callConfirm: boolean;
   /** 他家立直或多副露时，为手牌标注放铳危险度 */
   dangerHint: boolean;
-  aiLevel: 'beginner' | 'standard';
+  aiLevel: RiichiAiLevel;
   presentation: 'full' | 'simple' | 'off';
 }
 
@@ -150,7 +155,7 @@ export function normalizeRiichiSettings(raw: unknown): RiichiPlayerSettings {
     autoTsumogiri: bool(o.autoTsumogiri, d.autoTsumogiri),
     callConfirm: bool(o.callConfirm, d.callConfirm),
     dangerHint: bool(o.dangerHint, d.dangerHint),
-    aiLevel: o.aiLevel === 'beginner' ? 'beginner' : 'standard',
+    aiLevel: isRiichiAiLevel(o.aiLevel) ? o.aiLevel : 'standard',
     presentation:
       o.presentation === 'simple' || o.presentation === 'off'
         ? o.presentation

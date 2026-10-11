@@ -23,6 +23,7 @@ import { RiichiSettingsPanel } from './RiichiSettingsPanel';
 import { RiichiTile } from './Tile';
 
 type Props = {
+  ranked?: boolean;
   game: RiichiGameState;
   historyLength: number;
   onStart: () => void;
@@ -37,6 +38,7 @@ type Props = {
 };
 
 export function GameHeader({
+  ranked = false,
   game,
   historyLength,
   onStart,
@@ -151,8 +153,8 @@ export function GameHeader({
             <button type="button" onClick={() => closeAnd(onStart)}>
               <RotateCcw aria-hidden="true" size={18} />
               <span>
-                <strong>{t('riichi.modal.matchEnd.playAgain')}</strong>
-                <small>{t('riichi.menu.restartDetail')}</small>
+                <strong>{t(ranked ? 'ranked.newTable' : 'riichi.modal.matchEnd.playAgain')}</strong>
+                <small>{t(ranked ? 'ranked.exitDetail' : 'riichi.menu.restartDetail')}</small>
               </span>
             </button>
             <button type="button" onClick={() => closeAnd(onOpenGuide)}>
@@ -169,7 +171,7 @@ export function GameHeader({
                 <small>{t('riichi.menu.rulesDetail')}</small>
               </span>
             </button>
-            {historyLength > 0 && (
+            {!ranked && historyLength > 0 && (
               <button type="button" onClick={() => closeAnd(onUndo)}>
                 <Undo2 aria-hidden="true" size={18} />
                 <span>
@@ -185,16 +187,16 @@ export function GameHeader({
                 <small>{t('riichi.menu.logDetail')}</small>
               </span>
             </button>
-            <button type="button" onClick={() => closeAnd(onOpenReplay)}>
+            {!ranked && <button type="button" onClick={() => closeAnd(onOpenReplay)}>
               <ScrollText aria-hidden="true" size={18} />
               <span>
                 <strong>{t('riichi.replay.open')}</strong>
                 <small>{t('riichi.replay.export')}</small>
               </span>
-            </button>
+            </button>}
           </div>
 
-          <RiichiSettingsPanel />
+          <RiichiSettingsPanel ranked={ranked} />
 
           <section className="riichi-menu-theme">
             <div className="riichi-menu-section-title">

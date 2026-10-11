@@ -1,4 +1,5 @@
 import { RIICHI_TIME_BANK_INITIAL_SECONDS } from '@/lib/riichiClock';
+import { isRankedTicket, type RankedTicket } from '@/lib/ranked';
 import { rankSeatsByScore, resolveRiichiMatchEnd } from '@/lib/riichiGameEnd';
 import { RIICHI_INITIAL_POINTS } from '@/lib/riichiSettlement';
 import type {
@@ -25,8 +26,11 @@ import {
   type StepContext,
 } from './round';
 import {
+  isRiichiAiLevel,
   isRiichiRuleConfig,
+  normalizeSeatAiLevels,
   type RiichiRuleConfig,
+  type RiichiSeatAiLevels,
   resolveRules,
 } from './rules';
 
@@ -56,6 +60,8 @@ export interface RiichiMatchState {
   rules: RiichiRuleConfig;
   matchLength: 'east' | 'south';
   seatCharacters: RiichiSeatCharacters;
+  seatAiLevels: RiichiSeatAiLevels;
+  ranked?: RankedTicket;
   round: RiichiGameState;
   status: RiichiMatchStatus;
   matchEnd: RiichiMatchEnd | null;
@@ -77,10 +83,12 @@ export interface StepResult {
 }
 
 export interface CreateMatchOptions {
+  ranked?: RankedTicket;
   seed: number;
   matchLength: 'east' | 'south';
   rules?: Partial<RiichiRuleConfig>;
   seatCharacters?: RiichiSeatCharacters;
+  seatAiLevels?: Partial<RiichiSeatAiLevels>;
 }
 
 const INITIAL_SCORES = [
@@ -109,7 +117,7 @@ function statusOf(round: RiichiGameState): RiichiMatchStatus {
 }
 
 export function createMatch(options: CreateMatchOptions): StepResult {
-  const rules = resolveRules(options.rules);
+  const rules = resolveRules(options.ranked ? undefined : options.rules);
   const ctx = createStepContext(rules);
   ctx.effects.push({
     type: 'progress',
@@ -141,6 +149,8 @@ export function createMatch(options: CreateMatchOptions): StepResult {
       rules,
       matchLength: options.matchLength,
       seatCharacters: normalizeSeatCharacters(options.seatCharacters),
+      seatAiLevels: normalizeSeatAiLevels(options.seatAiLevels, rules.aiLevel),
+      ...(options.ranked ? { ranked: options.ranked, seatCharacters: [null, ...options.ranked.opponents] as RiichiSeatCharacters, seatAiLevels: [...options.ranked.seatAiLevels] as RiichiSeatAiLevels } : {}),
       round,
       status: statusOf(round),
       matchEnd: null,
@@ -357,7 +367,7 @@ export function isHumanEvent(event: RiichiEvent): boolean {
 export function undoLastHumanAction(
   match: RiichiMatchState,
 ): RiichiMatchState | null {
-  if (match.status !== 'playing') return null;
+  if (match.status !== 'playing' || match.ranked) return null;
   const start = match.roundStart.eventIndex;
   let target = -1;
   for (let i = match.events.length - 1; i >= start; i--) {
@@ -387,12 +397,14 @@ export function undoLastHumanAction(
 }
 
 export interface RiichiReplayFile {
+  ranked?: RankedTicket;
   version: number;
   seed: number;
   matchLength: 'east' | 'south';
   rules: RiichiRuleConfig;
   /** 缺省表示 P2 之前的回放，恢复为澪 / 凛 / 空。 */
   seatCharacters?: RiichiSeatCharacters;
+  seatAiLevels?: Partial<RiichiSeatAiLevels>;
   events: RiichiEvent[];
 }
 
@@ -403,6 +415,8 @@ export function toReplayFile(match: RiichiMatchState): RiichiReplayFile {
     matchLength: match.matchLength,
     rules: match.rules,
     seatCharacters: [...match.seatCharacters],
+    seatAiLevels: [...match.seatAiLevels],
+    ...(match.ranked ? { ranked: match.ranked } : {}),
     events: match.events,
   };
 }
@@ -414,6 +428,8 @@ export function replayMatch(file: RiichiReplayFile): RiichiMatchState[] {
     matchLength: file.matchLength,
     rules: file.rules,
     seatCharacters: file.seatCharacters,
+    seatAiLevels: file.seatAiLevels,
+    ranked: file.ranked,
   }).match;
   const frames = [match];
   for (const event of file.events) {
@@ -435,6 +451,8 @@ export function restoreMatch(file: RiichiReplayFile): RiichiMatchState | null {
     matchLength: file.matchLength,
     rules: file.rules,
     seatCharacters: file.seatCharacters,
+    seatAiLevels: file.seatAiLevels,
+    ranked: file.ranked,
   }).match;
   for (const event of file.events) {
     const step = applyEvent(match, event);
@@ -500,11 +518,18 @@ export function isReplayFile(value: unknown): value is RiichiReplayFile {
   };
   return (
     v.version === RIICHI_MATCH_VERSION &&
+    (v.ranked === undefined || (isRankedTicket(v.ranked) && v.ranked.seed === v.seed && v.ranked.matchLength === v.matchLength)) &&
     Number.isSafeInteger(v.seed) &&
     (v.matchLength === 'east' || v.matchLength === 'south') &&
     Array.isArray(v.events) &&
     v.events.length <= 20000 &&
     v.events.every(eventIsValid) &&
+    (v.seatAiLevels === undefined ||
+      (Array.isArray(v.seatAiLevels) &&
+        v.seatAiLevels.length <= 4 &&
+        v.seatAiLevels.every(
+          (level) => level == null || isRiichiAiLevel(level),
+        ))) &&
     (v.seatCharacters === undefined ||
       (Array.isArray(v.seatCharacters) &&
         v.seatCharacters.length === 4 &&

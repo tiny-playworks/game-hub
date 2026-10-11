@@ -4,9 +4,9 @@ import App from '../src/App';
 
 test('renders the main page', () => {
   render(<App />);
-  expect(screen.getAllByText('日麻游戏大厅').length).toBeGreaterThanOrEqual(1);
+  expect(screen.getAllByText('坐下来，打两圈。').length).toBeGreaterThanOrEqual(1);
   expect(
-    screen.getByText('进来就能开打，规则和新手引导也都在手边'),
+    screen.getByText('一方牌桌，片刻闲暇。'),
   ).toBeInTheDocument();
 });
 

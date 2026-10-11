@@ -1,6 +1,9 @@
 import { Copy, TimerReset } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { RankedResult } from '@/components/ranked/RankedResult';
+import { confirmRankedExit } from '@/components/ranked/RankedStartButton';
+import { useRankedState } from '@/hooks/useRankedState';
 import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -777,12 +780,15 @@ function RiichiKeyboardShortcuts({
 
 const GameMahjongJapanese = () => {
   const { t, locale } = useLocale();
+  const navigate = useNavigate();
+  const rankedState = useRankedState();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activePanel, setActivePanel] = useState<ActiveDesktopPanel>(null);
   const [loadError, setLoadError] = useState(false);
   const didHandleEntryRef = useRef(false);
   const { theme, setTheme } = useRiichiTheme();
   const match = useRiichiStore((s) => s.match);
+  const isRanked = Boolean(match?.ranked);
   const view = useRiichiStore((s) => s.view);
   const setView = useRiichiStore((s) => s.setView);
   const matchLength = useRiichiStore((s) => s.matchLength);
@@ -821,7 +827,7 @@ const GameMahjongJapanese = () => {
     decisionKey !== null && riichiSelection === decisionKey;
   const bag = useRiichiViewModel(
     game,
-    activePanel === 'hint',
+    activePanel === 'hint' && !isRanked,
     locale,
     riichiSelecting,
   );
@@ -857,6 +863,8 @@ const GameMahjongJapanese = () => {
       tile,
     });
   const startDesktopGame = async () => {
+    if (!confirmRankedExit(t)) return;
+    if (isRanked) { navigate('/'); return; }
     setActivePanel(null);
     setRiichiSelection(null);
     try {
@@ -890,7 +898,7 @@ const GameMahjongJapanese = () => {
     }
   };
   const openCurrentReplay = () => {
-    if (match) openReplay(toReplayFile(match));
+    if (match && !isRanked) openReplay(toReplayFile(match));
   };
   const openLastReplay = async () => {
     try {
@@ -906,9 +914,11 @@ const GameMahjongJapanese = () => {
     }
   };
   const returnToLobby = () => {
+    if (!confirmRankedExit(t)) return;
     setActivePanel(null);
     setRiichiSelection(null);
     setView('rules');
+    if (isRanked) navigate('/');
   };
 
   useEffect(() => {
@@ -927,7 +937,8 @@ const GameMahjongJapanese = () => {
     void preloadRiichiRules()
       .then(() => {
         if (shouldResume) setLoadError(!resumeSaved());
-        else startGame({ rules: { aiLevel: riichiSettings.aiLevel } });
+        else if (confirmRankedExit(t)) startGame({ rules: { aiLevel: riichiSettings.aiLevel } });
+        else resumeSaved();
       })
       .catch(() => setLoadError(true));
     if (shouldOpenGuide) setShowGuide(true);
@@ -944,6 +955,7 @@ const GameMahjongJapanese = () => {
     resumeSaved,
     setShowGuide,
     riichiSettings.aiLevel,
+    t,
   ]);
 
   useEffect(() => {
@@ -982,6 +994,9 @@ const GameMahjongJapanese = () => {
   }
 
   if (!game || !match) return null;
+
+  const rankedResult = isRanked && match.status === 'matchEnd' ? rankedState.history.find((entry) => entry.id === match.ranked?.id) : null;
+  if (rankedResult && !presenting) return <RankedResult key={rankedResult.id} result={rankedResult} />;
 
   const roundProgressSummary = getCurrentRiichiRoundProgressSummary();
   const actionState: RiichiActionState = {
@@ -1030,6 +1045,7 @@ const GameMahjongJapanese = () => {
           }
         />
         <GameHeader
+          ranked={isRanked}
           game={game}
           historyLength={
             match?.events
@@ -1044,7 +1060,7 @@ const GameMahjongJapanese = () => {
           }}
           onOpenLog={() => setActivePanel('log')}
           onBackToRules={returnToLobby}
-          returnRulesLabel={t('common.returnRules')}
+          returnRulesLabel={t(isRanked ? 'common.backHome' : 'common.returnRules')}
           theme={theme}
           onThemeChange={setTheme}
           onOpenGuide={() => setShowGuide(true)}
@@ -1064,16 +1080,17 @@ const GameMahjongJapanese = () => {
               actionState={actionState}
               actionHandlers={actionHandlers}
               discard={discard}
-              dangerHint={riichiSettings.dangerHint}
+              dangerHint={!isRanked && riichiSettings.dangerHint}
               previewBase={
-                activePanel === 'hint' && trainingPreview?.key === decisionKey
+                !isRanked && activePanel === 'hint' && trainingPreview?.key === decisionKey
                   ? trainingPreview.base
                   : null
               }
             />
           </div>
           <DesktopSideRail
-            activePanel={activePanel}
+            ranked={isRanked}
+            activePanel={isRanked && activePanel === 'hint' ? null : activePanel}
             onPanelChange={setActivePanel}
             hasHint={Boolean(turn)}
             hintContent={
@@ -1125,7 +1142,7 @@ const GameMahjongJapanese = () => {
               onNext={() => act({ type: 'nextRound' })}
             />
           )}
-        {match?.status === 'matchEnd' && match.matchEnd && !presenting && (
+        {!isRanked && match?.status === 'matchEnd' && match.matchEnd && !presenting && (
           <MatchEndModal
             matchEnd={match.matchEnd}
             moments={moments}

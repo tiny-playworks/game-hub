@@ -7,6 +7,7 @@ export interface WalletState {
   lifetimeEarned: number;
   ledger: { at: number; delta: number; reasonKey: string }[];
   dailyArcadeEarned: { dateKey: string; amount: number };
+  rewardedMatchIds: string[];
 }
 
 function count(value: unknown): number {
@@ -19,6 +20,7 @@ export function normalizeWalletState(raw: unknown): WalletState {
   const state =
     raw && typeof raw === 'object' ? (raw as Partial<WalletState>) : {};
   return {
+    rewardedMatchIds: Array.isArray(state.rewardedMatchIds) ? state.rewardedMatchIds.filter((id): id is string => typeof id === 'string').slice(-100) : [],
     coins: count(state.coins),
     lifetimeEarned: Math.max(count(state.coins), count(state.lifetimeEarned)),
     ledger: Array.isArray(state.ledger)
@@ -59,10 +61,12 @@ export function addCoins(
   amount: number,
   reasonKey: string,
   at = Date.now(),
+  matchId?: string,
 ): number {
   const delta = count(amount);
   if (!delta) return 0;
   const current = getWalletState();
+  if (matchId && current.rewardedMatchIds.includes(matchId)) return 0;
   if (
     !Number.isSafeInteger(current.coins + delta) ||
     !Number.isSafeInteger(current.lifetimeEarned + delta)
@@ -70,6 +74,7 @@ export function addCoins(
     return 0;
   const next = {
     ...current,
+    rewardedMatchIds: matchId ? [...current.rewardedMatchIds, matchId].slice(-100) : current.rewardedMatchIds,
     coins: current.coins + delta,
     lifetimeEarned: current.lifetimeEarned + delta,
     ledger: [...current.ledger, { at, delta, reasonKey }].slice(-50),

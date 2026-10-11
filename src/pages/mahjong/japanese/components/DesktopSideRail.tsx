@@ -23,6 +23,7 @@ const PANELS: PanelDefinition[] = [
 ];
 
 type Props = {
+  ranked?: boolean;
   activePanel: ActiveDesktopPanel;
   onPanelChange: (panel: ActiveDesktopPanel) => void;
   hasHint: boolean;
@@ -32,6 +33,7 @@ type Props = {
 };
 
 export function DesktopSideRail({
+  ranked = false,
   activePanel,
   onPanelChange,
   hasHint,
@@ -61,7 +63,7 @@ export function DesktopSideRail({
         className="riichi-desktop-rail-nav"
         aria-label={t('riichi.rail.tools')}
       >
-        {PANELS.map(({ id, icon: Icon }) => {
+        {PANELS.filter(({ id }) => !ranked || id !== 'hint').map(({ id, icon: Icon }) => {
           const label = t(`riichi.rail.${id}`);
           const selected = activePanel === id;
           return (

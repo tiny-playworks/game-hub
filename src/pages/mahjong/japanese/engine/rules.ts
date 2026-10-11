@@ -3,7 +3,34 @@ import {
   type MatchEndRules,
 } from '@/lib/riichiGameEnd';
 
-export type RiichiAiLevel = 'beginner' | 'standard';
+export const RIICHI_AI_LEVELS = [
+  'beginner',
+  'standard',
+  'strong',
+  'expert',
+] as const;
+export type RiichiAiLevel = (typeof RIICHI_AI_LEVELS)[number];
+export type RiichiSeatAiLevels = [
+  RiichiAiLevel,
+  RiichiAiLevel,
+  RiichiAiLevel,
+  RiichiAiLevel,
+];
+
+export function isRiichiAiLevel(value: unknown): value is RiichiAiLevel {
+  return RIICHI_AI_LEVELS.some((level) => level === value);
+}
+
+/** 老存档或未配置的座位继承整桌难度。 */
+export function normalizeSeatAiLevels(
+  value: unknown,
+  fallback: RiichiAiLevel,
+): RiichiSeatAiLevels {
+  const levels = Array.isArray(value) ? value : [];
+  return [0, 1, 2, 3].map((seat) =>
+    isRiichiAiLevel(levels[seat]) ? levels[seat] : fallback,
+  ) as RiichiSeatAiLevels;
+}
 
 /** 规则配置；默认对齐雀魂段位场 */
 export interface RiichiRuleConfig {
@@ -60,8 +87,7 @@ export function isRiichiRuleConfig(value: unknown): value is RiichiRuleConfig {
   ];
   if (!booleanKeys.every((key) => typeof rules[key] === 'boolean'))
     return false;
-  if (rules.aiLevel !== 'beginner' && rules.aiLevel !== 'standard')
-    return false;
+  if (!isRiichiAiLevel(rules.aiLevel)) return false;
   if (!rules.matchEnd || typeof rules.matchEnd !== 'object') return false;
   const end = rules.matchEnd as Record<string, unknown>;
   return (

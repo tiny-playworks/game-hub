@@ -4,7 +4,6 @@ import {
   Check,
   ChevronRight,
   Coins,
-  Crown,
   Gamepad2,
   Leaf,
   Play,
@@ -17,6 +16,8 @@ import { CharacterPortraitSlot } from '@/components/characters/CharacterPortrait
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
 import { ThemeSwitcher } from '@/components/common/ThemeSwitcher';
 import { PlayerAvatar } from '@/components/home/PlayerAvatar';
+import { RankedLobbyCard } from '@/components/ranked/RankedLobbyCard';
+import { getRankedState } from '@/lib/ranked';
 import { Button } from '@/components/ui/button';
 import { WalletBadge } from '@/components/WalletBadge';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -58,7 +59,7 @@ const Home = () => {
   const [checkin, setCheckin] = useState(ensureCheckinState);
   const [growth, setGrowth] = useState(getGrowthOverview);
   const [characters, setCharacters] = useState(
-    () => syncPlayerCharacterUnlocks().state,
+    () => syncPlayerCharacterUnlocks(getRankedState().peak.band).state,
   );
   const [feed, setFeed] = useState(() => getRecentGrowthFeed(3));
   const [categoryId, setCategoryId] = useState('mini');
@@ -84,7 +85,7 @@ const Home = () => {
         ? current
         : updatePlayerProfile({ activeTitle: nextTitle }),
     );
-    setCharacters(syncPlayerCharacterUnlocks().state);
+    setCharacters(syncPlayerCharacterUnlocks(getRankedState().peak.band).state);
     setFeed(getRecentGrowthFeed(3));
   }, []);
   useEffect(() => {
@@ -199,29 +200,7 @@ const Home = () => {
             </div>
           </article>
           <div className="flex min-w-0 flex-col gap-4">
-            <article className="paper-texture flex flex-1 flex-col rounded-[28px] border border-wood/25 bg-card p-6 sm:p-8">
-              <div className="flex items-center justify-between">
-                <span className="text-xs tracking-[0.16em] text-muted-foreground">
-                  {t('lobby.rankedLabel')}
-                </span>
-                <Crown className="size-5 text-wood" />
-              </div>
-              <div className="my-6 flex flex-1 flex-col items-center justify-center text-center">
-                <div className="lobby-rank-emblem flex size-24 items-center justify-center rounded-[28px] border border-gold/50 bg-gold/10">
-                  <Crown className="size-11 text-wood" strokeWidth={1.25} />
-                </div>
-                <h2 className="mt-5 text-2xl font-semibold">
-                  {t('lobby.rankedSoon')}
-                </h2>
-                <p className="mt-3 max-w-xs text-sm leading-7 text-muted-foreground">
-                  {t('lobby.rankedDescription')}
-                </p>
-              </div>
-              <Button disabled size="lg" className="w-full rounded-xl">
-                <Crown className="size-4" />
-                {t('lobby.startRanked')}
-              </Button>
-            </article>
+            <RankedLobbyCard />
             <article className="felt-surface rounded-[24px] border border-gold/30 p-5 text-paper">
               <div className="flex items-center gap-3">
                 <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-gold/30 bg-paper/10">
