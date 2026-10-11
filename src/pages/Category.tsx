@@ -1,6 +1,7 @@
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
+import { PersonalBest } from '@/components/game/PersonalBest';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { categories } from '@/data/categories';
@@ -155,6 +156,9 @@ const Category = () => {
                     {t(`game.${game.id}.description`) || game.description}
                   </p>
 
+                  <div className="mt-3">
+                    <PersonalBest gameId={game.id} />
+                  </div>
                   <div className="mt-4 flex flex-wrap gap-2">
                     {game.tags.map((tag) => (
                       <span

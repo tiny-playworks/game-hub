@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { VirtualController } from '@/components/common/VirtualController';
+import { GameResultOverlay } from '@/components/game/GameResultOverlay';
+import { GameShell, StatPill } from '@/components/game/GameShell';
 import { Button } from '@/components/ui/button';
+import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import {
   canSetDir,
@@ -12,7 +14,6 @@ import {
 } from '@/lib/snake';
 import { cn } from '@/lib/utils';
 import { useScreenShake } from '../hooks/useScreenShake';
-import { useGameStore } from '../store/gameStore';
 import './snake.css';
 
 const W = 400;
@@ -36,8 +37,10 @@ const GameSnake = () => {
   const shake = useScreenShake();
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const { stats, updateHighScore } = useGameStore();
-  const gameStats = stats.snake || { highScore: 0 };
+  const arcade = useArcade();
+  const { difficulty, paused, finish } = arcade;
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
 
   const [score, setScore] = useState(0);
   const [status, setStatus] = useState<'idle' | 'playing' | 'over'>('idle');
@@ -96,6 +99,7 @@ const GameSnake = () => {
   }, [placeFood]);
 
   const start = useCallback(() => {
+    if (pausedRef.current) return;
     if (stateRef.current.snake.length === 1) placeFood();
     setStatus('playing');
     stateRef.current.lastTick = performance.now();
@@ -141,7 +145,7 @@ const GameSnake = () => {
         ctx.stroke();
       }
 
-      if (status === 'playing') {
+      if (status === 'playing' && !pausedRef.current) {
         // Handle Golden Food Timer
         if (state.food.type === 'golden') {
           state.food.timer -= dt;
@@ -151,7 +155,11 @@ const GameSnake = () => {
         }
 
         // Logic Tick
-        const currentSpeed = Math.max(50, 150 - score * 0.2); // gets faster as score increases
+        const currentSpeed = Math.max(
+          35,
+          (difficulty === 'easy' ? 210 : difficulty === 'hard' ? 85 : 150) -
+            score * 0.2,
+        ); // gets faster as score increases
         if (timestamp - state.lastTick > currentSpeed) {
           state.lastTick = timestamp;
 
@@ -170,7 +178,6 @@ const GameSnake = () => {
           if (result.kind === 'dead') {
             setStatus('over');
             shake();
-            if (score > gameStats.highScore) updateHighScore('snake', score);
             return;
           }
 
@@ -285,18 +292,11 @@ const GameSnake = () => {
 
     reqId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(reqId);
-  }, [
-    status,
-    score,
-    gameStats.highScore,
-    placeFood,
-    shake,
-    updateHighScore,
-    createParticles,
-  ]);
+  }, [status, score, placeFood, shake, createParticles, difficulty]);
 
   const handleDirection = useCallback(
     (dir: SnakeDir) => {
+      if (pausedRef.current) return;
       const state = stateRef.current;
       if (status === 'idle') start();
       if (canSetDir(state.dir, dir)) state.nextDir = dir;
@@ -306,6 +306,7 @@ const GameSnake = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (pausedRef.current || arcade.result) return;
       switch (e.key) {
         case 'ArrowUp':
         case 'w':
@@ -335,36 +336,33 @@ const GameSnake = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleDirection]);
+  }, [handleDirection, arcade.result]);
 
+  useArcadeSnapshot(() => ({
+    status,
+    score,
+    snake: stateRef.current.snake,
+    direction: stateRef.current.dir,
+    food: stateRef.current.food,
+    grid: [COLS, ROWS],
+  }));
+  useEffect(() => {
+    if (status === 'playing') arcade.start();
+    if (status === 'over') finish('lose', score);
+  }, [status, score, arcade.start, finish]);
   return (
-    <div className="min-h-screen bg-black text-white selection:bg-cyan-900/50">
-      <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2 border-b border-cyan-900/30 bg-[#050505]/80 px-4 py-3 backdrop-blur">
-        <Link
-          to="/"
-          className="shrink-0 text-zinc-500 transition-colors hover:text-cyan-400"
-        >
-          ← {t('common.backToList')}
-        </Link>
-        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 text-xs font-mono sm:gap-4 sm:text-sm">
-          <span className="text-cyan-400">
-            {t('snake.score')}: {score.toString().padStart(4, '0')}
-          </span>
-          <span className="text-zinc-500">
-            {t('snake.best')}: {gameStats.highScore.toString().padStart(4, '0')}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={reset}
-            className="bg-transparent border-cyan-900/50 text-cyan-400 hover:bg-cyan-900/30"
-          >
-            {t('common.restart')}
-          </Button>
-        </div>
-      </header>
-
-      <main className="flex flex-col items-center justify-center p-4 min-h-[calc(100vh-64px)] pb-24 md:pb-4">
+    <GameShell
+      autoStart={false}
+      title={t('game.snake.name')}
+      subtitle={t('game.snake.description')}
+      status={<StatPill label={t('arcade.unit.points')} value={score} />}
+      toolbar={
+        <Button variant="outline" size="sm" onClick={reset}>
+          {t('common.restart')}
+        </Button>
+      }
+    >
+      <div className="flex w-full flex-col items-center justify-center pb-44 md:pb-4">
         <div
           className={cn(
             'responsive-canvas-wrapper snake-canvas-container rounded-xl overflow-hidden border border-cyan-900/50',
@@ -373,8 +371,15 @@ const GameSnake = () => {
         >
           <canvas ref={canvasRef} width={W} height={H} className="block" />
 
+          <GameResultOverlay
+            open={status === 'over'}
+            tone="lose"
+            title={t('snake.gameOver')}
+            description={String(score) + ' ' + t('arcade.unit.points')}
+            onRestart={reset}
+          />
           {/* Overlays */}
-          {(status === 'idle' || status === 'over') && (
+          {status === 'idle' && (
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
               {status === 'idle' && (
                 <>
@@ -393,23 +398,6 @@ const GameSnake = () => {
                   </Button>
                 </>
               )}
-              {status === 'over' && (
-                <>
-                  <h2 className="text-4xl font-black text-red-500 mb-2 tracking-widest animate-pulse">
-                    {t('snake.gameOver')}
-                  </h2>
-                  <p className="text-zinc-300 font-mono text-lg mb-6">
-                    {t('snake.finalScore')}:{' '}
-                    <span className="text-cyan-400 font-bold">{score}</span>
-                  </p>
-                  <Button
-                    onClick={reset}
-                    className="bg-white hover:bg-zinc-200 text-black font-bold px-8"
-                  >
-                    {t('common.playAgain')}
-                  </Button>
-                </>
-              )}
             </div>
           )}
         </div>
@@ -419,8 +407,8 @@ const GameSnake = () => {
           showActions={false}
           onDirection={(d) => handleDirection(d.toLowerCase() as SnakeDir)}
         />
-      </main>
-    </div>
+      </div>
+    </GameShell>
   );
 };
 

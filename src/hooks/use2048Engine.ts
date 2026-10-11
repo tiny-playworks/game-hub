@@ -14,19 +14,19 @@ export { SIZE };
 let tileIdCounter = 0;
 const defaultNextId = () => `tile-${Date.now()}-${tileIdCounter++}`;
 
-export function useEngine2048() {
+export function useEngine2048(size = 4) {
   const nextIdRef = useRef(defaultNextId);
   const [history, setHistory] = useState<Game2048State[]>([]);
   const [state, setState] = useState<Game2048State>(() =>
-    createInitialState(Math.random, nextIdRef.current),
+    createInitialState(Math.random, nextIdRef.current, size),
   );
   const [maxCombo, setMaxCombo] = useState(0);
 
   const initGame = useCallback(() => {
-    setState(createInitialState(Math.random, nextIdRef.current));
+    setState(createInitialState(Math.random, nextIdRef.current, size));
     setHistory([]);
     setMaxCombo(0);
-  }, []);
+  }, [size]);
 
   useEffect(() => {
     initGame();

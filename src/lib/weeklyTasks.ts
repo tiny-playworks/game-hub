@@ -1,6 +1,12 @@
 import type { RiichiDailyEvent, TaskRewardSummary } from '@/lib/dailyTasks';
 import { addGrowthPoints } from '@/lib/growth';
-import { addCoins } from '@/lib/wallet';
+import { addArcadeCoins, addCoins } from '@/lib/wallet';
+import {
+  advanceTask,
+  isArcadeTask,
+  type TaskEvent,
+  type TaskTrigger,
+} from './taskEvents';
 
 export const WEEKLY_TASK_STORAGE_KEY = 'game-hub-weekly-tasks';
 
@@ -8,7 +14,7 @@ export interface WeeklyTask {
   id: string;
   titleKey: string;
   descKey: string;
-  eventType: RiichiDailyEvent;
+  eventType: RiichiDailyEvent | TaskTrigger;
   target: number;
   rewardPoints: number;
 }
@@ -17,6 +23,7 @@ export interface WeeklyTaskProgress extends WeeklyTask {
   progress: number;
   completed: boolean;
   claimed: boolean;
+  distinctGames?: string[];
 }
 
 export interface WeeklyTaskState {
@@ -58,6 +65,38 @@ const WEEKLY_TEMPLATES: WeeklyTask[] = [
   },
 ];
 
+const ARCADE_WEEKLY_TEMPLATES: WeeklyTask[] = [
+  {
+    id: 'weekly-arcade-board',
+    titleKey: 'weekly.arcade.board.title',
+    descKey: 'weekly.arcade.board.desc',
+    eventType: {
+      scope: 'arcade',
+      category: 'board',
+      type: 'win',
+    },
+    target: 5,
+    rewardPoints: 100,
+  },
+  {
+    id: 'weekly-arcade-best',
+    titleKey: 'weekly.arcade.best.title',
+    descKey: 'weekly.arcade.best.desc',
+    eventType: {
+      scope: 'arcade',
+      category: 'mini',
+      type: 'best',
+      distinct: true,
+    },
+    target: 3,
+    rewardPoints: 100,
+  },
+];
+const weeklyArcade = (week: string) =>
+  ARCADE_WEEKLY_TEMPLATES[
+    Array.from(week).reduce((sum, char) => sum + char.charCodeAt(0), 0) % 2
+  ];
+
 function getDatePartsInShanghai(timestamp: number): {
   year: number;
   month: number;
@@ -96,8 +135,8 @@ export function getBeijingWeekKey(timestamp = Date.now()): string {
   return formatDateKey(date);
 }
 
-function createDefaultItems(): WeeklyTaskProgress[] {
-  return WEEKLY_TEMPLATES.map((task) => ({
+function createDefaultItems(weekKey: string): WeeklyTaskProgress[] {
+  return [...WEEKLY_TEMPLATES, weeklyArcade(weekKey)].map((task) => ({
     ...task,
     progress: 0,
     completed: false,
@@ -108,7 +147,7 @@ function createDefaultItems(): WeeklyTaskProgress[] {
 function createWeeklyTaskState(now = Date.now()): WeeklyTaskState {
   return {
     weekKey: getBeijingWeekKey(now),
-    items: createDefaultItems(),
+    items: createDefaultItems(getBeijingWeekKey(now)),
   };
 }
 
@@ -123,7 +162,9 @@ function normalizeState(raw: unknown): WeeklyTaskState | null {
     if (!item || typeof item !== 'object') continue;
     const candidate = item as Partial<WeeklyTaskProgress>;
     if (typeof candidate.id !== 'string') continue;
-    const template = WEEKLY_TEMPLATES.find((task) => task.id === candidate.id);
+    const template = [...WEEKLY_TEMPLATES, ...ARCADE_WEEKLY_TEMPLATES].find(
+      (task) => task.id === candidate.id,
+    );
     if (!template) continue;
     const progress =
       typeof candidate.progress === 'number' &&
@@ -135,10 +176,26 @@ function normalizeState(raw: unknown): WeeklyTaskState | null {
       ...template,
       progress: Math.min(progress, template.target),
       completed,
-      claimed: completed || Boolean(candidate.claimed),
+      claimed: isArcadeTask(template.eventType)
+        ? completed && Boolean(candidate.claimed)
+        : completed || Boolean(candidate.claimed),
+      distinctGames: Array.isArray(candidate.distinctGames)
+        ? [
+            ...new Set(
+              candidate.distinctGames.filter((id) => typeof id === 'string'),
+            ),
+          ]
+        : [],
     });
   }
   if (items.length === 0) return null;
+  if (!items.some((item) => isArcadeTask(item.eventType)))
+    items.push({
+      ...weeklyArcade(parsed.weekKey),
+      progress: 0,
+      completed: false,
+      claimed: false,
+    });
   return { weekKey: parsed.weekKey, items };
 }
 
@@ -169,7 +226,7 @@ export function ensureWeeklyTaskState(now = Date.now()): WeeklyTaskState {
 }
 
 export function recordWeeklyTaskEvent(
-  event: RiichiDailyEvent,
+  event: TaskEvent,
   now = Date.now(),
 ): RecordWeeklyTaskEventResult {
   const state = ensureWeeklyTaskState(now);
@@ -179,10 +236,10 @@ export function recordWeeklyTaskEvent(
   const next: WeeklyTaskState = {
     ...state,
     items: state.items.map((item) => {
-      if (item.eventType !== event || item.completed) return item;
-      const progress = Math.min(item.target, item.progress + 1);
-      const completed = progress >= item.target;
-      if (completed) {
+      const updated = advanceTask(item, event);
+      if (updated === item) return item;
+      const { progress, completed } = updated;
+      if (completed && !isArcadeTask(item.eventType)) {
         autoClaimedRewards.push({
           taskId: item.id,
           titleKey: item.titleKey,
@@ -192,10 +249,11 @@ export function recordWeeklyTaskEvent(
         });
       }
       return {
-        ...item,
+        ...updated,
         progress,
         completed,
-        claimed: completed ? true : item.claimed,
+        claimed:
+          completed && !isArcadeTask(item.eventType) ? true : item.claimed,
       };
     }),
   };
@@ -236,7 +294,12 @@ export function claimWeeklyTask(
   saveWeeklyTaskState(next);
   if (awardedPoints > 0) {
     addGrowthPoints(awardedPoints);
-    addCoins(150, 'wallet.reason.weekly', now);
+    const task = next.items.find((item) => item.id === taskId);
+    (task && isArcadeTask(task.eventType) ? addArcadeCoins : addCoins)(
+      150,
+      'wallet.reason.weekly',
+      now,
+    );
   }
   return {
     ok: awardedPoints > 0,

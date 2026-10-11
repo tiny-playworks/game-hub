@@ -1,13 +1,14 @@
-import { lazy, type ReactElement, Suspense, useEffect, useRef } from 'react';
+import { lazy, type ReactElement, Suspense, useEffect } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import AchievementUnlockToast from '@/components/AchievementUnlockToast';
 import CoinsToast from '@/components/CoinsToast';
 import { AffinityNotice } from '@/components/characters/AffinityNotice';
 import GrowthPointToast from '@/components/GrowthPointToast';
 import { RankedNavigationGuard } from '@/components/ranked/RankedNavigationGuard';
+import { ArcadeSession } from '@/contexts/ArcadeContext';
 import { LocaleProvider } from '@/contexts/LocaleContext';
 import { CosmeticsProvider } from '@/hooks/useCosmetics';
-import { emitGameEvent } from '@/lib/gameEvents';
+import { migrateLegacyArcadeStats } from '@/lib/achievements';
 import Home from '@/pages/Home';
 import './App.css';
 import './cosmetics.css';
@@ -51,16 +52,17 @@ function TrackedPage({
   gameId: string;
   children: ReactElement;
 }) {
-  const tracked = useRef<string | null>(null);
-  useEffect(() => {
-    if (tracked.current === gameId) return;
-    tracked.current = gameId;
-    emitGameEvent({ gameId, type: 'start' });
-  }, [gameId]);
-  return children;
+  return (
+    <ArcadeSession key={gameId} gameId={gameId}>
+      {children}
+    </ArcadeSession>
+  );
 }
 
 const App = () => {
+  useEffect(() => {
+    migrateLegacyArcadeStats();
+  }, []);
   return (
     <BrowserRouter>
       <LocaleProvider>

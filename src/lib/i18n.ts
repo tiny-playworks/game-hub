@@ -1,3 +1,4 @@
+import { arcadeMessages } from './arcadeMessages';
 export type Locale = 'zh' | 'en';
 
 const messages: Record<Locale, Record<string, string>> = {
@@ -4100,7 +4101,7 @@ const messages: Record<Locale, Record<string, string>> = {
 const warnedMissingKeys = new Set<string>();
 
 export function getMessage(locale: Locale, key: string): string {
-  const translated = messages[locale]?.[key];
+  const translated = arcadeMessages[locale]?.[key] ?? messages[locale]?.[key];
   if (translated !== undefined) return translated;
   if (process.env.NODE_ENV === 'development') {
     const id = `${locale}:${key}`;

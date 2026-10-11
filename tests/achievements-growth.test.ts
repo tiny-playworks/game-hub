@@ -31,14 +31,20 @@ test('achievements：自动解锁后点数与稀有度统计正确', () => {
   checkAndUnlockFromStats();
   const summary = getAchievementSummary();
 
-  expect(summary.total).toBe(14);
+  expect(summary.total).toBe(68);
+  expect(
+    ACHIEVEMENTS.filter((item) => item.gameId !== 'mahjong-japanese'),
+  ).toHaveLength(64);
   expect(summary.unlocked).toBe(3);
   expect(summary.unlockedPoints).toBe(280);
   expect(summary.rarityCounts).toEqual({
-    common: 5,
-    rare: 5,
-    epic: 3,
-    legendary: 1,
+    common: ACHIEVEMENTS.filter(
+      (item) => (item.rarity ?? 'common') === 'common',
+    ).length,
+    rare: ACHIEVEMENTS.filter((item) => item.rarity === 'rare').length,
+    epic: ACHIEVEMENTS.filter((item) => item.rarity === 'epic').length,
+    legendary: ACHIEVEMENTS.filter((item) => item.rarity === 'legendary')
+      .length,
   });
 });
 

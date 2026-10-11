@@ -80,6 +80,7 @@ export function stepShooter(
   input: ShooterInput,
   dt: number,
   rng: () => number,
+  difficulty: string = 'normal',
 ): { state: ShooterState; events: ShooterEvent[] } {
   if (state.status !== 'playing') {
     return { state, events: [] };
@@ -121,9 +122,18 @@ export function stepShooter(
     .map((b) => ({ ...b, y: b.y + SHOOTER.bulletSpeed * dt }))
     .filter((b) => b.y > -SHOOTER.bulletH);
 
+  const spawnInterval =
+    difficulty === 'easy'
+      ? 130
+      : difficulty === 'hard'
+        ? 50
+        : SHOOTER.spawnInterval;
+  const enemySpeed =
+    SHOOTER.enemySpeed *
+    (difficulty === 'easy' ? 0.7 : difficulty === 'hard' ? 1.45 : 1);
   spawnCounter += dt;
-  if (spawnCounter >= SHOOTER.spawnInterval) {
-    spawnCounter -= SHOOTER.spawnInterval;
+  if (spawnCounter >= spawnInterval) {
+    spawnCounter -= spawnInterval;
     enemies.push({
       x: rng() * (SHOOTER.w - SHOOTER.enemyW),
       y: -SHOOTER.enemyH,
@@ -131,7 +141,7 @@ export function stepShooter(
   }
 
   enemies = enemies
-    .map((e) => ({ ...e, y: e.y + SHOOTER.enemySpeed * dt }))
+    .map((e) => ({ ...e, y: e.y + enemySpeed * dt }))
     .filter((e) => e.y < SHOOTER.h + SHOOTER.enemyH);
 
   const survivingEnemies: ShooterEnemy[] = [];

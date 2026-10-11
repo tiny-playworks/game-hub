@@ -217,6 +217,7 @@ export interface ShengjiState {
   bottomCards: Card[];
   /** 闲家抠底拿到的分（末墩由闲家赢下时按两倍计入），未结算为 0 */
   bottomBonus: number;
+  playedCards?: Card[];
 }
 
 /** 从底牌第一张定主花色；若无主牌则随机 */
@@ -324,6 +325,7 @@ export function playCard(
       ...state,
       hands: newHands,
       currentTrick: trick,
+      playedCards: [...(state.playedCards ?? []), card],
       currentPlayer: (player + 1) % 4,
     };
   }
@@ -364,6 +366,7 @@ export function playCard(
     ...state,
     hands: newHands,
     currentTrick: [],
+    playedCards: [...(state.playedCards ?? []), card],
     trickLeader: winner,
     currentPlayer: winner,
     teamScores: newScores,
@@ -426,6 +429,7 @@ function wouldWinTrick(
       i === player ? h.filter((c) => c !== card) : h,
     ),
     currentTrick: [...state.currentTrick, card],
+    playedCards: [...(state.playedCards ?? []), card],
   };
   const seat = currentTrickLeaderSeat(after);
   return seat === player;
@@ -435,7 +439,10 @@ function wouldWinTrick(
  * 升级 AI：跟牌型游戏的基本盘——队友拿下就贴分，对手拿下就用最省的牌盖过去，
  * 盖不过就垫最小的闲张。比原来的「随机出一张」强得多，也不会拖慢界面。
  */
-export function getAIPlay(state: ShengjiState): Card | null {
+export function getAIPlay(
+  state: ShengjiState,
+  difficulty: string = 'normal',
+): Card | null {
   const player = state.currentPlayer;
   if (player === 0 || state.roundOver) return null;
   const valid = getValidPlays(state, player);
@@ -445,6 +452,45 @@ export function getAIPlay(state: ShengjiState): Card | null {
     (a, b) => strengthOf(a, state) - strengthOf(b, state),
   );
 
+  if (difficulty === 'hard') {
+    // Public cards reveal which high cards remain; preserve trump and points unless the team can collect them.
+    const seen = [...(state.playedCards ?? []), ...state.currentTrick];
+    const remaining = Array.from({ length: 54 }, (_, card) => card).filter(
+      (card) => !seen.includes(card) && !state.hands[player].includes(card),
+    );
+    if (!state.currentTrick.length) {
+      const safe = byStrength.filter(
+        (card) =>
+          !remaining.some(
+            (other) =>
+              getSuit(other) === getSuit(card) &&
+              strengthOf(other, state) > strengthOf(card, state),
+          ),
+      );
+      if (safe.length) return safe[safe.length - 1];
+      return (
+        byStrength.filter(
+          (card) =>
+            cardPoints(card) === 0 &&
+            !isTrump(card, state.trumpSuit, state.levelRank),
+        )[0] ?? byStrength[0]
+      );
+    }
+    const winning = byStrength.filter((card) =>
+      wouldWinTrick(state, player, card),
+    );
+    const teamLeads = currentTrickLeaderSeat(state) === partner(player);
+    if (teamLeads && state.currentTrick.length === 3)
+      return [...byStrength].sort(
+        (a, b) =>
+          cardPoints(b) - cardPoints(a) ||
+          strengthOf(a, state) - strengthOf(b, state),
+      )[0];
+    if (teamLeads)
+      return byStrength.find((card) => cardPoints(card) === 0) ?? byStrength[0];
+    if (winning.length) return winning[0];
+    return byStrength.find((card) => cardPoints(card) === 0) ?? byStrength[0];
+  }
   // 领出：优先打副牌里的大牌探路，手上只剩主牌时才出主
   if (state.currentTrick.length === 0) {
     const sideCards = byStrength.filter(
@@ -495,8 +541,11 @@ export function getAIPlay(state: ShengjiState): Card | null {
 }
 
 /** 执行一步 AI 并返回新状态 */
-export function applyAITurn(state: ShengjiState): ShengjiState {
-  const card = getAIPlay(state);
+export function applyAITurn(
+  state: ShengjiState,
+  difficulty: string = 'normal',
+): ShengjiState {
+  const card = getAIPlay(state, difficulty);
   if (card === null) return state;
   return playCard(state, state.currentPlayer, card);
 }

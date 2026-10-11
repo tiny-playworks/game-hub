@@ -8,6 +8,7 @@ import {
 } from '@/components/game/IntersectionBoard';
 import { SegmentedControl } from '@/components/game/SegmentedControl';
 import { Button } from '@/components/ui/button';
+import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import {
   canPlace,
@@ -18,7 +19,7 @@ import {
   pass,
   placeStone,
 } from '@/lib/go';
-import { chooseGoMove, type GoDifficulty } from '@/lib/goAi';
+import { chooseGoMove } from '@/lib/goAi';
 import { formatMessage } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
@@ -50,11 +51,19 @@ const Stone = ({
 
 const GameGo = () => {
   const { locale, t } = useLocale();
+  const arcade = useArcade();
+  const {
+    difficulty,
+    changeDifficulty: setDifficulty,
+    paused,
+    finish,
+    newRound,
+    start,
+  } = arcade;
   const [state, setState] = useState<GoState>(createInitialState);
   const [past, setPast] = useState<GoState[]>([]);
   const [lastMove, setLastMove] = useState<[number, number] | null>(null);
   const [opponent, setOpponent] = useState<Opponent>('ai');
-  const [difficulty, setDifficulty] = useState<GoDifficulty>('normal');
   const [thinking, setThinking] = useState(false);
   const aiTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -75,19 +84,19 @@ const GameGo = () => {
   );
 
   const handlePoint = (row: number, col: number) => {
-    if (state.gameOver || thinking || !isHumanTurn) return;
+    if (paused || state.gameOver || thinking || !isHumanTurn) return;
     if (!canPlace(state, row, col)) return;
     commit(placeStone(state, row, col), [row, col]);
   };
 
   const handlePass = () => {
-    if (state.gameOver || thinking || !isHumanTurn) return;
+    if (paused || state.gameOver || thinking || !isHumanTurn) return;
     commit(pass(state), null);
   };
 
   // 人机模式：轮到电脑时算一手
   useEffect(() => {
-    if (opponent !== 'ai' || state.gameOver) return;
+    if (paused || opponent !== 'ai' || state.gameOver) return;
     if (state.blackTurn === humanIsBlack) return;
 
     setThinking(true);
@@ -108,18 +117,21 @@ const GameGo = () => {
       if (aiTimer.current) clearTimeout(aiTimer.current);
       setThinking(false);
     };
-  }, [state, difficulty, opponent]);
+  }, [state, difficulty, opponent, paused]);
 
   const restart = useCallback(() => {
+    newRound();
+    start();
     if (aiTimer.current) clearTimeout(aiTimer.current);
     setThinking(false);
     setState(createInitialState());
     setPast([]);
     setLastMove(null);
-  }, []);
+  }, [newRound, start]);
 
   /** 人机模式一次退两手，回到玩家的回合 */
   const undo = () => {
+    if (paused || arcade.result) return;
     if (aiTimer.current) clearTimeout(aiTimer.current);
     setThinking(false);
     const steps = opponent === 'ai' ? Math.min(2, past.length) : 1;
@@ -164,8 +176,14 @@ const GameGo = () => {
           ? t('common.youWin')
           : t('common.youLose');
 
+  useArcadeSnapshot(() => ({ ...state, thinking, opponent, score }));
+  useEffect(() => {
+    if (state.gameOver) finish(resultTone, 0, { moves: past.length, opponent });
+  }, [state.gameOver, resultTone, past.length, finish, opponent]);
+
   return (
     <GameShell
+      onRestart={restart}
       title={t('game.go.name')}
       subtitle={t('game.go.rules')}
       status={

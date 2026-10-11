@@ -8,6 +8,8 @@ export interface GameItem {
   path: string;
   difficulty: 1 | 2 | 3 | 4;
   tags: string[];
+  bestMetric: 'max' | 'min' | 'wins';
+  bestUnitKey: string;
   /** 开发中时不渲染「开始游戏」链接，仅展示占位 */
   comingSoon?: boolean;
 }
@@ -15,6 +17,8 @@ export interface GameItem {
 export const games: GameItem[] = [
   {
     id: 'guess-number',
+    bestMetric: 'min',
+    bestUnitKey: 'arcade.unit.attempts',
     categoryId: 'mini',
     name: '猜数字',
     description: '电脑想一个 1～100 的数，用最少次数猜中。',
@@ -24,6 +28,8 @@ export const games: GameItem[] = [
   },
   {
     id: 'tictactoe',
+    bestMetric: 'wins',
+    bestUnitKey: 'arcade.unit.wins',
     categoryId: 'mini',
     name: '井字棋',
     description: '经典 3×3 井字棋，双人轮流下 X 和 O，先连成一线者胜。',
@@ -33,6 +39,8 @@ export const games: GameItem[] = [
   },
   {
     id: 'memory',
+    bestMetric: 'min',
+    bestUnitKey: 'arcade.unit.moves',
     categoryId: 'mini',
     name: '记忆翻牌',
     description: '翻开两张牌，配对相同图案。用最少步数完成全部配对。',
@@ -42,6 +50,8 @@ export const games: GameItem[] = [
   },
   {
     id: '2048',
+    bestMetric: 'max',
+    bestUnitKey: 'arcade.unit.points',
     categoryId: 'mini',
     name: '2048',
     description: '方向键移动方块，相同数字合并，努力拼出 2048。',
@@ -51,6 +61,8 @@ export const games: GameItem[] = [
   },
   {
     id: 'snake',
+    bestMetric: 'max',
+    bestUnitKey: 'arcade.unit.points',
     categoryId: 'mini',
     name: '贪吃蛇',
     description: '控制蛇头方向，吃到食物变长，撞墙或撞到自己即结束。',
@@ -60,6 +72,8 @@ export const games: GameItem[] = [
   },
   {
     id: 'breakout',
+    bestMetric: 'max',
+    bestUnitKey: 'arcade.unit.points',
     categoryId: 'mini',
     name: '打砖块',
     description: '用挡板接住小球，击碎所有砖块。经典弹球打砖块。',
@@ -69,6 +83,8 @@ export const games: GameItem[] = [
   },
   {
     id: 'shooter',
+    bestMetric: 'max',
+    bestUnitKey: 'arcade.unit.points',
     categoryId: 'mini',
     name: '飞机大战',
     description: '控制战机左右移动，空格射击，击落敌机得分，避免被撞。',
@@ -78,6 +94,8 @@ export const games: GameItem[] = [
   },
   {
     id: 'tank',
+    bestMetric: 'max',
+    bestUnitKey: 'arcade.unit.points',
     categoryId: 'mini',
     name: '坦克大战',
     description: '俯视角坦克，保护黄色基地，消灭所有敌方坦克。',
@@ -87,6 +105,8 @@ export const games: GameItem[] = [
   },
   {
     id: 'tetris',
+    bestMetric: 'max',
+    bestUnitKey: 'arcade.unit.points',
     categoryId: 'mini',
     name: '俄罗斯方块',
     description: '经典下落方块，消行得分，等级越高下落越快。',
@@ -96,6 +116,8 @@ export const games: GameItem[] = [
   },
   {
     id: 'rubiks',
+    bestMetric: 'min',
+    bestUnitKey: 'arcade.unit.seconds',
     categoryId: 'mini',
     name: '3D 魔方',
     description: '自然手势转动真实三阶魔方，支持打乱、复原与自由观察。',
@@ -106,6 +128,8 @@ export const games: GameItem[] = [
   // 棋类
   {
     id: 'go',
+    bestMetric: 'wins',
+    bestUnitKey: 'arcade.unit.wins',
     categoryId: 'board',
     name: '围棋',
     description: '9×9 入门，黑白对弈，围地吃子。',
@@ -115,6 +139,8 @@ export const games: GameItem[] = [
   },
   {
     id: 'xiangqi',
+    bestMetric: 'wins',
+    bestUnitKey: 'arcade.unit.wins',
     categoryId: 'board',
     name: '中国象棋',
     description: '楚河汉界，将帅对弈。',
@@ -124,6 +150,8 @@ export const games: GameItem[] = [
   },
   {
     id: 'chess',
+    bestMetric: 'wins',
+    bestUnitKey: 'arcade.unit.wins',
     categoryId: 'board',
     name: '国际象棋',
     description: '王后车马象兵，经典西洋棋。',
@@ -133,6 +161,8 @@ export const games: GameItem[] = [
   },
   {
     id: 'gomoku',
+    bestMetric: 'wins',
+    bestUnitKey: 'arcade.unit.wins',
     categoryId: 'board',
     name: '五子棋',
     description: '五子连珠即胜，简单易上手。',
@@ -143,6 +173,8 @@ export const games: GameItem[] = [
   // 麻将 - 仅保留日麻
   {
     id: 'mahjong-japanese',
+    bestMetric: 'wins',
+    bestUnitKey: 'arcade.unit.wins',
     categoryId: 'mahjong',
     name: '日本麻将',
     description: '立直、役种、符与点数计算。支持完整对局与流局。',
@@ -153,6 +185,8 @@ export const games: GameItem[] = [
   // 扑克 - 占位
   {
     id: 'doudizhu',
+    bestMetric: 'wins',
+    bestUnitKey: 'arcade.unit.wins',
     categoryId: 'poker',
     name: '斗地主',
     description: '三人斗地主简化版，单牌对子三带一炸弹火箭，先出完为胜。',
@@ -163,6 +197,8 @@ export const games: GameItem[] = [
   },
   {
     id: 'shengji',
+    bestMetric: 'wins',
+    bestUnitKey: 'arcade.unit.wins',
     categoryId: 'poker',
     name: '升级',
     description: '四人两对升级入门，单副牌单张跟牌，闲家 40 分升级。',

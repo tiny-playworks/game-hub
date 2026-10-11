@@ -338,6 +338,9 @@ export interface DoudizhuState {
   gameOver: boolean;
   /** 0=地主胜，1=农民胜；仅 gameOver 时有效 */
   winner: 0 | 1 | null;
+  playedCards?: Card[];
+  playCounts?: [number, number, number];
+  spring?: boolean;
 }
 
 export function createDeck(rng?: Rng | unknown): Card[] {
@@ -372,6 +375,9 @@ export function createInitialState(rng?: Rng | unknown): DoudizhuState {
     passCount: 0,
     gameOver: false,
     winner: null,
+    playedCards: [],
+    playCounts: [0, 0, 0],
+    spring: false,
   };
 }
 
@@ -436,6 +442,17 @@ function playHandBy(
     currentPlayer: next,
     lastPlay: { player, hand },
     passCount: 0,
+    playedCards: [...(state.playedCards ?? []), ...selected],
+    playCounts: (state.playCounts ?? [0, 0, 0]).map(
+      (count, seat) => count + Number(seat === player),
+    ) as [number, number, number],
+    spring:
+      gameOver &&
+      (winner === 0
+        ? [0, 1, 2]
+            .filter((seat) => seat !== state.landlord)
+            .every((seat) => (state.playCounts?.[seat] ?? 0) === 0)
+        : (state.playCounts?.[state.landlord] ?? 0) <= 1),
     gameOver,
     winner,
   };
@@ -711,9 +728,44 @@ function chooseLead(hand: Card[]): Card[] {
   return best.cards;
 }
 
+// Hard AI remembers public discards and scores the groups left in its own hand.
+function hardHandCost(
+  state: DoudizhuState,
+  hand: Card[],
+  played: Card[],
+): number {
+  const remaining = removeCards(hand, played);
+  if (!remaining.length) return -1000;
+  const groups = groupByRank(remaining);
+  const unseen = FULL_DECK.filter(
+    (card) => !hand.includes(card) && !(state.playedCards ?? []).includes(card),
+  );
+  const strength = parseHand(played)?.rank ?? 0;
+  const likelyBeaten = unseen.filter(
+    (card) => cardRank(card) > strength,
+  ).length;
+  return (
+    groups.size * 10 +
+    [...groups.values()].filter((group) => group.length === 1).length * 4 +
+    Number(breaksBomb(hand, played)) * 25 +
+    strength * 0.3 +
+    likelyBeaten * 0.1 -
+    played.length
+  );
+}
+function chooseHardLead(state: DoudizhuState, hand: Card[]): Card[] {
+  const candidates = enumerateHands(hand, null);
+  return (
+    [...candidates].sort(
+      (a, b) =>
+        hardHandCost(state, hand, a.cards) - hardHandCost(state, hand, b.cards),
+    )[0]?.cards ?? [hand[0]]
+  );
+}
 /** 简单 AI：队友领出不压；能用普通牌型压就压最小的；炸弹只在关键时刻用 */
 export function getAIPlay(
   state: DoudizhuState,
+  difficulty: string = 'normal',
 ): { type: 'play'; cards: Card[] } | { type: 'pass' } {
   const who = state.currentPlayer;
   if (who === 1 || state.gameOver) return { type: 'pass' };
@@ -724,7 +776,11 @@ export function getAIPlay(
   const last = state.lastPlay;
   // 新一轮：必须领出，不能 pass
   if (!last || state.passCount >= 2) {
-    return { type: 'play', cards: chooseLead(hand) };
+    return {
+      type: 'play',
+      cards:
+        difficulty === 'hard' ? chooseHardLead(state, hand) : chooseLead(hand),
+    };
   }
 
   // 不压自己的队友
@@ -736,6 +792,20 @@ export function getAIPlay(
   const normal = candidates.filter(
     (h) => h.type !== 'bomb' && h.type !== 'rocket',
   );
+  if (difficulty === 'hard') {
+    const enemyClose = [0, 1, 2].some(
+      (seat) =>
+        !isTeammate(state, who, seat) &&
+        seat !== who &&
+        state.hands[seat].length <= 2,
+    );
+    const pool = enemyClose ? candidates : normal.length ? normal : candidates;
+    const best = [...pool].sort(
+      (a, b) =>
+        hardHandCost(state, hand, a.cards) - hardHandCost(state, hand, b.cards),
+    )[0];
+    return { type: 'play', cards: best.cards };
+  }
   if (normal.length > 0) {
     const best = [...normal].sort(
       (a, b) =>
@@ -759,10 +829,13 @@ export function getAIPlay(
 }
 
 /** 应用 AI 一步并返回新状态 */
-export function applyAITurn(state: DoudizhuState): DoudizhuState {
+export function applyAITurn(
+  state: DoudizhuState,
+  difficulty: string = 'normal',
+): DoudizhuState {
   if (state.gameOver || state.currentPlayer === 1) return state;
 
-  const action = getAIPlay(state);
+  const action = getAIPlay(state, difficulty);
   if (action.type === 'pass') {
     return passTurn(state);
   }

@@ -49,13 +49,17 @@ export function applyMove(
   moves: TicMove[],
   player: TicPlayer,
   index: number,
+  rules: 'fading' | 'classic' = 'fading',
 ): TicMove[] | null {
   if (getWinner(moves)) return null;
   const board = boardFromMoves(moves);
   if (board[index] !== null) return null;
 
   const nextMoves = [...moves, { player, index }];
-  if (nextMoves.filter((m) => m.player === player).length > 3) {
+  if (
+    rules === 'fading' &&
+    nextMoves.filter((m) => m.player === player).length > 3
+  ) {
     const oldestIndex = nextMoves.findIndex((m) => m.player === player);
     if (oldestIndex !== -1) {
       nextMoves.splice(oldestIndex, 1);
@@ -113,4 +117,54 @@ export function chooseTicTacToeMove(
 
   const pick = Math.floor(rng() * emptyCells.length);
   return emptyCells[Math.min(pick, emptyCells.length - 1)];
+}
+
+// The classic nine-cell hard mode has a finite minimax tree and an unbeaten second player.
+// Easy and normal retain the original three-stone rotation rule.
+export function chooseTicDifficultyMove(
+  moves: TicMove[],
+  player: TicPlayer,
+  difficulty: string,
+  rng: () => number = Math.random,
+): number | null {
+  const board = boardFromMoves(moves),
+    empty = board
+      .map((cell, index) => (cell ? -1 : index))
+      .filter((index) => index >= 0);
+  if (getWinner(moves) || !empty.length) return null;
+  if (difficulty === 'easy')
+    return empty[Math.min(empty.length - 1, Math.floor(rng() * empty.length))];
+  if (difficulty !== 'hard') return chooseTicTacToeMove(moves, player, rng);
+  const cache = new Map<string, number>();
+  const search = (position: TicMove[], turn: TicPlayer): number => {
+    const winner = getWinner(position);
+    if (winner)
+      return winner === player ? 10 - position.length : position.length - 10;
+    const cells = boardFromMoves(position);
+    const free = cells.flatMap((cell, index) => (cell ? [] : [index]));
+    if (!free.length) return 0;
+    const key = turn + cells.map((cell) => cell ?? '-').join('');
+    const known = cache.get(key);
+    if (known !== undefined) return known;
+    const scores = free.map((index) =>
+      search(
+        applyMove(position, turn, index, 'classic') ?? position,
+        opponentOf(turn),
+      ),
+    );
+    const value = turn === player ? Math.max(...scores) : Math.min(...scores);
+    cache.set(key, value);
+    return value;
+  };
+  return [...empty].sort(
+    (a, b) =>
+      search(
+        applyMove(moves, player, b, 'classic') ?? moves,
+        opponentOf(player),
+      ) -
+        search(
+          applyMove(moves, player, a, 'classic') ?? moves,
+          opponentOf(player),
+        ) || Number(b === 4) - Number(a === 4),
+  )[0];
 }

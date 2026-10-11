@@ -1,23 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { GameResultOverlay } from '@/components/game/GameResultOverlay';
+import { GameShell, StatPill } from '@/components/game/GameShell';
 import { Button } from '@/components/ui/button';
+import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
-import { unlock } from '@/lib/achievements';
 import {
   BREAKOUT,
   type BreakoutState,
   clampPaddleX,
-  createBricks,
   createInitialState,
   stepBreakout,
 } from '@/lib/breakout';
 import { formatMessage } from '@/lib/i18n';
-import { useGameStore } from '../store/gameStore';
 
 const {
   canvasW: CANVAS_W,
   canvasH: CANVAS_H,
-  paddleW: PADDLE_W,
   paddleH: PADDLE_H,
   ballR: BALL_R,
   paddleY,
@@ -28,8 +26,14 @@ type GameStatus = BreakoutState['status'];
 const GameBreakout = () => {
   const { locale, t } = useLocale();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { stats, updateHighScore } = useGameStore();
-  const gameStats = stats.breakout || { highScore: 0 };
+  const arcade = useArcade();
+  const { difficulty, paused, finish } = arcade;
+  const PADDLE_W =
+    difficulty === 'easy' ? 150 : difficulty === 'hard' ? 70 : 100;
+  const ballSpeed =
+    difficulty === 'easy' ? 0.75 : difficulty === 'hard' ? 1.3 : 1;
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [status, setStatus] = useState<GameStatus>('idle');
@@ -39,29 +43,21 @@ const GameBreakout = () => {
     lastTime: 0,
   });
 
-  const resetGame = useCallback(() => {
-    stateRef.current = {
-      ...createInitialState(),
-      bricks: createBricks(),
-      lastTime: 0,
-    };
-    setScore(0);
-    setLives(3);
-    setStatus('idle');
-  }, []);
+  const resetGame = arcade.restart;
 
   const launch = useCallback(() => {
+    if (pausedRef.current) return;
     if (status === 'idle' && !stateRef.current.launched) {
       stateRef.current.launched = true;
-      stateRef.current.ballVx = 4;
-      stateRef.current.ballVy = -6;
+      stateRef.current.ballVx = 4 * ballSpeed;
+      stateRef.current.ballVy = -6 * ballSpeed;
       stateRef.current.status = 'playing';
       setStatus('playing');
     } else if (status === 'paused') {
       stateRef.current.status = 'playing';
       setStatus('playing');
     }
-  }, [status]);
+  }, [status, ballSpeed]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -91,10 +87,11 @@ const GameBreakout = () => {
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (pausedRef.current || arcade.result) return;
       if (e.code === 'Space') {
         e.preventDefault();
         if (status === 'idle' || status === 'paused') launch();
-        else if (status === 'playing') setStatus('paused');
+        else if (status === 'playing') arcade.setPaused(true);
       }
     };
 
@@ -108,14 +105,14 @@ const GameBreakout = () => {
       state.lastTime = time;
 
       if (status === 'idle' || status === 'paused' || status === 'playing') {
-        state.paddleX = clampPaddleX(mouseX - PADDLE_W / 2);
+        state.paddleX = clampPaddleX(mouseX - PADDLE_W / 2, PADDLE_W);
       }
 
       if ((status === 'idle' || status === 'paused') && !state.launched) {
         state.ballX = state.paddleX + PADDLE_W / 2;
       }
 
-      if (status === 'playing' && state.launched) {
+      if (status === 'playing' && state.launched && !pausedRef.current) {
         const { state: next, events } = stepBreakout(
           {
             paddleX: state.paddleX,
@@ -130,6 +127,7 @@ const GameBreakout = () => {
             status: 'playing',
           },
           dt,
+          PADDLE_W,
         );
 
         state.ballX = next.ballX;
@@ -188,43 +186,36 @@ const GameBreakout = () => {
       canvas.removeEventListener('pointerdown', handlePointerDown);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [status, launch]);
+  }, [status, launch, PADDLE_W, arcade.setPaused, arcade.result]);
 
+  useArcadeSnapshot(() => ({
+    ...stateRef.current,
+    status,
+    paddleWidth: PADDLE_W,
+    ballSpeed,
+  }));
   useEffect(() => {
-    if (status === 'win') unlock('breakout-first-win');
-    if (
-      (status === 'win' || status === 'lose') &&
-      score > gameStats.highScore
-    ) {
-      updateHighScore('breakout', score);
-    }
-  }, [status, score, gameStats.highScore, updateHighScore]);
-
+    if (status === 'playing') arcade.start();
+    if (status === 'win' || status === 'lose') finish(status, score, { lives });
+  }, [status, score, lives, arcade.start, finish]);
   return (
-    <div className="min-h-screen bg-background">
-      <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
-        <Link to="/" className="text-muted-foreground hover:text-foreground">
-          ← {t('common.backToList')}
-        </Link>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-muted-foreground">
-            {formatMessage(locale, 'breakout.highScore', {
-              score: gameStats.highScore,
-            })}
-          </span>
-          <span className="text-sm text-muted-foreground">
-            {formatMessage(locale, 'breakout.score', { score })}
-          </span>
-          <span className="text-sm text-muted-foreground">
-            {formatMessage(locale, 'breakout.lives', { lives })}
-          </span>
-          <Button variant="outline" size="sm" onClick={resetGame}>
-            {t('common.restart')}
-          </Button>
-        </div>
-      </header>
-
-      <main className="flex min-h-[calc(100vh-56px)] flex-col items-center justify-center p-4">
+    <GameShell
+      autoStart={false}
+      title={t('game.breakout.name')}
+      subtitle={t('breakout.controls')}
+      status={
+        <>
+          <StatPill label={t('arcade.unit.points')} value={score} />
+          <StatPill label={t('arcade.lives')} value={lives} />
+        </>
+      }
+      toolbar={
+        <Button variant="outline" size="sm" onClick={resetGame}>
+          {t('common.restart')}
+        </Button>
+      }
+    >
+      <div className="flex w-full flex-col items-center justify-center pb-44 md:pb-4">
         <div className="relative inline-block rounded-lg border-2 border-border bg-black shadow-xl">
           <canvas
             ref={canvasRef}
@@ -249,46 +240,24 @@ const GameBreakout = () => {
             </div>
           )}
 
-          {status === 'win' && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-green-900/80 rounded-lg">
-              <p className="mb-4 text-2xl font-bold text-white">
-                {t('breakout.win')}
-              </p>
-              <p className="mb-4 text-white">
-                {formatMessage(locale, 'breakout.finalScore', { score })}
-              </p>
-              <div className="flex gap-2">
-                <Button onClick={resetGame}>{t('common.playAgain')}</Button>
-                <Link to="/">
-                  <Button variant="outline">{t('common.backList')}</Button>
-                </Link>
-              </div>
-            </div>
-          )}
-
-          {status === 'lose' && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-900/80 rounded-lg">
-              <p className="mb-4 text-2xl font-bold text-white">
-                {t('breakout.gameOver')}
-              </p>
-              <p className="mb-4 text-white">
-                {formatMessage(locale, 'breakout.finalScore', { score })}
-              </p>
-              <div className="flex gap-2">
-                <Button onClick={resetGame}>{t('common.playAgain')}</Button>
-                <Link to="/">
-                  <Button variant="outline">{t('common.backList')}</Button>
-                </Link>
-              </div>
-            </div>
-          )}
+          <GameResultOverlay
+            open={status === 'win' || status === 'lose'}
+            tone={status === 'win' ? 'win' : 'lose'}
+            title={
+              status === 'win' ? t('breakout.win') : t('breakout.gameOver')
+            }
+            description={formatMessage(locale, 'breakout.finalScore', {
+              score,
+            })}
+            onRestart={resetGame}
+          />
         </div>
 
         <p className="mt-4 text-center text-sm text-muted-foreground">
           {t('breakout.controls')}
         </p>
-      </main>
-    </div>
+      </div>
+    </GameShell>
   );
 };
 

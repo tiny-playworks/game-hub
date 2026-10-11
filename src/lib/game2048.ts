@@ -13,6 +13,7 @@ export interface Tile {
 }
 
 export interface Game2048State {
+  size?: number;
   tiles: Record<string, Tile>;
   score: number;
   combo: number;
@@ -41,15 +42,16 @@ export function spawnTile(
   tiles: Record<string, Tile>,
   rng: () => number,
   nextId: () => string,
+  size = SIZE,
 ): Tile | null {
-  const occupied = Array.from({ length: SIZE }, () => Array(SIZE).fill(false));
+  const occupied = Array.from({ length: size }, () => Array(size).fill(false));
   for (const t of Object.values(tiles)) {
     if (!t.mergedInto) occupied[t.r][t.c] = true;
   }
 
   const empty: [number, number][] = [];
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
       if (!occupied[r][c]) empty.push([r, c]);
     }
   }
@@ -65,26 +67,26 @@ export function spawnTile(
   };
 }
 
-export function isGameOver(tiles: Record<string, Tile>): boolean {
-  const board = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+export function isGameOver(tiles: Record<string, Tile>, size = SIZE): boolean {
+  const board = Array.from({ length: size }, () => Array(size).fill(0));
   let emptyCount = 0;
 
   for (const t of Object.values(tiles)) {
     if (!t.mergedInto) board[t.r][t.c] = t.value;
   }
 
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
       if (board[r][c] === 0) emptyCount++;
     }
   }
   if (emptyCount > 0) return false;
 
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
       const v = board[r][c];
-      if (c + 1 < SIZE && board[r][c + 1] === v) return false;
-      if (r + 1 < SIZE && board[r + 1][c] === v) return false;
+      if (c + 1 < size && board[r][c + 1] === v) return false;
+      if (r + 1 < size && board[r + 1][c] === v) return false;
     }
   }
   return true;
@@ -93,13 +95,15 @@ export function isGameOver(tiles: Record<string, Tile>): boolean {
 export function createInitialState(
   rng: () => number,
   nextId: () => string,
+  size = SIZE,
 ): Game2048State {
-  const t1 = spawnTile({}, rng, nextId);
+  const t1 = spawnTile({}, rng, nextId, size);
   const tiles: Record<string, Tile> = {};
   if (t1) tiles[t1.id] = t1;
-  const t2 = spawnTile(tiles, rng, nextId);
+  const t2 = spawnTile(tiles, rng, nextId, size);
   if (t2) tiles[t2.id] = t2;
   return {
+    size,
     tiles,
     score: 0,
     combo: 0,
@@ -117,6 +121,7 @@ export function moveBoard(
   rng: () => number,
   nextId: () => string,
 ): MoveBoardResult {
+  const size = state.size ?? SIZE;
   if (state.gameOver) {
     return { isMoved: false, state, addedScore: 0, mergeCount: 0 };
   }
@@ -128,8 +133,8 @@ export function moveBoard(
     }
   }
 
-  const board: (Tile | null)[][] = Array.from({ length: SIZE }, () =>
-    Array(SIZE).fill(null),
+  const board: (Tile | null)[][] = Array.from({ length: size }, () =>
+    Array(size).fill(null),
   );
   for (const t of Object.values(newTiles)) {
     board[t.r][t.c] = t;
@@ -139,8 +144,9 @@ export function moveBoard(
   let addedScore = 0;
   let mergeCount = 0;
 
-  const rows = dir === 'down' ? [3, 2, 1, 0] : [0, 1, 2, 3];
-  const cols = dir === 'right' ? [3, 2, 1, 0] : [0, 1, 2, 3];
+  const indices = Array.from({ length: size }, (_, index) => index);
+  const rows = dir === 'down' ? [...indices].reverse() : indices;
+  const cols = dir === 'right' ? [...indices].reverse() : indices;
 
   let dr = 0;
   let dc = 0;
@@ -159,9 +165,9 @@ export function moveBoard(
 
       while (
         nextR + dr >= 0 &&
-        nextR + dr < SIZE &&
+        nextR + dr < size &&
         nextC + dc >= 0 &&
-        nextC + dc < SIZE
+        nextC + dc < size
       ) {
         const nextTile = board[nextR + dr][nextC + dc];
         if (!nextTile) {
@@ -228,7 +234,7 @@ export function moveBoard(
     return { isMoved: false, state, addedScore: 0, mergeCount: 0 };
   }
 
-  const spawned = spawnTile(newTiles, rng, nextId);
+  const spawned = spawnTile(newTiles, rng, nextId, size);
   if (spawned) newTiles[spawned.id] = spawned;
 
   const newCombo = mergeCount > 0 ? state.combo + mergeCount : 0;
@@ -238,10 +244,11 @@ export function moveBoard(
     addedScore,
     mergeCount,
     state: {
+      size,
       tiles: newTiles,
       score: state.score + addedScore,
       combo: newCombo,
-      gameOver: isGameOver(newTiles),
+      gameOver: isGameOver(newTiles, size),
     },
   };
 }

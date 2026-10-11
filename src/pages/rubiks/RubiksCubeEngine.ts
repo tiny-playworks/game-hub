@@ -107,6 +107,8 @@ export class RubiksCubeEngine {
   private activePivot: Object3D | null = null;
   private animationFrame = 0;
   private busy = false;
+  private paused = false;
+  private scrambleLength = SCRAMBLE_MOVES;
   private operationToken = 0;
   private moveHistory: CubeMove[] = [];
   /** 打乱进行中时不计入玩家步数 */
@@ -128,8 +130,9 @@ export class RubiksCubeEngine {
     this.animationFrame = requestAnimationFrame(this.render);
   }
 
-  scramble = (): void => {
-    if (this.busy) return;
+  scramble = (moves = SCRAMBLE_MOVES): void => {
+    if (this.busy || this.paused) return;
+    this.scrambleLength = Math.max(1, Math.min(100, Math.floor(moves)));
 
     const token = ++this.operationToken;
     this.scrambling = true;
@@ -155,7 +158,7 @@ export class RubiksCubeEngine {
 
   /** 撤销玩家最近一步（打乱过程不入历史） */
   undo = (): void => {
-    if (this.busy || this.scrambling) return;
+    if (this.paused || this.busy || this.scrambling) return;
     const last = this.moveHistory.pop();
     if (!last) return;
     this.options.onMoveCountChange?.(this.moveHistory.length);
@@ -171,6 +174,23 @@ export class RubiksCubeEngine {
     });
   };
 
+  setPaused = (paused: boolean): void => {
+    this.paused = paused;
+    this.controls.enabled = !paused && !this.busy;
+    for (const tween of this.tweens.getAll()) {
+      if (paused) tween.pause();
+      else tween.resume();
+    }
+  };
+  getSnapshot = () => ({
+    busy: this.busy,
+    scrambling: this.scrambling,
+    moves: this.moveHistory.length,
+    cubies: this.cubies.map((cubie) => ({
+      position: cubie.position.toArray(),
+      rotation: cubie.quaternion.toArray(),
+    })),
+  });
   getMoveCount = (): number => this.moveHistory.length;
 
   dispose(): void {
@@ -526,7 +546,7 @@ export class RubiksCubeEngine {
     token: number,
   ): void {
     if (token !== this.operationToken) return;
-    if (index >= SCRAMBLE_MOVES) {
+    if (index >= this.scrambleLength) {
       this.scrambling = false;
       this.setBusy(false);
       this.options.onStatusChange?.('打乱完成');
@@ -623,8 +643,10 @@ export class RubiksCubeEngine {
 
   private readonly render = (time: number): void => {
     this.animationFrame = requestAnimationFrame(this.render);
-    this.tweens.update(time);
-    this.controls.update();
+    if (!this.paused) {
+      this.tweens.update(time);
+      this.controls.update();
+    }
     this.renderer.render(this.scene, this.camera);
   };
 }

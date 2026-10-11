@@ -14,6 +14,7 @@ import { PlayerAvatar } from '@/components/home/PlayerAvatar';
 import { DataManagementCard } from '@/components/profile/DataManagementCard';
 import { WalletCard } from '@/components/profile/WalletCard';
 import { RankedProfilePanel } from '@/components/ranked/RankedProfilePanel';
+import { TaskClaimButton } from '@/components/TaskClaimButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -805,7 +806,11 @@ const Profile = () => {
                         {task.completed ? (
                           <span
                             className="flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm"
-                            title={t('home.daily.claimed')}
+                            title={
+                              task.claimed
+                                ? t('home.daily.claimed')
+                                : t('arcade.claim')
+                            }
                           >
                             <Check className="size-3.5" strokeWidth={2.5} />
                           </span>
@@ -851,10 +856,15 @@ const Profile = () => {
                         : 'text-muted-foreground',
                     )}
                   >
-                    {task.completed
+                    {task.claimed
                       ? `${t('home.daily.settledPrefix')}${task.rewardPoints} · +40 ${t('wallet.coins')}`
                       : `${t('home.daily.pendingRewardPrefix')}${task.rewardPoints} · 40 ${t('wallet.coins')}`}
                   </p>
+                  <TaskClaimButton
+                    task={task}
+                    scope="daily"
+                    onClaim={refreshDashboard}
+                  />
                 </li>
               ))}
             </ul>
@@ -900,11 +910,16 @@ const Profile = () => {
                           : 'bg-amber-50 text-amber-700'
                       }`}
                     >
-                      {task.completed
+                      {task.claimed
                         ? t('profile.task.status.settled')
                         : t('profile.task.status.pending')}
                     </span>
                   </div>
+                  <TaskClaimButton
+                    task={task}
+                    scope="weekly"
+                    onClaim={refreshDashboard}
+                  />
                 </li>
               ))}
             </ul>

@@ -11,8 +11,8 @@ import { GameResultOverlay } from '@/components/game/GameResultOverlay';
 import { GameShell, StatPill } from '@/components/game/GameShell';
 import { SegmentedControl } from '@/components/game/SegmentedControl';
 import { Button } from '@/components/ui/button';
+import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
-import { unlock } from '@/lib/achievements';
 import {
   type Board,
   CHESS_COLS,
@@ -28,7 +28,7 @@ import {
   type PieceType,
   type Side,
 } from '@/lib/chess';
-import { type ChessDifficulty, chooseChessMove } from '@/lib/chessAi';
+import { chooseChessMove } from '@/lib/chessAi';
 import { cn } from '@/lib/utils';
 
 type Opponent = 'ai' | 'human';
@@ -52,6 +52,15 @@ const PIECE_VALUE: Record<PieceType, number> = {
 
 const GameChess = () => {
   const { t } = useLocale();
+  const arcade = useArcade();
+  const {
+    difficulty,
+    changeDifficulty: setDifficulty,
+    paused,
+    finish,
+    newRound,
+    start,
+  } = arcade;
   const [board, setBoard] = useState<Board>(createInitialBoard);
   const [whiteTurn, setWhiteTurn] = useState(true);
   const [selected, setSelected] = useState<[number, number] | null>(null);
@@ -61,7 +70,6 @@ const GameChess = () => {
   const [captured, setCaptured] = useState<Piece[]>([]);
   const [past, setPast] = useState<Snapshot[]>([]);
   const [opponent, setOpponent] = useState<Opponent>('ai');
-  const [difficulty, setDifficulty] = useState<ChessDifficulty>('normal');
   const [thinking, setThinking] = useState(false);
   const aiTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -105,7 +113,7 @@ const GameChess = () => {
   );
 
   const handleSquare = (row: number, col: number) => {
-    if (finished || thinking || !isHumanTurn) return;
+    if (paused || finished || thinking || !isHumanTurn) return;
     const piece = board[row][col];
 
     if (selected) {
@@ -124,7 +132,7 @@ const GameChess = () => {
   };
 
   useEffect(() => {
-    if (opponent !== 'ai' || finished) return;
+    if (paused || opponent !== 'ai' || finished) return;
     if (sideToMove === humanSide) return;
 
     setThinking(true);
@@ -138,15 +146,11 @@ const GameChess = () => {
       if (aiTimer.current) clearTimeout(aiTimer.current);
       setThinking(false);
     };
-  }, [board, sideToMove, difficulty, opponent, finished, applyMove]);
-
-  useEffect(() => {
-    if (!checkmate) return;
-    const winner: Side = sideToMove === 'white' ? 'black' : 'white';
-    if (opponent === 'human' || winner === humanSide) unlock('chess-first-win');
-  }, [checkmate, sideToMove, opponent]);
+  }, [board, sideToMove, difficulty, opponent, finished, applyMove, paused]);
 
   const restart = useCallback(() => {
+    newRound();
+    start();
     if (aiTimer.current) clearTimeout(aiTimer.current);
     setThinking(false);
     setBoard(createInitialBoard());
@@ -155,9 +159,10 @@ const GameChess = () => {
     setLastMove(null);
     setCaptured([]);
     setPast([]);
-  }, []);
+  }, [newRound, start]);
 
   const undo = () => {
+    if (paused || arcade.result) return;
     if (aiTimer.current) clearTimeout(aiTimer.current);
     setThinking(false);
     if (past.length === 0) return;
@@ -217,8 +222,21 @@ const GameChess = () => {
     '--sq': 'clamp(34px, min(10.6vw, 7.6vh), 58px)',
   } as CSSProperties;
 
+  useArcadeSnapshot(() => ({
+    board,
+    sideToMove,
+    selected,
+    thinking,
+    opponent,
+    moves: past.length,
+  }));
+  useEffect(() => {
+    if (finished) finish(resultTone, 0, { moves: past.length, opponent });
+  }, [finished, resultTone, past.length, finish, opponent]);
+
   return (
     <GameShell
+      onRestart={restart}
       title={t('game.chess.name')}
       subtitle={t('game.chess.rules')}
       status={

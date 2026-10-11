@@ -3,6 +3,7 @@ import { GameResultOverlay } from '@/components/game/GameResultOverlay';
 import { GameShell, StatPill } from '@/components/game/GameShell';
 import { CardBack, PlayingCard } from '@/components/game/PlayingCard';
 import { Button } from '@/components/ui/button';
+import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import { formatMessage } from '@/lib/i18n';
 import {
@@ -37,6 +38,8 @@ const AI_PLAY_MS = 620;
 
 const GameShengji = () => {
   const { locale, t } = useLocale();
+  const arcade = useArcade();
+  const { difficulty, paused, finish, newRound, start } = arcade;
   const [state, setState] = useState<ShengjiState>(createInitialState);
   const [holding, setHolding] = useState(false);
 
@@ -46,29 +49,31 @@ const GameShengji = () => {
 
   // 一墩打完后先停一下再继续，否则第四张牌一落地整墩就消失了
   useEffect(() => {
-    if (!state.lastTrick || state.roundOver) return;
+    if (paused || !state.lastTrick || state.roundOver) return;
     setHolding(true);
     const id = setTimeout(() => setHolding(false), TRICK_HOLD_MS);
     return () => clearTimeout(id);
-  }, [state.lastTrick, state.roundOver]);
+  }, [state.lastTrick, state.roundOver, paused]);
 
   // AI 一次只出一张，让出牌过程可见
   useEffect(() => {
-    if (state.roundOver || holding) return;
+    if (paused || state.roundOver || holding) return;
     if (state.currentPlayer === 0) return;
     const id = setTimeout(() => {
-      setState((s) => applyAITurn(s));
+      setState((s) => applyAITurn(s, difficulty));
     }, AI_PLAY_MS);
     return () => clearTimeout(id);
-  }, [state, holding]);
+  }, [state, holding, paused, difficulty]);
 
   const restart = useCallback(() => {
+    newRound();
+    start();
     setState(createInitialState());
     setHolding(false);
-  }, []);
+  }, [newRound, start]);
 
   const handlePlay = (card: Card) => {
-    if (!isMyTurn(state) || holding || !validSet.has(card)) return;
+    if (paused || !isMyTurn(state) || holding || !validSet.has(card)) return;
     setState(playCard(state, 0, card));
   };
 
@@ -134,8 +139,29 @@ const GameShengji = () => {
       : t('game.shengji.seatLeft');
   };
 
+  useArcadeSnapshot(() => ({
+    ...state,
+    hands: state.hands.map((hand, seat) =>
+      seat === 0 ? hand : { count: hand.length },
+    ),
+    holding,
+  }));
+  useEffect(() => {
+    if (state.roundOver)
+      finish(iWon ? 'win' : 'lose', 0, {
+        moves: state.tricksPlayed,
+        upgrade: iAmDealerTeam
+          ? state.teamScores[1] === 0
+            ? 3
+            : state.teamScores[1] < 20
+              ? 2
+              : 1
+          : Math.max(1, Math.floor((state.teamScores[1] - 40) / 40)),
+      });
+  }, [state, iWon, iAmDealerTeam, finish]);
   return (
     <GameShell
+      onRestart={restart}
       title={t('game.shengji.name')}
       subtitle={t('game.shengji.rules')}
       status={

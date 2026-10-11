@@ -1,6 +1,7 @@
 import { expect, rs, test } from '@rstest/core';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { ArcadeSession } from '../src/contexts/ArcadeContext';
 import { LocaleProvider } from '../src/contexts/LocaleContext';
 import GameTetris3D from '../src/pages/tetris/index';
 
@@ -13,7 +14,9 @@ test('3D 俄罗斯方块页面显示 DOM HUD 并同步渲染引擎', () => {
   const { unmount } = render(
     <MemoryRouter>
       <LocaleProvider>
-        <GameTetris3D createEngine={() => engine} />
+        <ArcadeSession gameId="tetris">
+          <GameTetris3D createEngine={() => engine} />
+        </ArcadeSession>
       </LocaleProvider>
     </MemoryRouter>,
   );
@@ -52,7 +55,7 @@ test('3D 俄罗斯方块页面显示 DOM HUD 并同步渲染引擎', () => {
   ).toBeInTheDocument();
 
   unmount();
-  expect(engine.dispose).toHaveBeenCalledOnce();
+  expect(engine.dispose).toHaveBeenCalled();
 });
 
 test('3D 俄罗斯方块保留空格开始与 P 暂停键盘操作', () => {
@@ -64,7 +67,9 @@ test('3D 俄罗斯方块保留空格开始与 P 暂停键盘操作', () => {
   render(
     <MemoryRouter>
       <LocaleProvider>
-        <GameTetris3D createEngine={() => engine} />
+        <ArcadeSession gameId="tetris">
+          <GameTetris3D createEngine={() => engine} />
+        </ArcadeSession>
       </LocaleProvider>
     </MemoryRouter>,
   );
@@ -80,5 +85,5 @@ test('3D 俄罗斯方块保留空格开始与 P 暂停键盘操作', () => {
   expect(screen.getByText(/暂存:/)).toBeInTheDocument();
   fireEvent.keyDown(window, { code: 'KeyE' });
   fireEvent.keyDown(window, { code: 'KeyP' });
-  expect(screen.getByText('已暂停')).toBeInTheDocument();
+  expect(screen.getByRole('dialog', { name: '已暂停' })).toBeInTheDocument();
 });

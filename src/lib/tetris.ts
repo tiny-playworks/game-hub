@@ -24,6 +24,7 @@ export interface TetrisState {
   nextPiece: number;
   score: number;
   level: number;
+  startingLevel?: number;
   lines: number;
   status: TetrisStatus;
   dropCounter: number;
@@ -300,6 +301,7 @@ export function createTetrisBoard(): TetrisBoard {
 
 export function createInitialTetrisState(
   rng: () => number = Math.random,
+  startingLevel = 1,
 ): TetrisState {
   return {
     board: createTetrisBoard(),
@@ -309,11 +311,15 @@ export function createInitialTetrisState(
     py: 0,
     nextPiece: randomPiece(rng),
     score: 0,
-    level: 1,
+    level: startingLevel,
+    startingLevel,
     lines: 0,
     status: 'idle',
     dropCounter: 0,
-    dropInterval: INITIAL_DROP_INTERVAL,
+    dropInterval:
+      startingLevel === 1
+        ? INITIAL_DROP_INTERVAL
+        : getDropInterval(startingLevel),
     heldPiece: null,
     holdUsed: false,
     activeSpecial: null,
@@ -391,7 +397,7 @@ export function applyTetrisAction(
 ): TetrisStepResult {
   if (action.type === 'reset') {
     return {
-      state: createInitialTetrisState(action.rng),
+      state: createInitialTetrisState(action.rng, state.startingLevel),
       events: [{ type: 'reset' }],
     };
   }
@@ -485,7 +491,7 @@ export function applyTetrisAction(
     const next = cloneState(state);
     if (next.slowTicks > 0) next.slowTicks -= 1;
     next.dropInterval = getDropInterval(
-      getLevel(next.lines),
+      getLevel(next.lines, next.startingLevel),
       next.fallIntervalBonus,
       next.slowTicks,
     );
@@ -586,7 +592,7 @@ function activateClearBottomSkill(state: TetrisState): TetrisStepResult {
   next.skillEnergy = 0;
   next.lines += 1;
   next.score += 50 * next.level;
-  next.level = getLevel(next.lines);
+  next.level = getLevel(next.lines, next.startingLevel);
   next.dropInterval = getDropInterval(
     next.level,
     next.fallIntervalBonus,
@@ -684,7 +690,10 @@ function lockPiece(
 
   if (cleared.rows.length > 0) {
     const totalLines = next.lines + cleared.rows.length;
-    const scoreLevel = Math.min(10, 1 + Math.floor(totalLines / 10));
+    const scoreLevel = Math.min(
+      10,
+      (next.startingLevel ?? 1) + Math.floor(totalLines / 10),
+    );
     next.combo += 1;
     const comboMultiplier =
       next.combo > 1 ? 1 + (next.combo - 1) * next.comboBonus : 1;
@@ -696,7 +705,7 @@ function lockPiece(
     );
     next.lines = totalLines;
     next.score += scoreDelta;
-    next.level = getLevel(next.lines);
+    next.level = getLevel(next.lines, next.startingLevel);
     next.dropInterval = getDropInterval(
       next.level,
       next.fallIntervalBonus,
@@ -717,7 +726,7 @@ function lockPiece(
   } else {
     next.combo = 0;
     next.dropInterval = getDropInterval(
-      getLevel(next.lines),
+      getLevel(next.lines, next.startingLevel),
       next.fallIntervalBonus,
       next.slowTicks,
     );
@@ -777,7 +786,7 @@ function applySpecialEffect(
   if (special === 'ice') {
     state.slowTicks = 180;
     state.dropInterval = getDropInterval(
-      getLevel(state.lines),
+      getLevel(state.lines, state.startingLevel),
       state.fallIntervalBonus,
       state.slowTicks,
     );
@@ -871,8 +880,8 @@ function unchanged(state: TetrisState): TetrisStepResult {
   return { state: cloneState(state), events: [] };
 }
 
-function getLevel(lines: number): number {
-  return Math.min(10, 1 + Math.floor(lines / 10));
+function getLevel(lines: number, startingLevel = 1): number {
+  return Math.min(10, startingLevel + Math.floor(lines / 10));
 }
 
 function getDropInterval(

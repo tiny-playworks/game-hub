@@ -24,6 +24,8 @@ export const MEMORY_EMOJIS = [
   '🐙',
   '🦋',
   '🦄',
+  '🌻',
+  '🍋',
 ] as const;
 
 export type MemoryCard = {
@@ -69,11 +71,15 @@ export function shuffle<T>(arr: T[], rng: () => number): T[] {
   return out;
 }
 
-export function generateCards(level: number, rng: () => number): MemoryCard[] {
-  const offset = (level - 1) % (MEMORY_EMOJIS.length / MEMORY.pairCount);
+export function generateCards(
+  level: number,
+  rng: () => number,
+  pairCount: number = MEMORY.pairCount,
+): MemoryCard[] {
+  const offset = (level - 1) % (MEMORY_EMOJIS.length / pairCount);
   const pairs = MEMORY_EMOJIS.slice(
-    offset * MEMORY.pairCount,
-    offset * MEMORY.pairCount + MEMORY.pairCount,
+    offset * pairCount,
+    offset * MEMORY.pairCount + pairCount,
   );
   const list = [...pairs, ...pairs].map((emoji, i) => ({
     id: i,
@@ -85,9 +91,12 @@ export function generateCards(level: number, rng: () => number): MemoryCard[] {
   return shuffle(list, rng);
 }
 
-export function createInitialMemoryState(rng: () => number): MemoryState {
+export function createInitialMemoryState(
+  rng: () => number,
+  pairCount: number = MEMORY.pairCount,
+): MemoryState {
   return {
-    cards: generateCards(1, rng),
+    cards: generateCards(1, rng, pairCount),
     level: 1,
     score: 0,
     moves: 0,

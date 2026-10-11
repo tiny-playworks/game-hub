@@ -85,8 +85,11 @@ export function createInitialState(): BreakoutState {
   };
 }
 
-export function clampPaddleX(x: number): number {
-  const { canvasW, paddleW } = BREAKOUT;
+export function clampPaddleX(
+  x: number,
+  paddleW: number = BREAKOUT.paddleW,
+): number {
+  const { canvasW } = BREAKOUT;
   return Math.max(0, Math.min(canvasW - paddleW, x));
 }
 
@@ -152,8 +155,9 @@ export function bounceOffPaddle(
   _ballVx: number,
   ballVy: number,
   paddleX: number,
+  paddleW: number = BREAKOUT.paddleW,
 ): { ballVx: number; ballVy: number } {
-  const hitPos = (ballX - paddleX) / BREAKOUT.paddleW;
+  const hitPos = (ballX - paddleX) / paddleW;
   return {
     ballVy: -Math.abs(ballVy),
     ballVx: (hitPos - 0.5) * 10,
@@ -164,8 +168,9 @@ function overlapsPaddle(
   ballX: number,
   ballY: number,
   paddleX: number,
+  paddleW: number,
 ): boolean {
-  const { paddleW, paddleY, ballR, canvasH } = BREAKOUT;
+  const { paddleY, ballR, canvasH } = BREAKOUT;
   const paddleBottom = canvasH - 20;
   return (
     ballY + ballR >= paddleY &&
@@ -178,9 +183,10 @@ function overlapsPaddle(
 export function stepBreakout(
   state: BreakoutState,
   dt: number,
+  paddleW: number = BREAKOUT.paddleW,
 ): { state: BreakoutState; events: BreakoutEvent[] } {
   const events: BreakoutEvent[] = [];
-  const { canvasW, canvasH, ballR, paddleW } = BREAKOUT;
+  const { canvasW, canvasH, ballR } = BREAKOUT;
 
   let ballX = state.ballX + state.ballVx * dt;
   let ballY = state.ballY + state.ballVy * dt;
@@ -207,8 +213,15 @@ export function stepBreakout(
   }
 
   // Paddle
-  if (ballVy > 0 && overlapsPaddle(ballX, ballY, paddleX)) {
-    const bounced = bounceOffPaddle(ballX, ballY, ballVx, ballVy, paddleX);
+  if (ballVy > 0 && overlapsPaddle(ballX, ballY, paddleX, paddleW)) {
+    const bounced = bounceOffPaddle(
+      ballX,
+      ballY,
+      ballVx,
+      ballVy,
+      paddleX,
+      paddleW,
+    );
     ballVx = bounced.ballVx;
     ballVy = bounced.ballVy;
   }

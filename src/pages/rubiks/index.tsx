@@ -1,6 +1,9 @@
-import { ArrowLeft, RotateCcw, Shuffle, Undo2 } from 'lucide-react';
+import { RotateCcw, Shuffle, Undo2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { GameResultOverlay } from '@/components/game/GameResultOverlay';
+import { GameShell, StatPill } from '@/components/game/GameShell';
+import { Button } from '@/components/ui/button';
+import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import { formatMessage } from '@/lib/i18n';
 import { RubiksCubeEngine } from './RubiksCubeEngine';
@@ -32,7 +35,9 @@ const getStatusLabel = (status: string, t: (k: string) => string): string => {
 export interface RubiksEngineController {
   dispose(): void;
   reset(): void;
-  scramble(): void;
+  scramble(moves?: number): void;
+  setPaused?(paused: boolean): void;
+  getSnapshot?(): unknown;
   undo(): void;
   getMoveCount(): number;
 }
@@ -60,6 +65,15 @@ const GameRubiks = ({
   createEngine = createDefaultEngine,
 }: GameRubiksProps) => {
   const { locale, t } = useLocale();
+  const arcade = useArcade();
+  const { difficulty, paused, result, finish, newRound } = arcade;
+  const scrambleLength =
+    difficulty === 'easy' ? 5 : difficulty === 'hard' ? 25 : 12;
+  const [elapsed, setElapsed] = useState(0);
+  const elapsedRef = useRef(0);
+  const active = useRef(false);
+  const finishRef = useRef(finish);
+  finishRef.current = finish;
   const stageRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<RubiksEngineController | null>(null);
   const [busy, setBusy] = useState(false);
@@ -77,10 +91,18 @@ const GameRubiks = ({
 
     const engine = createEngine(stage, {
       onBusyChange: setBusy,
-      onStatusChange: setStatus,
+      onStatusChange: (value) => {
+        setStatus(value);
+        if (value === '打乱完成') active.current = true;
+      },
       onMoveCountChange: setMoveCount,
-      onSolvedChange: () => {
-        /* 状态文案已由 onStatusChange 覆盖「已复原」 */
+      onSolvedChange: (solved) => {
+        if (solved && active.current) {
+          active.current = false;
+          finishRef.current('win', Math.max(1, elapsedRef.current), {
+            scrambleMoves: scrambleLength,
+          });
+        }
       },
     });
     engineRef.current = engine;
@@ -91,53 +113,107 @@ const GameRubiks = ({
       engine.dispose();
       engineRef.current = null;
     };
-  }, [createEngine]);
+  }, [createEngine, scrambleLength]);
 
+  useEffect(() => {
+    engineRef.current?.setPaused?.(paused);
+  }, [paused]);
+  useEffect(() => {
+    if (paused || result) return;
+    const timer = window.setInterval(() => {
+      if (active.current) {
+        elapsedRef.current++;
+        setElapsed(elapsedRef.current);
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [paused, result]);
+  useArcadeSnapshot(() => ({
+    status,
+    busy,
+    moveCount,
+    elapsed,
+    scrambleLength,
+    cube: engineRef.current?.getSnapshot?.(),
+  }));
+  const scramble = () => {
+    if (paused || busy) return;
+    active.current = false;
+    newRound();
+    elapsedRef.current = 0;
+    setElapsed(0);
+    engineRef.current?.scramble(scrambleLength);
+    arcade.start();
+  };
+  const reset = () => {
+    active.current = false;
+    newRound();
+    elapsedRef.current = 0;
+    setElapsed(0);
+    engineRef.current?.reset();
+  };
   return (
-    <div className="rubiks-game">
-      <header className="rubiks-toolbar">
-        <Link to="/" className="rubiks-back">
-          <ArrowLeft aria-hidden="true" />
-          <span>{t('common.backToList')}</span>
-        </Link>
-
-        <h1>{t('game.rubiks.name')}</h1>
-
-        <div className="rubiks-actions">
-          <span className="rubiks-move-count" aria-live="polite">
+    <GameShell
+      autoStart={false}
+      title={t('game.rubiks.name')}
+      subtitle={t('game.rubiks.description')}
+      status={
+        <>
+          <StatPill label={t('arcade.unit.seconds')} value={elapsed} />
+        </>
+      }
+      toolbar={
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground" aria-live="polite">
             {formatMessage(locale, 'rubiks.moves', { count: moveCount })}
           </span>
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             type="button"
             aria-label={t('rubiks.undoAria')}
-            disabled={busy || moveCount === 0}
+            disabled={paused || busy || moveCount === 0}
             onClick={() => engineRef.current?.undo()}
           >
             <Undo2 aria-hidden="true" />
             <span>{t('rubiks.undo')}</span>
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             type="button"
             aria-label={t('rubiks.scrambleAria')}
-            disabled={busy}
-            onClick={() => engineRef.current?.scramble()}
+            disabled={paused || busy}
+            onClick={scramble}
           >
             <Shuffle aria-hidden="true" />
             <span>{t('rubiks.scramble')}</span>
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             type="button"
             aria-label={t('rubiks.resetAria')}
-            onClick={() => engineRef.current?.reset()}
+            onClick={reset}
           >
             <RotateCcw aria-hidden="true" />
             <span>{t('rubiks.reset')}</span>
-          </button>
+          </Button>
         </div>
-      </header>
-
-      <main className="rubiks-stage-shell">
-        <div ref={stageRef} className="rubiks-stage" />
+      }
+    >
+      <div
+        className="rubiks-stage-shell relative w-full overflow-hidden rounded-2xl"
+        style={{ display: 'block', height: 'min(72dvh, 680px)' }}
+      >
+        <div ref={stageRef} className="rubiks-stage h-full w-full" />
+        <GameResultOverlay
+          open={!!result}
+          tone="win"
+          title={t('rubiks.status.solved')}
+          description={`${elapsed} ${t('arcade.unit.seconds')}`}
+          onRestart={arcade.restart}
+        />
         <div className="rubiks-help" aria-live="polite">
           <span className="rubiks-status">{getStatusLabel(status, t)}</span>
           <span>{t('rubiks.help.drag')}</span>
@@ -146,8 +222,8 @@ const GameRubiks = ({
           <i aria-hidden="true" />
           <span>{t('rubiks.help.zoom')}</span>
         </div>
-      </main>
-    </div>
+      </div>
+    </GameShell>
   );
 };
 

@@ -1,6 +1,7 @@
 import { expect, rs, test } from '@rstest/core';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { ArcadeSession } from '../src/contexts/ArcadeContext';
 import { LocaleProvider } from '../src/contexts/LocaleContext';
 import GameRubiks from '../src/pages/rubiks';
 
@@ -18,12 +19,14 @@ test('3D 魔方页面提供打乱、撤销与重置控制并调用引擎', async
   render(
     <MemoryRouter>
       <LocaleProvider>
-        <GameRubiks
-          createEngine={(_host, options) => {
-            onMoveCountChange = options.onMoveCountChange;
-            return engine;
-          }}
-        />
+        <ArcadeSession gameId="rubiks">
+          <GameRubiks
+            createEngine={(_host, options) => {
+              onMoveCountChange = options.onMoveCountChange;
+              return engine;
+            }}
+          />
+        </ArcadeSession>
       </LocaleProvider>
     </MemoryRouter>,
   );

@@ -5,8 +5,8 @@ import { GameShell, StatPill } from '@/components/game/GameShell';
 import { IntersectionBoard } from '@/components/game/IntersectionBoard';
 import { SegmentedControl } from '@/components/game/SegmentedControl';
 import { Button } from '@/components/ui/button';
+import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
-import { unlock } from '@/lib/achievements';
 import { cn } from '@/lib/utils';
 import {
   type Board,
@@ -22,7 +22,7 @@ import {
   XIANGQI_COLS,
   XIANGQI_ROWS,
 } from '@/lib/xiangqi';
-import { chooseXiangqiMove, type XiangqiDifficulty } from '@/lib/xiangqiAi';
+import { chooseXiangqiMove } from '@/lib/xiangqiAi';
 
 type Opponent = 'ai' | 'human';
 
@@ -74,6 +74,15 @@ const PositionMark = ({ row, col }: { row: number; col: number }) => {
 
 const GameXiangqi = () => {
   const { t } = useLocale();
+  const arcade = useArcade();
+  const {
+    difficulty,
+    changeDifficulty: setDifficulty,
+    paused,
+    finish,
+    newRound,
+    start,
+  } = arcade;
   const [board, setBoard] = useState<Board>(createInitialBoard);
   const [redTurn, setRedTurn] = useState(true);
   const [selected, setSelected] = useState<[number, number] | null>(null);
@@ -84,7 +93,6 @@ const GameXiangqi = () => {
   const [notation, setNotation] = useState<string[]>([]);
   const [past, setPast] = useState<Snapshot[]>([]);
   const [opponent, setOpponent] = useState<Opponent>('ai');
-  const [difficulty, setDifficulty] = useState<XiangqiDifficulty>('normal');
   const [thinking, setThinking] = useState(false);
   const aiTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -129,7 +137,7 @@ const GameXiangqi = () => {
   );
 
   const handlePoint = (row: number, col: number) => {
-    if (result || thinking || !isHumanTurn) return;
+    if (paused || result || thinking || !isHumanTurn) return;
     const piece = board[row][col];
 
     if (selected) {
@@ -150,7 +158,7 @@ const GameXiangqi = () => {
 
   // 人机模式：轮到电脑就算一手
   useEffect(() => {
-    if (opponent !== 'ai' || result) return;
+    if (paused || opponent !== 'ai' || result) return;
     if (sideToMove === humanSide) return;
 
     setThinking(true);
@@ -166,16 +174,11 @@ const GameXiangqi = () => {
       if (aiTimer.current) clearTimeout(aiTimer.current);
       setThinking(false);
     };
-  }, [board, sideToMove, difficulty, opponent, result, applyMove]);
-
-  useEffect(() => {
-    if (!result) return;
-    if (opponent === 'human' || result.winner === humanSide) {
-      unlock('xiangqi-first-win');
-    }
-  }, [result, opponent]);
+  }, [board, sideToMove, difficulty, opponent, result, applyMove, paused]);
 
   const restart = useCallback(() => {
+    newRound();
+    start();
     if (aiTimer.current) clearTimeout(aiTimer.current);
     setThinking(false);
     setBoard(createInitialBoard());
@@ -185,9 +188,10 @@ const GameXiangqi = () => {
     setCaptured([]);
     setNotation([]);
     setPast([]);
-  }, []);
+  }, [newRound, start]);
 
   const undo = () => {
+    if (paused || arcade.result) return;
     if (aiTimer.current) clearTimeout(aiTimer.current);
     setThinking(false);
     if (past.length === 0) return;
@@ -235,8 +239,21 @@ const GameXiangqi = () => {
   /** 某一方已经损失的棋子，陈列在该方一侧 */
   const lostPieces = (side: Side) => captured.filter((p) => p.side === side);
 
+  useArcadeSnapshot(() => ({
+    board,
+    sideToMove,
+    selected,
+    thinking,
+    opponent,
+    moves: past.length,
+  }));
+  useEffect(() => {
+    if (result) finish(resultTone, 0, { moves: past.length, opponent });
+  }, [result, resultTone, past.length, finish, opponent]);
+
   return (
     <GameShell
+      onRestart={restart}
       title={t('game.xiangqi.name')}
       subtitle={t('game.xiangqi.rules')}
       status={

@@ -17,8 +17,10 @@ import { Link } from 'react-router-dom';
 import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
 import { ThemeSwitcher } from '@/components/common/ThemeSwitcher';
+import { PersonalBest } from '@/components/game/PersonalBest';
 import { PlayerAvatar } from '@/components/home/PlayerAvatar';
 import { RankedLobbyCard } from '@/components/ranked/RankedLobbyCard';
+import { TaskClaimButton } from '@/components/TaskClaimButton';
 import { Button } from '@/components/ui/button';
 import { WalletBadge } from '@/components/WalletBadge';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -316,8 +318,15 @@ const Home = () => {
                     <Coins className="size-3" />
                     40 {t('wallet.coins')} · {task.rewardPoints}{' '}
                     {t('lobby.growthPoints')}
-                    {task.completed ? ` · ${t('home.daily.claimed')}` : ''}
+                    {task.claimed ? ` · ${t('home.daily.claimed')}` : ''}
                   </p>
+                  {!task.claimed && (
+                    <TaskClaimButton
+                      task={task}
+                      scope="daily"
+                      onClaim={refresh}
+                    />
+                  )}
                 </li>
               ))}
             </ul>
@@ -341,6 +350,11 @@ const Home = () => {
                       }}
                     />
                   </div>
+                  <TaskClaimButton
+                    task={task}
+                    scope="weekly"
+                    onClaim={refresh}
+                  />
                 </div>
               ))}
             </div>
@@ -440,6 +454,9 @@ const Home = () => {
                   <p className="mt-2 line-clamp-2 min-h-10 text-xs leading-5 text-muted-foreground">
                     {t(`game.${game.id}.description`)}
                   </p>
+                  <div className="mt-3">
+                    <PersonalBest gameId={game.id} />
+                  </div>
                   <div className="mt-4 flex flex-wrap gap-1.5">
                     {game.tags.map((tag) => (
                       <span

@@ -1,5 +1,11 @@
 import { addGrowthPoints } from '@/lib/growth';
-import { addCoins } from '@/lib/wallet';
+import { addArcadeCoins, addCoins } from '@/lib/wallet';
+import {
+  advanceTask,
+  isArcadeTask,
+  type TaskEvent,
+  type TaskTrigger,
+} from './taskEvents';
 
 export const DAILY_TASK_STORAGE_KEY = 'game-hub-daily-tasks';
 export const DAILY_TASK_COUNT = 3;
@@ -15,7 +21,7 @@ export interface DailyTask {
   id: string;
   titleKey: string;
   descKey: string;
-  eventType: RiichiDailyEvent;
+  eventType: RiichiDailyEvent | TaskTrigger;
   target: number;
   rewardPoints: number;
 }
@@ -24,6 +30,7 @@ export interface DailyTaskProgress extends DailyTask {
   progress: number;
   completed: boolean;
   claimed: boolean;
+  distinctGames?: string[];
 }
 
 export interface DailyTaskState {
@@ -87,6 +94,84 @@ const RIICHI_DAILY_TEMPLATES: DailyTask[] = [
   },
 ];
 
+const ARCADE_DAILY_TEMPLATES: DailyTask[] = [
+  {
+    id: 'arcade-best',
+    titleKey: 'daily.arcade.best.title',
+    descKey: 'daily.arcade.best.desc',
+    eventType: {
+      scope: 'arcade',
+      type: 'best',
+      category: 'mini',
+    },
+    target: 1,
+    rewardPoints: 30,
+  },
+  {
+    id: 'arcade-board',
+    titleKey: 'daily.arcade.board.title',
+    descKey: 'daily.arcade.board.desc',
+    eventType: {
+      scope: 'arcade',
+      type: 'finish',
+      category: 'board',
+    },
+    target: 3,
+    rewardPoints: 30,
+  },
+  {
+    id: 'arcade-poker',
+    titleKey: 'daily.arcade.poker.title',
+    descKey: 'daily.arcade.poker.desc',
+    eventType: {
+      scope: 'arcade',
+      type: 'win',
+      category: 'poker',
+    },
+    target: 1,
+    rewardPoints: 30,
+  },
+  {
+    id: 'arcade-2048',
+    titleKey: 'daily.arcade.2048.title',
+    descKey: 'daily.arcade.2048.desc',
+    eventType: {
+      scope: 'arcade',
+      type: 'finish',
+      gameId: '2048',
+      metric: 'maxTile',
+    },
+    target: 512,
+    rewardPoints: 30,
+  },
+  {
+    id: 'arcade-tetris',
+    titleKey: 'daily.arcade.tetris.title',
+    descKey: 'daily.arcade.tetris.desc',
+    eventType: {
+      scope: 'arcade',
+      type: 'finish',
+      gameId: 'tetris',
+      metric: 'lines',
+    },
+    target: 20,
+    rewardPoints: 30,
+  },
+  {
+    id: 'arcade-rubiks',
+    titleKey: 'daily.arcade.rubiks.title',
+    descKey: 'daily.arcade.rubiks.desc',
+    eventType: {
+      scope: 'arcade',
+      type: 'win',
+      gameId: 'rubiks',
+      difficulty: 'normal',
+    },
+    target: 1,
+    rewardPoints: 30,
+  },
+];
+
 function toProgressItem(task: DailyTask): DailyTaskProgress {
   return {
     ...task,
@@ -131,7 +216,10 @@ export function buildDailyTaskSetForDate(
   dateKey: string,
   count = DAILY_TASK_COUNT,
 ): DailyTaskProgress[] {
-  const pickCount = Math.max(1, Math.min(count, RIICHI_DAILY_TEMPLATES.length));
+  const pickCount = Math.max(
+    1,
+    Math.min(count - 1, RIICHI_DAILY_TEMPLATES.length),
+  );
   const pool = [...RIICHI_DAILY_TEMPLATES];
   const selected: DailyTaskProgress[] = [];
   let seed = hashText(dateKey);
@@ -141,6 +229,11 @@ export function buildDailyTaskSetForDate(
     selected.push(toProgressItem(picked));
     seed = (seed * 1664525 + 1013904223) >>> 0;
   }
+  selected.push(
+    toProgressItem(
+      ARCADE_DAILY_TEMPLATES[hashText(dateKey) % ARCADE_DAILY_TEMPLATES.length],
+    ),
+  );
   return selected;
 }
 
@@ -155,9 +248,10 @@ function normalizeState(raw: unknown): DailyTaskState | null {
     if (!item || typeof item !== 'object') continue;
     const candidate = item as Partial<DailyTaskProgress>;
     if (typeof candidate.id !== 'string') continue;
-    const template = RIICHI_DAILY_TEMPLATES.find(
-      (task) => task.id === candidate.id,
-    );
+    const template = [
+      ...RIICHI_DAILY_TEMPLATES,
+      ...ARCADE_DAILY_TEMPLATES,
+    ].find((task) => task.id === candidate.id);
     if (!template) continue;
     const progress =
       typeof candidate.progress === 'number' &&
@@ -169,11 +263,24 @@ function normalizeState(raw: unknown): DailyTaskState | null {
       ...template,
       progress: Math.min(progress, template.target),
       completed,
-      claimed: completed || Boolean(candidate.claimed),
+      claimed: isArcadeTask(template.eventType)
+        ? completed && Boolean(candidate.claimed)
+        : completed || Boolean(candidate.claimed),
     });
   }
   if (items.length === 0) return null;
-  return { dateKey: parsed.dateKey, items };
+  const riichi = items
+    .filter((item) => !isArcadeTask(item.eventType))
+    .slice(0, 2);
+  const arcade =
+    items.find((item) => isArcadeTask(item.eventType)) ??
+    buildDailyTaskSetForDate(parsed.dateKey).find((item) =>
+      isArcadeTask(item.eventType),
+    );
+  return {
+    dateKey: parsed.dateKey,
+    items: [...riichi, ...(arcade ? [arcade] : [])],
+  };
 }
 
 export function createDailyTaskState(now = Date.now()): DailyTaskState {
@@ -210,7 +317,7 @@ export function ensureDailyTaskState(now = Date.now()): DailyTaskState {
 }
 
 export function recordDailyTaskEvent(
-  event: RiichiDailyEvent,
+  event: TaskEvent,
   now = Date.now(),
 ): RecordDailyTaskEventResult {
   const state = ensureDailyTaskState(now);
@@ -218,10 +325,10 @@ export function recordDailyTaskEvent(
   const next: DailyTaskState = {
     ...state,
     items: state.items.map((item) => {
-      if (item.eventType !== event || item.completed) return item;
-      const progress = Math.min(item.target, item.progress + 1);
-      const completed = progress >= item.target;
-      if (completed) {
+      const updated = advanceTask(item, event);
+      if (updated === item) return item;
+      const { progress, completed } = updated;
+      if (completed && !isArcadeTask(item.eventType)) {
         autoClaimedRewards.push({
           taskId: item.id,
           titleKey: item.titleKey,
@@ -231,10 +338,11 @@ export function recordDailyTaskEvent(
         });
       }
       return {
-        ...item,
+        ...updated,
         progress,
         completed,
-        claimed: completed ? true : item.claimed,
+        claimed:
+          completed && !isArcadeTask(item.eventType) ? true : item.claimed,
       };
     }),
   };
@@ -275,7 +383,12 @@ export function claimDailyTask(
   saveDailyTaskState(next);
   if (awardedPoints > 0) {
     addGrowthPoints(awardedPoints);
-    addCoins(40, 'wallet.reason.daily', now);
+    const task = next.items.find((item) => item.id === taskId);
+    (task && isArcadeTask(task.eventType) ? addArcadeCoins : addCoins)(
+      40,
+      'wallet.reason.daily',
+      now,
+    );
   }
   return {
     ok: awardedPoints > 0,

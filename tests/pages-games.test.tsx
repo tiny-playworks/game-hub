@@ -1,6 +1,7 @@
 import { expect, test } from '@rstest/core';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { ArcadeSession } from '../src/contexts/ArcadeContext';
 import { LocaleProvider } from '../src/contexts/LocaleContext';
 import Achievements from '../src/pages/Achievements';
 import Game2048 from '../src/pages/Game2048';
@@ -49,7 +50,13 @@ test('成就页：渲染标题与成就列表', () => {
 });
 
 test('猜数字：渲染标题与猜按钮', () => {
-  render(withRouter(<GameGuessNumber />));
+  render(
+    withRouter(
+      <ArcadeSession gameId="guess-number">
+        <GameGuessNumber />
+      </ArcadeSession>,
+    ),
+  );
   expect(
     screen.getAllByText(/猜数字|Guess Number/).length,
   ).toBeGreaterThanOrEqual(1);
@@ -57,7 +64,13 @@ test('猜数字：渲染标题与猜按钮', () => {
 });
 
 test('井字棋：渲染棋盘与重开按钮', () => {
-  render(withRouter(<GameTictactoe />));
+  render(
+    withRouter(
+      <ArcadeSession gameId="tictactoe">
+        <GameTictactoe />
+      </ArcadeSession>,
+    ),
+  );
   expect(
     screen.getByRole('button', { name: /重开|Restart/ }),
   ).toBeInTheDocument();
@@ -67,7 +80,13 @@ test('井字棋：渲染棋盘与重开按钮', () => {
 });
 
 test('五子棋：渲染五子连珠说明与重开按钮', () => {
-  render(withRouter(<GameGomoku />));
+  render(
+    withRouter(
+      <ArcadeSession gameId="gomoku">
+        <GameGomoku />
+      </ArcadeSession>,
+    ),
+  );
   expect(screen.getByText(/五子连珠即胜|Gomoku/)).toBeInTheDocument();
   expect(
     screen.getAllByRole('button', { name: /重开|Restart/ }).length,
@@ -75,7 +94,13 @@ test('五子棋：渲染五子连珠说明与重开按钮', () => {
 });
 
 test('中国象棋：渲染说明与重开按钮', () => {
-  render(withRouter(<GameXiangqi />));
+  render(
+    withRouter(
+      <ArcadeSession gameId="xiangqi">
+        <GameXiangqi />
+      </ArcadeSession>,
+    ),
+  );
   expect(screen.getByText(/中国象棋|Xiangqi/)).toBeInTheDocument();
   expect(
     screen.getAllByRole('button', { name: /重开|Restart/ }).length,
@@ -83,7 +108,13 @@ test('中国象棋：渲染说明与重开按钮', () => {
 });
 
 test('国际象棋：渲染说明与重开按钮', () => {
-  render(withRouter(<GameChess />));
+  render(
+    withRouter(
+      <ArcadeSession gameId="chess">
+        <GameChess />
+      </ArcadeSession>,
+    ),
+  );
   expect(screen.getByText(/国际象棋|Chess/)).toBeInTheDocument();
   expect(
     screen.getAllByRole('button', { name: /重开|Restart/ }).length,
@@ -91,7 +122,13 @@ test('国际象棋：渲染说明与重开按钮', () => {
 });
 
 test('围棋：渲染说明与重开按钮', () => {
-  render(withRouter(<GameGo />));
+  render(
+    withRouter(
+      <ArcadeSession gameId="go">
+        <GameGo />
+      </ArcadeSession>,
+    ),
+  );
   expect(screen.getByText(/围棋|Go 9/)).toBeInTheDocument();
   expect(
     screen.getAllByRole('button', { name: /重开|Restart/ }).length,
@@ -99,20 +136,38 @@ test('围棋：渲染说明与重开按钮', () => {
 });
 
 test('记忆翻牌：渲染步数统计', () => {
-  render(withRouter(<GameMemory />));
-  expect(screen.getByText(/步数:|Moves:/)).toBeInTheDocument();
+  render(
+    withRouter(
+      <ArcadeSession gameId="memory">
+        <GameMemory />
+      </ArcadeSession>,
+    ),
+  );
+  expect(screen.getByText(/^步$|^moves$/)).toBeInTheDocument();
 });
 
 test('2048：渲染分数与操作说明', () => {
-  render(withRouter(<Game2048 />));
-  expect(screen.getByText(/分数:|Score:/)).toBeInTheDocument();
+  render(
+    withRouter(
+      <ArcadeSession gameId="2048">
+        <Game2048 />
+      </ArcadeSession>,
+    ),
+  );
+  expect(screen.getByText(/^分数$|^分$|^Score$|^points$/)).toBeInTheDocument();
   expect(
     screen.getByText(/方向键移动方块|Slide and merge/),
   ).toBeInTheDocument();
 });
 
 test('贪吃蛇：渲染开始提示或分数', () => {
-  render(withRouter(<GameSnake />));
+  render(
+    withRouter(
+      <ArcadeSession gameId="snake">
+        <GameSnake />
+      </ArcadeSession>,
+    ),
+  );
   const scoreOrStart = screen.getAllByText(
     /分数:|按方向键开始|Score:|Press arrow/,
   );
@@ -120,25 +175,51 @@ test('贪吃蛇：渲染开始提示或分数', () => {
 });
 
 test('打砖块：渲染生命或开始按钮', () => {
-  render(withRouter(<GameBreakout />));
-  expect(screen.getByText(/生命:|Lives:/)).toBeInTheDocument();
+  render(
+    withRouter(
+      <ArcadeSession gameId="breakout">
+        <GameBreakout />
+      </ArcadeSession>,
+    ),
+  );
+  expect(screen.getByText(/生命|Lives/)).toBeInTheDocument();
 });
 
 test('飞机大战：渲染得分与操作说明', () => {
-  render(withRouter(<GameShooter />));
-  expect(screen.getByText(/分数:|Score:/)).toBeInTheDocument();
-  expect(screen.getByText(/击落敌机得分|Shoot down/)).toBeInTheDocument();
+  render(
+    withRouter(
+      <ArcadeSession gameId="shooter">
+        <GameShooter />
+      </ArcadeSession>,
+    ),
+  );
+  expect(screen.getByText(/^分数$|^分$|^Score$|^points$/)).toBeInTheDocument();
+  expect(
+    screen.getAllByText(/击落敌机得分|Shoot down/).length,
+  ).toBeGreaterThanOrEqual(1);
 });
 
 test('坦克大战：渲染操作说明', () => {
-  render(withRouter(<GameTank />));
+  render(
+    withRouter(
+      <ArcadeSession gameId="tank">
+        <GameTank />
+      </ArcadeSession>,
+    ),
+  );
   expect(
-    screen.getByText(/保护黄色基地|Protect the yellow base/),
+    screen.getAllByText(/保护黄色基地|Protect the yellow base/)[0],
   ).toBeInTheDocument();
 });
 
 test('俄罗斯方块：渲染得分/等级/消行', () => {
-  render(withRouter(<GameTetris />));
+  render(
+    withRouter(
+      <ArcadeSession gameId="tetris">
+        <GameTetris />
+      </ArcadeSession>,
+    ),
+  );
   expect(screen.getByText(/消行:|Lines:/)).toBeInTheDocument();
 });
 
@@ -163,7 +244,13 @@ test('日本立直麻将：自动开局后进入桌面游戏舞台', async () =>
 });
 
 test('斗地主：渲染说明与重开按钮', () => {
-  render(withRouter(<GameDoudizhu />));
+  render(
+    withRouter(
+      <ArcadeSession gameId="doudizhu">
+        <GameDoudizhu />
+      </ArcadeSession>,
+    ),
+  );
   expect(screen.getByText(/三人斗地主|Doudizhu/)).toBeInTheDocument();
   expect(
     screen.getAllByRole('button', { name: /重开|Restart/ }).length,
@@ -171,7 +258,13 @@ test('斗地主：渲染说明与重开按钮', () => {
 });
 
 test('升级：渲染说明与重开按钮', () => {
-  render(withRouter(<GameShengji />));
+  render(
+    withRouter(
+      <ArcadeSession gameId="shengji">
+        <GameShengji />
+      </ArcadeSession>,
+    ),
+  );
   expect(screen.getByText(/升级入门|Shengji/)).toBeInTheDocument();
   expect(
     screen.getAllByRole('button', { name: /重开|Restart/ }).length,

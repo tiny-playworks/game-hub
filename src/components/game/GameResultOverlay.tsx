@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useOptionalArcade } from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
+import { games } from '@/data/games';
 import { cn } from '@/lib/utils';
 
 export type ResultTone = 'win' | 'lose' | 'draw';
@@ -18,6 +20,8 @@ interface GameResultOverlayProps {
   restartLabel?: string;
   /** 额外操作，例如「复盘」 */
   extraAction?: ReactNode;
+  isNewBest?: boolean;
+  previousBest?: number | null;
 }
 
 const TONE_STYLE: Record<ResultTone, { ring: string; badge: string }> = {
@@ -45,8 +49,11 @@ export const GameResultOverlay = ({
   onRestart,
   restartLabel,
   extraAction,
+  isNewBest,
+  previousBest,
 }: GameResultOverlayProps) => {
   const { t } = useLocale();
+  const arcade = useOptionalArcade();
   if (!open) return null;
 
   const style = TONE_STYLE[tone];
@@ -56,7 +63,7 @@ export const GameResultOverlay = ({
       role="alertdialog"
       aria-modal="true"
       aria-label={title}
-      className="animate-overlay-in absolute inset-0 z-20 flex items-center justify-center rounded-[inherit] bg-slate-950/45 p-4 backdrop-blur-[3px]"
+      className="animate-overlay-in absolute inset-0 z-40 flex items-center justify-center rounded-[inherit] bg-slate-950/45 p-4 backdrop-blur-[3px]"
     >
       <div
         className={cn(
@@ -73,6 +80,22 @@ export const GameResultOverlay = ({
           {t('common.gameResult')}
         </p>
         <h2 className="text-xl font-bold text-foreground">{title}</h2>
+        {(isNewBest ?? arcade?.result?.isNewBest) && (
+          <div className="mt-3 rounded-xl border border-gold bg-gold/15 p-3 text-sm">
+            <strong className="text-gold">{t('arcade.newBest')}</strong>
+            <p className="mt-1 text-muted-foreground">
+              {previousBest ?? arcade?.result?.previousBest ?? '—'} →{' '}
+              {arcade?.result?.currentBest ?? '—'}{' '}
+              {t(
+                games.find((game) => game.id === arcade?.gameId)?.bestMetric ===
+                  'wins'
+                  ? 'arcade.unit.streak'
+                  : (games.find((game) => game.id === arcade?.gameId)
+                      ?.bestUnitKey ?? 'arcade.unit.points'),
+              )}
+            </p>
+          </div>
+        )}
         {description && (
           <p className="mt-1.5 text-sm text-muted-foreground">{description}</p>
         )}
@@ -80,6 +103,16 @@ export const GameResultOverlay = ({
           <div className="mt-4 rounded-xl bg-muted/40 p-3 text-left text-sm text-muted-foreground">
             {detail}
           </div>
+        )}
+        {arcade?.result && (
+          <p className="mt-3 text-sm text-primary">
+            +{arcade.result.coinsEarned} {t('wallet.coins')}
+            {arcade.result.capReached && (
+              <span className="mt-1 block text-xs text-muted-foreground">
+                {t('arcade.capReached')}
+              </span>
+            )}
+          </p>
         )}
         <div className="mt-5 flex flex-col gap-2">
           <Button onClick={onRestart} className="w-full">

@@ -8,10 +8,10 @@ import {
 } from '@/components/game/IntersectionBoard';
 import { SegmentedControl } from '@/components/game/SegmentedControl';
 import { Button } from '@/components/ui/button';
+import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
-import { unlock } from '@/lib/achievements';
 import { GOMOKU_SIZE, type GomokuStone, getGomokuWin } from '@/lib/gomoku';
-import { chooseGomokuMove, type GomokuDifficulty } from '@/lib/gomokuAi';
+import { chooseGomokuMove } from '@/lib/gomokuAi';
 import { cn } from '@/lib/utils';
 
 type Opponent = 'ai' | 'human';
@@ -46,10 +46,18 @@ const Stone = ({
 
 const GameGomoku = () => {
   const { t } = useLocale();
+  const arcade = useArcade();
+  const {
+    difficulty,
+    changeDifficulty: setDifficulty,
+    paused,
+    finish,
+    newRound,
+    start,
+  } = arcade;
   const [board, setBoard] = useState<GomokuStone[]>(emptyBoard);
   const [history, setHistory] = useState<number[]>([]);
   const [opponent, setOpponent] = useState<Opponent>('ai');
-  const [difficulty, setDifficulty] = useState<GomokuDifficulty>('normal');
   const [thinking, setThinking] = useState(false);
   const aiTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -75,13 +83,13 @@ const GameGomoku = () => {
 
   const handlePoint = (row: number, col: number) => {
     const index = row * GOMOKU_SIZE + col;
-    if (win || board[index] || thinking || !isHumanTurn) return;
+    if (paused || win || board[index] || thinking || !isHumanTurn) return;
     place(index, blackNext ? 'B' : 'W');
   };
 
   // 人机模式：玩家落子后让电脑跟一手
   useEffect(() => {
-    if (opponent !== 'ai' || win) return;
+    if (paused || opponent !== 'ai' || win) return;
     const aiStone: 'B' | 'W' = humanStone === 'B' ? 'W' : 'B';
     const aiToMove = blackNext ? aiStone === 'B' : aiStone === 'W';
     if (!aiToMove) return;
@@ -97,23 +105,20 @@ const GameGomoku = () => {
       if (aiTimer.current) clearTimeout(aiTimer.current);
       setThinking(false);
     };
-  }, [board, blackNext, difficulty, opponent, place, win]);
-
-  useEffect(() => {
-    if (win && (opponent === 'human' || win.stone === humanStone)) {
-      unlock('gomoku-first-win');
-    }
-  }, [win, opponent]);
+  }, [board, blackNext, difficulty, opponent, place, win, paused]);
 
   const restart = useCallback(() => {
+    newRound();
+    start();
     if (aiTimer.current) clearTimeout(aiTimer.current);
     setThinking(false);
     setBoard(emptyBoard());
     setHistory([]);
-  }, []);
+  }, [newRound, start]);
 
   /** 人机模式一次退两手，直接回到玩家可落子的局面 */
   const undo = () => {
+    if (paused || arcade.result) return;
     if (aiTimer.current) clearTimeout(aiTimer.current);
     setThinking(false);
     const steps = opponent === 'ai' ? Math.min(2, history.length) : 1;
@@ -154,8 +159,29 @@ const GameGomoku = () => {
         ? t('common.youWin')
         : t('common.youLose');
 
+  useArcadeSnapshot(() => ({
+    board,
+    blackNext,
+    thinking,
+    moves: moveCount,
+    opponent,
+  }));
+  useEffect(() => {
+    if (win || moveCount === GOMOKU_SIZE * GOMOKU_SIZE)
+      finish(
+        !win
+          ? 'draw'
+          : opponent === 'human' || win.stone === humanStone
+            ? 'win'
+            : 'lose',
+        0,
+        { moves: moveCount, opponent },
+      );
+  }, [win, moveCount, opponent, finish]);
+
   return (
     <GameShell
+      onRestart={restart}
       title={t('game.gomoku.name')}
       subtitle={t('game.gomoku.rules')}
       status={
@@ -310,9 +336,9 @@ const GameGomoku = () => {
         />
 
         <GameResultOverlay
-          open={!!win}
-          tone={resultTone}
-          title={resultTitle}
+          open={!!win || moveCount === GOMOKU_SIZE * GOMOKU_SIZE}
+          tone={win ? resultTone : 'draw'}
+          title={win ? resultTitle : t('arcade.draw')}
           description={`${t('common.moves')} ${moveCount}`}
           onRestart={restart}
         />

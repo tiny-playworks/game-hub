@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import {
   type ActionType,
   type Direction,
   VirtualController,
 } from '@/components/common/VirtualController';
+import { GameResultOverlay } from '@/components/game/GameResultOverlay';
+import { GameShell, StatPill } from '@/components/game/GameShell';
 import { Button } from '@/components/ui/button';
+import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import { formatMessage } from '@/lib/i18n';
 import {
@@ -14,33 +16,27 @@ import {
   SHOOTER,
   stepShooter,
 } from '@/lib/shooter';
-import { useGameStore } from '../store/gameStore';
 
 const GameShooter = () => {
   const { locale, t } = useLocale();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { stats, updateHighScore } = useGameStore();
-  const gameStats = stats.shooter || { highScore: 0 };
+  const arcade = useArcade();
+  const { difficulty, paused, finish } = arcade;
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
   const [score, setScore] = useState(0);
   const [status, setStatus] = useState<'idle' | 'playing' | 'paused' | 'over'>(
     'idle',
   );
 
+  const elapsed = useRef(0);
   const stateRef = useRef({
     ...createInitialShooterState(),
     keys: { left: false, right: false, fire: false },
     lastTime: 0,
   });
 
-  const reset = useCallback(() => {
-    stateRef.current = {
-      ...createInitialShooterState(),
-      keys: { left: false, right: false, fire: false },
-      lastTime: 0,
-    };
-    setScore(0);
-    setStatus('idle');
-  }, []);
+  const reset = arcade.restart;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -73,7 +69,8 @@ const GameShooter = () => {
         return;
       }
 
-      if (status === 'playing') {
+      if (status === 'playing' && !pausedRef.current) {
+        elapsed.current += (rawDt * 16) / 1000;
         const result = stepShooter(
           {
             playerX: state.playerX,
@@ -87,6 +84,7 @@ const GameShooter = () => {
           state.keys,
           rawDt,
           Math.random,
+          difficulty,
         );
         state.playerX = result.state.playerX;
         state.bullets = result.state.bullets;
@@ -162,16 +160,11 @@ const GameShooter = () => {
     stateRef.current.lastTime = 0;
     rafId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafId);
-  }, [status, score, locale, t]);
-
-  useEffect(() => {
-    if (status === 'over' && score > gameStats.highScore) {
-      updateHighScore('shooter', score);
-    }
-  }, [status, score, gameStats.highScore, updateHighScore]);
+  }, [status, score, locale, t, difficulty]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (pausedRef.current || arcade.result) return;
       const k = stateRef.current.keys;
       if (e.code === 'ArrowLeft') {
         e.preventDefault();
@@ -189,7 +182,7 @@ const GameShooter = () => {
       }
       if (e.code === 'KeyP') {
         e.preventDefault();
-        if (status === 'playing') setStatus('paused');
+        if (status === 'playing') arcade.setPaused(true);
         else if (status === 'paused') setStatus('playing');
       }
       if (e.code === 'KeyR' && status === 'over') {
@@ -209,9 +202,10 @@ const GameShooter = () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [status, reset]);
+  }, [status, reset, arcade.result, arcade.setPaused]);
 
   const start = useCallback(() => {
+    if (pausedRef.current) return;
     if (status === 'idle' || status === 'paused') setStatus('playing');
     else if (status === 'over') reset();
   }, [status, reset]);
@@ -230,58 +224,62 @@ const GameShooter = () => {
     [start],
   );
 
+  useArcadeSnapshot(() => ({
+    ...stateRef.current,
+    status,
+    score,
+    elapsed: elapsed.current,
+  }));
+  useEffect(() => {
+    if (paused)
+      stateRef.current.keys = { left: false, right: false, fire: false };
+  }, [paused]);
+  useEffect(() => {
+    if (status === 'playing') arcade.start();
+    if (status === 'over')
+      finish('lose', score, {
+        kills: score / 10,
+        survivalSeconds: elapsed.current,
+      });
+  }, [status, score, arcade.start, finish]);
   return (
-    <div className="min-h-screen bg-background">
-      <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
-        <Link to="/" className="text-muted-foreground hover:text-foreground">
-          ← {t('common.backToList')}
-        </Link>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-muted-foreground">
-            {formatMessage(locale, 'breakout.highScore', {
-              score: gameStats.highScore,
-            })}
-          </span>
-          <span className="text-sm text-muted-foreground">
-            {formatMessage(locale, 'breakout.score', { score })}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              status === 'playing'
-                ? setStatus('paused')
-                : status === 'paused'
-                  ? setStatus('playing')
-                  : reset()
-            }
+    <GameShell
+      autoStart={false}
+      title={t('game.shooter.name')}
+      subtitle={t('game.shooter.description')}
+      status={<StatPill label={t('arcade.unit.points')} value={score} />}
+      toolbar={
+        <Button variant="outline" size="sm" onClick={reset}>
+          {t('common.restart')}
+        </Button>
+      }
+    >
+      <div className="flex w-full flex-col items-center justify-center pb-44 md:pb-4">
+        <div className="relative">
+          <button
+            type="button"
+            className="rounded-lg border-2 border-border bg-black block"
+            onClick={start}
           >
-            {status === 'playing'
-              ? t('shooter.btnPause')
-              : status === 'paused'
-                ? t('shooter.btnResume')
-                : t('common.restart')}
-          </Button>
-        </div>
-      </header>
-
-      <main className="flex min-h-[calc(100vh-56px)] flex-col items-center justify-center p-4 pb-44 md:pb-4">
-        <button
-          type="button"
-          className="rounded-lg border-2 border-border bg-black block"
-          onClick={start}
-        >
-          <canvas
-            ref={canvasRef}
-            width={SHOOTER.w}
-            height={SHOOTER.h}
-            className="block cursor-pointer"
-            style={{
-              width: 'min(calc(100vw - 2rem), 400px)',
-              height: 'auto',
-            }}
+            <canvas
+              ref={canvasRef}
+              width={SHOOTER.w}
+              height={SHOOTER.h}
+              className="block cursor-pointer"
+              style={{
+                width: 'min(calc(100vw - 2rem), 400px)',
+                height: 'auto',
+              }}
+            />
+          </button>
+          <GameResultOverlay
+            open={status === 'over'}
+            tone={'lose'}
+            title={t('2048.gameOver')}
+            description={String(score) + ' ' + t('arcade.unit.points')}
+            onRestart={reset}
           />
-        </button>
+        </div>
         <p className="mt-4 text-center text-sm text-muted-foreground">
           {t('shooter.footerControls')}
         </p>
@@ -292,8 +290,8 @@ const GameShooter = () => {
           onAction={(action) => setVirtualAction(action, true)}
           onActionEnd={(action) => setVirtualAction(action, false)}
         />
-      </main>
-    </div>
+      </div>
+    </GameShell>
   );
 };
 

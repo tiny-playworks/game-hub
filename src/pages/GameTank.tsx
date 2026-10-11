@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import {
   type ActionType,
   type Direction,
   VirtualController,
 } from '@/components/common/VirtualController';
+import { GameResultOverlay } from '@/components/game/GameResultOverlay';
+import { GameShell, StatPill } from '@/components/game/GameShell';
 import { Button } from '@/components/ui/button';
+import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
-import { formatMessage } from '@/lib/i18n';
 import {
   bulletHitsTank,
   cloneMap,
@@ -23,7 +24,6 @@ import {
   type TankDir,
   type TankEntity,
 } from '@/lib/tank';
-import { useGameStore } from '../store/gameStore';
 
 const {
   tile: TILE,
@@ -36,15 +36,19 @@ const {
 } = TANK;
 
 const GameTank = () => {
-  const { locale, t } = useLocale();
+  const { t } = useLocale();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { stats, incrementPlayCount } = useGameStore();
-  const gameStats = stats.tank || { playCount: 0 };
+  const arcade = useArcade();
+  const { difficulty, paused, finish } = arcade;
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
   const [status, setStatus] = useState<'idle' | 'playing' | 'win' | 'over'>(
     'idle',
   );
-  const [remainingEnemies, setRemainingEnemies] = useState(5);
-  const remainingRef = useRef(5);
+  const enemyCount = difficulty === 'easy' ? 3 : difficulty === 'hard' ? 10 : 5;
+  const [remainingEnemies, setRemainingEnemies] = useState(enemyCount);
+  const remainingRef = useRef(enemyCount);
+  const baseDamaged = useRef(false);
 
   const stateRef = useRef<{
     map: number[][];
@@ -62,25 +66,11 @@ const GameTank = () => {
     bullets: [],
     keys: {},
     playerCooldown: 0,
-    enemySpawnQueue: 5,
+    enemySpawnQueue: enemyCount,
     enemySpawnTimer: 0,
   });
 
-  const reset = useCallback(() => {
-    stateRef.current = {
-      map: cloneMap(),
-      player: createPlayerTank(),
-      enemies: [],
-      bullets: [],
-      keys: {},
-      playerCooldown: 0,
-      enemySpawnQueue: 5,
-      enemySpawnTimer: 120,
-    };
-    setStatus('idle');
-    setRemainingEnemies(5);
-    remainingRef.current = 5;
-  }, []);
+  const reset = arcade.restart;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -128,7 +118,7 @@ const GameTank = () => {
         ctx.fillText(t('tank.descriptionPrompt'), W / 2, H / 2 + 48);
       }
 
-      if (status === 'playing') {
+      if (status === 'playing' && !pausedRef.current) {
         const dirs: { key: string; dir: TankDir }[] = [
           { key: 'ArrowUp', dir: 'up' },
           { key: 'ArrowDown', dir: 'down' },
@@ -150,8 +140,9 @@ const GameTank = () => {
         state.enemySpawnTimer++;
         if (
           state.enemySpawnQueue > 0 &&
-          state.enemySpawnTimer >= 180 &&
-          state.enemies.length < 2
+          state.enemySpawnTimer >= (difficulty === 'hard' ? 120 : 180) &&
+          state.enemies.length <
+            (difficulty === 'easy' ? 1 : difficulty === 'hard' ? 3 : 2)
         ) {
           state.enemySpawnTimer = 0;
           state.enemySpawnQueue--;
@@ -173,10 +164,19 @@ const GameTank = () => {
 
         enemies.forEach((enemy) => {
           enemy.moveCounter++;
-          if (enemy.moveCounter >= 30) {
+          if (enemy.moveCounter >= (difficulty === 'hard' ? 15 : 30)) {
             enemy.moveCounter = 0;
             const allDirs: TankDir[] = ['up', 'down', 'left', 'right'];
-            const tryDir = allDirs[Math.floor(Math.random() * 4)];
+            const tryDir =
+              difficulty === 'hard' && Math.random() < 0.65
+                ? Math.abs(player.x - enemy.x) > Math.abs(player.y - enemy.y)
+                  ? player.x > enemy.x
+                    ? 'right'
+                    : 'left'
+                  : player.y > enemy.y
+                    ? 'down'
+                    : 'up'
+                : allDirs[Math.floor(Math.random() * 4)];
             const [tdx, tdy] = DIR_DXY[tryDir];
             if (!isOffsetBlocked(map, enemy, tdx * TILE, tdy * TILE)) {
               enemy.dir = tryDir;
@@ -187,7 +187,10 @@ const GameTank = () => {
             enemy.x += dx * 2;
             enemy.y += dy * 2;
           }
-          if (Math.random() < 0.02) {
+          if (
+            Math.random() <
+            (difficulty === 'easy' ? 0.01 : difficulty === 'hard' ? 0.04 : 0.02)
+          ) {
             state.bullets.push(fireBullet(enemy));
           }
         });
@@ -196,6 +199,7 @@ const GameTank = () => {
         for (const b of bullets) {
           const stepped = stepBullet(map, b);
           if (stepped.event === 'base') {
+            baseDamaged.current = true;
             setStatus('over');
             continue;
           }
@@ -285,10 +289,11 @@ const GameTank = () => {
 
     rafId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafId);
-  }, [status, t]);
+  }, [status, t, difficulty]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (pausedRef.current || arcade.result) return;
       if (
         ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(
           e.code,
@@ -298,7 +303,6 @@ const GameTank = () => {
         stateRef.current.keys[e.code] = true;
         if (status === 'idle' && e.code === 'Space') {
           setStatus('playing');
-          incrementPlayCount('tank');
         }
       }
     };
@@ -313,14 +317,14 @@ const GameTank = () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [incrementPlayCount, status]);
+  }, [status, arcade.result]);
 
   const start = useCallback(() => {
+    if (pausedRef.current) return;
     if (status === 'idle') {
       setStatus('playing');
-      incrementPlayCount('tank');
     }
-  }, [status, incrementPlayCount]);
+  }, [status]);
 
   const setVirtualDirection = useCallback((dir: Direction, active: boolean) => {
     const keyByDirection: Record<Direction, string> = {
@@ -340,43 +344,67 @@ const GameTank = () => {
     [start],
   );
 
+  useArcadeSnapshot(() => ({
+    ...stateRef.current,
+    status,
+    remainingEnemies,
+    enemyCount,
+    baseDamaged: baseDamaged.current,
+  }));
+  useEffect(() => {
+    if (paused) stateRef.current.keys = {};
+  }, [paused]);
+  useEffect(() => {
+    if (status === 'playing') arcade.start();
+    if (status === 'win' || status === 'over')
+      finish(
+        status === 'win' ? 'win' : 'lose',
+        (enemyCount - remainingEnemies) * 100,
+        { baseDamaged: baseDamaged.current, enemies: enemyCount },
+      );
+  }, [status, enemyCount, remainingEnemies, arcade.start, finish]);
   return (
-    <div className="min-h-screen bg-background">
-      <header className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
-        <Link to="/" className="text-muted-foreground hover:text-foreground">
-          ← {t('common.backToList')}
-        </Link>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-muted-foreground">
-            {formatMessage(locale, 'tank.playCount', {
-              count: gameStats.playCount,
-            })}
-          </span>
-          <span className="text-sm text-red-500 font-bold">
-            {formatMessage(locale, 'tank.remainingEnemies', {
-              count: remainingEnemies,
-            })}
-          </span>
-          <Button variant="outline" size="sm" onClick={reset}>
-            {t('common.restart')}
-          </Button>
-        </div>
-      </header>
-
-      <main className="flex min-h-[calc(100vh-56px)] flex-col items-center justify-center p-4 pb-44 md:pb-4">
-        <button
-          type="button"
-          className="rounded-lg border-2 border-border bg-black block"
-          onClick={start}
-        >
-          <canvas
-            ref={canvasRef}
-            width={W}
-            height={H}
-            className="block cursor-pointer"
-            style={{ width: 'min(calc(100vw - 2rem), 416px)', height: 'auto' }}
+    <GameShell
+      autoStart={false}
+      title={t('game.tank.name')}
+      subtitle={t('game.tank.description')}
+      status={<StatPill label={t('arcade.enemies')} value={remainingEnemies} />}
+      toolbar={
+        <Button variant="outline" size="sm" onClick={reset}>
+          {t('common.restart')}
+        </Button>
+      }
+    >
+      <div className="flex w-full flex-col items-center justify-center pb-44 md:pb-4">
+        <div className="relative">
+          <button
+            type="button"
+            className="rounded-lg border-2 border-border bg-black block"
+            onClick={start}
+          >
+            <canvas
+              ref={canvasRef}
+              width={W}
+              height={H}
+              className="block cursor-pointer"
+              style={{
+                width: 'min(calc(100vw - 2rem), 416px)',
+                height: 'auto',
+              }}
+            />
+          </button>
+          <GameResultOverlay
+            open={status === 'over' || status === 'win'}
+            tone={status === 'win' ? 'win' : 'lose'}
+            title={status === 'win' ? t('common.youWin') : t('common.youLose')}
+            description={
+              String((enemyCount - remainingEnemies) * 100) +
+              ' ' +
+              t('arcade.unit.points')
+            }
+            onRestart={reset}
           />
-        </button>
+        </div>
         <p className="mt-4 text-center text-sm text-muted-foreground">
           {t('tank.footerControls')}
         </p>
@@ -387,8 +415,8 @@ const GameTank = () => {
           onAction={(action) => setVirtualAction(action, true)}
           onActionEnd={(action) => setVirtualAction(action, false)}
         />
-      </main>
-    </div>
+      </div>
+    </GameShell>
   );
 };
 

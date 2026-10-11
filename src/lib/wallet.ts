@@ -20,7 +20,11 @@ export function normalizeWalletState(raw: unknown): WalletState {
   const state =
     raw && typeof raw === 'object' ? (raw as Partial<WalletState>) : {};
   return {
-    rewardedMatchIds: Array.isArray(state.rewardedMatchIds) ? state.rewardedMatchIds.filter((id): id is string => typeof id === 'string').slice(-100) : [],
+    rewardedMatchIds: Array.isArray(state.rewardedMatchIds)
+      ? state.rewardedMatchIds
+          .filter((id): id is string => typeof id === 'string')
+          .slice(-100)
+      : [],
     coins: count(state.coins),
     lifetimeEarned: Math.max(count(state.coins), count(state.lifetimeEarned)),
     ledger: Array.isArray(state.ledger)
@@ -74,7 +78,9 @@ export function addCoins(
     return 0;
   const next = {
     ...current,
-    rewardedMatchIds: matchId ? [...current.rewardedMatchIds, matchId].slice(-100) : current.rewardedMatchIds,
+    rewardedMatchIds: matchId
+      ? [...current.rewardedMatchIds, matchId].slice(-100)
+      : current.rewardedMatchIds,
     coins: current.coins + delta,
     lifetimeEarned: current.lifetimeEarned + delta,
     ledger: [...current.ledger, { at, delta, reasonKey }].slice(-50),
@@ -98,4 +104,46 @@ export function getRiichiMatchCoins(
   if (!Number.isInteger(placement) || placement < 1 || placement > 4) return 0;
   const bonus = [60, 30, 10, 0][placement - 1];
   return matchLength === 'south' ? 100 + bonus * 1.5 : 60 + bonus;
+}
+
+export const ARCADE_DAILY_COIN_CAP = 200;
+/** The cap, balance and ledger commit in one record, including arcade task rewards. */
+export function addArcadeCoins(
+  amount: number,
+  reasonKey: string,
+  at = Date.now(),
+): number {
+  const current = getWalletState();
+  const dateKey = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(at);
+  const earned =
+    current.dailyArcadeEarned.dateKey === dateKey
+      ? Math.min(ARCADE_DAILY_COIN_CAP, current.dailyArcadeEarned.amount)
+      : 0;
+  const delta = Math.min(count(amount), ARCADE_DAILY_COIN_CAP - earned);
+  if (!delta) return 0;
+  if (
+    !Number.isSafeInteger(current.coins + delta) ||
+    !Number.isSafeInteger(current.lifetimeEarned + delta)
+  )
+    return 0;
+  const next = {
+    ...current,
+    coins: current.coins + delta,
+    lifetimeEarned: current.lifetimeEarned + delta,
+    ledger: [...current.ledger, { at, delta, reasonKey }].slice(-50),
+    dailyArcadeEarned: { dateKey, amount: earned + delta },
+  };
+  localStorage.setItem(WALLET_STORAGE_KEY, JSON.stringify(next));
+  window.dispatchEvent(new Event(WALLET_CHANGED_EVENT));
+  window.dispatchEvent(
+    new CustomEvent(COINS_GAINED_EVENT, {
+      detail: { coins: delta, balance: next.coins },
+    }),
+  );
+  return delta;
 }

@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { GameResultOverlay } from '@/components/game/GameResultOverlay';
+import { GameShell, StatPill } from '@/components/game/GameShell';
 import { Button } from '@/components/ui/button';
+import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import {
   applyMove,
   boardFromMoves,
-  chooseTicTacToeMove,
+  chooseTicDifficultyMove,
   fadingIndex,
   getWinner,
   getWinningLine,
@@ -19,6 +21,10 @@ import './tictactoe.css';
 const GameTictactoe = () => {
   const { t } = useLocale();
   const shake = useScreenShake();
+  const { difficulty, paused, finish, newRound, start } = useArcade();
+  const [turnCount, setTurnCount] = useState(0);
+  const [draw, setDraw] = useState(false);
+  const repetitions = useRef(new Map<string, number>());
 
   const [moves, setMoves] = useState<TicMove[]>([]);
   const [xNext, setXNext] = useState(true);
@@ -30,14 +36,35 @@ const GameTictactoe = () => {
 
   const board = useMemo(() => boardFromMoves(moves), [moves]);
 
-  const fadingMoveIndex = fadingIndex(moves, currentPlayer);
+  const fadingMoveIndex =
+    difficulty === 'hard' ? null : fadingIndex(moves, currentPlayer);
 
   const handlePlay = useCallback(
     (i: number) => {
-      const nextMoves = applyMove(moves, currentPlayer, i);
+      if (paused || draw) return;
+      const nextMoves = applyMove(
+        moves,
+        currentPlayer,
+        i,
+        difficulty === 'hard' ? 'classic' : 'fading',
+      );
       if (!nextMoves) return;
 
       setMoves(nextMoves);
+      setTurnCount((value) => value + 1);
+      const key =
+        (!xNext ? 'X' : 'O') +
+        nextMoves.map((move) => move.player + move.index).join('');
+      const seen = (repetitions.current.get(key) ?? 0) + 1;
+      repetitions.current.set(key, seen);
+      if (
+        seen >= 3 ||
+        turnCount >= 79 ||
+        (difficulty === 'hard' &&
+          nextMoves.length === 9 &&
+          !getWinner(nextMoves))
+      )
+        setDraw(true);
 
       if (getWinningLine(nextMoves) !== null) {
         shake();
@@ -45,25 +72,47 @@ const GameTictactoe = () => {
 
       setXNext(!xNext);
     },
-    [currentPlayer, moves, shake, xNext],
+    [currentPlayer, moves, shake, xNext, paused, draw, turnCount, difficulty],
   );
 
   useEffect(() => {
-    if (vsAI && !xNext && !winner) {
+    if (!paused && !draw && vsAI && !xNext && !winner) {
       const timer = setTimeout(() => {
-        const bestMove = chooseTicTacToeMove(moves, 'O');
+        const bestMove = chooseTicDifficultyMove(moves, 'O', difficulty);
         if (bestMove !== null) {
           handlePlay(bestMove);
         }
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [xNext, vsAI, winner, moves, handlePlay]);
+  }, [xNext, vsAI, winner, moves, handlePlay, difficulty, paused, draw]);
 
   const restart = () => {
+    newRound();
+    start();
+    setTurnCount(0);
+    setDraw(false);
+    repetitions.current.clear();
     setMoves([]);
     setXNext(true);
   };
+
+  useArcadeSnapshot(() => ({
+    board,
+    moves,
+    turn: currentPlayer,
+    turnCount,
+    winner,
+    draw,
+    vsAI,
+  }));
+  useEffect(() => {
+    if (winner || draw)
+      finish(draw ? 'draw' : !vsAI || winner === 'X' ? 'win' : 'lose', 0, {
+        opponent: vsAI ? 'ai' : 'human',
+        moves: turnCount,
+      });
+  }, [winner, draw, vsAI, turnCount, finish]);
 
   // SVG Line overlay
   const renderWinningLine = () => {
@@ -99,30 +148,28 @@ const GameTictactoe = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white selection:bg-purple-900/50">
-      <header className="flex items-center justify-between border-b border-purple-900/30 bg-black/50 backdrop-blur px-4 py-3 sticky top-0 z-20">
-        <Link
-          to="/"
-          className="text-zinc-500 hover:text-purple-400 transition-colors"
+    <GameShell
+      title={t('game.tictactoe.name')}
+      subtitle={t(
+        difficulty === 'hard' ? 'arcade.ticClassicRules' : 'tictactoe.rules',
+      )}
+      onRestart={restart}
+      status={<StatPill label={t('common.moves')} value={turnCount} />}
+      toolbar={
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setVsAI(!vsAI);
+            restart();
+          }}
+          className="bg-transparent border-purple-900/50 hover:bg-purple-900/20 text-purple-400"
         >
-          ← {t('common.backToList')}
-        </Link>
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setVsAI(!vsAI);
-              restart();
-            }}
-            className="bg-transparent border-purple-900/50 hover:bg-purple-900/20 text-purple-400"
-          >
-            {vsAI ? t('tictactoe.vsAI') : t('tictactoe.pvp')}
-          </Button>
-        </div>
-      </header>
-
-      <main className="flex flex-col items-center justify-center p-4 min-h-[calc(100vh-64px)] pb-20">
+          {vsAI ? t('tictactoe.vsAI') : t('tictactoe.pvp')}
+        </Button>
+      }
+    >
+      <div className="flex flex-col items-center justify-center py-4 text-white">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-black tracking-[0.2em] mb-2 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]">
             {t('tictactoe.title')}
@@ -153,13 +200,19 @@ const GameTictactoe = () => {
         </div>
 
         <div className="relative p-3 rounded-2xl bg-[#0a0a0a] neon-grid border-4">
-          <div className="grid grid-cols-3 gap-3 relative w-[300px] h-[300px] sm:w-[360px] sm:h-[360px]">
+          <div className="grid grid-cols-3 gap-3 relative w-[min(76vw,300px)] aspect-square sm:w-[360px] sm:h-[360px]">
             {board.map((cell, i) => (
               <button
                 key={i}
                 type="button"
-                onClick={() => handlePlay(i)}
-                disabled={!!winner || !!cell}
+                data-tic-index={i}
+                aria-label={`${i + 1} ${cell ?? ''}`}
+                onClick={() => {
+                  if (!vsAI || xNext) handlePlay(i);
+                }}
+                disabled={
+                  paused || draw || !!winner || !!cell || (vsAI && !xNext)
+                }
                 className={cn(
                   'relative flex items-center justify-center rounded-xl bg-black border-2 text-6xl font-black font-sans transition-all neon-cell disabled:opacity-100',
                   cell === 'X' && 'neon-x animate-pop-in',
@@ -171,11 +224,27 @@ const GameTictactoe = () => {
               </button>
             ))}
             {renderWinningLine()}
+            <GameResultOverlay
+              open={!!winner || draw}
+              tone={draw ? 'draw' : !vsAI || winner === 'X' ? 'win' : 'lose'}
+              title={
+                draw
+                  ? t('arcade.draw')
+                  : !vsAI || winner === 'X'
+                    ? t('common.youWin')
+                    : t('common.youLose')
+              }
+              onRestart={restart}
+            />
           </div>
         </div>
 
         <p className="text-xs text-zinc-500 mt-6 max-w-sm text-center px-4 leading-relaxed font-mono">
-          {t('tictactoe.rules')}
+          {t(
+            difficulty === 'hard'
+              ? 'arcade.ticClassicRules'
+              : 'tictactoe.rules',
+          )}
         </p>
 
         <div className="mt-12 flex gap-4">
@@ -187,8 +256,8 @@ const GameTictactoe = () => {
             {t('common.restart')}
           </Button>
         </div>
-      </main>
-    </div>
+      </div>
+    </GameShell>
   );
 };
 

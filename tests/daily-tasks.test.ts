@@ -18,11 +18,17 @@ test('dailyTasks：北京时间换日 key 计算正确', () => {
   expect(getBeijingDateKey(atMidnightUtc)).toBe('2026-04-03');
 });
 
-test('dailyTasks：每日任务 5 选 3 且同日生成稳定', () => {
+test('dailyTasks：每日任务 2 日麻 + 1 街机 且同日生成稳定', () => {
   const a = buildDailyTaskSetForDate('2026-04-03');
   const b = buildDailyTaskSetForDate('2026-04-03');
 
   expect(a.length).toBe(3);
+  expect(
+    a.filter(
+      (task) =>
+        typeof task.eventType === 'object' && task.eventType.scope === 'arcade',
+    ),
+  ).toHaveLength(1);
   expect(a.map((item) => item.id)).toEqual(b.map((item) => item.id));
   expect(new Set(a.map((item) => item.id)).size).toBe(3);
 });
@@ -34,7 +40,12 @@ test('dailyTasks：进度推进与领取奖励闭环', () => {
   const firstTask = initial.items[0];
   expect(firstTask).toBeTruthy();
 
-  const progressed = recordDailyTaskEvent(firstTask.eventType, now);
+  const progressed = recordDailyTaskEvent(
+    typeof firstTask.eventType === 'string'
+      ? firstTask.eventType
+      : 'enter-game',
+    now,
+  );
   const progressedTask = progressed.state.items.find(
     (item) => item.id === firstTask.id,
   );

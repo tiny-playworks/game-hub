@@ -6,10 +6,12 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Link } from 'react-router-dom';
+import { GameResultOverlay } from '@/components/game/GameResultOverlay';
+import { GameShell, StatPill } from '@/components/game/GameShell';
 import { Button } from '@/components/ui/button';
+import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
-import { unlock } from '@/lib/achievements';
+import { arcadeStatsKey } from '@/lib/arcade';
 import { formatMessage } from '@/lib/i18n';
 import {
   applyTetrisAction,
@@ -63,13 +65,22 @@ const createDefaultEngine: TetrisEngineFactory = (host, options) => {
 const GameTetris3D = ({
   createEngine = createDefaultEngine,
 }: GameTetris3DProps) => {
+  const arcade = useArcade();
+  const { difficulty, paused, finish } = arcade;
+  const startingLevel =
+    difficulty === 'easy' ? 1 : difficulty === 'hard' ? 10 : 5;
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
   const stageRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<TetrisEngineController | null>(null);
-  const stateRef = useRef<TetrisState>(createInitialTetrisState());
+  const stateRef = useRef<TetrisState>(
+    createInitialTetrisState(Math.random, startingLevel),
+  );
   const { locale, t } = useLocale();
   const [state, setState] = useState<TetrisState>(() => stateRef.current);
-  const { stats, updateHighScore } = useGameStore();
-  const bestLines = stats.tetris?.highScore || 0;
+  const bestLines = useGameStore(
+    (store) => store.stats[arcadeStatsKey('tetris', difficulty)]?.maxLines ?? 0,
+  );
   const [theme, setTheme] = useState<'glass' | 'neon'>('glass');
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const dasRef = useRef(createDasArrState());
@@ -105,30 +116,55 @@ const GameTetris3D = ({
   }, [theme]);
 
   useEffect(() => {
-    if (state.status !== 'playing') return;
+    if (paused || state.status !== 'playing') return;
     const id = window.setInterval(() => {
       const events = commitAction({ type: 'tick' });
       engineRef.current?.sync(stateRef.current, events);
     }, TICK_MS);
     return () => window.clearInterval(id);
-  }, [state.status, commitAction]);
+  }, [state.status, commitAction, paused]);
 
+  useArcadeSnapshot(() => state);
   useEffect(() => {
-    if (state.lines <= 0) return;
-    if (state.lines > bestLines) {
-      updateHighScore('tetris', state.lines);
-    }
-    if (state.lines >= 10) unlock('tetris-10');
-    if (state.lines >= 50) unlock('tetris-50');
-    if (state.lines >= 100) unlock('tetris-100');
-  }, [bestLines, state.lines, updateHighScore]);
+    if (state.status === 'playing') arcade.start();
+    if (state.status === 'over')
+      finish('lose', state.score, {
+        lines: state.lines,
+        maxCombo: state.combo,
+        startingLevel,
+      });
+  }, [
+    state.status,
+    state.score,
+    state.lines,
+    state.combo,
+    startingLevel,
+    arcade.start,
+    finish,
+  ]);
+  useEffect(() => {
+    if (
+      (paused && stateRef.current.status === 'playing') ||
+      (!paused && stateRef.current.status === 'paused')
+    )
+      commitAction({ type: 'togglePause' });
+  }, [paused, commitAction]);
 
   const dispatch = useCallback(
     (action: TetrisAction) => {
+      if (action.type === 'togglePause') {
+        arcade.setPaused(!pausedRef.current);
+        return;
+      }
+      if (action.type === 'reset') {
+        arcade.restart();
+        return;
+      }
+      if (pausedRef.current) return;
       const events = commitAction(action);
       engineRef.current?.sync(stateRef.current, events);
     },
-    [commitAction],
+    [commitAction, arcade.setPaused, arcade.restart],
   );
 
   useEffect(() => {
@@ -197,7 +233,7 @@ const GameTetris3D = ({
   }, [dispatch]);
 
   useEffect(() => {
-    if (state.status !== 'playing') {
+    if (paused || state.status !== 'playing') {
       dasRef.current = createDasArrState();
       dasLastTimeRef.current = 0;
       return;
@@ -219,7 +255,7 @@ const GameTetris3D = ({
     };
     rafId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafId);
-  }, [state.status, dispatch]);
+  }, [state.status, dispatch, paused]);
 
   const nextShape = useMemo(
     () => SHAPES[state.nextPiece][0],
@@ -234,8 +270,6 @@ const GameTetris3D = ({
           ? t('2048.gameOver')
           : t('tetris.status.playing');
 
-  const togglePauseLabel =
-    state.status === 'paused' ? t('shooter.btnResume') : t('shooter.btnPause');
   const skillReady = state.skillEnergy >= state.skillMax;
 
   const handleTouchStart = (event: TouchEvent<HTMLElement>) => {
@@ -263,264 +297,260 @@ const GameTetris3D = ({
   };
 
   return (
-    <div className={`tetris-game tetris-theme-${theme}`}>
-      <header className="tetris-toolbar">
-        <Link to="/" className="tetris-back">
-          ← {t('common.backToList')}
-        </Link>
-        <h1>{t('game.tetris.name')}</h1>
-        <div className="tetris-actions">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            aria-label={togglePauseLabel}
-            disabled={state.status === 'idle' || state.status === 'over'}
-            onClick={() => dispatch({ type: 'togglePause' })}
-          >
-            {togglePauseLabel}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            aria-label={t('common.restart')}
-            onClick={() => dispatch({ type: 'reset' })}
-          >
-            {t('common.restart')}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            aria-label={t('tetris.toggleTheme')}
-            onClick={() =>
-              setTheme((current) => (current === 'glass' ? 'neon' : 'glass'))
-            }
-          >
-            {t('tetris.toggleTheme')}
-          </Button>
-        </div>
-      </header>
-
-      <main className="tetris-shell">
-        <section
-          className="tetris-stage"
-          aria-label={t('tetris.stageAria')}
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-        >
-          <div ref={stageRef} className="absolute inset-0" />
-          {state.status === 'idle' && (
-            <button
-              type="button"
-              className="tetris-start-layer"
-              onClick={() => dispatch({ type: 'start' })}
-            >
-              <span>{t('tetris.startTip')}</span>
-            </button>
-          )}
-        </section>
-
-        <aside className="tetris-side" aria-label={t('category.mini.name')}>
-          <div className="tetris-card tetris-stats">
-            <span>
-              {formatMessage(locale, 'tetris.score', { score: state.score })}
-            </span>
-            <span>
-              {formatMessage(locale, 'tetris.level', { level: state.level })}
-            </span>
-            <span>
-              {formatMessage(locale, 'tetris.lines', { lines: state.lines })}
-            </span>
-            <span>
-              {formatMessage(locale, 'tetris.bestLines', { lines: bestLines })}
-            </span>
-            <span>
-              {formatMessage(locale, 'tetris.combo', { combo: state.combo })}
-            </span>
-            <span>
-              {formatMessage(locale, 'tetris.energy', {
-                current: state.skillEnergy,
-                max: state.skillMax,
-              })}
-            </span>
-            <span>
-              {formatMessage(locale, 'tetris.hold', {
-                piece: pieceLabel(state.heldPiece, t),
-              })}
-            </span>
-            <span>
-              {formatMessage(locale, 'tetris.activeSpecial', {
-                special: specialLabel(state.activeSpecial, t),
-              })}
-            </span>
-            <span>
-              {formatMessage(locale, 'tetris.nextSpecial', {
-                special: specialLabel(state.nextSpecial, t),
-              })}
-            </span>
-            <strong className="tetris-status">{statusText}</strong>
-          </div>
-
-          <div className="tetris-card tetris-skill-card">
-            <div
-              className="tetris-energy-bar"
-              role="progressbar"
-              aria-label={t('tetris.energyAria')}
-              aria-valuemin={0}
-              aria-valuemax={state.skillMax}
-              aria-valuenow={state.skillEnergy}
-            >
-              <i
-                style={{
-                  width: `${Math.min(100, (state.skillEnergy / state.skillMax) * 100)}%`,
-                }}
-              />
-            </div>
-            <Button
-              type="button"
-              variant={skillReady ? 'default' : 'outline'}
-              size="sm"
-              aria-label={t('tetris.skillAria')}
-              disabled={!skillReady || state.status !== 'playing'}
-              onClick={() => dispatch({ type: 'useSkill' })}
-            >
-              {t('tetris.skillBtn')}
-            </Button>
-          </div>
-
-          <div className="tetris-card">
-            <p className="tetris-next-title">{t('tetris.nextBlock')}</p>
-            <div
-              className="tetris-next-grid"
-              role="img"
-              aria-label={t('tetris.nextBlockAria')}
-            >
-              {nextShape.flatMap((row, rowIndex) =>
-                row.map((cell, colIndex) => (
-                  <i
-                    key={`${rowIndex}-${colIndex}`}
-                    className={`tetris-next-cell${cell ? ' is-filled' : ''}`}
-                    style={
-                      cell
-                        ? {
-                            backgroundColor: TETRIS_COLORS[state.nextPiece + 1],
-                          }
-                        : undefined
-                    }
-                  />
-                )),
-              )}
-            </div>
-          </div>
-
-          <p className="tetris-help">{t('tetris.help')}</p>
-        </aside>
-      </main>
-
-      <fieldset className="tetris-mobile-controls">
-        <legend className="sr-only">{t('category.mini.name')}</legend>
+    <GameShell
+      autoStart={false}
+      title={t('game.tetris.name')}
+      subtitle={t('tetris.help')}
+      status={<StatPill label={t('arcade.unit.points')} value={state.score} />}
+      toolbar={
         <Button
+          type="button"
           variant="outline"
           size="sm"
+          aria-label={t('tetris.toggleTheme')}
           onClick={() =>
-            dispatch(
-              state.status === 'idle'
-                ? { type: 'start' }
-                : state.status === 'over'
-                  ? { type: 'reset' }
-                  : { type: 'togglePause' },
-            )
+            setTheme((current) => (current === 'glass' ? 'neon' : 'glass'))
           }
         >
-          {state.status === 'idle'
-            ? t('common.start')
-            : state.status === 'paused'
-              ? t('shooter.btnResume')
-              : state.status === 'over'
-                ? t('common.restart')
-                : t('shooter.btnPause')}
+          {t('tetris.toggleTheme')}
         </Button>
-        <Button
-          variant={skillReady ? 'default' : 'outline'}
-          size="sm"
-          disabled={!skillReady || state.status !== 'playing'}
-          onClick={() => dispatch({ type: 'useSkill' })}
-        >
-          {t('tetris.mobile.skill')}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={state.status !== 'playing'}
-          onClick={() => dispatch({ type: 'move', dx: -1 })}
-        >
-          {t('tetris.mobile.left')}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={state.status !== 'playing'}
-          onClick={() => dispatch({ type: 'move', dx: 1 })}
-        >
-          {t('tetris.mobile.right')}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={state.status !== 'playing'}
-          onClick={() => dispatch({ type: 'rotate', direction: 'cw' })}
-        >
-          {t('tetris.mobile.rotate')}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={state.status !== 'playing'}
-          onClick={() => dispatch({ type: 'softDrop' })}
-        >
-          {t('tetris.mobile.down')}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={state.status !== 'playing'}
-          onClick={() => dispatch({ type: 'hardDrop' })}
-        >
-          {t('tetris.mobile.hardDrop')}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={state.status !== 'playing'}
-          onClick={() => dispatch({ type: 'hold' })}
-        >
-          {t('tetris.mobile.hold')}
-        </Button>
-      </fieldset>
+      }
+    >
+      <div
+        className={`tetris-game tetris-theme-${theme}`}
+        style={{ minHeight: 0, width: '100%' }}
+      >
+        <main className="tetris-shell">
+          <section
+            className="tetris-stage"
+            aria-label={t('tetris.stageAria')}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
+            <div ref={stageRef} className="absolute inset-0" />
+            <GameResultOverlay
+              open={state.status === 'over'}
+              tone="lose"
+              title={t('2048.gameOver')}
+              description={formatMessage(locale, 'tetris.score', {
+                score: state.score,
+              })}
+              onRestart={arcade.restart}
+            />
+            {state.status === 'idle' && (
+              <button
+                type="button"
+                className="tetris-start-layer"
+                onClick={() => dispatch({ type: 'start' })}
+              >
+                <span>{t('tetris.startTip')}</span>
+              </button>
+            )}
+          </section>
 
-      {state.pendingUpgradeChoices.length > 0 && (
-        <div className="tetris-upgrade-layer" role="dialog" aria-modal="true">
-          <div className="tetris-upgrade-panel">
-            <h2>{t('tetris.upgradeTitle')}</h2>
-            <p>{t('tetris.upgradeDesc')}</p>
-            <div className="tetris-upgrade-options">
-              {state.pendingUpgradeChoices.map((upgrade) => (
-                <button
-                  type="button"
-                  key={upgrade}
-                  onClick={() => dispatch({ type: 'chooseUpgrade', upgrade })}
-                >
-                  <strong>{upgradeLabel(upgrade, t)}</strong>
-                  <span>{upgradeDescription(upgrade, t)}</span>
-                </button>
-              ))}
+          <aside className="tetris-side" aria-label={t('category.mini.name')}>
+            <div className="tetris-card tetris-stats">
+              <span>
+                {formatMessage(locale, 'tetris.score', { score: state.score })}
+              </span>
+              <span>
+                {formatMessage(locale, 'tetris.level', { level: state.level })}
+              </span>
+              <span>
+                {formatMessage(locale, 'tetris.lines', { lines: state.lines })}
+              </span>
+              <span>
+                {formatMessage(locale, 'tetris.bestLines', {
+                  lines: bestLines,
+                })}
+              </span>
+              <span>
+                {formatMessage(locale, 'tetris.combo', { combo: state.combo })}
+              </span>
+              <span>
+                {formatMessage(locale, 'tetris.energy', {
+                  current: state.skillEnergy,
+                  max: state.skillMax,
+                })}
+              </span>
+              <span>
+                {formatMessage(locale, 'tetris.hold', {
+                  piece: pieceLabel(state.heldPiece, t),
+                })}
+              </span>
+              <span>
+                {formatMessage(locale, 'tetris.activeSpecial', {
+                  special: specialLabel(state.activeSpecial, t),
+                })}
+              </span>
+              <span>
+                {formatMessage(locale, 'tetris.nextSpecial', {
+                  special: specialLabel(state.nextSpecial, t),
+                })}
+              </span>
+              <strong className="tetris-status">{statusText}</strong>
+            </div>
+
+            <div className="tetris-card tetris-skill-card">
+              <div
+                className="tetris-energy-bar"
+                role="progressbar"
+                aria-label={t('tetris.energyAria')}
+                aria-valuemin={0}
+                aria-valuemax={state.skillMax}
+                aria-valuenow={state.skillEnergy}
+              >
+                <i
+                  style={{
+                    width: `${Math.min(100, (state.skillEnergy / state.skillMax) * 100)}%`,
+                  }}
+                />
+              </div>
+              <Button
+                type="button"
+                variant={skillReady ? 'default' : 'outline'}
+                size="sm"
+                aria-label={t('tetris.skillAria')}
+                disabled={!skillReady || state.status !== 'playing'}
+                onClick={() => dispatch({ type: 'useSkill' })}
+              >
+                {t('tetris.skillBtn')}
+              </Button>
+            </div>
+
+            <div className="tetris-card">
+              <p className="tetris-next-title">{t('tetris.nextBlock')}</p>
+              <div
+                className="tetris-next-grid"
+                role="img"
+                aria-label={t('tetris.nextBlockAria')}
+              >
+                {nextShape.flatMap((row, rowIndex) =>
+                  row.map((cell, colIndex) => (
+                    <i
+                      key={`${rowIndex}-${colIndex}`}
+                      className={`tetris-next-cell${cell ? ' is-filled' : ''}`}
+                      style={
+                        cell
+                          ? {
+                              backgroundColor:
+                                TETRIS_COLORS[state.nextPiece + 1],
+                            }
+                          : undefined
+                      }
+                    />
+                  )),
+                )}
+              </div>
+            </div>
+
+            <p className="tetris-help">{t('tetris.help')}</p>
+          </aside>
+        </main>
+
+        <fieldset className="tetris-mobile-controls">
+          <legend className="sr-only">{t('category.mini.name')}</legend>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              dispatch(
+                state.status === 'idle'
+                  ? { type: 'start' }
+                  : state.status === 'over'
+                    ? { type: 'reset' }
+                    : { type: 'togglePause' },
+              )
+            }
+          >
+            {state.status === 'idle'
+              ? t('common.start')
+              : state.status === 'paused'
+                ? t('shooter.btnResume')
+                : state.status === 'over'
+                  ? t('common.restart')
+                  : t('shooter.btnPause')}
+          </Button>
+          <Button
+            variant={skillReady ? 'default' : 'outline'}
+            size="sm"
+            disabled={!skillReady || state.status !== 'playing'}
+            onClick={() => dispatch({ type: 'useSkill' })}
+          >
+            {t('tetris.mobile.skill')}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={state.status !== 'playing'}
+            onClick={() => dispatch({ type: 'move', dx: -1 })}
+          >
+            {t('tetris.mobile.left')}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={state.status !== 'playing'}
+            onClick={() => dispatch({ type: 'move', dx: 1 })}
+          >
+            {t('tetris.mobile.right')}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={state.status !== 'playing'}
+            onClick={() => dispatch({ type: 'rotate', direction: 'cw' })}
+          >
+            {t('tetris.mobile.rotate')}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={state.status !== 'playing'}
+            onClick={() => dispatch({ type: 'softDrop' })}
+          >
+            {t('tetris.mobile.down')}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={state.status !== 'playing'}
+            onClick={() => dispatch({ type: 'hardDrop' })}
+          >
+            {t('tetris.mobile.hardDrop')}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={state.status !== 'playing'}
+            onClick={() => dispatch({ type: 'hold' })}
+          >
+            {t('tetris.mobile.hold')}
+          </Button>
+        </fieldset>
+
+        {state.pendingUpgradeChoices.length > 0 && (
+          <div className="tetris-upgrade-layer" role="dialog" aria-modal="true">
+            <div className="tetris-upgrade-panel">
+              <h2>{t('tetris.upgradeTitle')}</h2>
+              <p>{t('tetris.upgradeDesc')}</p>
+              <div className="tetris-upgrade-options">
+                {state.pendingUpgradeChoices.map((upgrade) => (
+                  <button
+                    type="button"
+                    key={upgrade}
+                    onClick={() => dispatch({ type: 'chooseUpgrade', upgrade })}
+                  >
+                    <strong>{upgradeLabel(upgrade, t)}</strong>
+                    <span>{upgradeDescription(upgrade, t)}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </GameShell>
   );
 };
 

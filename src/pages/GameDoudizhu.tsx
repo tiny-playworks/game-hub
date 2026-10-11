@@ -4,6 +4,7 @@ import { GameResultOverlay } from '@/components/game/GameResultOverlay';
 import { GameShell, StatPill } from '@/components/game/GameShell';
 import { CardBack, CardFan } from '@/components/game/PlayingCard';
 import { Button } from '@/components/ui/button';
+import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import {
   applyAITurn,
@@ -33,6 +34,8 @@ type SeatAction = { kind: 'play'; cards: Card[] } | { kind: 'pass' } | null;
 
 const GameDoudizhu = () => {
   const { t } = useLocale();
+  const arcade = useArcade();
+  const { difficulty, paused, finish, newRound, start } = arcade;
   const [state, setState] = useState<DoudizhuState>(() => createInitialState());
   const [selected, setSelected] = useState<Card[]>([]);
   const [actions, setActions] = useState<Record<number, SeatAction>>({
@@ -53,10 +56,10 @@ const GameDoudizhu = () => {
 
   // AI 一次只走一步，让玩家看清每一家出了什么
   useEffect(() => {
-    if (state.gameOver || state.currentPlayer === SEAT_ME) return;
+    if (paused || state.gameOver || state.currentPlayer === SEAT_ME) return;
     const who = state.currentPlayer;
     const id = setTimeout(() => {
-      const next = applyAITurn(state);
+      const next = applyAITurn(state, difficulty);
       const played =
         next.lastPlay !== state.lastPlay && next.lastPlay?.player === who;
       setActions((prev) => ({
@@ -68,7 +71,7 @@ const GameDoudizhu = () => {
       setState(next);
     }, AI_PLAY_MS);
     return () => clearTimeout(id);
-  }, [state]);
+  }, [state, paused, difficulty]);
 
   // 新一轮开始（无人压制）时清掉桌面上的旧牌
   useEffect(() => {
@@ -79,7 +82,7 @@ const GameDoudizhu = () => {
   }, [state.lastPlay]);
 
   const toggleCard = (card: Card) => {
-    if (!myTurn) return;
+    if (paused || !myTurn) return;
     setNoHint(false);
     setSelected((prev) =>
       prev.includes(card) ? prev.filter((c) => c !== card) : [...prev, card],
@@ -87,7 +90,7 @@ const GameDoudizhu = () => {
   };
 
   const handlePlay = () => {
-    if (!playable) return;
+    if (paused || !playable) return;
     setActions((prev) => ({
       ...prev,
       [SEAT_ME]: { kind: 'play', cards: [...selected] },
@@ -98,7 +101,7 @@ const GameDoudizhu = () => {
   };
 
   const handlePass = () => {
-    if (!canPass(state)) return;
+    if (paused || !canPass(state)) return;
     setActions((prev) => ({ ...prev, [SEAT_ME]: { kind: 'pass' } }));
     setState(passTurn(state));
     setSelected([]);
@@ -106,7 +109,7 @@ const GameDoudizhu = () => {
 
   /** 反复点提示会依次给出不同的可行组合；一手都压不过时明确告诉玩家 */
   const handleHint = () => {
-    if (!myTurn) return;
+    if (paused || !myTurn) return;
     const hint = findHint(state, triedHints.current);
     if (!hint) {
       const firstPass = triedHints.current.length === 0;
@@ -121,11 +124,13 @@ const GameDoudizhu = () => {
   };
 
   const restart = useCallback(() => {
+    newRound();
+    start();
     setState(createInitialState());
     setSelected([]);
     setActions({ 0: null, 1: null, 2: null });
     triedHints.current = [];
-  }, []);
+  }, [newRound, start]);
 
   const iAmLandlord = state.landlord === SEAT_ME;
   const iWon =
@@ -143,8 +148,32 @@ const GameDoudizhu = () => {
       ? t('game.doudizhu.status.yourTurn')
       : t('game.doudizhu.status.otherTurn');
 
+  useArcadeSnapshot(() => ({
+    ...state,
+    hands: state.hands.map((hand, seat) =>
+      seat === SEAT_ME ? hand : { count: hand.length },
+    ),
+    selected,
+  }));
+  useEffect(() => {
+    if (state.gameOver)
+      finish(iWon ? 'win' : 'lose', 0, {
+        moves: state.playCounts?.reduce((sum, count) => sum + count, 0) ?? 0,
+        landlord: iAmLandlord,
+        spring: state.spring === true,
+      });
+  }, [
+    state.gameOver,
+    iWon,
+    state.playCounts,
+    state.spring,
+    iAmLandlord,
+    finish,
+  ]);
+
   return (
     <GameShell
+      onRestart={restart}
       title={t('game.doudizhu.name')}
       subtitle={t('game.doudizhu.rules')}
       status={
