@@ -67,7 +67,7 @@ export const GameResultOverlay = ({
     >
       <div
         className={cn(
-          'animate-overlay-card-in w-full max-w-xs rounded-2xl paper-texture bg-card p-6 text-center shadow-2xl ring-4',
+          'animate-overlay-card-in w-full max-w-xs max-h-[90dvh] overflow-y-auto rounded-2xl paper-texture bg-card p-6 text-center shadow-2xl ring-4',
           style.ring,
         )}
       >

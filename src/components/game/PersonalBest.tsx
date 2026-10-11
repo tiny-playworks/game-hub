@@ -28,7 +28,7 @@ export function PersonalBest({
       data-personal-best={gameId}
       data-difficulty={difficulty}
     >
-      <span>{t('arcade.personalBest')}</span>
+      <span className="hidden sm:inline">{t('arcade.personalBest')}</span>
       <strong>
         {game.bestMetric === 'wins'
           ? `${stats.wins} ${t('arcade.unit.wins')} · ${stats.bestStreak} ${t('arcade.unit.streak')}`

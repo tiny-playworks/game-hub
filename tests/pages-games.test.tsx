@@ -1,6 +1,7 @@
 import { expect, test } from '@rstest/core';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { GameResultOverlay } from '../src/components/game/GameResultOverlay';
 import { ArcadeSession } from '../src/contexts/ArcadeContext';
 import { LocaleProvider } from '../src/contexts/LocaleContext';
 import Achievements from '../src/pages/Achievements';
@@ -269,4 +270,56 @@ test('升级：渲染说明与重开按钮', () => {
   expect(
     screen.getAllByRole('button', { name: /重开|Restart/ }).length,
   ).toBeGreaterThanOrEqual(1);
+});
+
+test('GameShell 统一暂停与继续流程', () => {
+  render(
+    withRouter(
+      <ArcadeSession gameId="guess-number">
+        <GameGuessNumber />
+      </ArcadeSession>,
+    ),
+  );
+  const pauseBtn = screen.getByRole('button', { name: /暂停|Pause/ });
+  fireEvent.click(pauseBtn);
+  expect(screen.getByText(/已暂停|Paused/)).toBeInTheDocument();
+  expect(
+    screen.getByRole('button', { name: /继续|Resume/ }),
+  ).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /继续|Resume/ }));
+  expect(screen.queryByText(/已暂停|Paused/)).not.toBeInTheDocument();
+});
+
+test('GameShell 设置弹窗可打开并展示控制项', () => {
+  render(
+    withRouter(
+      <ArcadeSession gameId="snake">
+        <GameSnake />
+      </ArcadeSession>,
+    ),
+  );
+  const settingsBtn = screen.getByRole('button', { name: /设置|Settings/ });
+  fireEvent.click(settingsBtn);
+  expect(screen.getByText(/游戏设置|Settings/)).toBeInTheDocument();
+  expect(screen.getByText(/音效|Sound/)).toBeInTheDocument();
+  expect(
+    screen.getByRole('button', { name: /继续|Resume/ }),
+  ).toBeInTheDocument();
+});
+
+test('GameResultOverlay 正确显示新纪录', () => {
+  render(
+    withRouter(
+      <GameResultOverlay
+        open={true}
+        tone="win"
+        title="胜利"
+        isNewBest={true}
+        previousBest={100}
+        onRestart={() => {}}
+      />,
+    ),
+  );
+  expect(screen.getByText(/新纪录！|New Record/)).toBeInTheDocument();
+  expect(screen.getByText(/100 →/)).toBeInTheDocument();
 });
