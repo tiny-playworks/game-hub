@@ -35,7 +35,7 @@ export function playBeep(
   durationMs = 120,
   volume = 0.04,
 ): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined' || volume <= 0) return;
   const Ctx =
     window.AudioContext ||
     (window as typeof window & { webkitAudioContext?: typeof AudioContext })

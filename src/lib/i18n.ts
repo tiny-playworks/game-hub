@@ -2,6 +2,381 @@ export type Locale = 'zh' | 'en';
 
 const messages: Record<Locale, Record<string, string>> = {
   zh: {
+    'character.affinityLine.koharu.match-start': '今天先看牌河，我答应过你的！',
+    'character.affinityLine.koharu.riichi': '我数过三秒了，这次立直！',
+    'character.affinityLine.koharu.ron': '看，我这次没急着乱碰！',
+    'character.affinityLine.koharu.tsumo': '这张来得刚好，我们的约定有效！',
+    'character.affinityLine.koharu.deal-in': '哎呀，又跑快了。下次提醒我一下？',
+    'character.affinityLine.koharu.call': '终点我看清啦，这张我碰！',
+    'character.affinityLine.koharu.ryuukyoku-tenpai':
+      '还差一点，下一局一起努力。',
+    'character.affinityLine.koharu.match-top': '椅子给你留着，下一局也陪我吧！',
+    'character.affinityLine.koharu.match-last':
+      '今天输赢都记住了，明天换我追上你！',
+    'character.affinityLine.mio.match-start':
+      '窗外那棵树又长了一点。今天也慢慢打。',
+    'character.affinityLine.mio.riichi': '这一手值得，我想试着向前。',
+    'character.affinityLine.mio.ron': '判断没错。这次我记下了。',
+    'character.affinityLine.mio.tsumo': '等到了。谢谢你陪我守住节奏。',
+    'character.affinityLine.mio.deal-in': '这次退晚了，下次把选择留早一点。',
+    'character.affinityLine.mio.call': '改变计划也没关系，这张我需要。',
+    'character.affinityLine.mio.ryuukyoku-tenpai':
+      '先保住听牌，剩下的下一局再说。',
+    'character.affinityLine.mio.match-top': '今天进与退，都算自己的选择。',
+    'character.affinityLine.mio.match-last': '不急。树还在，下一局也还在。',
+    'character.affinityLine.rin.match-start': '今天不追末班车，追一手好牌！',
+    'character.affinityLine.rin.riichi': '终点确认，开始冲刺！',
+    'character.affinityLine.rin.ron': '这次速度和路线都没错！',
+    'character.affinityLine.rin.tsumo': '赶上了！这一手跑得舒服。',
+    'character.affinityLine.rin.deal-in': '弯道抢太急了，记住这个教训。',
+    'character.affinityLine.rin.call': '这条路更短，先拐过去！',
+    'character.affinityLine.rin.ryuukyoku-tenpai': '还差一步，先把呼吸稳住。',
+    'character.affinityLine.rin.match-top': '这局我领跑，下局还一起？',
+    'character.affinityLine.rin.match-last':
+      '慢一点也没关系，今天本来就不赶车。',
+    'character.affinityLine.chitose.match-start':
+      '第二杯茶刚好，先坐稳再摸牌。',
+    'character.affinityLine.chitose.riichi': '杯子放稳了，这一手立直。',
+    'character.affinityLine.chitose.ron': '停顿之后，答案就清楚了。',
+    'character.affinityLine.chitose.tsumo': '茶还温着，牌也刚好来了。',
+    'character.affinityLine.chitose.deal-in':
+      '这次没停稳。茶重新泡，牌重新想。',
+    'character.affinityLine.chitose.call': '这手可以变一变，不必只照旧方法。',
+    'character.affinityLine.chitose.ryuukyoku-tenpai':
+      '听牌了。祖母也会说，这样就很好。',
+    'character.affinityLine.chitose.match-top':
+      '这一局有我自己的味道，你觉得呢？',
+    'character.affinityLine.chitose.match-last':
+      '茶凉了就添热水，输一局也不着急。',
+    'character.affinityLine.sora.match-start':
+      '今天不用节拍器，听我们自己的节奏。',
+    'character.affinityLine.sora.riichi': '最后一个音，留给牌山来接。',
+    'character.affinityLine.sora.ron': '这一句终于完整了。',
+    'character.affinityLine.sora.tsumo': '和弦落稳了，谢谢你听到这里。',
+    'character.affinityLine.sora.deal-in': '这次多写了一个音，节奏乱了。',
+    'character.affinityLine.sora.call': '换一个和弦，旋律还能接下去。',
+    'character.affinityLine.sora.ryuukyoku-tenpai': '休止也好，下一段再继续。',
+    'character.affinityLine.sora.match-top': '今天的曲子，值得再听一次。',
+    'character.affinityLine.sora.match-last': '没写好的部分，下次慢慢改。',
+    'character.affinityLine.aya.match-start':
+      '今天不用证明什么，认真选每一张就好。',
+    'character.affinityLine.aya.riichi': '看过风险了，这是我的答案。立直！',
+    'character.affinityLine.aya.ron': '敢打，也要打得有理由。',
+    'character.affinityLine.aya.tsumo': '这一次，勇气有了回应！',
+    'character.affinityLine.aya.deal-in': '该停的时候没停。我认，下次改。',
+    'character.affinityLine.aya.call': '今天换一条路，也算自己的选择。',
+    'character.affinityLine.aya.ryuukyoku-tenpai':
+      '听牌就先留在这里，不硬追了。',
+    'character.affinityLine.aya.match-top': '你记得这一局，我就够开心了。',
+    'character.affinityLine.aya.match-last': '输了也能堂堂正正再来一局。',
+    'character.affinityLine.mahiru.match-start':
+      '新画加了最后一笔，今天的牌也试着画完吧。',
+    'character.affinityLine.mahiru.riichi': '留白够了，添上这一笔。立直。',
+    'character.affinityLine.mahiru.ron': '颜色接上了，比草稿还好看。',
+    'character.affinityLine.mahiru.tsumo': '这一道光，刚好落在手牌里。',
+    'character.affinityLine.mahiru.deal-in': '画过界了。擦不掉，但可以学会。',
+    'character.affinityLine.mahiru.call': '不是最爱的颜色，也能画出好手牌。',
+    'character.affinityLine.mahiru.ryuukyoku-tenpai':
+      '还没完成，也已经有轮廓了。',
+    'character.affinityLine.mahiru.match-top': '今天这幅，我们一起记住。',
+    'character.affinityLine.mahiru.match-last': '下次换一张纸，颜色还在。',
+    'character.affinityLine.yoru.match-start': '位置还在。今晚也一起坐。',
+    'character.affinityLine.yoru.riichi': '看清了。立直。',
+    'character.affinityLine.yoru.ron': '牌河说完了。',
+    'character.affinityLine.yoru.tsumo': '等到了。',
+    'character.affinityLine.yoru.deal-in': '这张，我看漏了。',
+    'character.affinityLine.yoru.call': '需要这张。',
+    'character.affinityLine.yoru.ryuukyoku-tenpai': '留到下一局。',
+    'character.affinityLine.yoru.match-top': '这一桌，很好。',
+    'character.affinityLine.yoru.match-last': '灯还亮着。不急。',
+    'affinity.extraLines': '新事件台词 + 大厅表情轮换',
+    'affinity.max': '满好感纪念，奖励永久保留。',
+    'story.koharu.1.title': '再来一局的地方',
+    'story.koharu.1.0': '我下课路过这儿，听见大家笑，就忍不住推门进来了。',
+    'story.koharu.1.1': '现在也会紧张吗？',
+    'story.koharu.1.2': '会呀！尤其是大家突然都不说话的时候。',
+    'story.koharu.1.3': '不过你坐在这儿，我就敢问“这张能打吗”了。',
+    'story.koharu.2.title': '第一声“碰”',
+    'story.koharu.2.0': '我第一次学会碰牌，就觉得自己终于跟上大家了。',
+    'story.koharu.2.1': '所以你总是跑得这么快？',
+    'story.koharu.2.2': '嗯……有时候跑过头，连牌河都忘了看。',
+    'story.koharu.2.3': '下次我先数三秒。你可要看着我有没有做到！',
+    'story.koharu.3.title': '留一张空椅子',
+    'story.koharu.3.0': '有次我连输好多局，回家路上想过以后不来了。',
+    'story.koharu.3.1': '后来是什么让你回来了？',
+    'story.koharu.3.2': '我怕大家只记得我打错牌的样子。',
+    'story.koharu.3.3': '现在不怕啦。我给你留椅子，你也记得给我留一局。',
+    'story.mio.1.title': '靠窗的座位',
+    'story.mio.1.0': '这儿的窗外有一棵树。下班后来坐一会儿，脑子会慢慢安静。',
+    'story.mio.1.1': '打麻将也能让你放松？',
+    'story.mio.1.2': '整理手牌的时候，只需要想眼前这一件事。',
+    'story.mio.1.3': '今天不用赶时间。我们把这一局慢慢打好。',
+    'story.mio.2.title': '先留一张安全牌',
+    'story.mio.2.0': '刚学的时候，我只想着和牌，输掉的点数却总比赢来的多。',
+    'story.mio.2.1': '后来就开始重视防守了？',
+    'story.mio.2.2': '一位前辈让我每巡问自己：如果现在被立直，我怎么办？',
+    'story.mio.2.3': '留一张安全牌，不是害怕。是给自己留选择。',
+    'story.mio.3.title': '也想试着向前',
+    'story.mio.3.0': '有时候，我太习惯退一步，连值得进攻的牌都放掉了。',
+    'story.mio.3.1': '那下次，一起看看有没有机会？',
+    'story.mio.3.2': '我怕把已经守住的东西再输回去。',
+    'story.mio.3.3': '但和你同桌的时候，我愿意再相信一次自己的判断。',
+    'story.rin.1.title': '赶上末班车之前',
+    'story.rin.1.0': '我来得晚，是因为训练刚结束。赶末班车前，刚好够打几局。',
+    'story.rin.1.1': '这么累了还想打？',
+    'story.rin.1.2': '这里没人催我跑得更快，只催我别摸错牌。',
+    'story.rin.1.3': '坐吧！车次我记着，轮到我我也不会拖。',
+    'story.rin.2.title': '弯道上的节奏',
+    'story.rin.2.0': '跑步过弯的时候，犹豫一下，整个节奏就散了。',
+    'story.rin.2.1': '所以你的牌风也讲速度。',
+    'story.rin.2.2': '但只顾冲刺也不行。以前一副露，就把能做的役忘了。',
+    'story.rin.2.3': '现在我先认清终点，再选最短的路。',
+    'story.rin.3.title': '输赢之外的计时',
+    'story.rin.3.0': '最近训练成绩卡住了，我总觉得每一次落后都证明我不够好。',
+    'story.rin.3.1': '牌桌上也会这样想？',
+    'story.rin.3.2': '会。我嘴上说再来，心里其实很急。',
+    'story.rin.3.3': '下次陪我打一局不赶车的吧。我想试着只享受这一局。',
+    'story.chitose.1.title': '第二杯茶',
+    'story.chitose.1.0': '家里的茶具太多，我就把几套带到雀庄来了。',
+    'story.chitose.1.1': '难怪每次来，都有茶喝。',
+    'story.chitose.1.2': '一个人喝，总觉得第二杯少了个理由。',
+    'story.chitose.1.3': '你来了就刚好。茶要慢慢喝，牌也一样。',
+    'story.chitose.2.title': '祖母教的停顿',
+    'story.chitose.2.0': '祖母教我打牌时，总让我落牌前把杯子放稳。',
+    'story.chitose.2.1': '是怕洒出茶吗？',
+    'story.chitose.2.2': '也有这个原因。更是让我别被刚摸来的牌带着走。',
+    'story.chitose.2.3': '停一停，进攻与防守就不必抢着回答了。',
+    'story.chitose.3.title': '茶凉之前',
+    'story.chitose.3.0': '有段时间，我只照着祖母的方法打，怕一变就忘了她。',
+    'story.chitose.3.1': '也许她会想看见你的打法。',
+    'story.chitose.3.2': '我也这样想过，只是还不太敢。',
+    'story.chitose.3.3': '下次试一手新的吧。茶凉之前，你陪我把它打完。',
+    'story.sora.1.title': '琴房之外',
+    'story.sora.1.0': '琴房关门后，这里的摸牌声还有一点节拍。',
+    'story.sora.1.1': '你是来找灵感的吗？',
+    'story.sora.1.2': '有时是，有时只是想听人说话，不听节拍器。',
+    'story.sora.1.3': '今天你坐对面，我们试着合奏一局。',
+    'story.sora.2.title': '不急着落最后一个音',
+    'story.sora.2.0': '写旋律时，太早把最后一个音定下来，前面就只剩赶路。',
+    'story.sora.2.1': '手牌也是这样？',
+    'story.sora.2.2': '嗯。我喜欢多看一种役，让牌自己接出完整的句子。',
+    'story.sora.2.3': '当然，机会过了就收手。休止也是音乐。',
+    'story.sora.3.title': '还没写完的曲子',
+    'story.sora.3.0': '我有一首曲子，改了很久，始终不敢给别人听。',
+    'story.sora.3.1': '愿意的话，我可以做第一个听众。',
+    'story.sora.3.2': '我怕你听见的，只有那些还不够好的地方。',
+    'story.sora.3.3': '那就约好了。下次一局之后，我把它弹给你听。',
+    'story.aya.1.title': '把答案放上桌',
+    'story.aya.1.0': '第一次来，我只是陪朋友。结果她走了，我还想再打一局。',
+    'story.aya.1.1': '是什么让你留下？',
+    'story.aya.1.2': '在这里，选好了就落牌，不用等谁点头。',
+    'story.aya.1.3': '这种感觉我喜欢。你也把自己的答案放上来吧。',
+    'story.aya.2.title': '立直之前的一秒',
+    'story.aya.2.0': '我第一次立直时，声音小到大家都没听见。',
+    'story.aya.2.1': '现在可完全听得见了。',
+    'story.aya.2.2': '所以我练了很久。不是练喊，是练下定决心。',
+    'story.aya.2.3': '不过先确认手牌值得。勇气也要有依据。',
+    'story.aya.3.title': '不必每局都证明',
+    'story.aya.3.0': '有时我明知道该退，还是会想：退了是不是就认输了？',
+    'story.aya.3.1': '下一局还能再进攻。',
+    'story.aya.3.2': '道理我懂。只是想让大家记得，我敢打。',
+    'story.aya.3.3': '现在你记得就够了。下一局，帮我看看什么时候该停。',
+    'story.mahiru.1.title': '画室里的一张桌子',
+    'story.mahiru.1.0': '画到颜色打结时，我就来这里，把万筒索摆得整整齐齐。',
+    'story.mahiru.1.1': '这也算换一种画画？',
+    'story.mahiru.1.2': '算吧。只是牌山不会乖乖照着草稿给我颜色。',
+    'story.mahiru.1.3': '所以每一局都不一样，坐下来一起看看吧。',
+    'story.mahiru.2.title': '只留一种颜色',
+    'story.mahiru.2.0': '老师让我用一种颜色画一天，我才发现深浅能讲很多事。',
+    'story.mahiru.2.1': '所以你喜欢做混一色、清一色。',
+    'story.mahiru.2.2': '对。但缺的一张不能凭想象画上去，得看它还剩多少。',
+    'story.mahiru.2.3': '颜色是偏好，牌河才告诉我能不能继续。',
+    'story.mahiru.3.title': '留给你的那一道光',
+    'story.mahiru.3.0': '我藏着一幅没完成的画，怕添最后一笔就把它毁了。',
+    'story.mahiru.3.1': '像迟迟不敢打出最后那张牌？',
+    'story.mahiru.3.2': '嗯。后来和你打了几场，我才想起画也可以改。',
+    'story.mahiru.3.3': '我给它添了一道光。下次来，带你看原作。',
+    'story.yoru.1.title': '夜里亮着的灯',
+    'story.yoru.1.0': '巡夜回来，这盏灯还亮着。',
+    'story.yoru.1.1': '所以你总坐到很晚。',
+    'story.yoru.1.2': '这里的安静，不是一个人的安静。',
+    'story.yoru.1.3': '你坐吧。我还不急着走。',
+    'story.yoru.2.title': '听牌河说完',
+    'story.yoru.2.0': '以前总猜别人的手牌。猜错一次，就打乱整局。',
+    'story.yoru.2.1': '现在更相信已经打出的牌？',
+    'story.yoru.2.2': '看得见的，先记牢。看不见的，留一点余地。',
+    'story.yoru.2.3': '牌河会说话。让它说完，再落牌。',
+    'story.yoru.3.title': '不用急着填满安静',
+    'story.yoru.3.0': '有次我离开得很久，以为回来也没人记得。',
+    'story.yoru.3.1': '我们一直给你留着位置。',
+    'story.yoru.3.2': '嗯。我看见了。只是没找到合适的话。',
+    'story.yoru.3.3': '下次还坐这一桌吧。有些话，慢慢说。',
+    'shop.title': '外观商店',
+    'shop.eyebrow': '雀庄小铺',
+    'shop.subtitle': '给熟悉的牌桌，添一点你的颜色。',
+    'shop.categories': '外观类别',
+    'shop.category.tile-back': '牌背',
+    'shop.category.table-felt': '桌布',
+    'shop.category.riichi-effect': '立直特效',
+    'shop.category.win-effect': '和牌特效',
+    'shop.category.avatar-frame': '头像框',
+    'shop.rarity.common': '普通',
+    'shop.rarity.rare': '稀有',
+    'shop.rarity.epic': '史诗',
+    'shop.rarity.legendary': '传说',
+    'shop.playPreview': '播放预览',
+    'shop.equipped': '已装备',
+    'shop.owned': '已拥有',
+    'shop.equip': '装备',
+    'shop.preview': '外观预览',
+    'shop.unlock.rank': '曾达到 {rank} 解锁',
+    'shop.unlock.affinity': '与 {character} 好感达到 {stage} 阶段',
+    'shop.unlock.achievement': '完成成就「{achievement}」',
+    'shop.buy': '{price} 雀币 · 购买',
+    'shop.insufficient': '雀币不足，完成对局和任务可获得。',
+    'shop.failed': '保存未成功，请重试。',
+    'shop.confirmTitle': '确认购买',
+    'shop.confirmDescription':
+      '购买「{item}」需要 {price} 雀币，购买后余额为 {balance}。',
+    'shop.confirmBuy': '确认购买',
+    'shop.acquired': '已获得新外观！',
+    'shop.later': '稍后装备',
+    'wallet.reason.cosmetic': '购买外观',
+    'characters.title': '角色图鉴',
+    'characters.eyebrow': '牌桌上的相遇',
+    'characters.subtitle': '每一次同桌，都能多了解一点彼此。',
+    'characters.unknown': '未知角色',
+    'characters.unmet': '未遇到',
+    'characters.locked': '未解锁',
+    'characters.meetHint': '在对局中与这位角色相遇后，可查看档案。',
+    'characters.affinity': '好感',
+    'characters.back': '返回图鉴',
+    'characters.expressions': '切换表情',
+    'characters.expression.normal': '平常',
+    'characters.expression.happy': '开心',
+    'characters.expression.frustrated': '失落',
+    'characters.cycleExpression': '换个表情',
+    'characters.encounters': '同桌记录',
+    'characters.matches': '同桌场次',
+    'characters.aboveRate': '你排在其前的比例',
+    'characters.completedOnly': '仅统计完成的整场对局；平分按对局名次计算。',
+    'characters.viewRewards': '查看奖励',
+    'affinity.increased': '好感提升！',
+    'affinity.storyUnlocked': '与 {character} 达到 {stage} 阶段，解锁新故事。',
+    'affinity.frameUnlocked': '与 {character} 达到满好感，专属头像框已获得。',
+    'affinity.rules': '整场结束：主角色 +2，同桌对手 +1；排在对手前，再 +1。',
+    'affinity.threshold': '好感 {value}',
+    'affinity.reward.1': '初识 · 故事一',
+    'affinity.reward.2': '相知 · 故事二',
+    'affinity.reward.3': '约定 · 专属外观',
+    'affinity.reward.4': '满好感 · 纪念框',
+    'story.skip': '跳过',
+    'story.dismiss': '关闭提示',
+    'story.read': '阅读故事',
+    'story.instructions': '点击对话或按空格继续，左右方向键可翻页。',
+    'story.player': '你',
+    'story.advance': '继续对话',
+    'story.advanceHint': '点击 / 空格继续',
+    'story.replay': '从头回看',
+    'story.previous': '上一句',
+    'story.next': '下一句',
+    'story.finish': '读完了',
+    'cosmetic.back-blue.name': '靛蓝',
+    'cosmetic.back-blue.desc': '熟悉的细织蓝纹，安静陪你开局。',
+    'cosmetic.back-vermilion.name': '朱漆',
+    'cosmetic.back-vermilion.desc': '朱红漆纹，像旧雀庄里温热的灯。',
+    'cosmetic.back-sakura.name': '樱花纹',
+    'cosmetic.back-sakura.desc': '浅粉花瓣落在牌背，让等待也轻一点。',
+    'cosmetic.back-waves.name': '青海波',
+    'cosmetic.back-waves.desc': '层层青海波纹，陪你看清每一次潮起。',
+    'cosmetic.back-gold.name': '金箔',
+    'cosmetic.back-gold.desc': '雀圣的纪念牌背，斜光下浮起细碎金色。',
+    'cosmetic.felt-green.name': '绿毡',
+    'cosmetic.felt-green.desc': '雀庄的经典绿毡，沉静而温暖。',
+    'cosmetic.felt-blue.name': '深蓝',
+    'cosmetic.felt-blue.desc': '深蓝桌布，像入夜后的雨窗。',
+    'cosmetic.felt-wine.name': '酒红',
+    'cosmetic.felt-wine.desc': '一抹沉稳酒红，给牌桌添上暖意。',
+    'cosmetic.felt-tatami.name': '榻榻米',
+    'cosmetic.felt-tatami.desc': '草席细纹与格线，带一点和室的清静。',
+    'cosmetic.felt-night.name': '夜空',
+    'cosmetic.felt-night.desc': '曾达到雀豪的纪念，星点散落在深夜桌面。',
+    'cosmetic.riichi-default.name': '落棒',
+    'cosmetic.riichi-default.desc': '立直棒轻落，下一张交给牌山。',
+    'cosmetic.riichi-sparks.name': '火花',
+    'cosmetic.riichi-sparks.desc': '宣言的一刻，细小金色火花向外散开。',
+    'cosmetic.riichi-sakura.name': '樱花飘落',
+    'cosmetic.riichi-sakura.desc': '伴随立直棒，淡粉花瓣缓缓落下。',
+    'cosmetic.riichi-lightning.name': '雷光',
+    'cosmetic.riichi-lightning.desc': '短促的蓝白雷光，点亮立直宣言。',
+    'cosmetic.riichi-ink.name': '水墨',
+    'cosmetic.riichi-ink.desc': '墨迹一瞬晕开，留白交给下一巡。',
+    'cosmetic.win-default.name': '雀庄庆贺',
+    'cosmetic.win-default.desc': '沿用和牌分档演出，为好手牌喝彩。',
+    'cosmetic.win-fireworks.name': '烟花',
+    'cosmetic.win-fireworks.desc': '和牌结算时，一圈金色烟花绽开。',
+    'cosmetic.win-sakura.name': '樱吹雪',
+    'cosmetic.win-sakura.desc': '樱花随和牌轻落，像一场短暂的春雪。',
+    'cosmetic.win-dragon.name': '金龙',
+    'cosmetic.win-dragon.desc': '金色龙印浮现，光点从牌桌中心散开。',
+    'cosmetic.win-galaxy.name': '星河',
+    'cosmetic.win-galaxy.desc': '淡紫星轨绕过牌桌，留下片刻星光。',
+    'cosmetic.frame-wood.name': '木框',
+    'cosmetic.frame-wood.desc': '温润的木色，是雀庄最初的问候。',
+    'cosmetic.frame-gold.name': '金框',
+    'cosmetic.frame-gold.desc': '简洁金边，为你的头像添一缕亮色。',
+    'cosmetic.frame-sakura.name': '樱环',
+    'cosmetic.frame-sakura.desc': '细密樱色圆点，围成柔和的花环。',
+    'cosmetic.frame-rank-adept.name': '雀士纪念框',
+    'cosmetic.frame-rank-adept.desc': '曾达到雀士的纪念，浅蓝双线边框。',
+    'cosmetic.back-koharu.name': '向日葵牌背',
+    'cosmetic.back-koharu.desc': '明亮的小花，是小春与你再来一局的邀请。',
+    'cosmetic.frame-koharu.name': '小春 · 约定',
+    'cosmetic.frame-koharu.desc':
+      '小春与你满好感的纪念。每一局相伴，都在这一圈颜色里。',
+    'cosmetic.win-mio.name': '静水和牌',
+    'cosmetic.win-mio.desc': '青绿色涟漪，像澪打好这一手之后的微笑。',
+    'cosmetic.frame-mio.name': '澪 · 约定',
+    'cosmetic.frame-mio.desc':
+      '澪与你满好感的纪念。每一局相伴，都在这一圈颜色里。',
+    'cosmetic.back-rin.name': '疾风牌背',
+    'cosmetic.back-rin.desc': '斜向蓝纹，记下你与凛追赶节奏的日子。',
+    'cosmetic.frame-rin.name': '凛 · 约定',
+    'cosmetic.frame-rin.desc':
+      '凛与你满好感的纪念。每一局相伴，都在这一圈颜色里。',
+    'cosmetic.win-chitose.name': '茶庭和牌',
+    'cosmetic.win-chitose.desc': '嫩绿茶叶轻落，千岁的茶还温着。',
+    'cosmetic.frame-chitose.name': '千岁 · 约定',
+    'cosmetic.frame-chitose.desc':
+      '千岁与你满好感的纪念。每一局相伴，都在这一圈颜色里。',
+    'cosmetic.back-sora.name': '和弦牌背',
+    'cosmetic.back-sora.desc': '紫色弧线相叠，是空为这张桌子写下的节拍。',
+    'cosmetic.frame-sora.name': '空 · 约定',
+    'cosmetic.frame-sora.desc':
+      '空与你满好感的纪念。每一局相伴，都在这一圈颜色里。',
+    'cosmetic.win-aya.name': '赤电和牌',
+    'cosmetic.win-aya.desc': '赤红光芒一闪，绫把勇气留在这次和牌里。',
+    'cosmetic.frame-aya.name': '绫 · 约定',
+    'cosmetic.frame-aya.desc':
+      '绫与你满好感的纪念。每一局相伴，都在这一圈颜色里。',
+    'cosmetic.back-mahiru.name': '一色牌背',
+    'cosmetic.back-mahiru.desc': '青底一道金色笔触，真昼留给你的作品。',
+    'cosmetic.frame-mahiru.name': '真昼 · 约定',
+    'cosmetic.frame-mahiru.desc':
+      '真昼与你满好感的纪念。每一局相伴，都在这一圈颜色里。',
+    'cosmetic.win-yoru.name': '月下和牌',
+    'cosmetic.win-yoru.desc': '淡紫月影与星点，是夜不必说出口的祝贺。',
+    'cosmetic.frame-yoru.name': '夜 · 约定',
+    'cosmetic.frame-yoru.desc':
+      '夜与你满好感的纪念。每一局相伴，都在这一圈颜色里。',
+    'cosmetic.frame-rank-novice.name': '初心纪念框',
+    'cosmetic.frame-rank-novice.desc': '曾达到初心的纪念，段位回落也会保留。',
+    'cosmetic.frame-rank-expert.name': '雀杰纪念框',
+    'cosmetic.frame-rank-expert.desc': '曾达到雀杰的纪念，段位回落也会保留。',
+    'cosmetic.frame-rank-master.name': '雀豪纪念框',
+    'cosmetic.frame-rank-master.desc': '曾达到雀豪的纪念，段位回落也会保留。',
+    'cosmetic.frame-rank-saint.name': '雀圣纪念框',
+    'cosmetic.frame-rank-saint.desc': '曾达到雀圣的纪念，段位回落也会保留。',
     'character.chatter.koharu.other-riichi.0': '哇，立直了！我也得加把劲。',
     'character.chatter.koharu.other-riichi.1': '先看看牌河……这次我记得！',
     'character.chatter.koharu.stalled.0': '好牌是不是绕路了呀？',
@@ -1522,6 +1897,515 @@ const messages: Record<Locale, Record<string, string>> = {
     'game.mahjong.discardAndTenpai': '打 {discard} 听 {waits}',
   },
   en: {
+    'character.affinityLine.koharu.match-start':
+      'I promised you I’d watch the discards today!',
+    'character.affinityLine.koharu.riichi':
+      'I counted to three. Riichi this time!',
+    'character.affinityLine.koharu.ron':
+      'Look, I didn’t rush into every call this time!',
+    'character.affinityLine.koharu.tsumo':
+      'Just the tile I needed. Our promise worked!',
+    'character.affinityLine.koharu.deal-in':
+      'Oops, rushed again. Give me a nudge next time?',
+    'character.affinityLine.koharu.call': 'I can see the finish line. Pon!',
+    'character.affinityLine.koharu.ryuukyoku-tenpai':
+      'So close. Let’s try together next hand.',
+    'character.affinityLine.koharu.match-top':
+      'Your chair is saved. Stay for another game!',
+    'character.affinityLine.koharu.match-last':
+      'I’ll remember today. Tomorrow I’ll catch up!',
+    'character.affinityLine.mio.match-start':
+      'The tree outside has grown a little. Let’s take our time today.',
+    'character.affinityLine.mio.riichi':
+      'This hand is worth it. I’ll take a step forward.',
+    'character.affinityLine.mio.ron':
+      'My judgment was right. I’ll remember this one.',
+    'character.affinityLine.mio.tsumo':
+      'There it is. Thanks for keeping pace with me.',
+    'character.affinityLine.mio.deal-in':
+      'I folded too late. Next time I’ll leave myself a choice sooner.',
+    'character.affinityLine.mio.call':
+      'It’s all right to change plans. I need this tile.',
+    'character.affinityLine.mio.ryuukyoku-tenpai':
+      'Tenpai is enough for now. We’ll see about the rest next hand.',
+    'character.affinityLine.mio.match-top':
+      'Today, both pushing and folding were my own choices.',
+    'character.affinityLine.mio.match-last':
+      'No hurry. The tree is still there, and so is the next game.',
+    'character.affinityLine.rin.match-start':
+      'Today I’m chasing a good hand, not the last train!',
+    'character.affinityLine.rin.riichi':
+      'Finish line confirmed. Time to sprint!',
+    'character.affinityLine.rin.ron':
+      'The pace and the route both worked this time!',
+    'character.affinityLine.rin.tsumo': 'Made it! That hand had a good stride.',
+    'character.affinityLine.rin.deal-in':
+      'I rushed the bend. I’ll remember that lesson.',
+    'character.affinityLine.rin.call':
+      'This route is shorter. Let’s turn here!',
+    'character.affinityLine.rin.ryuukyoku-tenpai':
+      'One step short. Let’s steady the breathing.',
+    'character.affinityLine.rin.match-top':
+      'I led this one. Shall we race again?',
+    'character.affinityLine.rin.match-last':
+      'Slower is fine. We’re not racing the train today.',
+    'character.affinityLine.chitose.match-start':
+      'The second cup is ready. Settle in before drawing.',
+    'character.affinityLine.chitose.riichi':
+      'My cup is steady. Riichi on this hand.',
+    'character.affinityLine.chitose.ron':
+      'After a pause, the answer became clear.',
+    'character.affinityLine.chitose.tsumo':
+      'The tea is still warm, and the tile arrived just in time.',
+    'character.affinityLine.chitose.deal-in':
+      'I didn’t pause properly. Fresh tea, a fresh thought.',
+    'character.affinityLine.chitose.call':
+      'We can change this hand. The old way isn’t the only way.',
+    'character.affinityLine.chitose.ryuukyoku-tenpai':
+      'Tenpai. My grandmother would say that’s good enough.',
+    'character.affinityLine.chitose.match-top':
+      'This game had a little of my own flavor. What did you think?',
+    'character.affinityLine.chitose.match-last':
+      'Add hot water when the tea cools. A loss is no reason to rush.',
+    'character.affinityLine.sora.match-start':
+      'No metronome today. Let’s listen to our own rhythm.',
+    'character.affinityLine.sora.riichi':
+      'I’ll let the wall supply the final note.',
+    'character.affinityLine.sora.ron': 'The phrase is finally complete.',
+    'character.affinityLine.sora.tsumo':
+      'The chord settled. Thank you for listening this far.',
+    'character.affinityLine.sora.deal-in':
+      'I added one note too many and lost the rhythm.',
+    'character.affinityLine.sora.call':
+      'A different chord can keep the melody going.',
+    'character.affinityLine.sora.ryuukyoku-tenpai':
+      'A rest is fine. We’ll continue in the next phrase.',
+    'character.affinityLine.sora.match-top':
+      'Today’s piece is worth hearing again.',
+    'character.affinityLine.sora.match-last':
+      'We’ll revise the unfinished parts next time.',
+    'character.affinityLine.aya.match-start':
+      'Nothing to prove today. Just choose each tile with care.',
+    'character.affinityLine.aya.riichi':
+      'I’ve checked the risk. This is my answer. Riichi!',
+    'character.affinityLine.aya.ron': 'Be brave, but have a reason to play.',
+    'character.affinityLine.aya.tsumo': 'This time, courage got an answer!',
+    'character.affinityLine.aya.deal-in':
+      'I didn’t stop when I should have. I’ll own it and change next time.',
+    'character.affinityLine.aya.call': 'A different route is still my choice.',
+    'character.affinityLine.aya.ryuukyoku-tenpai':
+      'I’ll keep tenpai here. No need to force more.',
+    'character.affinityLine.aya.match-top':
+      'If you remember this game, that’s enough for me.',
+    'character.affinityLine.aya.match-last':
+      'I can lose and still face the next game proudly.',
+    'character.affinityLine.mahiru.match-start':
+      'I added the final stroke to my painting. Let’s finish today’s hand, too.',
+    'character.affinityLine.mahiru.riichi':
+      'Enough empty space. One more stroke. Riichi.',
+    'character.affinityLine.mahiru.ron':
+      'The colors connected. Better than my sketch.',
+    'character.affinityLine.mahiru.tsumo':
+      'That stroke of light landed right in my hand.',
+    'character.affinityLine.mahiru.deal-in':
+      'I painted past the edge. I can’t erase it, but I can learn.',
+    'character.affinityLine.mahiru.call':
+      'Even a different color can make a beautiful hand.',
+    'character.affinityLine.mahiru.ryuukyoku-tenpai':
+      'Unfinished, but the shape is there.',
+    'character.affinityLine.mahiru.match-top':
+      'Let’s both remember today’s picture.',
+    'character.affinityLine.mahiru.match-last':
+      'A fresh sheet next time. The colors are still here.',
+    'character.affinityLine.yoru.match-start':
+      'The seat is still here. Let’s share the table tonight.',
+    'character.affinityLine.yoru.riichi': 'I’ve seen enough. Riichi.',
+    'character.affinityLine.yoru.ron': 'The river has finished speaking.',
+    'character.affinityLine.yoru.tsumo': 'It arrived.',
+    'character.affinityLine.yoru.deal-in': 'I missed this tile.',
+    'character.affinityLine.yoru.call': 'I need this one.',
+    'character.affinityLine.yoru.ryuukyoku-tenpai':
+      'We’ll leave it for the next hand.',
+    'character.affinityLine.yoru.match-top': 'A good table.',
+    'character.affinityLine.yoru.match-last': 'The light’s still on. No hurry.',
+    'affinity.extraLines': 'New event lines + lobby expressions',
+    'affinity.max': 'A lasting bond; earned rewards are yours to keep.',
+    'story.koharu.1.title': 'A Place for One More Game',
+    'story.koharu.1.0':
+      'I passed by after class, heard everyone laughing, and couldn’t help coming in.',
+    'story.koharu.1.1': 'Do you still get nervous?',
+    'story.koharu.1.2': 'I do! Especially when everyone suddenly goes quiet.',
+    'story.koharu.1.3':
+      'But with you here, I feel brave enough to ask about a tile.',
+    'story.koharu.2.title': 'My First Pon',
+    'story.koharu.2.0':
+      'The first time I learned to call pon, I felt I was finally keeping up.',
+    'story.koharu.2.1': 'Is that why you always rush ahead?',
+    'story.koharu.2.2':
+      'Well… sometimes I rush so far that I forget the discards.',
+    'story.koharu.2.3':
+      'Next time I’ll count to three first. Tell me if I manage it!',
+    'story.koharu.3.title': 'A Chair Saved for You',
+    'story.koharu.3.0':
+      'Once I lost so many games that I thought I wouldn’t come back.',
+    'story.koharu.3.1': 'What brought you back?',
+    'story.koharu.3.2':
+      'I was afraid everyone would only remember my mistakes.',
+    'story.koharu.3.3':
+      'I’m not afraid now. I’ll save you a chair; save me another game.',
+    'story.mio.1.title': 'The Seat by the Window',
+    'story.mio.1.0':
+      'There’s a tree outside this window. Sitting here after work quiets my thoughts.',
+    'story.mio.1.1': 'Mahjong helps you relax?',
+    'story.mio.1.2':
+      'While sorting my hand, I only have to think about this one thing.',
+    'story.mio.1.3':
+      'There’s no hurry today. Let’s give this game our attention.',
+    'story.mio.2.title': 'One Safe Tile',
+    'story.mio.2.0':
+      'When I started, I only thought about winning. I lost more points than I gained.',
+    'story.mio.2.1': 'Is that when you learned to defend?',
+    'story.mio.2.2':
+      'A mentor taught me to ask every turn: what if someone declares riichi now?',
+    'story.mio.2.3': 'Keeping a safe tile isn’t fear. It gives you a choice.',
+    'story.mio.3.title': 'A Step Forward',
+    'story.mio.3.0':
+      'Sometimes I’m so used to stepping back that I fold hands worth fighting for.',
+    'story.mio.3.1': 'Next time, shall we look for the chance together?',
+    'story.mio.3.2': 'I’m afraid of losing what I worked so hard to protect.',
+    'story.mio.3.3':
+      'But at a table with you, I’m willing to trust my judgment again.',
+    'story.rin.1.title': 'Before the Last Train',
+    'story.rin.1.0':
+      'I arrive late because practice just ended. There’s time for a few games before the last train.',
+    'story.rin.1.1': 'You still want to play when you’re tired?',
+    'story.rin.1.2':
+      'Here, nobody tells me to run faster. They only tell me to draw the right tile.',
+    'story.rin.1.3':
+      'Sit down! I know the timetable, and I won’t keep you waiting.',
+    'story.rin.2.title': 'Rhythm on the Bend',
+    'story.rin.2.0':
+      'When you hesitate on a bend, your running rhythm falls apart.',
+    'story.rin.2.1': 'So your mahjong is all about speed, too.',
+    'story.rin.2.2':
+      'But sprinting isn’t enough. I used to call and forget whether I had a yaku.',
+    'story.rin.2.3':
+      'Now I check the finish line before choosing the shortest route.',
+    'story.rin.3.title': 'More Than a Stopwatch',
+    'story.rin.3.0':
+      'My times have stalled lately. Every gap feels like proof that I’m not good enough.',
+    'story.rin.3.1': 'Do you feel that at the table, too?',
+    'story.rin.3.2': 'Yes. I say “one more,” but inside I’m impatient.',
+    'story.rin.3.3':
+      'Join me when I’m not racing a train next time. I’d like to simply enjoy the game.',
+    'story.chitose.1.title': 'The Second Cup',
+    'story.chitose.1.0':
+      'I had too many tea sets at home, so I brought a few to the parlor.',
+    'story.chitose.1.1': 'So that’s why there’s always tea here.',
+    'story.chitose.1.2':
+      'When I drink alone, the second cup feels a little unnecessary.',
+    'story.chitose.1.3':
+      'With you here, it’s just right. Take your time with the tea and the tiles.',
+    'story.chitose.2.title': 'My Grandmother’s Pause',
+    'story.chitose.2.0':
+      'When my grandmother taught me mahjong, she made me set my cup down before discarding.',
+    'story.chitose.2.1': 'Was she worried you’d spill the tea?',
+    'story.chitose.2.2':
+      'Partly. But she also wanted me to stop chasing whatever tile I’d just drawn.',
+    'story.chitose.2.3':
+      'With a pause, attack and defense don’t have to fight for the first answer.',
+    'story.chitose.3.title': 'Before the Tea Cools',
+    'story.chitose.3.0':
+      'For a while, I only played her way. I was afraid that changing would mean forgetting her.',
+    'story.chitose.3.1': 'Perhaps she’d like to see your own style.',
+    'story.chitose.3.2': 'I’ve thought that too, but I haven’t quite dared.',
+    'story.chitose.3.3':
+      'I’ll try a new hand next time. Stay until we finish it, before the tea cools.',
+    'story.sora.1.title': 'Outside the Practice Room',
+    'story.sora.1.0':
+      'After the practice room closes, the sound of drawing tiles still has a rhythm.',
+    'story.sora.1.1': 'Are you here for inspiration?',
+    'story.sora.1.2':
+      'Sometimes. Other times I just want voices instead of a metronome.',
+    'story.sora.1.3':
+      'Sit across from me today. Let’s try a duet at the table.',
+    'story.sora.2.title': 'The Last Note Can Wait',
+    'story.sora.2.0':
+      'If I choose the final note too early, the rest of the melody becomes a rush to get there.',
+    'story.sora.2.1': 'Is a hand like that, too?',
+    'story.sora.2.2':
+      'Yes. I like to consider another yaku and let the tiles form a complete phrase.',
+    'story.sora.2.3':
+      'But when the chance passes, I stop. A rest is music too.',
+    'story.sora.3.title': 'An Unfinished Piece',
+    'story.sora.3.0':
+      'I’ve revised one piece for ages, but I still haven’t dared to play it for anyone.',
+    'story.sora.3.1': 'If you’d like, I could be your first listener.',
+    'story.sora.3.2':
+      'I’m afraid all you’ll hear are the parts that aren’t good enough.',
+    'story.sora.3.3':
+      'Then it’s a promise. After our next game, I’ll play it for you.',
+    'story.aya.1.title': 'Put Your Answer on the Table',
+    'story.aya.1.0':
+      'I first came with a friend. She left, but I still wanted another game.',
+    'story.aya.1.1': 'What made you stay?',
+    'story.aya.1.2':
+      'Here, once I’ve decided, I can discard. I don’t have to wait for permission.',
+    'story.aya.1.3':
+      'I like that feeling. Put your own answer on the table, too.',
+    'story.aya.2.title': 'The Second Before Riichi',
+    'story.aya.2.0':
+      'My first riichi declaration was so quiet that nobody heard it.',
+    'story.aya.2.1': 'They can definitely hear you now.',
+    'story.aya.2.2':
+      'I practiced for a long time. Not shouting—making up my mind.',
+    'story.aya.2.3':
+      'But I check that the hand is worth it first. Courage needs a reason.',
+    'story.aya.3.title': 'Nothing to Prove',
+    'story.aya.3.0':
+      'Sometimes I know I should fold, but wonder whether that means admitting defeat.',
+    'story.aya.3.1': 'You can attack again in the next hand.',
+    'story.aya.3.2':
+      'I know. I just want everyone to remember that I’m brave enough to play.',
+    'story.aya.3.3':
+      'It’s enough that you remember. Next game, help me notice when to stop.',
+    'story.mahiru.1.title': 'A Table for My Palette',
+    'story.mahiru.1.0':
+      'When the colors in my painting get tangled, I come here and sort the suits neatly.',
+    'story.mahiru.1.1': 'Is this another way of painting?',
+    'story.mahiru.1.2':
+      'Perhaps. Though the wall never follows my sketch when handing out colors.',
+    'story.mahiru.1.3':
+      'That’s why every game is different. Sit down and see with me.',
+    'story.mahiru.2.title': 'A Single Color',
+    'story.mahiru.2.0':
+      'My teacher made me paint in one color for a day. I learned how much its shades could say.',
+    'story.mahiru.2.1': 'Is that why you like honitsu and chinitsu?',
+    'story.mahiru.2.2':
+      'Yes. But I can’t paint in a missing tile. I have to see how many remain.',
+    'story.mahiru.2.3':
+      'Color is my preference. The discards tell me whether I can keep going.',
+    'story.mahiru.3.title': 'A Stroke of Light for You',
+    'story.mahiru.3.0':
+      'I keep an unfinished painting hidden. I’m afraid the final stroke will ruin it.',
+    'story.mahiru.3.1': 'Like hesitating over the final discard?',
+    'story.mahiru.3.2':
+      'Yes. Playing with you reminded me that a painting can be changed.',
+    'story.mahiru.3.3':
+      'I added a stroke of light. Next time, I’ll show you the original.',
+    'story.yoru.1.title': 'A Light After Dark',
+    'story.yoru.1.0': 'After my night shift, this light is still on.',
+    'story.yoru.1.1': 'So that’s why you stay so late.',
+    'story.yoru.1.2': 'The quiet here isn’t the quiet of being alone.',
+    'story.yoru.1.3': 'Sit down. I’m not in a hurry to leave.',
+    'story.yoru.2.title': 'Let the River Speak',
+    'story.yoru.2.0':
+      'I used to guess other people’s hands. One wrong guess could unravel the game.',
+    'story.yoru.2.1': 'Now you trust the tiles you can see?',
+    'story.yoru.2.2':
+      'Remember what you can see. Leave room for what you can’t.',
+    'story.yoru.2.3': 'The river speaks. Let it finish before you discard.',
+    'story.yoru.3.title': 'No Need to Fill the Silence',
+    'story.yoru.3.0':
+      'Once I was away for a long time. I thought nobody would remember me.',
+    'story.yoru.3.1': 'We kept your seat for you.',
+    'story.yoru.3.2': 'I noticed. I just couldn’t find the words.',
+    'story.yoru.3.3':
+      'Let’s sit here next time, too. Some things can be said slowly.',
+    'shop.title': 'Cosmetic Shop',
+    'shop.eyebrow': 'THE PARLOR SHOP',
+    'shop.subtitle': 'Give your familiar table a touch of your own color.',
+    'shop.categories': 'Cosmetic categories',
+    'shop.category.tile-back': 'Tile Backs',
+    'shop.category.table-felt': 'Table Felts',
+    'shop.category.riichi-effect': 'Riichi Effects',
+    'shop.category.win-effect': 'Win Effects',
+    'shop.category.avatar-frame': 'Avatar Frames',
+    'shop.rarity.common': 'Common',
+    'shop.rarity.rare': 'Rare',
+    'shop.rarity.epic': 'Epic',
+    'shop.rarity.legendary': 'Legendary',
+    'shop.playPreview': 'Play Preview',
+    'shop.equipped': 'Equipped',
+    'shop.owned': 'Owned',
+    'shop.equip': 'Equip',
+    'shop.preview': 'PREVIEW',
+    'shop.unlock.rank': 'Reach {rank} to unlock',
+    'shop.unlock.affinity': 'Reach affinity stage {stage} with {character}',
+    'shop.unlock.achievement': 'Complete “{achievement}”',
+    'shop.buy': 'Buy · {price} Coins',
+    'shop.insufficient': 'Earn more coins by finishing matches and tasks.',
+    'shop.failed': 'Could not save. Please try again.',
+    'shop.confirmTitle': 'Confirm Purchase',
+    'shop.confirmDescription':
+      '“{item}” costs {price} coins. Your balance will be {balance}.',
+    'shop.confirmBuy': 'Confirm Purchase',
+    'shop.acquired': 'New Cosmetic Acquired!',
+    'shop.later': 'Equip Later',
+    'wallet.reason.cosmetic': 'Cosmetic purchase',
+    'characters.title': 'Character Collection',
+    'characters.eyebrow': 'MEET AT THE TABLE',
+    'characters.subtitle': 'Every shared table brings you a little closer.',
+    'characters.unknown': 'Unknown character',
+    'characters.unmet': 'Not Met',
+    'characters.locked': 'Locked',
+    'characters.meetHint':
+      'Meet this character at the table to reveal their profile.',
+    'characters.affinity': 'Affinity',
+    'characters.back': 'Back to Collection',
+    'characters.expressions': 'Change Expression',
+    'characters.expression.normal': 'Calm',
+    'characters.expression.happy': 'Happy',
+    'characters.expression.frustrated': 'Downcast',
+    'characters.cycleExpression': 'Change Expression',
+    'characters.encounters': 'Shared Tables',
+    'characters.matches': 'Matches Together',
+    'characters.aboveRate': 'Your Higher Finish Rate',
+    'characters.completedOnly':
+      'Completed matches only; ties follow the match’s final ranking.',
+    'characters.viewRewards': 'View Rewards',
+    'affinity.increased': 'Affinity Increased!',
+    'affinity.storyUnlocked':
+      'Affinity with {character} reached stage {stage}. A new story is unlocked.',
+    'affinity.frameUnlocked':
+      'Maximum affinity with {character}! Their exclusive frame is yours.',
+    'affinity.rules':
+      'On completion: companion +2; each opponent +1, plus another +1 when you finish ahead of them.',
+    'affinity.threshold': '{value} Affinity',
+    'affinity.reward.1': 'First Meeting',
+    'affinity.reward.2': 'Getting Closer',
+    'affinity.reward.3': 'A Promise',
+    'affinity.reward.4': 'A Lasting Bond',
+    'story.skip': 'Skip',
+    'story.dismiss': 'Dismiss',
+    'story.read': 'Read Story',
+    'story.instructions':
+      'Click the dialogue or press Space to continue. Use arrow keys to move between lines.',
+    'story.player': 'You',
+    'story.advance': 'Continue Dialogue',
+    'story.advanceHint': 'Click / Space to continue',
+    'story.replay': 'Replay',
+    'story.previous': 'Previous',
+    'story.next': 'Next',
+    'story.finish': 'Finish',
+    'cosmetic.back-blue.name': 'Indigo',
+    'cosmetic.back-blue.desc': 'A quiet blue weave for a familiar opening.',
+    'cosmetic.back-vermilion.name': 'Vermilion',
+    'cosmetic.back-vermilion.desc':
+      'Warm lacquer stripes inspired by an old parlor’s lamps.',
+    'cosmetic.back-sakura.name': 'Sakura Pattern',
+    'cosmetic.back-sakura.desc': 'Soft petals make the wait a little lighter.',
+    'cosmetic.back-waves.name': 'Ocean Waves',
+    'cosmetic.back-waves.desc':
+      'Layered waves for the ebb and flow of a match.',
+    'cosmetic.back-gold.name': 'Gold Leaf',
+    'cosmetic.back-gold.desc': 'A Saint’s keepsake, glinting like gold leaf.',
+    'cosmetic.felt-green.name': 'Parlor Green',
+    'cosmetic.felt-green.desc': 'The parlor’s classic, calm green felt.',
+    'cosmetic.felt-blue.name': 'Deep Blue',
+    'cosmetic.felt-blue.desc': 'Deep blue, like a rainy window after dusk.',
+    'cosmetic.felt-wine.name': 'Wine Red',
+    'cosmetic.felt-wine.desc': 'A warm wine red for an unhurried table.',
+    'cosmetic.felt-tatami.name': 'Tatami',
+    'cosmetic.felt-tatami.desc':
+      'Woven rush and quiet seams evoke a Japanese room.',
+    'cosmetic.felt-night.name': 'Night Sky',
+    'cosmetic.felt-night.desc':
+      'A Master’s keepsake: stars scattered over midnight felt.',
+    'cosmetic.riichi-default.name': 'The Declaration',
+    'cosmetic.riichi-default.desc':
+      'A riichi stick lands. The next tile is up to the wall.',
+    'cosmetic.riichi-sparks.name': 'Sparks',
+    'cosmetic.riichi-sparks.desc': 'Golden sparks scatter at your declaration.',
+    'cosmetic.riichi-sakura.name': 'Falling Sakura',
+    'cosmetic.riichi-sakura.desc': 'Pink petals drift with the riichi stick.',
+    'cosmetic.riichi-lightning.name': 'Lightning',
+    'cosmetic.riichi-lightning.desc':
+      'A sharp blue flash lights up the declaration.',
+    'cosmetic.riichi-ink.name': 'Ink Wash',
+    'cosmetic.riichi-ink.desc':
+      'An ink flourish leaves space for the next turn.',
+    'cosmetic.win-default.name': 'Parlor Celebration',
+    'cosmetic.win-default.desc':
+      'The familiar score-tier celebration for a good hand.',
+    'cosmetic.win-fireworks.name': 'Fireworks',
+    'cosmetic.win-fireworks.desc': 'A golden burst celebrates the final score.',
+    'cosmetic.win-sakura.name': 'Sakura Shower',
+    'cosmetic.win-sakura.desc':
+      'A brief spring snowfall of petals celebrates your win.',
+    'cosmetic.win-dragon.name': 'Golden Dragon',
+    'cosmetic.win-dragon.desc':
+      'A golden dragon seal rises in a circle of light.',
+    'cosmetic.win-galaxy.name': 'Galaxy',
+    'cosmetic.win-galaxy.desc':
+      'Violet stars trace a fleeting orbit over the table.',
+    'cosmetic.frame-wood.name': 'Wood Frame',
+    'cosmetic.frame-wood.desc': 'Warm wood is the parlor’s first greeting.',
+    'cosmetic.frame-gold.name': 'Gold Frame',
+    'cosmetic.frame-gold.desc': 'A simple gold rim adds a little light.',
+    'cosmetic.frame-sakura.name': 'Sakura Ring',
+    'cosmetic.frame-sakura.desc': 'Sakura dots form a soft floral ring.',
+    'cosmetic.frame-rank-adept.name': 'Adept Frame',
+    'cosmetic.frame-rank-adept.desc': 'A pale blue keepsake of reaching Adept.',
+    'cosmetic.back-koharu.name': 'Sunflower Back',
+    'cosmetic.back-koharu.desc':
+      'Sunny little flowers invite you to another game with Koharu.',
+    'cosmetic.frame-koharu.name': 'Koharu · Our Promise',
+    'cosmetic.frame-koharu.desc':
+      'A keepsake of your lasting bond with Koharu, holding every game you shared.',
+    'cosmetic.win-mio.name': 'Still Waters',
+    'cosmetic.win-mio.desc':
+      'Teal ripples mirror Mio’s quiet smile after a well-played hand.',
+    'cosmetic.frame-mio.name': 'Mio · Our Promise',
+    'cosmetic.frame-mio.desc':
+      'A keepsake of your lasting bond with Mio, holding every game you shared.',
+    'cosmetic.back-rin.name': 'Swift Wind Back',
+    'cosmetic.back-rin.desc':
+      'Blue diagonals recall the days you chased Rin’s tempo.',
+    'cosmetic.frame-rin.name': 'Rin · Our Promise',
+    'cosmetic.frame-rin.desc':
+      'A keepsake of your lasting bond with Rin, holding every game you shared.',
+    'cosmetic.win-chitose.name': 'Tea Garden',
+    'cosmetic.win-chitose.desc':
+      'Tender leaves drift while Chitose’s tea stays warm.',
+    'cosmetic.frame-chitose.name': 'Chitose · Our Promise',
+    'cosmetic.frame-chitose.desc':
+      'A keepsake of your lasting bond with Chitose, holding every game you shared.',
+    'cosmetic.back-sora.name': 'Harmony Back',
+    'cosmetic.back-sora.desc':
+      'Violet arcs layer into Sora’s rhythm for this table.',
+    'cosmetic.frame-sora.name': 'Sora · Our Promise',
+    'cosmetic.frame-sora.desc':
+      'A keepsake of your lasting bond with Sora, holding every game you shared.',
+    'cosmetic.win-aya.name': 'Scarlet Flash',
+    'cosmetic.win-aya.desc': 'Aya’s courage shines in a brief scarlet flash.',
+    'cosmetic.frame-aya.name': 'Aya · Our Promise',
+    'cosmetic.frame-aya.desc':
+      'A keepsake of your lasting bond with Aya, holding every game you shared.',
+    'cosmetic.back-mahiru.name': 'One Color Back',
+    'cosmetic.back-mahiru.desc':
+      'A single gold stroke on teal: Mahiru’s gift to you.',
+    'cosmetic.frame-mahiru.name': 'Mahiru · Our Promise',
+    'cosmetic.frame-mahiru.desc':
+      'A keepsake of your lasting bond with Mahiru, holding every game you shared.',
+    'cosmetic.win-yoru.name': 'Moonlit Win',
+    'cosmetic.win-yoru.desc':
+      'A violet moon and stars offer Yoru’s unspoken congratulations.',
+    'cosmetic.frame-yoru.name': 'Yoru · Our Promise',
+    'cosmetic.frame-yoru.desc':
+      'A keepsake of your lasting bond with Yoru, holding every game you shared.',
+    'cosmetic.frame-rank-novice.name': 'Novice Frame',
+    'cosmetic.frame-rank-novice.desc':
+      'A keepsake of reaching Novice, kept through later rank changes.',
+    'cosmetic.frame-rank-expert.name': 'Expert Frame',
+    'cosmetic.frame-rank-expert.desc':
+      'A keepsake of reaching Expert, kept through later rank changes.',
+    'cosmetic.frame-rank-master.name': 'Master Frame',
+    'cosmetic.frame-rank-master.desc':
+      'A keepsake of reaching Master, kept through later rank changes.',
+    'cosmetic.frame-rank-saint.name': 'Saint Frame',
+    'cosmetic.frame-rank-saint.desc':
+      'A keepsake of reaching Saint, kept through later rank changes.',
     'character.chatter.koharu.other-riichi.0':
       'Whoa, riichi! Time to step it up.',
     'character.chatter.koharu.other-riichi.1':

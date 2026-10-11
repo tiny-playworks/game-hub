@@ -1,7 +1,9 @@
 import { type CSSProperties, useEffect, useRef, useState } from 'react';
+import { CosmeticEffect } from '@/components/cosmetics/CosmeticEffect';
 import { Button } from '@/components/ui/button';
 import { DialogTitle } from '@/components/ui/dialog';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useCosmetics } from '@/hooks/useCosmetics';
 import { useRiichiSounds } from '@/hooks/useRiichiSounds';
 import { formatMessage } from '@/lib/i18n';
 import type { RiichiPlayerSettings } from '@/lib/playerProfile';
@@ -45,6 +47,7 @@ export function WinPresentation({
   onNext,
 }: Props) {
   const { t, locale } = useLocale();
+  const { equipped } = useCosmetics();
   const sounds = useRiichiSounds();
   const [reduced, setReduced] = useState(
     () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -178,6 +181,9 @@ export function WinPresentation({
               </b>
             )}
           </div>
+        )}
+        {full && final && equipped['win-effect'] !== 'win-default' && (
+          <CosmeticEffect id={equipped['win-effect']} kind="win" />
         )}
         {mode !== 'off' && (
           <CharacterQuotes

@@ -50,14 +50,16 @@ function DialogContent({
   children,
   showCloseButton = true,
   container,
+  overlayClassName,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
   container?: HTMLElement | null;
+  overlayClassName?: string;
 }) {
   return (
     <DialogPortal data-slot="dialog-portal" container={container}>
-      <DialogOverlay />
+      <DialogOverlay className={overlayClassName} />
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(

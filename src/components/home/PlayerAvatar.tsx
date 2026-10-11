@@ -1,11 +1,18 @@
+import { AvatarFrame } from '@/components/cosmetics/AvatarFrame';
 import { getAvatarPresetById, type PlayerProfile } from '@/lib/playerProfile';
 
 type Props = {
   profile: PlayerProfile;
   size?: 'sm' | 'md' | 'lg';
+  framed?: boolean;
 };
 
-export function PlayerAvatar({ profile, size = 'md' }: Props) {
+export function PlayerAvatar({ framed = true, ...props }: Props) {
+  const artwork = <AvatarArtwork {...props} />;
+  return framed ? <AvatarFrame>{artwork}</AvatarFrame> : artwork;
+}
+
+function AvatarArtwork({ profile, size = 'md' }: Props) {
   const box =
     size === 'lg'
       ? 'h-20 w-20 rounded-[22px] text-3xl'

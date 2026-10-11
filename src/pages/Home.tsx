@@ -8,7 +8,9 @@ import {
   Leaf,
   Play,
   ScrollText,
+  ShoppingBag,
   Trophy,
+  Users,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -17,12 +19,12 @@ import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
 import { ThemeSwitcher } from '@/components/common/ThemeSwitcher';
 import { PlayerAvatar } from '@/components/home/PlayerAvatar';
 import { RankedLobbyCard } from '@/components/ranked/RankedLobbyCard';
-import { getRankedState } from '@/lib/ranked';
 import { Button } from '@/components/ui/button';
 import { WalletBadge } from '@/components/WalletBadge';
 import { useLocale } from '@/contexts/LocaleContext';
 import { categories } from '@/data/categories';
 import { games } from '@/data/games';
+import { useCharacters } from '@/hooks/useCosmetics';
 import {
   checkinToday,
   ensureCheckinState,
@@ -32,11 +34,13 @@ import { ensureDailyTaskState } from '@/lib/dailyTasks';
 import { getGrowthOverview } from '@/lib/growth';
 import { getRecentGrowthFeed } from '@/lib/growthFeed';
 import {
+  type CharacterExpression,
   getCharacterAffinityStage,
   getCharacterById,
   syncPlayerCharacterUnlocks,
 } from '@/lib/playerCharacters';
 import { getPlayerProfile, updatePlayerProfile } from '@/lib/playerProfile';
+import { getRankedState } from '@/lib/ranked';
 import { getTitleById, resolveActiveTitle } from '@/lib/titles';
 import { cn } from '@/lib/utils';
 import { ensureWeeklyTaskState } from '@/lib/weeklyTasks';
@@ -58,9 +62,8 @@ const Home = () => {
   const [weekly, setWeekly] = useState(ensureWeeklyTaskState);
   const [checkin, setCheckin] = useState(ensureCheckinState);
   const [growth, setGrowth] = useState(getGrowthOverview);
-  const [characters, setCharacters] = useState(
-    () => syncPlayerCharacterUnlocks(getRankedState().peak.band).state,
-  );
+  const characters = useCharacters();
+  const [expression, setExpression] = useState<CharacterExpression>('normal');
   const [feed, setFeed] = useState(() => getRecentGrowthFeed(3));
   const [categoryId, setCategoryId] = useState('mini');
   const character = getCharacterById(characters.activeCharacterId);
@@ -85,7 +88,7 @@ const Home = () => {
         ? current
         : updatePlayerProfile({ activeTitle: nextTitle }),
     );
-    setCharacters(syncPlayerCharacterUnlocks(getRankedState().peak.band).state);
+    syncPlayerCharacterUnlocks(getRankedState().peak.band);
     setFeed(getRecentGrowthFeed(3));
   }, []);
   useEffect(() => {
@@ -113,6 +116,21 @@ const Home = () => {
           </Link>
           <div className="flex flex-wrap items-center gap-2">
             <WalletBadge />
+            <Link
+              to="/shop"
+              className="flex items-center gap-2 rounded-full border bg-card px-3 py-2 text-sm text-primary"
+            >
+              <ShoppingBag className="size-4" />
+              {t('shop.title')}
+            </Link>
+            <Link
+              to="/characters"
+              className="flex size-9 items-center justify-center rounded-full border bg-card text-primary"
+              aria-label={t('characters.title')}
+              title={t('characters.title')}
+            >
+              <Users className="size-4" />
+            </Link>
             <Button
               variant="outline"
               disabled={signedToday}
@@ -170,7 +188,11 @@ const Home = () => {
                 )}
               </span>
             </div>
-            <div className="relative my-7 flex flex-1 items-center justify-center">
+            <Link
+              to={`/characters/${character.id}`}
+              aria-label={t('home.characters.viewProfile')}
+              className="relative my-7 flex flex-1 items-center justify-center"
+            >
               <span
                 className="lobby-portrait-ring absolute size-56 rounded-full border border-gold/20"
                 aria-hidden="true"
@@ -178,10 +200,29 @@ const Home = () => {
               <CharacterPortraitSlot
                 character={character}
                 size="xl"
+                expression={expression}
                 label={t(character.nameKey)}
                 className="max-w-full"
               />
-            </div>
+            </Link>
+            {(characters.rewardStageByCharacter[character.id] ?? 0) >= 2 && (
+              <button
+                type="button"
+                className="mx-auto -mt-4 mb-4 rounded-full border border-paper/20 px-3 py-1.5 text-xs text-paper/70"
+                onClick={() => {
+                  const values: CharacterExpression[] = [
+                    'normal',
+                    'happy',
+                    'frustrated',
+                  ];
+                  setExpression(
+                    values[(values.indexOf(expression) + 1) % values.length],
+                  );
+                }}
+              >
+                {t('characters.cycleExpression')}
+              </button>
+            )}
             <div className="relative">
               <p className="text-xs tracking-[0.2em] text-gold">
                 {t('lobby.yourCompanion')}
@@ -191,7 +232,7 @@ const Home = () => {
                 {t(character.taglineKey)}
               </p>
               <Link
-                to="/profile"
+                to={`/characters/${character.id}`}
                 className="mt-5 inline-flex items-center gap-2 text-xs text-paper/70 hover:text-gold"
               >
                 {t('home.characters.viewProfile')}

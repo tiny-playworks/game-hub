@@ -14,12 +14,16 @@ export interface RiichiSaveData {
   replay: RiichiReplayFile;
   processedProgress: string[];
   savedAt: number;
+  sessionId?: string;
+  playerCharacterId?: string;
 }
 
 export interface LoadedRiichiSave {
   match: RiichiMatchState;
   processedProgress: string[];
   savedAt: number;
+  sessionId: string;
+  playerCharacterId?: string;
 }
 
 function storage(): Storage | null {
@@ -70,6 +74,14 @@ export function loadSavedMatch(): LoadedRiichiSave | null {
           )
         : [],
       savedAt: typeof data.savedAt === 'number' ? data.savedAt : 0,
+      sessionId:
+        typeof data.sessionId === 'string' && data.sessionId.length
+          ? data.sessionId
+          : `legacy:${replay.seed}:${data.savedAt ?? 0}`,
+      playerCharacterId:
+        typeof data.playerCharacterId === 'string'
+          ? data.playerCharacterId
+          : undefined,
     };
   } catch {
     return null;
@@ -89,6 +101,7 @@ export function hasSavedMatch(): boolean {
 export function saveMatch(
   match: RiichiMatchState,
   processedProgress: string[],
+  session?: { sessionId: string; playerCharacterId: string },
 ): void {
   const s = storage();
   if (!s) return;
@@ -103,6 +116,8 @@ export function saveMatch(
       replay: toReplayFile(match),
       processedProgress,
       savedAt: Date.now(),
+      sessionId: session?.sessionId,
+      playerCharacterId: session?.playerCharacterId,
     };
     s.setItem(RIICHI_SAVE_STORAGE_KEY, JSON.stringify(data));
   } catch {

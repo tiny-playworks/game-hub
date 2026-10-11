@@ -1,7 +1,10 @@
+import { appendGrowthFeedItem } from '@/lib/growthFeed';
 import { getPlayerStats } from '@/lib/playerStats';
 
 export const PLAYER_CHARACTER_STORAGE_KEY = 'game-hub-player-characters';
-export const CHARACTER_AFFINITY_THRESHOLDS = [5, 15, 30] as const;
+export const CHARACTER_AFFINITY_THRESHOLDS = [5, 15, 30, 50] as const;
+export const CHARACTERS_CHANGED_EVENT = 'game-hub:characters-changed';
+export const AFFINITY_STAGE_EVENT = 'game-hub:affinity-stage';
 
 export const CHARACTER_RANK_BANDS = [
   'novice',
@@ -69,9 +72,18 @@ export interface CharacterDef {
 }
 
 export interface PlayerCharacterState {
+  version: 2;
   activeCharacterId: string;
   unlockedCharacterIds: string[];
   affinityByCharacter: Record<string, number>;
+  /** Rewards are permanent even if an older affinity value is restored. */
+  rewardStageByCharacter: Record<string, number>;
+  encounteredCharacterIds: string[];
+  encountersByCharacter: Record<
+    string,
+    { matches: number; playerAbove: number }
+  >;
+  rewardedMatchIds: string[];
   updatedAt: number;
 }
 
@@ -289,6 +301,7 @@ function safeAffinity(value: unknown): number {
 export function createDefaultPlayerCharacterState(): PlayerCharacterState {
   const defaultCharacter = getDefaultCharacter();
   return {
+    version: 2,
     activeCharacterId: defaultCharacter.id,
     unlockedCharacterIds: CHARACTER_DEFS.filter(
       (character) => character.unlockRule.type === 'default',
@@ -298,11 +311,17 @@ export function createDefaultPlayerCharacterState(): PlayerCharacterState {
         (character) => character.unlockRule.type === 'default',
       ).map((character) => [character.id, 0]),
     ),
+    rewardStageByCharacter: {},
+    encounteredCharacterIds: [],
+    encountersByCharacter: {},
+    rewardedMatchIds: [],
     updatedAt: Date.now(),
   };
 }
 
-function normalizePlayerCharacterState(raw: unknown): PlayerCharacterState {
+export function normalizePlayerCharacterState(
+  raw: unknown,
+): PlayerCharacterState {
   const defaults = createDefaultPlayerCharacterState();
   if (!raw || typeof raw !== 'object') return defaults;
   const parsed = raw as Partial<PlayerCharacterState>;
@@ -335,10 +354,40 @@ function normalizePlayerCharacterState(raw: unknown): PlayerCharacterState {
   )
     ? (parsed.activeCharacterId as string)
     : defaults.activeCharacterId;
+  const rewardStageByCharacter: Record<string, number> = {};
+  const encountersByCharacter: PlayerCharacterState['encountersByCharacter'] =
+    {};
+  for (const character of CHARACTER_DEFS) {
+    rewardStageByCharacter[character.id] = Math.max(
+      getCharacterAffinityStage(affinityByCharacter[character.id] ?? 0),
+      Math.min(4, safeAffinity(parsed.rewardStageByCharacter?.[character.id])),
+    );
+    const encounters = parsed.encountersByCharacter?.[character.id];
+    const matches = safeAffinity(encounters?.matches);
+    encountersByCharacter[character.id] = {
+      matches,
+      playerAbove: Math.min(matches, safeAffinity(encounters?.playerAbove)),
+    };
+  }
   return {
+    version: 2,
     activeCharacterId,
     unlockedCharacterIds: mergedUnlockedIds,
     affinityByCharacter,
+    rewardStageByCharacter,
+    encountersByCharacter,
+    encounteredCharacterIds: CHARACTER_DEFS.filter(
+      (character) =>
+        (Array.isArray(parsed.encounteredCharacterIds) &&
+          parsed.encounteredCharacterIds.includes(character.id)) ||
+        (affinityByCharacter[character.id] ?? 0) > 0 ||
+        encountersByCharacter[character.id].matches > 0,
+    ).map((character) => character.id),
+    rewardedMatchIds: Array.isArray(parsed.rewardedMatchIds)
+      ? parsed.rewardedMatchIds
+          .filter((id): id is string => typeof id === 'string')
+          .slice(-1000)
+      : [],
     updatedAt:
       typeof parsed.updatedAt === 'number' && Number.isFinite(parsed.updatedAt)
         ? parsed.updatedAt
@@ -358,6 +407,8 @@ function savePlayerCharacterState(
     PLAYER_CHARACTER_STORAGE_KEY,
     JSON.stringify(normalized),
   );
+  if (typeof window !== 'undefined')
+    window.dispatchEvent(new Event(CHARACTERS_CHANGED_EVENT));
   return normalized;
 }
 
@@ -397,6 +448,7 @@ export function getCharacterById(characterId: string): CharacterDef {
 
 export function getCharacterAffinityStage(affinity: number): number {
   const safeValue = safeAffinity(affinity);
+  if (safeValue >= CHARACTER_AFFINITY_THRESHOLDS[3]) return 4;
   if (safeValue >= CHARACTER_AFFINITY_THRESHOLDS[2]) return 3;
   if (safeValue >= CHARACTER_AFFINITY_THRESHOLDS[1]) return 2;
   if (safeValue >= CHARACTER_AFFINITY_THRESHOLDS[0]) return 1;
@@ -493,4 +545,97 @@ export function addActiveCharacterAffinity(
     currentStage: getCharacterAffinityStage(currentAffinity),
     newlyUnlockedCharacters: unlockedResult.newlyUnlockedCharacters,
   };
+}
+
+export function markCharactersEncountered(ids: string[]): void {
+  const current = getPlayerCharacterState();
+  const next = CHARACTER_DEFS.filter(
+    (character) =>
+      ids.includes(character.id) &&
+      !current.encounteredCharacterIds.includes(character.id),
+  ).map((character) => character.id);
+  if (next.length)
+    updatePlayerCharacterState({
+      encounteredCharacterIds: [...current.encounteredCharacterIds, ...next],
+    });
+}
+
+/** Only whole, completed matches reach this boundary. One receipt covers every seat. */
+export function recordCharacterMatchFinish(input: {
+  matchId: string;
+  characterId: string;
+  opponents: string[];
+  ranking: number[];
+}): PlayerCharacterState {
+  const current = getPlayerCharacterState();
+  if (!input.matchId || current.rewardedMatchIds.includes(input.matchId))
+    return current;
+  const affinity = { ...current.affinityByCharacter };
+  const encounters = { ...current.encountersByCharacter };
+  const playerPlace = input.ranking.indexOf(0);
+  const validIds = new Set(CHARACTER_DEFS.map((character) => character.id));
+  if (
+    !validIds.has(input.characterId) ||
+    playerPlace < 0 ||
+    input.ranking.length !== 4 ||
+    new Set(input.ranking).size !== 4 ||
+    input.ranking.some((seat) => ![0, 1, 2, 3].includes(seat))
+  )
+    return current;
+  affinity[input.characterId] = (affinity[input.characterId] ?? 0) + 2;
+  const opponents = new Set<string>();
+  input.opponents.slice(0, 3).forEach((id, index) => {
+    if (!validIds.has(id) || id === input.characterId || opponents.has(id))
+      return;
+    opponents.add(id);
+    const above = playerPlace < input.ranking.indexOf(index + 1);
+    affinity[id] = (affinity[id] ?? 0) + 1 + Number(above);
+    const previous = encounters[id] ?? { matches: 0, playerAbove: 0 };
+    encounters[id] = {
+      matches: previous.matches + 1,
+      playerAbove: previous.playerAbove + Number(above),
+    };
+  });
+  const state = updatePlayerCharacterState({
+    affinityByCharacter: affinity,
+    encountersByCharacter: encounters,
+    encounteredCharacterIds: [
+      ...new Set([
+        ...current.encounteredCharacterIds,
+        input.characterId,
+        ...opponents,
+      ]),
+    ],
+    rewardedMatchIds: [...current.rewardedMatchIds, input.matchId].slice(-1000),
+  });
+  const stages = CHARACTER_DEFS.flatMap((character) => {
+    const stage = state.rewardStageByCharacter[character.id] ?? 0;
+    if (stage <= (current.rewardStageByCharacter[character.id] ?? 0)) return [];
+    appendGrowthFeedItem({
+      type: 'character-stage',
+      titleKey: 'growth.feed.character.stage.title',
+      detailKey: 'growth.feed.character.stage.detail',
+      characterId: character.id,
+      stage,
+      value: affinity[character.id],
+    });
+    return [{ characterId: character.id, stage }];
+  });
+  if (stages.length && typeof window !== 'undefined')
+    window.dispatchEvent(
+      new CustomEvent(AFFINITY_STAGE_EVENT, { detail: stages }),
+    );
+  return state;
+}
+
+export function getCharacterLines(
+  character: CharacterDef,
+  trigger: LineTrigger,
+): string[] {
+  const lines = character.lines[trigger];
+  const stage =
+    getPlayerCharacterState().rewardStageByCharacter[character.id] ?? 0;
+  return stage >= 2
+    ? [...lines, `character.affinityLine.${character.id}.${trigger}`]
+    : lines;
 }

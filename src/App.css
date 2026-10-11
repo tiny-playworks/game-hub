@@ -4023,6 +4023,9 @@ h3 {
   position: relative;
   isolation: isolate;
 }
+.paper-texture[data-slot="dialog-content"] {
+  position: fixed;
+}
 .paper-texture::before,
 .felt-surface::before,
 .game-shell-ambient::before {

@@ -1,7 +1,9 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
+import { CosmeticEffect } from '@/components/cosmetics/CosmeticEffect';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useCosmetics } from '@/hooks/useCosmetics';
 import { getCharacterById } from '@/lib/playerCharacters';
 import type { RiichiPlayerSettings } from '@/lib/playerProfile';
 import { cn } from '@/lib/utils';
@@ -14,6 +16,7 @@ export function CharacterCutIn({
   mode: RiichiPlayerSettings['presentation'];
 }) {
   const { t } = useLocale();
+  const { equipped } = useCosmetics();
   const moment = useRiichiStore((state) => state.cutIns[0]);
   const finish = useRiichiStore((state) => state.finishCutIn);
   const clear = useRiichiStore((state) => state.clearCutIns);
@@ -58,6 +61,9 @@ export function CharacterCutIn({
           mode === 'simple' && 'is-simple',
         )}
       >
+        {moment.kind === 'riichi' && mode === 'full' && (
+          <CosmeticEffect id={equipped['riichi-effect']} kind="riichi" />
+        )}
         {mode === 'full' && (
           <CharacterPortraitSlot
             character={character}

@@ -1,6 +1,7 @@
 import {
   CHARACTER_LINE_TRIGGERS,
   getCharacterById,
+  getCharacterLines,
   type LineTrigger,
 } from '@/lib/playerCharacters';
 import { mixSeed, mulberry32 } from '@/lib/seededRandom';
@@ -34,7 +35,7 @@ export function createCharacterMoments(
     const character = getCharacterById(
       match.seatCharacters[effect.seat] ?? playerCharacterId,
     );
-    const lines = character.lines[effect.kind];
+    const lines = getCharacterLines(character, effect.kind);
     if (!lines.length) return [];
     const random = mulberry32(
       mixSeed(

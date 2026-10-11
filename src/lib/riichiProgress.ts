@@ -13,10 +13,7 @@ import {
 import { emitGameEvent } from '@/lib/gameEvents';
 import { getGrowthOverview } from '@/lib/growth';
 import { appendGrowthFeedItem, type GrowthFeedItem } from '@/lib/growthFeed';
-import {
-  addActiveCharacterAffinity,
-  type CharacterAffinityProgress,
-} from '@/lib/playerCharacters';
+import { syncPlayerCharacterUnlocks } from '@/lib/playerCharacters';
 import { recordRiichiStatEvent } from '@/lib/playerStats';
 import { recordWeeklyTaskEvent } from '@/lib/weeklyTasks';
 
@@ -143,20 +140,6 @@ function getNewlyUnlockedAchievements(): RiichiAchievementRewardSummary[] {
     .filter((item): item is RiichiAchievementRewardSummary => item !== null);
 }
 
-function buildCharacterProgressSummary(
-  progress: CharacterAffinityProgress,
-): RiichiCharacterProgressSummary {
-  return {
-    characterId: progress.character.id,
-    characterName: progress.character.name,
-    previousAffinity: progress.previousAffinity,
-    currentAffinity: progress.currentAffinity,
-    previousStage: progress.previousStage,
-    currentStage: progress.currentStage,
-    stageIncreased: progress.currentStage > progress.previousStage,
-  };
-}
-
 function buildTaskRewardFeedItems(
   rewards: RiichiProgressResult['autoClaimedTaskRewards'],
 ): GrowthFeedItem[] {
@@ -226,6 +209,7 @@ export function recordRiichiProgressEvent(
       ? emitGameEvent({ gameId: 'mahjong-japanese', type: 'start' })
       : null;
   recordRiichiStatEvent(event);
+  if (event === 'finish-round') syncPlayerCharacterUnlocks();
   const autoClaimedTaskRewards = startResult?.taskRewards ?? [
     ...recordDailyTaskEvent(event).autoClaimedRewards,
     ...recordWeeklyTaskEvent(event).autoClaimedRewards,
@@ -243,10 +227,7 @@ export function recordRiichiProgressEvent(
     0,
   );
   const statDelta = getStatDeltaForEvent(event);
-  const characterProgress =
-    event === 'finish-round'
-      ? buildCharacterProgressSummary(addActiveCharacterAffinity(1))
-      : null;
+  const characterProgress = null;
 
   const recordedGrowthItems = [
     ...buildTaskRewardFeedItems(autoClaimedTaskRewards),
@@ -289,10 +270,11 @@ export function recordRiichiProgressEvent(
 export function recordRiichiMatchFinish(
   placement: number,
   matchLength: 'east' | 'south',
+  matchId?: string,
 ) {
   return emitGameEvent({
     gameId: 'mahjong-japanese',
     type: 'finish',
-    meta: { placement, matchLength },
+    meta: { placement, matchLength, matchId },
   });
 }

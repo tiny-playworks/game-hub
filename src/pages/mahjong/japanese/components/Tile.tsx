@@ -196,11 +196,7 @@ export function TileBack({
       title={getMessage(getStoredLocale(), 'riichi.tile.back')}
     >
       <span className="riichi-tile-back-rotator">
-        <span
-          className="riichi-tile-art"
-          style={getAtlasStyle({ column: 0, row: 4 })}
-          aria-hidden="true"
-        />
+        <span className="cosmetic-tile-pattern" aria-hidden="true" />
       </span>
     </span>
   );

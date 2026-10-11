@@ -1,8 +1,16 @@
 import { shallow } from 'zustand/shallow';
 import { createWithEqualityFn } from 'zustand/traditional';
-import { getPlayerCharacterState } from '@/lib/playerCharacters';
+import {
+  getPlayerCharacterState,
+  markCharactersEncountered,
+  recordCharacterMatchFinish,
+} from '@/lib/playerCharacters';
 import { getPlayerProfile } from '@/lib/playerProfile';
-import { getRankedState, saveRankedState, type RankedTicket } from '@/lib/ranked';
+import {
+  getRankedState,
+  type RankedTicket,
+  saveRankedState,
+} from '@/lib/ranked';
 import { settleRankedMatch } from '@/lib/rankedSettlement';
 import {
   recordRiichiMatchFinish,
@@ -54,6 +62,7 @@ type RiichiStore = {
   processedProgress: string[];
   replay: RiichiReplayFile | null;
   playerCharacterId: string;
+  sessionId: string;
   moments: CharacterMoment[];
   cutIns: CharacterMoment[];
   expireMoment: (id: string) => void;
@@ -92,6 +101,7 @@ function processProgress(
   match: RiichiMatchState,
   effects: RiichiEffect[],
   processed: string[],
+  session: { sessionId: string; playerCharacterId: string },
 ): string[] {
   let next = processed;
   for (const effect of effects) {
@@ -112,7 +122,14 @@ function processProgress(
         recordRiichiMatchFinish(
           match.matchEnd.ranking.indexOf(0) + 1,
           match.matchLength,
+          session.sessionId,
         );
+        recordCharacterMatchFinish({
+          matchId: session.sessionId,
+          characterId: session.playerCharacterId,
+          opponents: match.seatCharacters.slice(1) as string[],
+          ranking: match.matchEnd.ranking,
+        });
         next = [...next, key].slice(-400);
       } catch {
         // A failed wallet write must not interrupt the match.
@@ -144,6 +161,7 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
           | 'decisionClock'
           | 'matchLength'
           | 'playerCharacterId'
+          | 'sessionId'
         >
       >,
     ) => {
@@ -208,6 +226,7 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
       processedProgress: [],
       replay: null,
       playerCharacterId: getPlayerCharacterState().activeCharacterId,
+      sessionId: '',
       moments: [],
       cutIns: [],
       expireMoment: (id) =>
@@ -226,16 +245,21 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
       setShowGuide: (showGuide) => changeVisibility({ showGuide }),
       setShowMenu: (showMenu) => changeVisibility({ showMenu }),
       setDecisionClock: (decisionClock) => set({ decisionClock }),
-      openReplay: (replay) =>
-        { if (get().match?.ranked && get().match?.status !== 'matchEnd' && replay) return;
-          changeVisibility({ replay, cutIns: [], moments: [] }); },
+      openReplay: (replay) => {
+        if (get().match?.ranked && get().match?.status !== 'matchEnd' && replay)
+          return;
+        changeVisibility({ replay, cutIns: [], moments: [] });
+      },
       startMatch: (options) => {
         // UI 必须先确认并结算旧段位战，不能直接覆盖正在进行的存档。
         const rankedState = getRankedState();
-        if (rankedState.activeMatchId) throw new Error('Ranked match still active');
+        if (rankedState.activeMatchId)
+          throw new Error('Ranked match still active');
         const seed = options?.seed ?? randomSeed();
         const ticket = options?.ranked;
-        const playerCharacterId = ticket?.characterId ?? getPlayerCharacterState().activeCharacterId;
+        const playerCharacterId =
+          ticket?.characterId ?? getPlayerCharacterState().activeCharacterId;
+        const sessionId = ticket?.id ?? `free:${crypto.randomUUID()}`;
         const { match, effects } = createMatch({
           seed: ticket?.seed ?? seed,
           matchLength: ticket?.matchLength ?? get().matchLength,
@@ -248,8 +272,24 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
             options?.seatCharacters?.slice(1) ?? options?.opponentSelection,
           ),
         });
-        if (ticket) saveRankedState({ ...rankedState, activeMatchId: ticket.id, activeTicket: ticket });
-        const processedProgress = processProgress(match, effects, []);
+        if (ticket)
+          saveRankedState({
+            ...rankedState,
+            activeMatchId: ticket.id,
+            activeTicket: ticket,
+          });
+        try {
+          markCharactersEncountered([
+            playerCharacterId,
+            ...(match.seatCharacters.slice(1) as string[]),
+          ]);
+        } catch {
+          /* Progress storage must not block play. */
+        }
+        const processedProgress = processProgress(match, effects, [], {
+          sessionId,
+          playerCharacterId,
+        });
         changeVisibility({
           match,
           matchLength: match.matchLength,
@@ -258,9 +298,10 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
           view: 'game',
           showMenu: false,
           playerCharacterId,
+          sessionId,
           ...presentation(match, effects, playerCharacterId, true),
         });
-        saveMatch(match, processedProgress);
+        saveMatch(match, processedProgress, { sessionId, playerCharacterId });
         emit(effects);
       },
       dispatch: (event) => {
@@ -268,15 +309,20 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
         if (!current || get().cutIns.length > 0) return false;
         const step = applyEvent(current, event);
         if (!step) return false;
-        if (current.ranked && getRankedState().activeMatchId !== current.ranked.id) return false;
+        if (
+          current.ranked &&
+          getRankedState().activeMatchId !== current.ranked.id
+        )
+          return false;
         const processedProgress = processProgress(
           step.match,
           step.effects,
           get().processedProgress,
+          get(),
         );
         // 先保存终局事件；刷新时可以从同一收据继续完成结算。
         if (step.match.ranked && step.match.matchEnd) {
-          saveMatch(step.match, processedProgress);
+          saveMatch(step.match, processedProgress, get());
           settleRankedMatch(step.match.ranked, step.match.matchEnd.finalScores);
         }
         changeVisibility({
@@ -284,7 +330,7 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
           processedProgress,
           ...presentation(step.match, step.effects, get().playerCharacterId),
         });
-        saveMatch(step.match, processedProgress);
+        saveMatch(step.match, processedProgress, get());
         emit(step.effects);
         return true;
       },
@@ -299,7 +345,7 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
           cutIns: [],
           moments: [],
         });
-        saveMatch(reverted, get().processedProgress);
+        saveMatch(reverted, get().processedProgress, get());
         return true;
       },
       resumeSaved: () => {
@@ -308,8 +354,15 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
         if (saved.match.ranked) {
           const ranked = getRankedState();
           if (saved.match.status === 'matchEnd' && saved.match.matchEnd) {
-            if (!settleRankedMatch(saved.match.ranked, saved.match.matchEnd.finalScores)) return false;
-          } else if (ranked.activeMatchId !== saved.match.ranked.id) return false;
+            if (
+              !settleRankedMatch(
+                saved.match.ranked,
+                saved.match.matchEnd.finalScores,
+              )
+            )
+              return false;
+          } else if (ranked.activeMatchId !== saved.match.ranked.id)
+            return false;
         }
         changeVisibility({
           match: { ...saved.match, turn: saved.match.turn + 1 },
@@ -318,7 +371,11 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
           decisionClock: null,
           view: 'game',
           showMenu: false,
-          playerCharacterId: saved.match.ranked?.characterId ?? getPlayerCharacterState().activeCharacterId,
+          playerCharacterId:
+            saved.match.ranked?.characterId ??
+            saved.playerCharacterId ??
+            getPlayerCharacterState().activeCharacterId,
+          sessionId: saved.sessionId,
           cutIns: [],
           moments: [],
         });
@@ -327,13 +384,30 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
       abandonRanked: () => {
         const ranked = getRankedState();
         if (!ranked.activeMatchId) return true;
-        const current = get().match?.ranked?.id === ranked.activeMatchId ? get().match : loadSavedMatch()?.match;
+        const current =
+          get().match?.ranked?.id === ranked.activeMatchId
+            ? get().match
+            : loadSavedMatch()?.match;
         const ticket = ranked.activeTicket ?? current?.ranked;
         if (!ticket) return false;
-        const scores = current?.ranked?.id === ticket.id ? current.matchEnd?.finalScores ?? current.round.result?.settlement.newScores ?? current.round.scores : [25000,25000,25000,25000];
+        const scores =
+          current?.ranked?.id === ticket.id
+            ? (current.matchEnd?.finalScores ??
+              current.round.result?.settlement.newScores ??
+              current.round.scores)
+            : [25000, 25000, 25000, 25000];
         settleRankedMatch(ticket, scores, current?.status !== 'matchEnd');
         clearSavedMatch();
-        changeVisibility({ match: null, view: 'rules', cutIns: [], moments: [], decisionClock: null, replay: null, showMenu: false, showGuide: false });
+        changeVisibility({
+          match: null,
+          view: 'rules',
+          cutIns: [],
+          moments: [],
+          decisionClock: null,
+          replay: null,
+          showMenu: false,
+          showGuide: false,
+        });
         return true;
       },
     };

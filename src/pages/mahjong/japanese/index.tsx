@@ -2,6 +2,7 @@ import { Copy, TimerReset } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
+import { AvatarFrame } from '@/components/cosmetics/AvatarFrame';
 import { RankedResult } from '@/components/ranked/RankedResult';
 import { confirmRankedExit } from '@/components/ranked/RankedStartButton';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -453,15 +454,17 @@ function SelfSeat({
 
       <div className="riichi-self-meta">
         <div className="riichi-seat-card-main">
-          <CharacterPortraitSlot
-            character={character}
-            size="sm"
-            label={t(character.nameKey)}
-            className={cn(
-              'riichi-character-avatar',
-              (actionState.isMyTurn || actionState.isMyClaim) && 'is-acting',
-            )}
-          />
+          <AvatarFrame>
+            <CharacterPortraitSlot
+              character={character}
+              size="sm"
+              label={t(character.nameKey)}
+              className={cn(
+                'riichi-character-avatar',
+                (actionState.isMyTurn || actionState.isMyClaim) && 'is-acting',
+              )}
+            />
+          </AvatarFrame>
           <span className="riichi-seat-wind">
             {t(`game.mahjong.winds.${seatWind}`)}
           </span>

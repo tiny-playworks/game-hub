@@ -10,10 +10,10 @@ import { Link } from 'react-router-dom';
 import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
 import { ThemeSwitcher } from '@/components/common/ThemeSwitcher';
+import { PlayerAvatar } from '@/components/home/PlayerAvatar';
 import { DataManagementCard } from '@/components/profile/DataManagementCard';
 import { WalletCard } from '@/components/profile/WalletCard';
 import { RankedProfilePanel } from '@/components/ranked/RankedProfilePanel';
-import { getRankedState } from '@/lib/ranked';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -36,20 +36,20 @@ import {
   type CharacterDef,
   getCharacterAffinityStage,
   getCharacterById,
+  getPlayerCharacterState,
   type PlayerCharacterState,
   setActiveCharacter,
   syncPlayerCharacterUnlocks,
 } from '@/lib/playerCharacters';
 import {
   cropImageFileToSquareDataUrl,
-  getAvatarPresetById,
   getPlayerProfile,
   PLAYER_AVATAR_PRESETS,
-  type PlayerProfile,
   sanitizeNickname,
   updatePlayerProfile,
 } from '@/lib/playerProfile';
 import { getPlayerStats, type PlayerStatsState } from '@/lib/playerStats';
+import { getRankedState } from '@/lib/ranked';
 import {
   getNextLockedTitle,
   getTitleById,
@@ -58,28 +58,6 @@ import {
 } from '@/lib/titles';
 import { cn } from '@/lib/utils';
 import { ensureWeeklyTaskState, type WeeklyTaskState } from '@/lib/weeklyTasks';
-
-function ProfileAvatar({ profile }: { profile: PlayerProfile }) {
-  if (profile.avatarMode === 'upload' && profile.avatarUploadDataUrl) {
-    return (
-      <img
-        src={profile.avatarUploadDataUrl}
-        alt="avatar"
-        className="h-16 w-16 rounded-2xl border border-border object-cover"
-      />
-    );
-  }
-  const preset = getAvatarPresetById(profile.avatarPresetId);
-  return (
-    <div
-      className={`flex h-16 w-16 items-center justify-center rounded-2xl border border-border text-2xl font-semibold ${preset.bgClass} ${preset.fgClass}`}
-      role="img"
-      aria-label={preset.label}
-    >
-      {preset.glyph}
-    </div>
-  );
-}
 
 function formatGrowthFeedLine(
   item: GrowthFeedItem,
@@ -142,7 +120,7 @@ const Profile = () => {
     getPlayerStats(),
   );
   const [characterState, setCharacterState] = useState<PlayerCharacterState>(
-    () => syncPlayerCharacterUnlocks(getRankedState().peak.band).state,
+    getPlayerCharacterState,
   );
   const [recentFeed, setRecentFeed] = useState(() => getFullGrowthFeed());
   const growthHistoryMeta = useMemo(
@@ -163,7 +141,9 @@ const Profile = () => {
     const nextCheckin = ensureCheckinState();
     const nextGrowth = getGrowthOverview();
     const nextStats = getPlayerStats();
-    const nextCharacterState = syncPlayerCharacterUnlocks(getRankedState().peak.band).state;
+    const nextCharacterState = syncPlayerCharacterUnlocks(
+      getRankedState().peak.band,
+    ).state;
     const currentProfile = getPlayerProfile();
     const resolvedTitleId = resolveActiveTitle(
       currentProfile.activeTitle,
@@ -350,7 +330,7 @@ const Profile = () => {
               {t('home.player.title')}
             </p>
             <div className="mt-3 flex items-start gap-4">
-              <ProfileAvatar profile={profile} />
+              <PlayerAvatar profile={profile} />
               <div className="min-w-0 flex-1 space-y-2">
                 <label
                   className="text-xs text-muted-foreground"
@@ -523,6 +503,12 @@ const Profile = () => {
             <p className="text-xs font-medium tracking-[0.2em] text-primary/80 uppercase">
               {t('profile.companion.section')}
             </p>
+            <Link
+              to="/characters"
+              className="mt-2 inline-flex text-xs text-primary"
+            >
+              {t('characters.title')} →
+            </Link>
             <div className="mt-4 rounded-[24px] bg-[linear-gradient(135deg,#13243b,#173226_58%,#234036)] p-4 text-white">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                 <CharacterPortraitSlot
