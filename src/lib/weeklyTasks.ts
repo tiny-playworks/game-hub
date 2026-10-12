@@ -1,5 +1,6 @@
 import type { RiichiDailyEvent, TaskRewardSummary } from '@/lib/dailyTasks';
 import { addGrowthPoints } from '@/lib/growth';
+import { gameStorage } from '@/lib/storage';
 import { addArcadeCoins, addCoins } from '@/lib/wallet';
 import {
   advanceTask,
@@ -201,9 +202,9 @@ function normalizeState(raw: unknown): WeeklyTaskState | null {
 
 export function getWeeklyTaskState(now = Date.now()): WeeklyTaskState {
   const weekKey = getBeijingWeekKey(now);
-  if (typeof localStorage === 'undefined') return createWeeklyTaskState(now);
+  if (typeof gameStorage === 'undefined') return createWeeklyTaskState(now);
   try {
-    const raw = localStorage.getItem(WEEKLY_TASK_STORAGE_KEY);
+    const raw = gameStorage.getItem(WEEKLY_TASK_STORAGE_KEY);
     if (!raw) return createWeeklyTaskState(now);
     const parsed = normalizeState(JSON.parse(raw));
     if (!parsed || parsed.weekKey !== weekKey)
@@ -215,8 +216,8 @@ export function getWeeklyTaskState(now = Date.now()): WeeklyTaskState {
 }
 
 export function saveWeeklyTaskState(state: WeeklyTaskState): WeeklyTaskState {
-  if (typeof localStorage === 'undefined') return state;
-  localStorage.setItem(WEEKLY_TASK_STORAGE_KEY, JSON.stringify(state));
+  if (typeof gameStorage === 'undefined') return state;
+  gameStorage.setItem(WEEKLY_TASK_STORAGE_KEY, JSON.stringify(state));
   return state;
 }
 

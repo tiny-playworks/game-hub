@@ -1,3 +1,4 @@
+import { gameStorage } from '@/lib/storage';
 import {
   isReplayFile,
   RIICHI_MATCH_VERSION,
@@ -28,7 +29,7 @@ export interface LoadedRiichiSave {
 
 function storage(): Storage | null {
   try {
-    return typeof localStorage === 'undefined' ? null : localStorage;
+    return typeof gameStorage === 'undefined' ? null : gameStorage;
   } catch {
     return null;
   }

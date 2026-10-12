@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { PageErrorBoundary } from './components/recovery/PageErrorBoundary';
 import { applyTheme, getStoredTheme } from './lib/theme';
 
 applyTheme(getStoredTheme());
@@ -10,7 +11,9 @@ if (rootEl) {
   const root = ReactDOM.createRoot(rootEl);
   root.render(
     <React.StrictMode>
-      <App />
+      <PageErrorBoundary>
+        <App />
+      </PageErrorBoundary>
     </React.StrictMode>,
   );
 }

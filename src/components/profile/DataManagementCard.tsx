@@ -12,6 +12,7 @@ import { useLocale } from '@/contexts/LocaleContext';
 import {
   downloadSaveFile,
   importSaveFile,
+  PartialSaveError,
   parseSaveFile,
   resetSaveData,
   type SaveFile,
@@ -80,8 +81,14 @@ export function DataManagementCard() {
             setPending(parseSaveFile(await file.text()));
             setStep(1);
             setError('');
-          } catch {
-            setError(t('save.invalid'));
+          } catch (error) {
+            setError(
+              t(
+                error instanceof PartialSaveError
+                  ? 'save.partial'
+                  : 'save.invalid',
+              ),
+            );
           }
         }}
       />

@@ -1,4 +1,5 @@
 import type { RiichiDailyEvent } from '@/lib/dailyTasks';
+import { gameStorage } from '@/lib/storage';
 
 export const PLAYER_STATS_STORAGE_KEY = 'game-hub-player-stats';
 
@@ -56,9 +57,9 @@ function normalizeStats(raw: unknown): PlayerStatsState {
 }
 
 export function getPlayerStats(): PlayerStatsState {
-  if (typeof localStorage === 'undefined') return createDefaultPlayerStats();
+  if (typeof gameStorage === 'undefined') return createDefaultPlayerStats();
   try {
-    const raw = localStorage.getItem(PLAYER_STATS_STORAGE_KEY);
+    const raw = gameStorage.getItem(PLAYER_STATS_STORAGE_KEY);
     if (!raw) return createDefaultPlayerStats();
     return normalizeStats(JSON.parse(raw));
   } catch {
@@ -68,8 +69,8 @@ export function getPlayerStats(): PlayerStatsState {
 
 export function savePlayerStats(state: PlayerStatsState): PlayerStatsState {
   const normalized = normalizeStats({ ...state, updatedAt: Date.now() });
-  if (typeof localStorage === 'undefined') return normalized;
-  localStorage.setItem(PLAYER_STATS_STORAGE_KEY, JSON.stringify(normalized));
+  if (typeof gameStorage === 'undefined') return normalized;
+  gameStorage.setItem(PLAYER_STATS_STORAGE_KEY, JSON.stringify(normalized));
   return normalized;
 }
 

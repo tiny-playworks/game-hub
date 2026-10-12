@@ -1,3 +1,4 @@
+import { commitStorageChanges, gameStorage } from '@/lib/storage';
 import { getUnlockedIds } from './achievements';
 import {
   CHARACTER_DEFS,
@@ -156,7 +157,7 @@ export function normalizeCosmetics(raw: unknown): CosmeticsState {
 function readCosmetics(): CosmeticsState {
   try {
     return normalizeCosmetics(
-      JSON.parse(localStorage.getItem(COSMETICS_STORAGE_KEY) ?? 'null'),
+      JSON.parse(gameStorage.getItem(COSMETICS_STORAGE_KEY) ?? 'null'),
     );
   } catch {
     return normalizeCosmetics(null);
@@ -193,7 +194,7 @@ function notify(): void {
     window.dispatchEvent(new Event(COSMETICS_CHANGED_EVENT));
 }
 function save(state: CosmeticsState): void {
-  localStorage.setItem(COSMETICS_STORAGE_KEY, JSON.stringify(state));
+  gameStorage.setItem(COSMETICS_STORAGE_KEY, JSON.stringify(state));
   notify();
 }
 export function syncCosmeticRewards(): void {
@@ -201,7 +202,7 @@ export function syncCosmeticRewards(): void {
   const next = getCosmeticsState();
   if (
     next.owned.length !== current.owned.length ||
-    !localStorage.getItem(COSMETICS_STORAGE_KEY)
+    !gameStorage.getItem(COSMETICS_STORAGE_KEY)
   )
     save(next);
 }
@@ -227,12 +228,9 @@ export function purchaseCosmetic(id: string, at = Date.now()): PurchaseResult {
   if (def.price === null) return 'locked';
   const wallet = getWalletState();
   if (wallet.coins < def.price) return 'insufficient';
-  const previousWallet = localStorage.getItem(WALLET_STORAGE_KEY);
-  const previousCosmetics = localStorage.getItem(COSMETICS_STORAGE_KEY);
   try {
-    localStorage.setItem(
-      WALLET_STORAGE_KEY,
-      JSON.stringify({
+    commitStorageChanges({
+      [WALLET_STORAGE_KEY]: JSON.stringify({
         ...wallet,
         coins: wallet.coins - def.price,
         ledger: [
@@ -240,22 +238,15 @@ export function purchaseCosmetic(id: string, at = Date.now()): PurchaseResult {
           { at, delta: -def.price, reasonKey: 'wallet.reason.cosmetic' },
         ].slice(-50),
       }),
-    );
-    localStorage.setItem(
-      COSMETICS_STORAGE_KEY,
-      JSON.stringify({ ...cosmetics, owned: [...cosmetics.owned, id] }),
-    );
+      [COSMETICS_STORAGE_KEY]: JSON.stringify({
+        ...cosmetics,
+        owned: [...cosmetics.owned, id],
+      }),
+    });
   } catch {
-    try {
-      if (previousWallet === null) localStorage.removeItem(WALLET_STORAGE_KEY);
-      else localStorage.setItem(WALLET_STORAGE_KEY, previousWallet);
-      if (previousCosmetics === null)
-        localStorage.removeItem(COSMETICS_STORAGE_KEY);
-      else localStorage.setItem(COSMETICS_STORAGE_KEY, previousCosmetics);
-    } finally {
-      notify();
+    notify();
+    if (typeof window !== 'undefined')
       window.dispatchEvent(new Event(WALLET_CHANGED_EVENT));
-    }
     return 'failed';
   }
   notify();

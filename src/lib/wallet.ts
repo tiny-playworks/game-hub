@@ -1,3 +1,4 @@
+import { gameStorage } from '@/lib/storage';
 export const WALLET_STORAGE_KEY = 'game-hub-wallet-v1';
 export const COINS_GAINED_EVENT = 'game-hub:coins-gained';
 export const WALLET_CHANGED_EVENT = 'game-hub:wallet-changed';
@@ -54,7 +55,7 @@ export function normalizeWalletState(raw: unknown): WalletState {
 export function getWalletState(): WalletState {
   try {
     return normalizeWalletState(
-      JSON.parse(localStorage.getItem(WALLET_STORAGE_KEY) ?? 'null'),
+      JSON.parse(gameStorage.getItem(WALLET_STORAGE_KEY) ?? 'null'),
     );
   } catch {
     return normalizeWalletState(null);
@@ -85,7 +86,7 @@ export function addCoins(
     lifetimeEarned: current.lifetimeEarned + delta,
     ledger: [...current.ledger, { at, delta, reasonKey }].slice(-50),
   };
-  localStorage.setItem(WALLET_STORAGE_KEY, JSON.stringify(next));
+  gameStorage.setItem(WALLET_STORAGE_KEY, JSON.stringify(next));
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent(WALLET_CHANGED_EVENT));
     window.dispatchEvent(
@@ -138,7 +139,7 @@ export function addArcadeCoins(
     ledger: [...current.ledger, { at, delta, reasonKey }].slice(-50),
     dailyArcadeEarned: { dateKey, amount: earned + delta },
   };
-  localStorage.setItem(WALLET_STORAGE_KEY, JSON.stringify(next));
+  gameStorage.setItem(WALLET_STORAGE_KEY, JSON.stringify(next));
   window.dispatchEvent(new Event(WALLET_CHANGED_EVENT));
   window.dispatchEvent(
     new CustomEvent(COINS_GAINED_EVENT, {

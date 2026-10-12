@@ -1,3 +1,4 @@
+import { gameStorage } from '@/lib/storage';
 export const RECENT_MAHJONG_STORAGE_KEY = 'game-hub-recent-mahjong';
 
 export type RecentMahjongEntry = {
@@ -6,9 +7,9 @@ export type RecentMahjongEntry = {
 };
 
 export function getRecentMahjongEntry(): RecentMahjongEntry | null {
-  if (typeof localStorage === 'undefined') return null;
+  if (typeof gameStorage === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(RECENT_MAHJONG_STORAGE_KEY);
+    const raw = gameStorage.getItem(RECENT_MAHJONG_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as RecentMahjongEntry;
     if (parsed.gameId !== 'mahjong-japanese') return null;
@@ -20,8 +21,8 @@ export function getRecentMahjongEntry(): RecentMahjongEntry | null {
 }
 
 export function markRecentMahjongPlayed(): void {
-  if (typeof localStorage === 'undefined') return;
-  localStorage.setItem(
+  if (typeof gameStorage === 'undefined') return;
+  gameStorage.setItem(
     RECENT_MAHJONG_STORAGE_KEY,
     JSON.stringify({
       gameId: 'mahjong-japanese',

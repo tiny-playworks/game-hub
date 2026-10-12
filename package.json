@@ -24,6 +24,7 @@
     "dev": "rsbuild dev --open",
     "format": "biome format --write",
     "preview": "rsbuild preview",
+    "prepare:nas": "node scripts/prepare-nas-release.mjs",
     "test": "rstest",
     "test:coverage": "rstest --coverage",
     "test:watch": "rstest --watch",

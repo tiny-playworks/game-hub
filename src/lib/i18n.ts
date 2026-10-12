@@ -1,8 +1,31 @@
+import { gameStorage } from '@/lib/storage';
 import { arcadeMessages } from './arcadeMessages';
 export type Locale = 'zh' | 'en';
 
 const messages: Record<Locale, Record<string, string>> = {
   zh: {
+    'recovery.title': '这个页面暂时出了点问题',
+    'recovery.description':
+      '可以重新尝试，或返回大厅。已有存档不会被清空；如果进度尚未保存，请先导出备份。',
+    'recovery.retry': '重新尝试',
+    'recovery.home': '返回大厅',
+    'recovery.copy': '复制错误信息',
+    'recovery.copied': '错误信息已复制。',
+    'recovery.copyFailed': '复制失败，请展开错误详情并手动复制。',
+    'recovery.details': '错误详情',
+    'recovery.exported': '已生成备份文件，请确认浏览器已下载。',
+    'storage.title': '进度暂未保存',
+    'save.partial':
+      '这份恢复备份可能不完整，请保留用于恢复资料，不能用它覆盖完整存档。',
+    'storage.conflicted':
+      '浏览器存储已恢复，但发现本页未读取的原存档。为保护原数据，暂未自动覆盖。请先导出本页备份，再重新打开页面读取原存档。',
+    'storage.description':
+      '最新进度暂存在此页面中，关闭或刷新可能丢失。请导出备份，或重试保存。',
+    'storage.readFailed':
+      '浏览器存储无法读取。本页可以继续使用，但只能备份本页已读取的数据；请勿把这份备份作为完整存档覆盖原数据。',
+    'storage.retry': '重试保存',
+    'storage.retryFailed':
+      '仍无法保存。请先导出备份，检查浏览器存储权限或空间后重试。',
     'character.affinityLine.koharu.match-start': '今天先看牌河，我答应过你的！',
     'character.affinityLine.koharu.riichi': '我数过三秒了，这次立直！',
     'character.affinityLine.koharu.ron': '看，我这次没急着乱碰！',
@@ -1898,6 +1921,30 @@ const messages: Record<Locale, Record<string, string>> = {
     'game.mahjong.discardAndTenpai': '打 {discard} 听 {waits}',
   },
   en: {
+    'recovery.title': 'This page ran into a problem',
+    'recovery.description':
+      'Try again or return to the lobby. Existing saves will not be cleared. Export a backup first if progress has not been saved.',
+    'recovery.retry': 'Try again',
+    'recovery.home': 'Return to lobby',
+    'recovery.copy': 'Copy error details',
+    'recovery.copied': 'Error details copied.',
+    'recovery.copyFailed':
+      'Copy failed. Expand the error details and copy them manually.',
+    'recovery.details': 'Error details',
+    'recovery.exported':
+      'A backup file was generated. Please confirm that your browser downloaded it.',
+    'storage.title': 'Progress has not been saved',
+    'save.partial':
+      'This recovery backup may be incomplete. Keep it for recovery, but do not use it to replace a complete save.',
+    'storage.conflicted':
+      'Storage is available again, but an existing save was not read by this page. It has not been overwritten. Export this page’s backup before reopening the page to read the original save.',
+    'storage.description':
+      'Recent progress is held in this page. Closing or reloading may lose it. Export a backup or retry saving.',
+    'storage.readFailed':
+      'Browser storage cannot be read. Only data already read by this page can be backed up. Do not use this partial backup to replace a complete save.',
+    'storage.retry': 'Retry saving',
+    'storage.retryFailed':
+      'Saving still failed. Export a backup, check browser storage permissions or space, and retry.',
     'character.affinityLine.koharu.match-start':
       'I promised you I’d watch the discards today!',
     'character.affinityLine.koharu.riichi':
@@ -4127,13 +4174,25 @@ export function formatMessage(
 }
 
 export const LOCALE_STORAGE_KEY = 'game-hub-locale';
+const LOCALE_CHANGED_EVENT = 'game-hub:locale-changed';
+
+export function subscribeStoredLocale(listener: () => void): () => void {
+  window.addEventListener(LOCALE_CHANGED_EVENT, listener);
+  window.addEventListener('storage', listener);
+  return () => {
+    window.removeEventListener(LOCALE_CHANGED_EVENT, listener);
+    window.removeEventListener('storage', listener);
+  };
+}
 
 export function getStoredLocale(): Locale {
-  if (typeof localStorage === 'undefined') return 'zh';
-  const v = localStorage.getItem(LOCALE_STORAGE_KEY);
+  if (typeof gameStorage === 'undefined') return 'zh';
+  const v = gameStorage.getItem(LOCALE_STORAGE_KEY);
   return v === 'en' ? 'en' : 'zh';
 }
 
 export function setStoredLocale(locale: Locale): void {
-  localStorage?.setItem(LOCALE_STORAGE_KEY, locale);
+  gameStorage?.setItem(LOCALE_STORAGE_KEY, locale);
+  if (typeof window !== 'undefined')
+    window.dispatchEvent(new Event(LOCALE_CHANGED_EVENT));
 }

@@ -1,11 +1,12 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import { games } from '@/data/games';
 import {
   type ArcadeDifficulty,
   arcadeStatsKey,
   normalizeArcadeDifficulty,
 } from '@/lib/arcade';
+import { gameStorage } from '@/lib/storage';
 
 export interface GameStats {
   highScore: number;
@@ -221,6 +222,7 @@ export const useGameStore = create<GameState>()(
     }),
     {
       name: 'game-hub-storage',
+      storage: createJSONStorage(() => gameStorage),
       version: 1,
       migrate: (raw) => normalizeGameState(raw),
       merge: (persisted, current) => ({

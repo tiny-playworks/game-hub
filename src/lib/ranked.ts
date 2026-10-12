@@ -1,3 +1,4 @@
+import { gameStorage } from '@/lib/storage';
 import type {
   RiichiAiLevel,
   RiichiSeatAiLevels,
@@ -282,14 +283,14 @@ export function normalizeRankedState(value: unknown): RankedState {
 export function getRankedState(): RankedState {
   try {
     return normalizeRankedState(
-      JSON.parse(localStorage.getItem(RANKED_STORAGE_KEY) ?? 'null'),
+      JSON.parse(gameStorage.getItem(RANKED_STORAGE_KEY) ?? 'null'),
     );
   } catch {
     return normalizeRankedState(null);
   }
 }
 export function saveRankedState(state: RankedState): void {
-  localStorage.setItem(RANKED_STORAGE_KEY, JSON.stringify(state));
+  gameStorage.setItem(RANKED_STORAGE_KEY, JSON.stringify(state));
   if (typeof window !== 'undefined')
     window.dispatchEvent(new Event(RANKED_CHANGED_EVENT));
 }

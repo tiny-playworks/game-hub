@@ -1,4 +1,5 @@
 import { addGrowthPoints } from '@/lib/growth';
+import { gameStorage } from '@/lib/storage';
 import { addArcadeCoins, addCoins } from '@/lib/wallet';
 import {
   advanceTask,
@@ -293,9 +294,9 @@ export function createDailyTaskState(now = Date.now()): DailyTaskState {
 
 export function getDailyTaskState(now = Date.now()): DailyTaskState {
   const dateKey = getBeijingDateKey(now);
-  if (typeof localStorage === 'undefined') return createDailyTaskState(now);
+  if (typeof gameStorage === 'undefined') return createDailyTaskState(now);
   try {
-    const raw = localStorage.getItem(DAILY_TASK_STORAGE_KEY);
+    const raw = gameStorage.getItem(DAILY_TASK_STORAGE_KEY);
     if (!raw) return createDailyTaskState(now);
     const parsed = normalizeState(JSON.parse(raw));
     if (!parsed || parsed.dateKey !== dateKey) return createDailyTaskState(now);
@@ -306,8 +307,8 @@ export function getDailyTaskState(now = Date.now()): DailyTaskState {
 }
 
 export function saveDailyTaskState(state: DailyTaskState): DailyTaskState {
-  if (typeof localStorage === 'undefined') return state;
-  localStorage.setItem(DAILY_TASK_STORAGE_KEY, JSON.stringify(state));
+  if (typeof gameStorage === 'undefined') return state;
+  gameStorage.setItem(DAILY_TASK_STORAGE_KEY, JSON.stringify(state));
   return state;
 }
 

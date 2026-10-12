@@ -1,5 +1,6 @@
 import { appendGrowthFeedItem } from '@/lib/growthFeed';
 import { getPlayerStats } from '@/lib/playerStats';
+import { gameStorage } from '@/lib/storage';
 
 export const PLAYER_CHARACTER_STORAGE_KEY = 'game-hub-player-characters';
 export const CHARACTER_AFFINITY_THRESHOLDS = [5, 15, 30, 50] as const;
@@ -402,21 +403,18 @@ function savePlayerCharacterState(
     ...state,
     updatedAt: Date.now(),
   });
-  if (typeof localStorage === 'undefined') return normalized;
-  localStorage.setItem(
-    PLAYER_CHARACTER_STORAGE_KEY,
-    JSON.stringify(normalized),
-  );
+  if (typeof gameStorage === 'undefined') return normalized;
+  gameStorage.setItem(PLAYER_CHARACTER_STORAGE_KEY, JSON.stringify(normalized));
   if (typeof window !== 'undefined')
     window.dispatchEvent(new Event(CHARACTERS_CHANGED_EVENT));
   return normalized;
 }
 
 export function getPlayerCharacterState(): PlayerCharacterState {
-  if (typeof localStorage === 'undefined')
+  if (typeof gameStorage === 'undefined')
     return createDefaultPlayerCharacterState();
   try {
-    const raw = localStorage.getItem(PLAYER_CHARACTER_STORAGE_KEY);
+    const raw = gameStorage.getItem(PLAYER_CHARACTER_STORAGE_KEY);
     if (!raw) return createDefaultPlayerCharacterState();
     return normalizePlayerCharacterState(JSON.parse(raw));
   } catch {

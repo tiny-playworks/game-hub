@@ -1,6 +1,7 @@
+import { gameStorage } from '@/lib/storage';
 export const GROWTH_FEED_STORAGE_KEY = 'game-hub-growth-feed';
 
-/** 单设备 localStorage 可承受的长期成长流水上限（超出则丢弃最旧记录）。非「最近 N 条」语义。 */
+/** 单设备 gameStorage 可承受的长期成长流水上限（超出则丢弃最旧记录）。非「最近 N 条」语义。 */
 export const GROWTH_FEED_MAX_ITEMS = 2000;
 
 export type GrowthFeedItemType =
@@ -74,9 +75,9 @@ function normalizeGrowthFeedItem(raw: unknown): GrowthFeedItem | null {
 }
 
 function getStoredGrowthFeed(): GrowthFeedItem[] {
-  if (typeof localStorage === 'undefined') return [];
+  if (typeof gameStorage === 'undefined') return [];
   try {
-    const raw = localStorage.getItem(GROWTH_FEED_STORAGE_KEY);
+    const raw = gameStorage.getItem(GROWTH_FEED_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -94,8 +95,8 @@ function saveGrowthFeed(items: GrowthFeedItem[]): GrowthFeedItem[] {
   const normalized = [...items]
     .sort((a, b) => b.createdAt - a.createdAt)
     .slice(0, GROWTH_FEED_MAX_ITEMS);
-  if (typeof localStorage === 'undefined') return normalized;
-  localStorage.setItem(GROWTH_FEED_STORAGE_KEY, JSON.stringify(normalized));
+  if (typeof gameStorage === 'undefined') return normalized;
+  gameStorage.setItem(GROWTH_FEED_STORAGE_KEY, JSON.stringify(normalized));
   return normalized;
 }
 

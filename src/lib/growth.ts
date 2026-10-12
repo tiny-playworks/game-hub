@@ -2,6 +2,7 @@ import {
   type AchievementRarity,
   getAchievementSummary,
 } from '@/lib/achievements';
+import { gameStorage } from '@/lib/storage';
 
 export const GROWTH_STORAGE_KEY = 'game-hub-growth-state';
 export const GROWTH_POINTS_GAINED_EVENT = 'game-hub:growth-points-gained';
@@ -53,9 +54,9 @@ function normalizeGrowthState(raw: unknown): GrowthState {
 }
 
 export function getGrowthState(): GrowthState {
-  if (typeof localStorage === 'undefined') return createDefaultGrowthState();
+  if (typeof gameStorage === 'undefined') return createDefaultGrowthState();
   try {
-    const raw = localStorage.getItem(GROWTH_STORAGE_KEY);
+    const raw = gameStorage.getItem(GROWTH_STORAGE_KEY);
     if (!raw) return createDefaultGrowthState();
     return normalizeGrowthState(JSON.parse(raw));
   } catch {
@@ -68,8 +69,8 @@ export function saveGrowthState(state: GrowthState): GrowthState {
     ...state,
     updatedAt: Date.now(),
   });
-  if (typeof localStorage === 'undefined') return normalized;
-  localStorage.setItem(GROWTH_STORAGE_KEY, JSON.stringify(normalized));
+  if (typeof gameStorage === 'undefined') return normalized;
+  gameStorage.setItem(GROWTH_STORAGE_KEY, JSON.stringify(normalized));
   return normalized;
 }
 

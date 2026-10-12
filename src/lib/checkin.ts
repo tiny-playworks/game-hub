@@ -1,5 +1,6 @@
 import { addGrowthPoints } from '@/lib/growth';
 import { appendGrowthFeedItem } from '@/lib/growthFeed';
+import { gameStorage } from '@/lib/storage';
 import { addCoins } from '@/lib/wallet';
 
 export const CHECKIN_STORAGE_KEY = 'game-hub-checkin-state';
@@ -126,9 +127,9 @@ function normalizeCheckinState(raw: unknown): CheckinState {
 }
 
 export function getCheckinState(): CheckinState {
-  if (typeof localStorage === 'undefined') return createDefaultCheckinState();
+  if (typeof gameStorage === 'undefined') return createDefaultCheckinState();
   try {
-    const raw = localStorage.getItem(CHECKIN_STORAGE_KEY);
+    const raw = gameStorage.getItem(CHECKIN_STORAGE_KEY);
     if (!raw) return createDefaultCheckinState();
     return normalizeCheckinState(JSON.parse(raw));
   } catch {
@@ -141,8 +142,8 @@ export function saveCheckinState(state: CheckinState): CheckinState {
     ...state,
     updatedAt: Date.now(),
   });
-  if (typeof localStorage === 'undefined') return normalized;
-  localStorage.setItem(CHECKIN_STORAGE_KEY, JSON.stringify(normalized));
+  if (typeof gameStorage === 'undefined') return normalized;
+  gameStorage.setItem(CHECKIN_STORAGE_KEY, JSON.stringify(normalized));
   return normalized;
 }
 

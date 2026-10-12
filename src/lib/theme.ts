@@ -1,11 +1,10 @@
+import { gameStorage } from '@/lib/storage';
 export const THEME_STORAGE_KEY = 'game-hub-theme-v1';
 export type Theme = 'light' | 'dark';
 
 export function getStoredTheme(): Theme {
   try {
-    return localStorage.getItem(THEME_STORAGE_KEY) === 'dark'
-      ? 'dark'
-      : 'light';
+    return gameStorage.getItem(THEME_STORAGE_KEY) === 'dark' ? 'dark' : 'light';
   } catch {
     return 'light';
   }

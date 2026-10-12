@@ -1,4 +1,5 @@
 import { games } from '@/data/games';
+import { gameStorage } from '@/lib/storage';
 
 export type ArcadeDifficulty = 'easy' | 'normal' | 'hard';
 export const ARCADE_PREFS_KEY = 'game-hub-arcade-prefs-v1';
@@ -29,7 +30,7 @@ export function normalizeArcadeDifficulty(
 }
 export function getArcadeDifficulty(gameId: string): ArcadeDifficulty {
   try {
-    const raw = JSON.parse(localStorage.getItem(ARCADE_PREFS_KEY) ?? 'null');
+    const raw = JSON.parse(gameStorage.getItem(ARCADE_PREFS_KEY) ?? 'null');
     return normalizeArcadeDifficulty(gameId, raw?.difficulties?.[gameId]);
   } catch {
     return 'normal';
@@ -41,7 +42,7 @@ export function setArcadeDifficulty(
 ): void {
   let difficulties: Record<string, ArcadeDifficulty> = {};
   try {
-    const raw = JSON.parse(localStorage.getItem(ARCADE_PREFS_KEY) ?? 'null');
+    const raw = JSON.parse(gameStorage.getItem(ARCADE_PREFS_KEY) ?? 'null');
     difficulties = Object.fromEntries(
       games
         .filter((game) => game.categoryId !== 'mahjong')
@@ -53,7 +54,7 @@ export function setArcadeDifficulty(
   } catch {
     /* Older or malformed preferences use the normal difficulty. */
   }
-  localStorage.setItem(
+  gameStorage.setItem(
     ARCADE_PREFS_KEY,
     JSON.stringify({
       version: 1,

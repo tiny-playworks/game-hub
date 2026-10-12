@@ -1,0 +1,16 @@
+# Template only: confirm existing NAS mounts/ports before starting this service.
+services:
+  game-hub-static:
+    image: nginx:1.28-alpine
+    restart: unless-stopped
+    ports:
+      - "${GAME_HUB_PORT:-8089}:80"
+    volumes:
+      # Mount the parent, not the resolved current symlink or releases/<id>.
+      - "${GAME_HUB_ROOT:-/volume1/docker/game-hub}:/srv/game-hub:ro"
+      - "./nginx.conf:/etc/nginx/conf.d/default.conf:ro"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

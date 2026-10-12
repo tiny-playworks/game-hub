@@ -1,4 +1,5 @@
 import { games } from '@/data/games';
+import { gameStorage } from '@/lib/storage';
 import {
   DEFAULT_GAME_STATS,
   type GameStats,
@@ -218,9 +219,9 @@ const DEFAULT_POINTS = 50;
 const DEFAULT_TARGET = 1;
 
 export function getUnlockedIds(): string[] {
-  if (typeof localStorage === 'undefined') return [];
+  if (typeof gameStorage === 'undefined') return [];
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = gameStorage.getItem(STORAGE_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed)
       ? parsed.filter((id): id is string => typeof id === 'string')
@@ -235,7 +236,7 @@ export function unlock(id: string): void {
   if (ids.has(id)) return;
   ids.add(id);
   try {
-    localStorage?.setItem(STORAGE_KEY, JSON.stringify([...ids]));
+    gameStorage?.setItem(STORAGE_KEY, JSON.stringify([...ids]));
   } catch {
     // ignore
   }
@@ -263,8 +264,8 @@ export function isUnlocked(id: string): boolean {
 }
 
 function readNumberStat(key: string): number {
-  if (typeof localStorage === 'undefined') return 0;
-  const parsed = Number.parseInt(localStorage.getItem(key) ?? '0', 10);
+  if (typeof gameStorage === 'undefined') return 0;
+  const parsed = Number.parseInt(gameStorage.getItem(key) ?? '0', 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
@@ -354,7 +355,7 @@ export function getAchievementSummary(): AchievementSummary {
   };
 }
 
-/** 根据当前 localStorage 中的最高分等统计，自动解锁符合条件的成就 */
+/** 根据当前 gameStorage 中的最高分等统计，自动解锁符合条件的成就 */
 export function checkAndUnlockFromStats(): void {
   try {
     const best2048 = Math.max(

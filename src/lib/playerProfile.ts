@@ -1,3 +1,4 @@
+import { gameStorage } from '@/lib/storage';
 import {
   isRiichiAiLevel,
   type RiichiAiLevel,
@@ -184,7 +185,7 @@ export function normalizeAudioVolumes(raw: unknown): AudioVolumes {
 
 const profileListeners = new Set<() => void>();
 
-/** 与 localStorage 原始串对齐，保证 getPlayerProfile 引用稳定（useSyncExternalStore 要求） */
+/** 与 gameStorage 原始串对齐，保证 getPlayerProfile 引用稳定（useSyncExternalStore 要求） */
 let profileSnapshotRaw: string | null = null;
 let profileSnapshot: PlayerProfile | null = null;
 
@@ -242,9 +243,9 @@ function normalizePlayerProfile(raw: unknown): PlayerProfile {
 }
 
 export function getPlayerProfile(): PlayerProfile {
-  if (typeof localStorage === 'undefined') return emptyProfileSnapshot;
+  if (typeof gameStorage === 'undefined') return emptyProfileSnapshot;
   try {
-    const raw = localStorage.getItem(PLAYER_PROFILE_STORAGE_KEY);
+    const raw = gameStorage.getItem(PLAYER_PROFILE_STORAGE_KEY);
     if (raw === profileSnapshotRaw && profileSnapshot !== null) {
       return profileSnapshot;
     }
@@ -267,9 +268,9 @@ export function savePlayerProfile(profile: PlayerProfile): PlayerProfile {
     ...profile,
     updatedAt: Date.now(),
   });
-  if (typeof localStorage === 'undefined') return normalized;
+  if (typeof gameStorage === 'undefined') return normalized;
   const serialized = JSON.stringify(normalized);
-  localStorage.setItem(PLAYER_PROFILE_STORAGE_KEY, serialized);
+  gameStorage.setItem(PLAYER_PROFILE_STORAGE_KEY, serialized);
   profileSnapshotRaw = serialized;
   profileSnapshot = normalized;
   notifyPlayerProfile();

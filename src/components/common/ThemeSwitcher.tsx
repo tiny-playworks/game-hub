@@ -1,6 +1,7 @@
 import { Moon, Sun } from 'lucide-react';
 import { useState } from 'react';
 import { useLocale } from '@/contexts/LocaleContext';
+import { gameStorage } from '@/lib/storage';
 import { applyTheme, getStoredTheme, THEME_STORAGE_KEY } from '@/lib/theme';
 
 export function ThemeSwitcher() {
@@ -15,7 +16,7 @@ export function ThemeSwitcher() {
       className="flex size-9 shrink-0 items-center justify-center rounded-full border bg-card text-foreground transition hover:bg-accent"
       onClick={() => {
         const next = theme === 'light' ? 'dark' : 'light';
-        localStorage.setItem(THEME_STORAGE_KEY, next);
+        gameStorage.setItem(THEME_STORAGE_KEY, next);
         applyTheme(next);
         setTheme(next);
       }}
