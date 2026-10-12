@@ -8,6 +8,7 @@ import { getCharacterById, getPlayerCharacterState } from '@/lib/playerCharacter
 import { getRankedState, selectRankedOpponents, type MatchLength, type RankedTicket } from '@/lib/ranked';
 import { preloadRiichiRules } from '@/lib/riichiRules';
 import { randomSeed } from '@/lib/seededRandom';
+import { createUuid } from '@/lib/uuid';
 import { useRiichiStore } from '@/pages/mahjong/japanese/store/riichiMatchStore';
 import './ranked.css';
 
@@ -46,7 +47,7 @@ export function RankedStartButton({ matchLength, again = false }: { matchLength:
       const rank = getRankedState();
       const characters = getPlayerCharacterState();
       const seed = randomSeed();
-      setTicket({ id: crypto.randomUUID(), at: Date.now(), seed, band: rank.band, level: rank.level, matchLength,
+      setTicket({ id: createUuid(), at: Date.now(), seed, band: rank.band, level: rank.level, matchLength,
         characterId: characters.activeCharacterId, affinityStart: characters.affinityByCharacter[characters.activeCharacterId] ?? 0,
         ...selectRankedOpponents(rank, characters.activeCharacterId, seed) });
     } catch { setError(true); setLoading(false); pending.current = false; }

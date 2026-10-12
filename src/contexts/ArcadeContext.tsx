@@ -15,6 +15,7 @@ import {
   setArcadeDifficulty,
 } from '@/lib/arcade';
 import { emitGameEvent } from '@/lib/gameEvents';
+import { createUuid } from '@/lib/uuid';
 import type { ArcadeRecord } from '@/store/gameStore';
 
 export type ArcadeOutcome = 'win' | 'lose' | 'draw';
@@ -56,7 +57,7 @@ export function ArcadeSession({
   const [paused, setPaused] = useState(false);
   const [result, setResult] = useState<ArcadeResult | null>(null);
   const receipt = useRef({
-    id: `arcade:${crypto.randomUUID()}`,
+    id: `arcade:${createUuid()}`,
     started: false,
     finished: false,
   });
@@ -73,7 +74,7 @@ export function ArcadeSession({
   }, [gameId, difficulty]);
   const newRound = useCallback(() => {
     receipt.current = {
-      id: `arcade:${crypto.randomUUID()}`,
+      id: `arcade:${createUuid()}`,
       started: false,
       finished: false,
     };

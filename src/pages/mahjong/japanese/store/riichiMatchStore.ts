@@ -17,6 +17,7 @@ import {
   recordRiichiProgressEvent,
 } from '@/lib/riichiProgress';
 import { randomSeed } from '@/lib/seededRandom';
+import { createUuid } from '@/lib/uuid';
 import {
   type CharacterMoment,
   createCharacterMoments,
@@ -259,7 +260,7 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
         const ticket = options?.ranked;
         const playerCharacterId =
           ticket?.characterId ?? getPlayerCharacterState().activeCharacterId;
-        const sessionId = ticket?.id ?? `free:${crypto.randomUUID()}`;
+        const sessionId = ticket?.id ?? `free:${createUuid()}`;
         const { match, effects } = createMatch({
           seed: ticket?.seed ?? seed,
           matchLength: ticket?.matchLength ?? get().matchLength,
