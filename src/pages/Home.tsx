@@ -5,24 +5,17 @@ import {
   ChevronRight,
   Coins,
   Gamepad2,
-  Leaf,
   Play,
   ScrollText,
-  ShoppingBag,
-  Trophy,
-  Users,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
-import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
-import { ThemeSwitcher } from '@/components/common/ThemeSwitcher';
 import { PersonalBest } from '@/components/game/PersonalBest';
-import { PlayerAvatar } from '@/components/home/PlayerAvatar';
+import { VenueGameGlyph } from '@/components/home/VenueGameGlyph';
 import { RankedLobbyCard } from '@/components/ranked/RankedLobbyCard';
 import { TaskClaimButton } from '@/components/TaskClaimButton';
 import { Button } from '@/components/ui/button';
-import { WalletBadge } from '@/components/WalletBadge';
 import { useLocale } from '@/contexts/LocaleContext';
 import { categories } from '@/data/categories';
 import { games } from '@/data/games';
@@ -43,7 +36,7 @@ import {
 } from '@/lib/playerCharacters';
 import { getPlayerProfile, updatePlayerProfile } from '@/lib/playerProfile';
 import { getRankedState } from '@/lib/ranked';
-import { getTitleById, resolveActiveTitle } from '@/lib/titles';
+import { resolveActiveTitle } from '@/lib/titles';
 import { cn } from '@/lib/utils';
 import { ensureWeeklyTaskState } from '@/lib/weeklyTasks';
 import {
@@ -59,19 +52,14 @@ const Home = () => {
       state.match !== null &&
       state.match.status !== 'matchEnd',
   );
-  const [profile, setProfile] = useState(getPlayerProfile);
   const [daily, setDaily] = useState(ensureDailyTaskState);
   const [weekly, setWeekly] = useState(ensureWeeklyTaskState);
   const [checkin, setCheckin] = useState(ensureCheckinState);
-  const [growth, setGrowth] = useState(getGrowthOverview);
   const characters = useCharacters();
   const [expression, setExpression] = useState<CharacterExpression>('normal');
   const [feed, setFeed] = useState(() => getRecentGrowthFeed(3));
   const [categoryId, setCategoryId] = useState('mini');
   const character = getCharacterById(characters.activeCharacterId);
-  const title = getTitleById(
-    resolveActiveTitle(profile.activeTitle, growth.totalPoints),
-  );
   const signedToday = checkin.dateKey === getBeijingDateKey();
   const canResume = isActive || hasResumableMatch();
   const refresh = useCallback(() => {
@@ -79,17 +67,13 @@ const Home = () => {
     setWeekly(ensureWeeklyTaskState());
     setCheckin(ensureCheckinState());
     const nextGrowth = getGrowthOverview();
-    setGrowth(nextGrowth);
     const current = getPlayerProfile();
     const nextTitle = resolveActiveTitle(
       current.activeTitle,
       nextGrowth.totalPoints,
     );
-    setProfile(
-      nextTitle === current.activeTitle
-        ? current
-        : updatePlayerProfile({ activeTitle: nextTitle }),
-    );
+    if (nextTitle !== current.activeTitle)
+      updatePlayerProfile({ activeTitle: nextTitle });
     syncPlayerCharacterUnlocks(getRankedState().peak.band);
     setFeed(getRecentGrowthFeed(3));
   }, []);
@@ -98,76 +82,10 @@ const Home = () => {
   }, [refresh]);
 
   return (
-    <div className="lobby-page min-h-screen bg-background text-foreground">
-      <header className="border-b border-wood/20 bg-card/90 px-4 py-3 backdrop-blur sm:px-8">
-        <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3">
-          <Link
-            to="/profile"
-            className="flex min-w-0 items-center gap-3"
-            aria-label={t('home.quick.profile')}
-          >
-            <PlayerAvatar profile={profile} size="sm" />
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">
-                {profile.nickname}
-              </p>
-              <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                {title ? t(title.nameKey) : t('profile.titles.none')}
-              </p>
-            </div>
-          </Link>
-          <div className="flex flex-wrap items-center gap-2">
-            <WalletBadge />
-            <Link
-              to="/shop"
-              className="flex items-center gap-2 rounded-full border bg-card px-3 py-2 text-sm text-primary"
-            >
-              <ShoppingBag className="size-4" />
-              {t('shop.title')}
-            </Link>
-            <Link
-              to="/characters"
-              className="flex size-9 items-center justify-center rounded-full border bg-card text-primary"
-              aria-label={t('characters.title')}
-              title={t('characters.title')}
-            >
-              <Users className="size-4" />
-            </Link>
-            <Button
-              variant="outline"
-              disabled={signedToday}
-              onClick={() => {
-                checkinToday();
-                refresh();
-              }}
-            >
-              <CalendarCheck className="size-4" />
-              {t(
-                signedToday
-                  ? 'profile.checkin.checkedIn'
-                  : 'home.quick.checkin',
-              )}
-            </Button>
-            <Link
-              to="/achievements"
-              className="flex size-9 items-center justify-center rounded-full border bg-card text-primary"
-              aria-label={t('home.quick.achievements')}
-              title={t('home.quick.achievements')}
-            >
-              <Trophy className="size-4" />
-            </Link>
-            <LanguageSwitcher />
-            <ThemeSwitcher />
-          </div>
-        </div>
-      </header>
+    <div className="venue-home lobby-page min-h-screen bg-background text-foreground">
       <main className="mx-auto max-w-[1440px] px-4 py-6 sm:px-8 sm:py-8">
-        <div className="mb-6 flex items-end justify-between gap-4">
+        <div className="venue-page-heading">
           <div>
-            <p className="flex items-center gap-2 text-xs tracking-[0.2em] text-primary">
-              <Leaf className="size-3.5" />
-              {t('lobby.brand')}
-            </p>
             <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">
               {t('lobby.title')}
             </h1>
@@ -180,7 +98,7 @@ const Home = () => {
           className="lobby-main-grid grid gap-5"
           aria-label={t('lobby.title')}
         >
-          <article className="felt-surface relative flex min-h-[400px] flex-col overflow-hidden rounded-[28px] border border-gold/40 p-6 text-paper">
+          <article className="venue-companion felt-surface relative flex min-h-[400px] flex-col overflow-hidden rounded-[28px] border border-gold/40 p-6 text-paper">
             <div className="flex items-center justify-between text-xs text-paper/70">
               <span>{t('lobby.companion')}</span>
               <span className="rounded-full border border-gold/40 px-2.5 py-1 text-gold">
@@ -193,7 +111,7 @@ const Home = () => {
             <Link
               to={`/characters/${character.id}`}
               aria-label={t('home.characters.viewProfile')}
-              className="relative my-7 flex flex-1 items-center justify-center"
+              className="venue-companion-portrait relative my-7 flex flex-1 items-center justify-center"
             >
               <span
                 className="lobby-portrait-ring absolute size-56 rounded-full border border-gold/20"
@@ -225,7 +143,7 @@ const Home = () => {
                 {t('characters.cycleExpression')}
               </button>
             )}
-            <div className="relative">
+            <div className="venue-companion-copy relative">
               <p className="text-xs tracking-[0.2em] text-gold">
                 {t('lobby.yourCompanion')}
               </p>
@@ -242,9 +160,9 @@ const Home = () => {
               </Link>
             </div>
           </article>
-          <div className="flex min-w-0 flex-col gap-4">
+          <div className="venue-modes flex min-w-0 flex-col gap-4">
             <RankedLobbyCard />
-            <article className="felt-surface rounded-[24px] border border-gold/30 p-5 text-paper">
+            <article className="venue-free felt-surface rounded-[24px] border border-gold/30 p-5 text-paper">
               <div className="flex items-center gap-3">
                 <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-gold/30 bg-paper/10">
                   <Play className="size-5 text-gold" />
@@ -288,77 +206,97 @@ const Home = () => {
               </div>
             </article>
           </div>
-          <aside className="paper-texture rounded-[28px] border border-wood/25 bg-card p-5">
-            <div className="flex items-center justify-between">
-              <h2 className="flex items-center gap-2 text-base font-semibold">
-                <ScrollText className="size-4 text-primary" />
-                {t('home.daily.title')}
-              </h2>
-              <span className="text-xs text-muted-foreground">
-                {daily.items.filter((task) => task.completed).length}/3
-              </span>
-            </div>
-            <ul className="mt-3 divide-y">
-              {daily.items.map((task) => (
-                <li key={task.id} className="py-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium">{t(task.titleKey)}</p>
-                    {task.completed ? (
-                      <Check className="size-4 shrink-0 text-primary" />
-                    ) : (
-                      <span className="text-xs tabular-nums text-muted-foreground">
+          <aside className="venue-task-stack">
+            <section className="venue-task-panel venue-daily">
+              <div className="flex items-center justify-between">
+                <h2 className="flex items-center gap-2 text-base font-semibold">
+                  <ScrollText className="size-4 text-primary" />
+                  {t('home.daily.title')}
+                </h2>
+                <div className="venue-task-actions">
+                  <span className="text-xs text-muted-foreground">
+                    {daily.items.filter((task) => task.completed).length}/3
+                  </span>
+                  <Button
+                    variant="outline"
+                    className="venue-checkin"
+                    disabled={signedToday}
+                    onClick={() => {
+                      checkinToday();
+                      refresh();
+                    }}
+                  >
+                    <CalendarCheck className="size-4" />
+                    {t(
+                      signedToday
+                        ? 'profile.checkin.checkedIn'
+                        : 'home.quick.checkin',
+                    )}
+                  </Button>
+                </div>
+              </div>
+              <ul className="mt-3 divide-y">
+                {daily.items.map((task) => (
+                  <li key={task.id} className="py-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium">{t(task.titleKey)}</p>
+                      {task.completed ? (
+                        <Check className="size-4 shrink-0 text-primary" />
+                      ) : (
+                        <span className="text-xs tabular-nums text-muted-foreground">
+                          {task.progress}/{task.target}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      {t(task.descKey)}
+                    </p>
+                    <p className="mt-1.5 flex items-center gap-1 text-xs text-primary">
+                      <Coins className="size-3" />
+                      40 {t('wallet.coins')} · {task.rewardPoints}{' '}
+                      {t('lobby.growthPoints')}
+                      {task.claimed ? ` · ${t('home.daily.claimed')}` : ''}
+                    </p>
+                    {!task.claimed && (
+                      <TaskClaimButton
+                        task={task}
+                        scope="daily"
+                        onClaim={refresh}
+                      />
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+            <section className="venue-task-panel venue-weekly">
+              <h3 className="text-sm font-semibold">{t('lobby.weekly')}</h3>
+              <div className="mt-3 space-y-3">
+                {weekly.items.map((task) => (
+                  <div key={task.id}>
+                    <div className="flex justify-between gap-2 text-xs">
+                      <span>{t(task.titleKey)}</span>
+                      <span className="tabular-nums text-muted-foreground">
                         {task.progress}/{task.target}
                       </span>
-                    )}
-                  </div>
-                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    {t(task.descKey)}
-                  </p>
-                  <p className="mt-1.5 flex items-center gap-1 text-xs text-primary">
-                    <Coins className="size-3" />
-                    40 {t('wallet.coins')} · {task.rewardPoints}{' '}
-                    {t('lobby.growthPoints')}
-                    {task.claimed ? ` · ${t('home.daily.claimed')}` : ''}
-                  </p>
-                  {!task.claimed && (
+                    </div>
+                    <div className="mt-1.5 h-1 rounded-full bg-muted">
+                      <div
+                        className="h-1 rounded-full bg-primary"
+                        style={{
+                          width: `${(task.progress / task.target) * 100}%`,
+                        }}
+                      />
+                    </div>
                     <TaskClaimButton
                       task={task}
-                      scope="daily"
+                      scope="weekly"
                       onClaim={refresh}
                     />
-                  )}
-                </li>
-              ))}
-            </ul>
-            <h3 className="mt-3 border-t pt-4 text-sm font-semibold">
-              {t('lobby.weekly')}
-            </h3>
-            <div className="mt-3 space-y-3">
-              {weekly.items.map((task) => (
-                <div key={task.id}>
-                  <div className="flex justify-between gap-2 text-xs">
-                    <span>{t(task.titleKey)}</span>
-                    <span className="tabular-nums text-muted-foreground">
-                      {task.progress}/{task.target}
-                    </span>
                   </div>
-                  <div className="mt-1.5 h-1 rounded-full bg-muted">
-                    <div
-                      className="h-1 rounded-full bg-primary"
-                      style={{
-                        width: `${(task.progress / task.target) * 100}%`,
-                      }}
-                    />
-                  </div>
-                  <TaskClaimButton
-                    task={task}
-                    scope="weekly"
-                    onClaim={refresh}
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="mt-5 border-t pt-4">
+                ))}
+              </div>
+            </section>
+            <section className="venue-task-panel venue-growth">
               <h3 className="text-sm font-semibold">
                 {t('home.recentGrowth.title')}
               </h3>
@@ -383,10 +321,10 @@ const Home = () => {
                   {t('home.recentGrowth.empty')}
                 </p>
               )}
-            </div>
+            </section>
           </aside>
         </section>
-        <section className="mt-8" aria-labelledby="arcade-heading">
+        <section className="venue-arcade mt-8" aria-labelledby="arcade-heading">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <Gamepad2 className="size-5 text-wood" />
@@ -435,37 +373,26 @@ const Home = () => {
                 <Link
                   key={game.id}
                   to={game.path}
-                  className="paper-texture group flex w-[230px] shrink-0 flex-col rounded-[22px] border border-wood/20 bg-card p-5 transition hover:-translate-y-1 hover:border-primary/40 hover:shadow-md"
+                  className="venue-arcade-entry paper-texture group flex w-[230px] shrink-0 flex-col rounded-[22px] border border-wood/20 bg-card p-5 transition hover:-translate-y-1 hover:border-primary/40 hover:shadow-md"
                 >
-                  <div className="flex items-center justify-between">
-                    <Gamepad2 className="size-5 text-primary" />
-                    <span
-                      role="img"
-                      aria-label={`${t('lobby.difficulty')} ${game.difficulty}`}
-                      className="text-xs tracking-widest text-wood"
-                    >
-                      {'★'.repeat(game.difficulty)}
-                      {'☆'.repeat(4 - game.difficulty)}
-                    </span>
-                  </div>
-                  <h3 className="mt-4 text-lg font-semibold group-hover:text-primary">
-                    {t(`game.${game.id}.name`)}
-                  </h3>
-                  <p className="mt-2 line-clamp-2 min-h-10 text-xs leading-5 text-muted-foreground">
-                    {t(`game.${game.id}.description`)}
-                  </p>
-                  <div className="mt-3">
-                    <PersonalBest gameId={game.id} />
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-1.5">
-                    {game.tags.map((tag) => (
+                  <VenueGameGlyph gameId={game.id} />
+                  <div className="venue-arcade-copy">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3>{t(`game.${game.id}.name`)}</h3>
                       <span
-                        key={tag}
-                        className="rounded-full bg-muted px-2 py-1 text-[10px] text-muted-foreground"
+                        role="img"
+                        aria-label={`${t('lobby.difficulty')} ${game.difficulty}`}
+                        className="venue-game-difficulty"
                       >
-                        {t(`game.tag.${tag}`)}
+                        {'★'.repeat(game.difficulty)}
                       </span>
-                    ))}
+                    </div>
+                    <p>{t(`game.${game.id}.description`)}</p>
+                    <PersonalBest gameId={game.id} />
+                    <span className="venue-game-link">
+                      {t('common.startGame')}{' '}
+                      <ArrowRight className="size-3.5" />
+                    </span>
                   </div>
                 </Link>
               ))}

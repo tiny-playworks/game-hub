@@ -1,14 +1,15 @@
 import {
-  ArrowLeft,
   Check,
   Coins,
+  Frame,
+  Layers,
   LockKeyhole,
-  ShoppingBag,
   Sparkles,
+  Square,
+  Zap,
 } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
+import { useSearchParams } from 'react-router-dom';
 import { CosmeticPreview } from '@/components/cosmetics/CosmeticPreview';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,7 +19,7 @@ import {
   DialogFooter,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { useWallet, WalletBadge } from '@/components/WalletBadge';
+import { useWallet } from '@/components/WalletBadge';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useCosmetics } from '@/hooks/useCosmetics';
 import {
@@ -84,28 +85,9 @@ export default function Shop() {
     }
   };
   return (
-    <div className="lobby-page min-h-screen bg-background text-foreground">
-      <header className="border-b bg-card/90 px-4 py-4 sm:px-8">
-        <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3">
-          <Link
-            to="/"
-            className="flex items-center gap-2 text-sm text-muted-foreground"
-          >
-            <ArrowLeft className="size-4" />
-            {t('common.backHome')}
-          </Link>
-          <div className="flex items-center gap-3">
-            <WalletBadge />
-            <LanguageSwitcher />
-          </div>
-        </div>
-      </header>
+    <div className="venue-shop lobby-page min-h-screen bg-background text-foreground">
       <main className="mx-auto max-w-[1440px] px-4 py-7 sm:px-8">
-        <div className="mb-7">
-          <p className="flex items-center gap-2 text-xs tracking-widest text-primary">
-            <ShoppingBag className="size-4" />
-            {t('shop.eyebrow')}
-          </p>
+        <div className="venue-page-heading">
           <h1 className="mt-2 text-3xl font-semibold">{t('shop.title')}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             {t('shop.subtitle')}
@@ -128,7 +110,18 @@ export default function Shop() {
                   setError('');
                 }}
               >
-                <span>{t(`shop.category.${value}`)}</span>
+                <span className="venue-shop-category-label">
+                  {value === 'tile-back' ? (
+                    <Layers />
+                  ) : value === 'table-felt' ? (
+                    <Square />
+                  ) : value === 'avatar-frame' ? (
+                    <Frame />
+                  ) : (
+                    <Zap />
+                  )}{' '}
+                  {t(`shop.category.${value}`)}
+                </span>
                 <span className="text-xs opacity-60">
                   {
                     COSMETIC_DEFS.filter(

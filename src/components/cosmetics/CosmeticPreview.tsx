@@ -28,6 +28,7 @@ export function CosmeticPreview({
   return (
     <div
       className={compact ? 'cosmetic-preview is-compact' : 'cosmetic-preview'}
+      data-preview-category={item.category}
       data-tile-back={back}
       data-table-felt={felt}
     >
@@ -44,11 +45,14 @@ export function CosmeticPreview({
           <>
             {!effect && <span className="cosmetic-mini-center">東</span>}
             <div className="cosmetic-mini-hand">
-              {Array.from({ length: compact ? 3 : 5 }, (_, index) => (
-                <span className="cosmetic-sample-back" key={index}>
-                  <i />
-                </span>
-              ))}
+              {Array.from(
+                { length: compact || item.category === 'tile-back' ? 3 : 5 },
+                (_, index) => (
+                  <span className="cosmetic-sample-back" key={index}>
+                    <i />
+                  </span>
+                ),
+              )}
             </div>
           </>
         )}

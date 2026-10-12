@@ -1,0 +1,1675 @@
+/* P8: one shared venue system. Business state and purchased cosmetics stay separate. */
+:root {
+  --venue-ink: #172a3a;
+  --venue-ivory: #f5f2e9;
+  --venue-red: #c54838;
+  --background: var(--venue-ivory);
+  --foreground: var(--venue-ink);
+  --card: #faf8f1;
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --primary: var(--venue-red);
+  --primary-foreground: #fffaf2;
+  --secondary: var(--venue-ink);
+  --secondary-foreground: var(--venue-ivory);
+  --muted: #e8e7df;
+  --muted-foreground: #5c6871;
+  --accent: #eaded3;
+  --accent-foreground: var(--foreground);
+  --destructive: #b3312a;
+  --border: #b9bfc0;
+  --input: var(--border);
+  --ring: var(--primary);
+  --felt: var(--venue-ink);
+  --wood: #67757d;
+  --gold: #cbb391;
+  --paper: var(--venue-ivory);
+  --radius: 0.6rem;
+}
+.dark {
+  --background: #101d28;
+  --foreground: #f2eee4;
+  --card: #1c2f3e;
+  --card-foreground: var(--foreground);
+  --popover: #213543;
+  --popover-foreground: var(--foreground);
+  --primary: #ee8270;
+  --primary-foreground: #152631;
+  --secondary: #384b57;
+  --secondary-foreground: var(--foreground);
+  --muted: #2a3d49;
+  --muted-foreground: #a6b4bc;
+  --accent: #45362e;
+  --accent-foreground: var(--foreground);
+  --destructive: #f58b7d;
+  --border: #52636d;
+  --input: var(--border);
+  --ring: var(--primary);
+  --wood: #a6b4bc;
+}
+body {
+  line-height: 1.6;
+}
+button,
+a,
+input,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+button:not(:disabled),
+a {
+  touch-action: manipulation;
+}
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+}
+.venue-navigation {
+  background: var(--venue-ink);
+  color: var(--venue-ivory);
+  border-bottom: 1px solid #78868c;
+}
+.venue-navigation-inner {
+  max-width: 1600px;
+  min-height: 68px;
+  margin: auto;
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+.venue-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  flex: 0 0 auto;
+  font:
+    24px / 1 Georgia,
+    serif;
+  letter-spacing: 0.18em;
+}
+.venue-brand > span {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 46px;
+  border-radius: 4px;
+  color: var(--venue-red);
+  background: var(--venue-ivory);
+  font:
+    30px / 1 "Noto Serif SC",
+    "Songti SC",
+    serif;
+  letter-spacing: 0;
+  box-shadow: 0 2px 0 #bcaf96;
+}
+.venue-nav-links {
+  display: flex;
+  align-self: stretch;
+  align-items: stretch;
+  gap: 24px;
+  min-width: 0;
+}
+.venue-nav-links a {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  font-size: 14px;
+  border-bottom: 2px solid transparent;
+  padding: 12px 0;
+}
+.venue-nav-links a.active {
+  color: #ef856e;
+  border-bottom-color: #ef856e;
+}
+.venue-nav-links a:hover {
+  color: #ef856e;
+}
+.venue-nav-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+.venue-nav-tools button,
+.venue-nav-tools [aria-label] {
+  color: var(--venue-ivory);
+  background: transparent;
+  border-color: #8c989e;
+}
+.venue-nav-tools button {
+  min-height: 40px;
+}
+.venue-nav-tools button[aria-pressed="true"] {
+  color: #ef856e;
+}
+.venue-nav-tools [aria-label="雀币钱包"],
+.venue-nav-tools [aria-label="Coin wallet"] {
+  border-radius: 6px;
+  padding: 6px 14px;
+}
+.venue-page-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 28px;
+  margin-bottom: 24px;
+}
+.venue-page-heading h1,
+.venue-characters h1,
+.venue-heading-contained h1 {
+  margin: 0;
+  font:
+    600 clamp(32px, 3.5vw, 54px) / 1.3 "Noto Serif SC",
+    "Songti SC",
+    serif;
+  letter-spacing: 0.025em;
+}
+.venue-page-heading p {
+  margin: 0;
+  font-size: 15px;
+  color: var(--muted-foreground);
+  letter-spacing: 0.05em;
+}
+.venue-heading-contained {
+  max-width: 1440px;
+  margin: auto;
+  padding: 28px 28px 0;
+}
+.venue-home > main,
+.venue-shop > main,
+.venue-characters > main {
+  max-width: 1600px;
+  padding: 28px;
+}
+.lobby-page,
+.game-shell-ambient {
+  background-image: none;
+}
+.paper-texture::before,
+.felt-surface::before,
+.game-shell-ambient::before {
+  display: none;
+}
+.felt-surface {
+  background: var(--venue-ink);
+  box-shadow: none;
+}
+.premium-surface,
+.premium-panel,
+.premium-panel-soft {
+  background: var(--card);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.premium-surface::before,
+.premium-surface::after {
+  display: none;
+}
+.lobby-main-grid {
+  grid-template-columns: minmax(250px, 0.95fr) minmax(400px, 1.35fr) minmax(
+      270px,
+      1fr
+    );
+  align-items: stretch;
+  gap: 12px;
+}
+.venue-companion {
+  border: 1px solid #5d7281;
+  border-radius: 8px;
+  min-height: 520px;
+  padding: 24px;
+}
+.venue-companion > div:first-child {
+  position: relative;
+  z-index: 1;
+}
+.venue-companion-portrait {
+  position: absolute;
+  inset: 20px 0 0;
+  margin: 0;
+}
+.venue-companion-portrait > [role="img"] {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+.venue-companion-portrait img {
+  object-fit: contain;
+  object-position: center bottom;
+}
+.lobby-portrait-ring {
+  display: none;
+}
+.venue-companion-copy {
+  margin-top: auto;
+  padding: 18px 14px 14px;
+  border-radius: 4px;
+  background: #172a3ae8;
+  z-index: 1;
+}
+.venue-companion-copy h2 {
+  font:
+    600 34px / 1.4 "Noto Serif SC",
+    "Songti SC",
+    serif;
+}
+.venue-companion-copy > p:first-child {
+  display: none;
+}
+.venue-companion-copy > a {
+  color: #ef856e;
+}
+.venue-modes {
+  gap: 12px;
+}
+.venue-ranked {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+}
+.venue-mode-heading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 16px;
+  margin-bottom: 18px;
+}
+.venue-mode-heading h2 {
+  font:
+    600 30px / 1.25 "Noto Serif SC",
+    "Songti SC",
+    serif;
+}
+.venue-mode-heading p {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin-top: 6px;
+}
+.venue-mode-tile {
+  display: grid;
+  place-items: center;
+  width: 45px;
+  height: 60px;
+  flex: 0 0 auto;
+  border: 2px solid var(--foreground);
+  border-radius: 6px;
+  color: var(--primary);
+  background: var(--background);
+  font:
+    30px / 1 "Noto Serif SC",
+    "Songti SC",
+    serif;
+}
+.venue-ranked .ranked-badge--large {
+  flex-direction: row;
+  gap: 14px;
+  margin: 4px 0 20px;
+}
+.venue-ranked .ranked-badge--large strong {
+  font:
+    600 30px / 1.4 "Noto Serif SC",
+    "Songti SC",
+    serif;
+  color: var(--foreground);
+}
+.venue-ranked .ranked-badge-icon {
+  width: 48px;
+  height: 54px;
+  min-height: 0;
+  background: var(--muted);
+  color: var(--primary);
+  border: 1px solid var(--border);
+  box-shadow: none;
+  border-radius: 6px;
+}
+.venue-ranked .ranked-badge-icon svg {
+  width: 22px;
+  height: 22px;
+}
+.ranked-progress-track {
+  background: var(--muted);
+}
+.ranked-progress-track i {
+  background: var(--primary);
+}
+.venue-ranked .ranked-progress {
+  margin-top: auto;
+  color: var(--foreground);
+}
+.ranked-length {
+  gap: 4px;
+  margin: 18px 0 12px;
+}
+.ranked-length button {
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+.ranked-length button[aria-pressed="true"] {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 6%, var(--card));
+  border-color: var(--primary);
+}
+.venue-ranked > button {
+  min-height: 48px;
+  border-radius: 5px;
+  font-size: 16px;
+}
+.venue-ranked-resume {
+  margin-top: 10px;
+  color: var(--primary);
+  font-size: 13px;
+  text-align: center;
+  text-decoration: underline;
+}
+.venue-free {
+  background: var(--card);
+  color: var(--foreground);
+  border-color: var(--border);
+  border-radius: 8px;
+  padding: 20px 24px;
+}
+.venue-free h2 {
+  font:
+    600 27px / 1.4 "Noto Serif SC",
+    "Songti SC",
+    serif;
+}
+.venue-free p {
+  color: var(--muted-foreground);
+}
+.venue-free svg {
+  color: var(--primary);
+}
+.venue-free [data-slot="button"] {
+  min-height: 44px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+  border-radius: 5px;
+}
+.venue-tasks {
+  padding: 20px;
+  border-color: var(--border);
+  border-radius: 8px;
+  background: var(--card);
+}
+.venue-tasks h2,
+.venue-tasks h3 {
+  font-family: "Noto Serif SC", "Songti SC", serif;
+}
+.venue-tasks li {
+  padding: 10px 0;
+}
+.venue-tasks li > p {
+  margin-top: 4px;
+}
+.venue-checkin {
+  margin-top: 12px;
+  width: 100%;
+  min-height: 40px;
+}
+.venue-arcade {
+  border-top: 1px solid var(--foreground);
+  padding-top: 20px;
+  margin-top: 20px;
+}
+.venue-arcade h2 {
+  font:
+    600 30px / 1.3 "Noto Serif SC",
+    "Songti SC",
+    serif;
+}
+.venue-arcade [role="tabpanel"] {
+  gap: 8px;
+}
+.venue-arcade-entry {
+  width: 245px;
+  padding: 16px;
+  border-radius: 8px;
+}
+.venue-arcade-entry h3 {
+  margin-top: 10px;
+}
+.venue-arcade-entry > div:last-child {
+  display: none;
+}
+.venue-home > main > footer {
+  border-top: 1px solid var(--border);
+}
+.venue-profile-grid {
+  max-width: 1440px;
+  padding: 24px 28px;
+  gap: 20px;
+  align-items: start;
+}
+.venue-profile-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.venue-profile-sections > section {
+  margin: 0;
+  border-radius: 8px;
+  box-shadow: none;
+}
+.venue-profile-sections > section > p:first-child {
+  font:
+    600 20px / 1.4 "Noto Serif SC",
+    "Songti SC",
+    serif;
+  color: var(--foreground);
+  letter-spacing: 0;
+}
+.venue-profile-sections [class*="bg-[linear-gradient"] {
+  background: var(--venue-ink);
+}
+.venue-profile-sections input[type="range"] {
+  accent-color: var(--primary);
+  min-height: 32px;
+}
+.venue-profile-summary {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.venue-profile-summary > :last-child {
+  grid-column: 1 / -1;
+}
+.venue-profile-summary > * {
+  border-radius: 8px;
+  box-shadow: none;
+}
+.venue-profile [class*="rounded-3xl"],
+.venue-characters [class*="rounded-3xl"],
+.venue-character-profile [class*="rounded-3xl"],
+.venue-achievements [class*="rounded-lg"] {
+  border-radius: 8px;
+}
+.venue-profile [data-slot="button"],
+.venue-character-profile [data-slot="button"] {
+  min-height: 44px;
+}
+.venue-breadcrumb {
+  max-width: 1440px;
+  margin: auto;
+  padding: 18px 28px 0;
+}
+.venue-characters > main {
+  max-width: 1440px;
+}
+.venue-character-profile > main {
+  max-width: 1440px;
+}
+.venue-category header {
+  background: transparent;
+  border: 0;
+}
+.venue-category > main,
+.venue-achievements > main {
+  max-width: 1440px;
+}
+.venue-category [class*="rounded-["] {
+  border-radius: 8px;
+}
+.venue-category > main > section:first-child {
+  display: none;
+}
+.shop-layout {
+  grid-template-columns: 180px minmax(0, 1fr) 330px;
+  gap: 18px;
+}
+.shop-categories {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 0;
+}
+.shop-category {
+  border-radius: 0;
+  min-height: 60px;
+  border-left: 4px solid transparent;
+}
+.shop-category.is-active {
+  border-left-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  color: var(--primary);
+}
+.shop-items {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.shop-item {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+}
+.shop-item.is-selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+.shop-item-copy strong {
+  font:
+    600 20px / 1.4 "Noto Serif SC",
+    "Songti SC",
+    serif;
+}
+.shop-detail {
+  top: 20px;
+  border-radius: 6px;
+}
+.shop-detail > p:first-child {
+  font:
+    600 23px / 1.4 "Noto Serif SC",
+    "Songti SC",
+    serif;
+  color: var(--foreground);
+  letter-spacing: 0;
+}
+.shop-detail h2 {
+  font:
+    600 32px / 1.4 "Noto Serif SC",
+    "Songti SC",
+    serif;
+}
+.shop-detail [data-slot="button"] {
+  min-height: 48px;
+}
+.cosmetic-mini-table {
+  border-width: 3px;
+  border-color: #67757d;
+  border-radius: 6px;
+}
+.game-shell-header {
+  background: var(--venue-ink);
+  color: var(--venue-ivory);
+  border-bottom: 1px solid #6d7d87;
+  box-shadow: none;
+}
+.game-shell-header h1,
+.game-shell-header p,
+.game-shell-header .text-foreground {
+  color: var(--venue-ivory);
+}
+.game-shell-header [data-slot="button"] {
+  min-height: 40px;
+  color: var(--venue-ivory);
+  background: transparent;
+  border-color: #6d7d87;
+}
+.ranked-result {
+  background: var(--venue-ink);
+}
+.ranked-matchmaking,
+.ranked-opponent-card {
+  background: var(--card);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+.recovery-card {
+  border-radius: 8px;
+}
+@media (min-width: 1700px) {
+  .shop-items {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (max-width: 1150px) {
+  .venue-navigation-inner {
+    gap: 18px;
+  }
+  .venue-brand {
+    font-size: 18px;
+  }
+  .venue-nav-links {
+    gap: 16px;
+  }
+  .venue-nav-tools {
+    gap: 6px;
+  }
+  .lobby-main-grid {
+    grid-template-columns: minmax(220px, 0.8fr) minmax(340px, 1.2fr);
+  }
+  .venue-tasks {
+    grid-column: 1 / -1;
+  }
+  .shop-layout {
+    grid-template-columns: 135px minmax(0, 1fr) 270px;
+    gap: 12px;
+  }
+  .shop-items {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 850px) {
+  .venue-navigation-inner {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0;
+    padding: 10px 16px 0;
+  }
+  .venue-brand {
+    font-size: 18px;
+  }
+  .venue-brand > span {
+    width: 26px;
+    height: 34px;
+    font-size: 24px;
+  }
+  .venue-nav-links {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    overflow-x: auto;
+    justify-content: space-between;
+    gap: 22px;
+  }
+  .venue-nav-links a {
+    min-height: 44px;
+    font-size: 12px;
+  }
+  .venue-nav-tools {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .venue-nav-tools [aria-label="雀币钱包"],
+  .venue-nav-tools [aria-label="Coin wallet"] {
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+  .venue-nav-tools button {
+    width: 34px;
+    min-height: 34px;
+  }
+  .venue-nav-tools > div {
+    gap: 0;
+  }
+  .venue-page-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .venue-page-heading h1,
+  .venue-heading-contained h1 {
+    font-size: 32px;
+  }
+  .venue-home > main,
+  .venue-shop > main,
+  .venue-characters > main {
+    padding: 20px 16px;
+  }
+  .lobby-main-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .venue-companion {
+    min-height: 300px;
+  }
+  .venue-companion-portrait {
+    left: 35%;
+  }
+  .venue-companion-copy {
+    width: 65%;
+    padding: 14px 8px;
+    background: #172a3acc;
+  }
+  .venue-companion-copy h2 {
+    font-size: 30px;
+  }
+  .venue-modes {
+    grid-row: 1;
+  }
+  .venue-tasks {
+    grid-column: auto;
+  }
+  .venue-ranked {
+    padding: 20px;
+  }
+  .venue-profile-grid {
+    grid-template-columns: 1fr;
+    padding: 20px 16px;
+  }
+  .venue-profile-summary {
+    grid-template-columns: 1fr;
+  }
+  .venue-heading-contained {
+    padding: 20px 16px 0;
+  }
+  .shop-layout {
+    grid-template-columns: 1fr;
+  }
+  .shop-categories {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 0;
+  }
+  .shop-category {
+    flex: 0 0 auto;
+    min-height: 48px;
+    border-left: 0;
+    border-bottom: 3px solid transparent;
+    font-size: 12px;
+  }
+  .shop-category.is-active {
+    border-left: 0;
+    border-bottom-color: var(--primary);
+  }
+  .shop-items {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .shop-detail {
+    position: static;
+    grid-row: 2;
+  }
+  .shop-detail .cosmetic-preview {
+    max-height: none;
+  }
+  .shop-item-copy strong {
+    font-size: 17px;
+  }
+  .shop-item-copy > div {
+    flex-wrap: wrap;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .venue-arcade-entry {
+    transform: none;
+    transition: none;
+  }
+}
+/* Reference comparison corrections: compact tasks, readable chrome, genuine card backs. */
+.venue-nav-tools [data-wallet-badge],
+.riichi-header-actions [data-wallet-badge],
+.game-shell-header [data-wallet-badge] {
+  color: #f5f2e9;
+  background: transparent;
+  border: 1px solid #8c989e;
+  border-radius: 6px;
+}
+.venue-nav-tools > div {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+.venue-nav-tools > div svg {
+  display: none;
+}
+.venue-nav-tools > div button {
+  color: #f5f2e9;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+}
+.venue-nav-tools > div button.bg-card {
+  color: #ef856e;
+}
+.venue-nav-tools > div button + button {
+  border-left: 1px solid #78868c;
+}
+.venue-tasks li > p:first-of-type {
+  display: none;
+}
+.venue-tasks > div:last-child {
+  margin-top: 12px;
+  padding-top: 10px;
+}
+.venue-tasks > h3 {
+  padding-top: 10px;
+}
+.venue-tasks li {
+  padding: 8px 0;
+}
+.venue-profile-sections {
+  display: contents;
+}
+.venue-profile-sections > section {
+  align-self: stretch;
+}
+.venue-profile-sections > section:first-child {
+  min-width: 0;
+}
+.cosmetic-preview[data-preview-category="tile-back"] .cosmetic-mini-table {
+  border: 0;
+  border-radius: 4px;
+  box-shadow: none;
+  background: var(--muted);
+  min-height: 220px;
+}
+.cosmetic-preview[data-preview-category="tile-back"].is-compact
+  .cosmetic-mini-table {
+  min-height: 150px;
+}
+.cosmetic-preview[data-preview-category="tile-back"] .cosmetic-mini-center {
+  display: none;
+}
+.cosmetic-preview[data-preview-category="tile-back"] .cosmetic-mini-hand {
+  position: static;
+  transform: none;
+  gap: 0;
+  justify-content: center;
+}
+.cosmetic-preview[data-preview-category="tile-back"] .cosmetic-sample-back {
+  width: 70px;
+  height: 105px;
+  border: 3px solid #f5f2e9;
+  box-shadow:
+    0 2px 0 #a49b8c,
+    0 4px 8px #0002;
+  border-radius: 5px;
+  margin: 0 -8px;
+}
+.cosmetic-preview[data-preview-category="tile-back"].is-compact
+  .cosmetic-sample-back {
+  width: 43px;
+  height: 65px;
+  border-width: 2px;
+  margin: 0 -5px;
+}
+.cosmetic-preview[data-preview-category="tile-back"]
+  .cosmetic-sample-back:nth-child(1) {
+  transform: rotate(-12deg) translateY(5px);
+}
+.cosmetic-preview[data-preview-category="tile-back"]
+  .cosmetic-sample-back:nth-child(2) {
+  transform: none;
+}
+.cosmetic-preview[data-preview-category="tile-back"]
+  .cosmetic-sample-back:nth-child(3) {
+  transform: rotate(12deg) translateY(5px);
+}
+@media (max-width: 850px) {
+  .venue-nav-tools {
+    gap: 4px;
+  }
+  .venue-nav-tools [data-wallet-badge] {
+    padding: 4px 6px;
+  }
+}
+/* Signature motifs from the approved screens. */
+.venue-navigation-inner {
+  gap: 36px;
+}
+.venue-nav-links {
+  gap: 30px;
+}
+.venue-nav-links a {
+  font-size: 16px;
+}
+.venue-brand {
+  font-size: 26px;
+}
+.venue-page-heading h1 {
+  font-size: clamp(32px, 4.1vw, 60px);
+}
+.venue-page-heading p {
+  font-size: 17px;
+}
+.venue-companion {
+  min-height: 490px;
+  background: url("../assets/venue/ink-cloth.png") center / cover;
+}
+.venue-companion-portrait {
+  top: 0;
+}
+.venue-companion-copy {
+  background: transparent;
+  padding: 0 4px;
+}
+.venue-companion-copy > h2 {
+  position: relative;
+}
+.venue-companion-copy > p {
+  max-width: 240px;
+  text-shadow: 0 1px 3px #172a3a;
+}
+.venue-companion-copy > a {
+  font-size: 13px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid #ef856e;
+}
+.venue-companion-portrait img {
+  object-position: 72% bottom;
+}
+.venue-companion-copy {
+  background: linear-gradient(0deg, #172a3ae8, #172a3ae8 60%, transparent);
+  margin: auto -24px -24px;
+  padding: 22px 28px;
+}
+.venue-tasks {
+  padding: 18px 20px;
+}
+.venue-tasks h2 {
+  font-size: 20px;
+}
+.venue-tasks > h3 {
+  font-size: 16px;
+}
+.venue-tasks li {
+  padding: 6px 0;
+}
+.venue-tasks .space-y-3 {
+  gap: 6px;
+}
+.venue-checkin {
+  min-height: 32px;
+  height: 32px;
+  margin-top: 8px;
+}
+.venue-tasks > div:last-child {
+  margin-top: 8px;
+  padding-top: 8px;
+}
+.venue-tasks > div:last-child > p {
+  line-height: 1.5;
+}
+.venue-arcade {
+  margin-top: 16px;
+  padding-top: 16px;
+}
+.venue-arcade-entry {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  width: 260px;
+  padding: 14px;
+  min-height: 140px;
+}
+.venue-game-glyph {
+  width: 56px;
+  height: 64px;
+  color: var(--venue-ink);
+}
+.dark .venue-game-glyph {
+  --venue-ink: #d9e0e3;
+}
+.venue-arcade-copy h3 {
+  margin: 0;
+  font:
+    600 17px / 1.5 "Noto Serif SC",
+    "Songti SC",
+    serif;
+}
+.venue-arcade-copy > p {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  line-height: 1.7;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 4px 0;
+}
+.venue-arcade-copy .game-personal-best {
+  font-size: 10px;
+}
+.venue-arcade-entry > div:last-child {
+  display: block;
+}
+.venue-game-difficulty {
+  font-size: 8px;
+  color: var(--muted-foreground);
+}
+.venue-game-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 7px;
+  font-size: 12px;
+  color: var(--primary);
+  border-bottom: 1px solid var(--primary);
+}
+.venue-shop-category-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+}
+.venue-shop-category-label svg {
+  width: 25px;
+  height: 25px;
+  flex-shrink: 0;
+  stroke-width: 1.6;
+}
+.shop-category {
+  min-height: 72px;
+  padding: 12px 14px;
+}
+.shop-category > span:last-child {
+  font-size: 10px;
+}
+.shop-item-copy {
+  padding: 14px 4px 8px;
+}
+.shop-rarity {
+  border-radius: 4px;
+  font-size: 11px;
+}
+.cosmetic-preview[data-preview-category="tile-back"].is-compact
+  .cosmetic-sample-back {
+  width: 62px;
+  height: 94px;
+  margin: 0 -9px;
+}
+.cosmetic-preview[data-preview-category="tile-back"] .cosmetic-sample-back {
+  width: 100px;
+  height: 151px;
+  margin: 0 -14px;
+}
+.cosmetic-preview[data-preview-category="tile-back"] .cosmetic-mini-table {
+  min-height: 320px;
+  background: var(--background);
+  border: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+}
+.cosmetic-preview[data-preview-category="tile-back"].is-compact
+  .cosmetic-mini-table {
+  min-height: 185px;
+}
+[data-tile-back="back-blue"] {
+  --cosmetic-back: url("../assets/venue/ink-cloth.png") center / cover;
+  --cosmetic-back-color: #253c4c;
+}
+[data-tile-back="back-vermilion"] {
+  --cosmetic-back: url("../assets/venue/asanoha.svg") center / 36px 42px;
+}
+[data-tile-back="back-sakura"] {
+  --cosmetic-back: url("../assets/venue/sakura.svg") center / cover;
+  --cosmetic-back-color: #94606b;
+}
+@media (min-width: 1280px) {
+  .shop-items {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (max-width: 1150px) {
+  .venue-nav-links {
+    gap: 18px;
+  }
+  .venue-nav-links a {
+    font-size: 14px;
+  }
+  .venue-brand {
+    font-size: 20px;
+  }
+}
+@media (max-width: 850px) {
+  .venue-navigation-inner {
+    gap: 0;
+  }
+  .venue-brand {
+    font-size: 18px;
+  }
+  .venue-nav-links {
+    gap: 18px;
+  }
+  .venue-nav-links a {
+    font-size: 12px;
+  }
+  .venue-page-heading h1 {
+    font-size: 32px;
+  }
+  .venue-page-heading p {
+    font-size: 13px;
+  }
+  .venue-companion {
+    min-height: 340px;
+  }
+  .venue-companion-copy {
+    margin: auto -24px -24px;
+    width: calc(100% + 48px);
+  }
+  .venue-companion-portrait img {
+    object-position: right bottom;
+  }
+  .venue-shop-category-label {
+    font-size: 12px;
+    gap: 6px;
+  }
+  .venue-shop-category-label svg {
+    width: 16px;
+    height: 16px;
+  }
+  .shop-category {
+    min-height: 48px;
+    padding: 10px;
+  }
+  .cosmetic-preview[data-preview-category="tile-back"] .cosmetic-mini-table {
+    min-height: 250px;
+  }
+  .cosmetic-preview[data-preview-category="tile-back"].is-compact
+    .cosmetic-mini-table {
+    min-height: 155px;
+  }
+}
+.venue-identity {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 12px 20px;
+}
+.venue-identity > p:first-child {
+  grid-column: 1 / -1;
+}
+.venue-identity > div:nth-child(2),
+.venue-identity > div:nth-child(3),
+.venue-identity > div:nth-child(4) {
+  grid-column: 1;
+  margin-top: 0;
+}
+.venue-identity > div:nth-child(5) {
+  grid-column: 2;
+  grid-row: 2 / 5;
+  margin: 0;
+  border: 0;
+  border-left: 1px solid var(--border);
+  padding: 0 0 0 16px;
+  border-radius: 0;
+}
+.venue-identity > div:nth-child(6) {
+  grid-column: 1 / -1;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+  padding: 12px 0 0;
+  border-radius: 0;
+}
+.venue-identity [role="img"] {
+  width: 60px;
+  height: 60px;
+}
+.venue-identity > div:nth-child(5) > p:nth-child(2) {
+  font-size: 10px;
+}
+.venue-identity > div:nth-child(5) > div {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+.venue-identity [id^="audio-"] {
+  width: 100%;
+}
+.venue-active-companion {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 18px 0;
+  margin-top: 8px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.venue-active-companion > [role="img"] {
+  width: 120px;
+  height: 120px;
+  border-radius: 5px;
+}
+.venue-active-companion h2 {
+  font:
+    600 30px / 1.4 "Noto Serif SC",
+    "Songti SC",
+    serif;
+}
+.venue-active-companion p {
+  font-size: 13px;
+  margin-top: 8px;
+  color: var(--muted-foreground);
+}
+.venue-active-companion span {
+  font-size: 12px;
+  color: var(--primary);
+  display: block;
+  margin-top: 14px;
+}
+.venue-character-picker {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 22px;
+}
+.venue-character-picker button {
+  position: relative;
+  min-width: 0;
+  padding: 4px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  text-align: center;
+}
+.venue-character-picker button[aria-pressed="true"] {
+  border-color: var(--primary);
+}
+.venue-character-picker [role="img"] {
+  width: 100%;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: 1;
+  border-radius: 5px;
+}
+.venue-character-picker strong {
+  display: block;
+  font-size: 12px;
+  margin-top: 5px;
+}
+.venue-character-picker small {
+  display: block;
+  font-size: 8px;
+  color: var(--muted-foreground);
+}
+.venue-character-picker button:disabled [role="img"] {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+.venue-character-lock {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  top: 20px;
+  left: calc(50% - 9px);
+  color: var(--foreground);
+}
+@media (max-width: 1150px) {
+  .venue-character-picker {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (max-width: 850px) {
+  .venue-identity {
+    display: block;
+  }
+  .venue-identity > div {
+    margin-top: 14px !important;
+  }
+  .venue-identity > div:nth-child(5) {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+    padding: 14px 0 0;
+  }
+  .venue-identity > div:nth-child(5) > div {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+  .venue-identity [id^="audio-"] {
+    width: auto;
+    flex: 1;
+  }
+  .venue-character-picker {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.venue-task-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.venue-task-actions .venue-checkin {
+  margin: 0;
+  width: auto;
+  padding: 3px 7px;
+  font-size: 10px;
+  height: 28px;
+  min-height: 28px;
+}
+.venue-task-actions .venue-checkin svg {
+  width: 12px;
+  height: 12px;
+}
+.venue-tasks li > div:first-child > p {
+  font-size: 12px;
+  line-height: 18px;
+}
+.venue-tasks li > p:last-of-type {
+  font-size: 10px;
+  line-height: 15px;
+}
+.venue-tasks li {
+  padding: 5px 0;
+}
+.venue-tasks > ul {
+  margin-top: 8px;
+}
+.venue-tasks > h3 {
+  margin-top: 8px;
+  padding-top: 8px;
+  font-size: 15px;
+}
+.venue-tasks > div.space-y-3 {
+  margin-top: 8px;
+}
+.venue-tasks > div.space-y-3 > div {
+  margin: 0 0 5px;
+}
+.venue-tasks > div.space-y-3 > div > div:first-child {
+  font-size: 10px;
+  line-height: 15px;
+}
+.venue-tasks > div.space-y-3 > div > div:nth-child(2) {
+  margin-top: 3px;
+  height: 3px;
+}
+.venue-tasks > div:last-child h3 {
+  font-size: 14px;
+}
+.venue-tasks > div:last-child p {
+  font-size: 10px;
+  margin-top: 4px;
+}
+.venue-companion {
+  min-height: 450px;
+}
+.venue-free h2 {
+  font-size: 28px;
+}
+.venue-free > div:first-child > div:first-child {
+  width: 42px;
+  height: 54px;
+  border: 2px solid var(--foreground);
+  border-radius: 5px;
+  background: transparent;
+}
+.venue-free > div:first-child > div:first-child svg {
+  display: none;
+}
+.venue-free > div:first-child > div:first-child::after {
+  content: "南";
+  color: var(--primary);
+  font:
+    30px / 1 "Noto Serif SC",
+    "Songti SC",
+    serif;
+}
+.cosmetic-mini-table {
+  width: 100%;
+  min-width: 0;
+}
+.cosmetic-preview[data-preview-category="tile-back"] .cosmetic-mini-table,
+.cosmetic-preview[data-preview-category="tile-back"].is-compact
+  .cosmetic-mini-table {
+  aspect-ratio: auto;
+  width: 100%;
+}
+
+/* Concept fidelity: illustrated cosmetics share one surface in shop and play. */
+[data-tile-back="back-gold"] {
+  --cosmetic-back: url("../assets/venue/back-gold.jpg") center / cover;
+  --cosmetic-back-color: #b88a3f;
+}
+[data-tile-back="back-koharu"] {
+  --cosmetic-back: url("../assets/venue/back-koharu.jpg") center / cover;
+  --cosmetic-back-color: #ae8b4d;
+}
+[data-tile-back="back-rin"] {
+  --cosmetic-back: url("../assets/venue/back-rin.jpg") center / cover;
+  --cosmetic-back-color: #274d6b;
+}
+[data-tile-back="back-sora"] {
+  --cosmetic-back: url("../assets/venue/back-sora.jpg") center / cover;
+  --cosmetic-back-color: #b39759;
+}
+.venue-task-stack {
+  display: grid;
+  grid-template-rows: auto auto minmax(110px, 1fr);
+  gap: 10px;
+  min-width: 0;
+}
+.venue-task-panel {
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--card);
+  min-width: 0;
+}
+.venue-task-panel h2,
+.venue-task-panel h3 {
+  font:
+    600 20px / 1.4 "Noto Serif SC",
+    "Songti SC",
+    serif;
+}
+.venue-task-panel h2 svg {
+  width: 22px;
+  height: 22px;
+  color: var(--foreground);
+}
+.venue-task-panel > h3,
+.venue-daily > div:first-child {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+}
+.venue-daily > ul {
+  margin-top: 4px;
+}
+.venue-daily li {
+  padding: 7px 0;
+}
+.venue-daily li > p:nth-child(2) {
+  display: none;
+}
+.venue-daily li > p:last-of-type {
+  font-size: 10px;
+  margin-top: 2px;
+  line-height: 1.5;
+}
+.venue-daily li > div p {
+  font-size: 13px;
+}
+.venue-weekly > div {
+  margin-top: 9px;
+}
+.venue-weekly > div > div {
+  margin-top: 7px;
+}
+.venue-weekly > div > div > div:first-child {
+  font-size: 12px;
+}
+.venue-growth {
+  display: flex;
+  flex-direction: column;
+}
+.venue-growth > p {
+  margin: auto 0;
+  padding-top: 14px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--muted-foreground);
+}
+.venue-growth > ul {
+  margin-top: 12px;
+}
+.venue-rank-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 22px;
+  margin: 16px 0 24px;
+}
+.venue-rank-summary .ranked-badge--large {
+  margin: 0;
+}
+.venue-rank-summary .ranked-badge-icon {
+  display: none;
+}
+.venue-rank-summary .ranked-progress {
+  margin: 0;
+}
+.venue-rank-summary .ranked-progress-track {
+  height: 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.venue-ranked .ranked-length {
+  margin-top: auto;
+}
+.venue-ranked > button {
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 23px;
+  font-weight: 600;
+}
+.venue-arcade [role="tablist"],
+.venue-arcade [role="tab"] {
+  border-radius: 4px;
+}
+.venue-arcade [role="tablist"] {
+  padding: 0;
+  gap: 0;
+}
+.venue-arcade [role="tab"] {
+  min-width: 96px;
+  padding: 7px 18px;
+}
+.venue-arcade-entry {
+  width: calc((100% - 32px) / 5);
+  min-width: 230px;
+}
+.venue-companion-copy {
+  margin: 0;
+  padding: 12px 0;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  inset: 22px 22px;
+  pointer-events: none;
+}
+.venue-companion-copy h2 {
+  font-size: 36px;
+  margin: 0;
+}
+.venue-companion-copy > p:not(:first-child) {
+  width: 110px;
+  padding: 12px 0 0;
+  border-left: 0;
+  font:
+    16px / 1.9 "Noto Serif SC",
+    "Songti SC",
+    serif;
+}
+.venue-companion-copy > a {
+  align-self: flex-start;
+  margin-top: auto;
+  pointer-events: auto;
+  background: #172a3acc;
+  padding: 6px 4px;
+}
+.venue-companion > div:first-child {
+  visibility: hidden;
+}
+.venue-companion-portrait {
+  left: 60px;
+  right: -50px;
+  top: 20px;
+}
+.venue-companion-portrait img {
+  object-fit: cover;
+  object-position: 45% top;
+}
+.venue-companion > button {
+  position: absolute;
+  bottom: 65px;
+  left: 24px;
+  z-index: 2;
+  background: var(--venue-ink);
+}
+@media (min-width: 1101px) {
+  .venue-home .venue-page-heading {
+    width: 70%;
+    margin-bottom: 18px;
+  }
+  .venue-home .lobby-main-grid {
+    grid-template-columns: minmax(0, 0.98fr) minmax(0, 1.45fr) minmax(0, 1fr);
+  }
+  .venue-task-stack {
+    margin-top: -96px;
+  }
+  .venue-home .venue-page-heading h1 {
+    font-size: clamp(36px, 3.8vw, 58px);
+  }
+  .venue-home .venue-page-heading p {
+    font-size: 16px;
+  }
+  .venue-companion {
+    min-height: 480px;
+  }
+  .venue-ranked {
+    padding: 20px;
+  }
+  .venue-free {
+    padding: 16px 20px;
+  }
+}
+@media (max-width: 1100px) {
+  .venue-task-stack {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: auto;
+  }
+  .venue-rank-summary {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin: 8px 0 16px;
+  }
+}
+@media (max-width: 650px) {
+  .venue-task-stack {
+    grid-template-columns: 1fr;
+  }
+  .venue-companion {
+    min-height: 340px;
+  }
+  .venue-companion-portrait {
+    left: 80px;
+    right: -20px;
+  }
+  .venue-companion-copy {
+    width: auto;
+    inset: 22px;
+  }
+  .venue-arcade-entry {
+    min-width: 245px;
+  }
+  .venue-rank-summary {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .venue-rank-summary .ranked-badge--large strong {
+    font-size: 24px;
+  }
+}
+.venue-free [data-slot="button"][data-variant="outline"] {
+  background: transparent;
+  color: var(--muted-foreground);
+  border-color: var(--border);
+}
+.venue-free a[href*="resume"] {
+  background: transparent;
+  color: var(--muted-foreground);
+  border-color: var(--border);
+}
+.venue-companion-copy > p:not(:first-child) {
+  width: 120px;
+}
+.shop-item-copy > p {
+  min-height: 42px;
+  padding: 8px;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--background);
+}
+.cosmetic-preview[data-preview-category="tile-back"] .cosmetic-sample-back {
+  box-shadow:
+    0 3px 0 #b5a98e,
+    0 8px 9px #172a3a33;
+}
+.venue-game-glyph {
+  min-width: 56px;
+}

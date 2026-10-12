@@ -1,6 +1,5 @@
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
-import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
 import { PersonalBest } from '@/components/game/PersonalBest';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -21,7 +20,7 @@ const Category = () => {
 
   if (!category) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="venue-category min-h-screen bg-background">
         <header className="border-b border-border bg-card px-4 py-3">
           <div className="mx-auto flex max-w-5xl items-center justify-between">
             <Link
@@ -30,7 +29,6 @@ const Category = () => {
             >
               ← {t('common.backHome')}
             </Link>
-            <LanguageSwitcher />
           </div>
         </header>
         <main className="mx-auto max-w-5xl px-4 py-12 text-center">
@@ -48,7 +46,7 @@ const Category = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="venue-category min-h-screen bg-background">
       <header className="border-b border-border bg-card/80 px-4 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-start justify-between gap-4">
           <div>
@@ -65,7 +63,6 @@ const Category = () => {
               {t(`category.${category.id}.description`)}
             </p>
           </div>
-          <LanguageSwitcher />
         </div>
       </header>
 

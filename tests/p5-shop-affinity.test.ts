@@ -55,13 +55,15 @@ beforeEach(() => {
 });
 
 describe('Cosmetic purchases and permanent rewards', () => {
-  test('five base items per category, eight affinity cosmetics and eight commemorative frames', () => {
+  test('five legacy base items per category, a free venue cloth, and character rewards', () => {
     expect(new Set(COSMETIC_DEFS.map((item) => item.id)).size).toBe(
       COSMETIC_DEFS.length,
     );
     for (const category of COSMETIC_CATEGORIES)
       expect(
-        COSMETIC_DEFS.slice(0, 25).filter((item) => item.category === category),
+        COSMETIC_DEFS.filter((item) => item.id !== 'felt-venue')
+          .slice(0, 25)
+          .filter((item) => item.category === category),
       ).toHaveLength(5);
     for (const character of CHARACTER_DEFS)
       for (const stage of [3, 4])
@@ -76,6 +78,14 @@ describe('Cosmetic purchases and permanent rewards', () => {
   });
   test('corrupt equipment and missing fields fall back to owned defaults', () => {
     expect(normalizeCosmetics(null).equipped).toEqual(DEFAULT_COSMETICS);
+    const legacy = normalizeCosmetics({
+      version: 1,
+      owned: ['felt-green', 'back-sakura'],
+      equipped: { 'table-felt': 'felt-green', 'tile-back': 'back-sakura' },
+    });
+    expect(legacy.equipped['table-felt']).toBe('felt-green');
+    expect(legacy.equipped['tile-back']).toBe('back-sakura');
+    expect(legacy.owned).toContain('felt-venue');
     const state = normalizeCosmetics({
       owned: ['unknown', 'back-sakura', 'back-sakura'],
       equipped: { 'tile-back': 'felt-green', 'table-felt': 'felt-wine' },
@@ -101,7 +111,7 @@ describe('Cosmetic purchases and permanent rewards', () => {
     expect(equipCosmetic('back-vermilion')).toBe(true);
     expect(getCosmeticsState().equipped['tile-back']).toBe('back-vermilion');
     expect(equipCosmetic('back-sakura')).toBe(false);
-    expect(getCosmeticsState().equipped['table-felt']).toBe('felt-green');
+    expect(getCosmeticsState().equipped['table-felt']).toBe('felt-venue');
   });
   test('insufficient coins and locked rewards cannot be purchased', () => {
     addCoins(299, 'test');

@@ -10,7 +10,6 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
 import { CharacterStoryPlayer } from '@/components/characters/CharacterStoryPlayer';
-import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useCharacters } from '@/hooks/useCosmetics';
@@ -55,8 +54,8 @@ export default function CharacterProfile() {
   const unlocked = state.unlockedCharacterIds.includes(character.id);
   const active = state.activeCharacterId === character.id;
   return (
-    <div className="lobby-page min-h-screen bg-background text-foreground">
-      <header className="border-b bg-card/90 px-4 py-4 sm:px-8">
+    <div className="venue-character-profile lobby-page min-h-screen bg-background text-foreground">
+      <header className="venue-breadcrumb">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
           <Link
             to="/characters"
@@ -65,7 +64,6 @@ export default function CharacterProfile() {
             <ArrowLeft className="size-4" />
             {t('characters.back')}
           </Link>
-          <LanguageSwitcher />
         </div>
       </header>
       <main className="mx-auto grid max-w-6xl items-start gap-6 px-4 py-8 sm:px-8 lg:grid-cols-[340px_1fr]">

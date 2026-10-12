@@ -1,13 +1,6 @@
-import {
-  ArrowLeft,
-  ChevronRight,
-  Heart,
-  LockKeyhole,
-  Users,
-} from 'lucide-react';
+import { ChevronRight, Heart, LockKeyhole } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
-import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useCharacters } from '@/hooks/useCosmetics';
 import { CHARACTER_DEFS } from '@/lib/playerCharacters';
@@ -17,24 +10,8 @@ export default function Characters() {
   const { t } = useLocale();
   const state = useCharacters();
   return (
-    <div className="lobby-page min-h-screen bg-background text-foreground">
-      <header className="border-b bg-card/90 px-4 py-4 sm:px-8">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
-          <Link
-            to="/"
-            className="flex items-center gap-2 text-sm text-muted-foreground"
-          >
-            <ArrowLeft className="size-4" />
-            {t('common.backHome')}
-          </Link>
-          <LanguageSwitcher />
-        </div>
-      </header>
+    <div className="venue-characters lobby-page min-h-screen bg-background text-foreground">
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-8">
-        <p className="flex items-center gap-2 text-xs tracking-widest text-primary">
-          <Users className="size-4" />
-          {t('characters.eyebrow')}
-        </p>
         <h1 className="mt-2 text-3xl font-semibold">{t('characters.title')}</h1>
         <p className="mt-3 text-sm text-muted-foreground">
           {t('characters.subtitle')}

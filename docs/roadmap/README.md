@@ -32,7 +32,7 @@ P1–P6 的“纯本地、禁止后端/账号/联机、移动端不专门改造�
 | P5 | 商店、外观、好感故事 | 已完成 | [P5](./P5-shop-affinity.md) |
 | P6 | 副玩法统一与成长循环 | 已完成 | [P6](./P6-arcade.md) |
 | P7 | 使用可靠性与发布准备 | 本机完成；NAS/容器/Windows待验 | [P7](./P7-reliability.md) |
-| P8 | 全站视觉重设计 | 待实施 | [P8](./P8-visual-redesign.md) |
+| P8 | 全站视觉重设计 | 进行中：概念已确认，素材与布局校准；全站验收未完成 | [P8](./P8-visual-redesign.md) |
 | P9 | 牌桌交互与视听品质 | 待实施 | [P9](./P9-table-experience.md) |
 | P10 | 家庭成员与 NAS 服务 | 待实施 | [P10](./P10-household-service.md) |
 | P11 | 跨设备续玩与离线同步 | 待实施 | [P11](./P11-save-sync.md) |

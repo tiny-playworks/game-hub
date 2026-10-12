@@ -29,15 +29,9 @@ const Achievements = () => {
   const growth = getGrowthOverview();
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card px-4 py-4">
+    <div className="venue-achievements min-h-screen bg-background">
+      <header className="venue-heading-contained">
         <div className="mx-auto max-w-4xl">
-          <Link
-            to="/"
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            ← {t('common.backHome')}
-          </Link>
           <h1 className="mt-2 text-2xl font-bold text-foreground">
             {t('achievements.title')}
           </h1>
@@ -89,7 +83,7 @@ const Achievements = () => {
               <section key={group} data-achievement-group={group}>
                 <div className="mb-3 flex items-center justify-between">
                   <h2 className="text-xl font-semibold">
-                    {t('arcade.group.' + group)}
+                    {t(`arcade.group.${group}`)}
                   </h2>
                   <span className="text-sm text-muted-foreground">
                     {

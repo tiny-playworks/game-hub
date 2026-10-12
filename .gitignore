@@ -16,4 +16,5 @@ coverage/
 !.vscode/extensions.json
 .idea
 .superpowers/
-output/
+output/nas
+output/playwright

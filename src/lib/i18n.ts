@@ -4,6 +4,13 @@ export type Locale = 'zh' | 'en';
 
 const messages: Record<Locale, Record<string, string>> = {
   zh: {
+    'venue.nav.home': '大厅',
+    'venue.profile.settings': '个人设置',
+    'venue.nav.label': '主导航',
+    'theme.dark': '切换深色模式',
+    'theme.light': '切换浅色模式',
+    'cosmetic.felt-venue.name': '墨蓝',
+    'cosmetic.felt-venue.desc': '竞技馆默认桌布，清晰而沉静。',
     'recovery.title': '这个页面暂时出了点问题',
     'recovery.description':
       '可以重新尝试，或返回大厅。已有存档不会被清空；如果进度尚未保存，请先导出备份。',
@@ -652,8 +659,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'save.continue': '继续确认',
     'save.confirmReset': '确认删除全部进度',
     'save.confirmImport': '覆盖并恢复存档',
-    'theme.dark': '切换夜间雀庄',
-    'theme.light': '切换白天雀庄',
+
     'category.mode': '玩法定位',
     'category.sideContent': '街机角',
     'category.gameCount': '游戏数量',
@@ -777,7 +783,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'riichi.lobby.badge': '规则引擎已接入',
     'riichi.lobby.title': '日本立直麻将',
     'riichi.lobby.lead':
-      '面向电脑大屏的完整练习牌桌。专注行牌、听牌与局面判断。',
+      '电脑与手机均可游玩的完整练习牌桌。专注行牌、听牌与局面判断。',
     'riichi.lobby.fourPlayers': '四人完整牌桌',
     'riichi.lobby.rules': '规则引擎和牌判定',
     'riichi.lobby.hints': '本地训练提示',
@@ -1921,6 +1927,13 @@ const messages: Record<Locale, Record<string, string>> = {
     'game.mahjong.discardAndTenpai': '打 {discard} 听 {waits}',
   },
   en: {
+    'venue.nav.home': 'Lobby',
+    'venue.profile.settings': 'Personal settings',
+    'venue.nav.label': 'Main navigation',
+    'theme.dark': 'Switch to dark mode',
+    'theme.light': 'Switch to light mode',
+    'cosmetic.felt-venue.name': 'Ink Navy',
+    'cosmetic.felt-venue.desc': 'The venue’s default cloth: clear and calm.',
     'recovery.title': 'This page ran into a problem',
     'recovery.description':
       'Try again or return to the lobby. Existing saves will not be cleared. Export a backup first if progress has not been saved.',
@@ -2779,8 +2792,6 @@ const messages: Record<Locale, Record<string, string>> = {
     'save.continue': 'Continue',
     'save.confirmReset': 'Delete all progress',
     'save.confirmImport': 'Overwrite and restore',
-    'theme.dark': 'Switch to night theme',
-    'theme.light': 'Switch to day theme',
     'category.mode': 'Mode',
     'category.sideContent': 'Arcade corner',
     'category.gameCount': 'Games',
@@ -2915,7 +2926,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'riichi.lobby.badge': 'Rules engine connected',
     'riichi.lobby.title': 'Japanese Riichi Mahjong',
     'riichi.lobby.lead':
-      'A full practice table for desktop. Focus on tile efficiency, waits and the board state.',
+      'A full practice table for desktop and mobile. Focus on tile efficiency, waits and the board state.',
     'riichi.lobby.fourPlayers': 'Full four-player table',
     'riichi.lobby.rules': 'Rules engine and scoring',
     'riichi.lobby.hints': 'Local training hints',

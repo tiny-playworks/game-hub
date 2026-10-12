@@ -1,4 +1,4 @@
-import { Check, Upload } from 'lucide-react';
+import { Check, LockKeyhole, Upload } from 'lucide-react';
 import {
   type ChangeEventHandler,
   useCallback,
@@ -8,8 +8,6 @@ import {
 } from 'react';
 import { Link } from 'react-router-dom';
 import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
-import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
-import { ThemeSwitcher } from '@/components/common/ThemeSwitcher';
 import { PlayerAvatar } from '@/components/home/PlayerAvatar';
 import { DataManagementCard } from '@/components/profile/DataManagementCard';
 import { WalletCard } from '@/components/profile/WalletCard';
@@ -297,38 +295,17 @@ const Profile = () => {
     checkinState.totalDays >= monthMilestone && !monthClaimed;
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-wood/20 bg-card/90 px-4 py-4 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-start justify-between gap-4">
-          <div>
-            <Link
-              to="/"
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              ← {t('common.backHome')}
-            </Link>
-            <h1 className="mt-2 text-2xl font-bold text-foreground">
-              {t('profile.title')}
-            </h1>
-            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-              {t('profile.heroSubtitle')}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <LanguageSwitcher />
-            <ThemeSwitcher />
-          </div>
-        </div>
-      </header>
+    <div className="venue-profile min-h-screen bg-background text-foreground">
+      <div className="venue-page-heading venue-heading-contained">
+        <h1>{t('profile.title')}</h1>
+        <p>{t('profile.heroSubtitle')}</p>
+      </div>
 
-      <main className="mx-auto grid max-w-6xl gap-4 px-4 py-8 md:grid-cols-[0.92fr_1.08fr] md:py-10">
-        <div className="space-y-4">
-          <WalletCard />
-          <RankedProfilePanel />
-          <DataManagementCard />
-          <section className="rounded-3xl border border-border paper-texture bg-card p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+      <main className="venue-profile-grid mx-auto grid max-w-6xl gap-4 px-4 py-8 md:grid-cols-[0.92fr_1.08fr] md:py-10">
+        <div className="venue-profile-sections space-y-4">
+          <section className="venue-identity rounded-3xl border border-border paper-texture bg-card p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
             <p className="text-xs font-medium tracking-[0.2em] text-primary/80 uppercase">
-              {t('home.player.title')}
+              {t('venue.profile.settings')}
             </p>
             <div className="mt-3 flex items-start gap-4">
               <PlayerAvatar profile={profile} />
@@ -381,7 +358,7 @@ const Profile = () => {
                     className={`flex h-10 w-10 items-center justify-center rounded-lg text-sm font-semibold transition ${
                       profile.avatarMode === 'preset' &&
                       profile.avatarPresetId === preset.id
-                        ? 'ring-2 ring-emerald-500'
+                        ? 'ring-2 ring-primary'
                         : 'ring-1 ring-slate-200'
                     } ${preset.bgClass} ${preset.fgClass}`}
                     aria-label={preset.label}
@@ -483,7 +460,7 @@ const Profile = () => {
                         onClick={() => switchTitle(title.id)}
                         className={`rounded-full px-3 py-1 text-xs transition ${
                           selected
-                            ? 'bg-emerald-700 text-white'
+                            ? 'bg-primary text-primary-foreground'
                             : 'bg-muted text-muted-foreground hover:bg-muted'
                         }`}
                       >
@@ -500,7 +477,7 @@ const Profile = () => {
             </div>
           </section>
 
-          <section className="rounded-3xl border border-border paper-texture bg-card p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+          <section className="venue-companion-settings rounded-3xl border border-border paper-texture bg-card p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
             <p className="text-xs font-medium tracking-[0.2em] text-primary/80 uppercase">
               {t('profile.companion.section')}
             </p>
@@ -510,134 +487,64 @@ const Profile = () => {
             >
               {t('characters.title')} →
             </Link>
-            <div className="mt-4 rounded-[24px] bg-[linear-gradient(135deg,#13243b,#173226_58%,#234036)] p-4 text-white">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-                <CharacterPortraitSlot
-                  character={activeCharacter}
-                  size="lg"
-                  label={t(activeCharacter.nameKey)}
-                  className="border-white/25"
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-2xl font-semibold">
-                        {t(activeCharacter.nameKey)}
-                      </p>
-                      <p className="mt-2 text-sm leading-6 text-slate-200">
-                        {t(activeCharacter.taglineKey)}
-                      </p>
-                    </div>
-                    <span className="shrink-0 rounded-full bg-card/10 px-3 py-1 text-xs text-slate-100">
-                      {t('profile.companion.currentBadge')}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              {activeCharacter.bioKey ? (
-                <p className="mt-3 text-xs leading-5 text-slate-300/95">
-                  {t(activeCharacter.bioKey)}
-                </p>
-              ) : null}
-              <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-                <div className="rounded-2xl bg-card/10 px-3 py-2">
-                  <p className="text-xs text-slate-300">
-                    {t('profile.companion.stageLabel')}
-                  </p>
-                  <p className="mt-1 font-semibold">{activeStage}</p>
-                </div>
-                <div className="rounded-2xl bg-card/10 px-3 py-2">
-                  <p className="text-xs text-slate-300">
-                    {t('profile.companion.affinityLabel')}
-                  </p>
-                  <p className="mt-1 font-semibold">{activeAffinity}</p>
-                </div>
+            <div className="venue-active-companion">
+              <CharacterPortraitSlot
+                character={activeCharacter}
+                size="lg"
+                label={t(activeCharacter.nameKey)}
+              />
+              <div>
+                <h2>{t(activeCharacter.nameKey)}</h2>
+                <p>{t(activeCharacter.taglineKey)}</p>
+                <span>
+                  {t('profile.companion.stageLabel')} {activeStage} ·{' '}
+                  {t('profile.companion.affinityLabel')} {activeAffinity}
+                </span>
               </div>
             </div>
-
-            <div className="mt-4 space-y-3">
+            <div className="venue-character-picker">
               {CHARACTER_DEFS.map((character) => {
                 const unlocked = characterState.unlockedCharacterIds.includes(
                   character.id,
                 );
-                const affinity =
-                  characterState.affinityByCharacter[character.id] ?? 0;
-                const stage = getCharacterAffinityStage(affinity);
-                const isActive =
+                const active =
                   character.id === characterState.activeCharacterId;
                 return (
-                  <div
+                  <button
                     key={character.id}
-                    className="rounded-2xl border border-border bg-card p-3"
+                    type="button"
                     data-character-id={character.id}
+                    aria-pressed={active}
+                    disabled={!unlocked}
+                    onClick={() => switchCharacter(character.id)}
+                    title={
+                      unlocked
+                        ? t('profile.companion.setActive')
+                        : getCharacterUnlockText(character, playerStats, t)
+                    }
                   >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="flex min-w-0 flex-1 items-start gap-3">
-                        <CharacterPortraitSlot
-                          character={character}
-                          size="md"
-                          label={t(character.nameKey)}
-                        />
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-foreground">
-                            {t(character.nameKey)}
-                          </p>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {t(character.taglineKey)}
-                          </p>
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary">
-                              {t(`character.rank.${character.rankBand}`)}
-                            </span>
-                            {character.styleTagKeys.map((key) => (
-                              <span
-                                key={key}
-                                className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
-                              >
-                                {t(key)}
-                              </span>
-                            ))}
-                          </div>
-                          {character.bioKey ? (
-                            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                              {t(character.bioKey)}
-                            </p>
-                          ) : null}
-                          <p className="mt-2 text-xs text-muted-foreground">
-                            {unlocked
-                              ? `${t('profile.companion.stageLabel')} ${stage} · ${t('profile.companion.affinityLabel')} ${affinity}`
-                              : getCharacterUnlockText(
-                                  character,
-                                  playerStats,
-                                  t,
-                                )}
-                          </p>
-                        </div>
-                      </div>
-                      {unlocked ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant={isActive ? 'default' : 'outline'}
-                          className={cn(
-                            'self-end sm:self-auto',
-                            isActive
-                              ? 'bg-emerald-700 text-white hover:bg-emerald-600'
-                              : 'border-border',
-                          )}
-                          onClick={() => switchCharacter(character.id)}
-                        >
-                          {isActive
-                            ? t('profile.companion.active')
-                            : t('profile.companion.setActive')}
-                        </Button>
-                      ) : (
-                        <span className="self-end rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground sm:self-auto">
-                          {t('profile.companion.locked')}
-                        </span>
+                    <CharacterPortraitSlot
+                      character={character}
+                      size="md"
+                      label={t(character.nameKey)}
+                    />
+                    {!unlocked && (
+                      <LockKeyhole
+                        className="venue-character-lock"
+                        aria-hidden="true"
+                      />
+                    )}
+                    <strong>{t(character.nameKey)}</strong>
+                    <small>
+                      {t(
+                        active
+                          ? 'profile.companion.active'
+                          : unlocked
+                            ? 'profile.companion.setActive'
+                            : 'profile.companion.locked',
                       )}
-                    </div>
-                  </div>
+                    </small>
+                  </button>
                 );
               })}
             </div>
@@ -668,7 +575,7 @@ const Profile = () => {
               <Button
                 type="button"
                 size="sm"
-                className="bg-emerald-700 text-white hover:bg-emerald-600"
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
                 onClick={checkinTodayAction}
                 disabled={checkedInToday}
               >
@@ -709,7 +616,7 @@ const Profile = () => {
           </section>
         </div>
 
-        <div className="space-y-4">
+        <div className="venue-profile-sections space-y-4">
           <section className="rounded-3xl border border-border paper-texture bg-card p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
             <p className="text-xs font-medium tracking-[0.2em] text-primary/80 uppercase">
               {t('home.growth.title')}
@@ -1024,6 +931,11 @@ const Profile = () => {
               )}
             </div>
           </section>
+        </div>
+        <div className="venue-profile-summary">
+          <WalletCard />
+          <RankedProfilePanel />
+          <DataManagementCard />
         </div>
       </main>
     </div>

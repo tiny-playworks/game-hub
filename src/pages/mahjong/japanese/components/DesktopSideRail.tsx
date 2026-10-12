@@ -63,33 +63,36 @@ export function DesktopSideRail({
         className="riichi-desktop-rail-nav"
         aria-label={t('riichi.rail.tools')}
       >
-        {PANELS.filter(({ id }) => !ranked || id !== 'hint').map(({ id, icon: Icon }) => {
-          const label = t(`riichi.rail.${id}`);
-          const selected = activePanel === id;
-          return (
-            <button
-              key={id}
-              type="button"
-              className={cn(
-                'riichi-desktop-rail-button',
-                selected && 'riichi-desktop-rail-button--active',
-              )}
-              onClick={() => onPanelChange(selected ? null : id)}
-              aria-label={label}
-              aria-pressed={selected}
-              title={label}
-            >
-              <Icon aria-hidden="true" size={20} strokeWidth={1.8} />
-              {id === 'hint' && hasHint && !selected && (
-                <span
-                  className="riichi-desktop-rail-dot"
-                  role="img"
-                  aria-label={t('riichi.rail.newHint')}
-                />
-              )}
-            </button>
-          );
-        })}
+        {PANELS.filter(({ id }) => !ranked || id !== 'hint').map(
+          ({ id, icon: Icon }) => {
+            const label = t(`riichi.rail.${id}`);
+            const selected = activePanel === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                className={cn(
+                  'riichi-desktop-rail-button',
+                  selected && 'riichi-desktop-rail-button--active',
+                )}
+                onClick={() => onPanelChange(selected ? null : id)}
+                aria-label={label}
+                aria-pressed={selected}
+                title={label}
+              >
+                <Icon aria-hidden="true" size={20} strokeWidth={1.8} />
+                <span>{label}</span>
+                {id === 'hint' && hasHint && !selected && (
+                  <span
+                    className="riichi-desktop-rail-dot"
+                    role="img"
+                    aria-label={t('riichi.rail.newHint')}
+                  />
+                )}
+              </button>
+            );
+          },
+        )}
       </nav>
 
       {activePanel && (

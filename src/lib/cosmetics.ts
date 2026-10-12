@@ -68,7 +68,7 @@ function item(
 }
 export const DEFAULT_COSMETICS: Record<CosmeticCategory, string> = {
   'tile-back': 'back-blue',
-  'table-felt': 'felt-green',
+  'table-felt': 'felt-venue',
   'riichi-effect': 'riichi-default',
   'win-effect': 'win-default',
   'avatar-frame': 'frame-wood',
@@ -79,6 +79,7 @@ export const COSMETIC_DEFS: CosmeticDef[] = [
   item('back-sakura', 'tile-back', 'rare'),
   item('back-waves', 'tile-back', 'epic'),
   item('back-gold', 'tile-back', 'legendary', { type: 'rank', band: 'saint' }),
+  item('felt-venue', 'table-felt', 'common', undefined, true),
   item('felt-green', 'table-felt', 'common', undefined, true),
   item('felt-blue', 'table-felt'),
   item('felt-wine', 'table-felt', 'rare'),
@@ -139,6 +140,8 @@ export function normalizeCosmetics(raw: unknown): CosmeticsState {
   const owned = [
     ...new Set([
       ...Object.values(DEFAULT_COSMETICS),
+      // Keep the historical free green cloth available and any saved equipment.
+      'felt-green',
       ...(Array.isArray(state.owned)
         ? state.owned.filter(
             (id): id is string => typeof id === 'string' && !!getCosmetic(id),

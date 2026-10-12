@@ -4,6 +4,7 @@ import AchievementUnlockToast from '@/components/AchievementUnlockToast';
 import CoinsToast from '@/components/CoinsToast';
 import { AffinityNotice } from '@/components/characters/AffinityNotice';
 import GrowthPointToast from '@/components/GrowthPointToast';
+import { VenueNavigation } from '@/components/layout/VenueNavigation';
 import { RankedNavigationGuard } from '@/components/ranked/RankedNavigationGuard';
 import { PageErrorBoundary } from '@/components/recovery/PageErrorBoundary';
 import { StorageNotice } from '@/components/recovery/StorageNotice';
@@ -15,6 +16,8 @@ import { lazyPage } from '@/lib/lazyPage';
 import Home from '@/pages/Home';
 import './App.css';
 import './cosmetics.css';
+import './styles/venue.css';
+import './styles/riichi-venue.css';
 
 const Achievements = lazyPage(() => import('@/pages/Achievements'));
 const Category = lazyPage(() => import('@/pages/Category'));
@@ -71,6 +74,7 @@ const App = () => {
       <LocaleProvider>
         <StorageNotice />
         <CosmeticsProvider>
+          <VenueNavigation />
           <RankedNavigationGuard />
           <AchievementUnlockToast />
           <GrowthPointToast />
