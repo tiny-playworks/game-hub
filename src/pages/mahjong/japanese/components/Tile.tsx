@@ -6,11 +6,7 @@ import { cn } from '@/lib/utils';
 
 export type RiichiTileVariant = 'hand' | 'river' | 'meld' | 'indicator';
 export type RiichiTileState =
-  | 'normal'
-  | 'drawn'
-  | 'last-discard'
-  | 'riichi-discard'
-  | 'disabled';
+  'normal' | 'drawn' | 'last-discard' | 'riichi-discard' | 'disabled';
 
 export type RiichiTileProps = {
   tile: number;

@@ -1,4 +1,4 @@
-import { expect, test } from '@rstest/core';
+import { expect, test } from 'rstack/test';
 import { cn } from '../src/lib/utils';
 
 test('cn 合并多个 class 字符串', () => {

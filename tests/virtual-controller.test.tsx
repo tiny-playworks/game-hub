@@ -1,4 +1,4 @@
-import { expect, test } from '@rstest/core';
+import { expect, test } from 'rstack/test';
 import { render, screen } from '@testing-library/react';
 import { VirtualController } from '../src/components/common/VirtualController';
 

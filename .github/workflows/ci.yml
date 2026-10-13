@@ -1,4 +1,4 @@
-# 推送/PR 时自动跑：类型检查、Biome 检查、测试、构建
+# 推送/PR 时自动跑：类型检查、Rslint、格式检查、测试、构建
 # 公开仓库免费且不限时长：https://docs.github.com/en/billing/managing-billing-for-github-actions/about-billing-for-github-actions
 name: CI
 
@@ -20,18 +20,15 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'pnpm'
 
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Typecheck
-        run: pnpm run typecheck
-
-      - name: Lint & format (Biome)
-        run: pnpm exec biome check .
-        # CI 不加 --write，有问题直接失败
+      - name: Check
+        run: pnpm exec rs check --type-check
+        # CI 不加 --fix，有问题直接失败
 
       - name: Test
         run: pnpm run test

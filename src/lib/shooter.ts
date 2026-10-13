@@ -43,8 +43,7 @@ export interface ShooterInput {
 }
 
 export type ShooterEvent =
-  | { type: 'enemy_destroyed'; scoreDelta: number }
-  | { type: 'player_hit' };
+  { type: 'enemy_destroyed'; scoreDelta: number } | { type: 'player_hit' };
 
 export function playerY(): number {
   return SHOOTER.h - SHOOTER.playerH - 20;

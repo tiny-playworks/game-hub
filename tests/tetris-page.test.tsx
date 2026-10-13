@@ -1,4 +1,4 @@
-import { expect, rs, test } from '@rstest/core';
+import { expect, rs, test } from 'rstack/test';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ArcadeSession } from '../src/contexts/ArcadeContext';

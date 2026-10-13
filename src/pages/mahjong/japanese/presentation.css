@@ -98,15 +98,15 @@
   color: var(--riichi-accent);
   font-size: 11px;
 }
-.riichi-win-yaku li[data-yakuman="true"] {
+.riichi-win-yaku li[data-yakuman='true'] {
   background: #d3ae54;
   color: #342308;
   border-color: #e6c56d;
 }
-.riichi-win-yaku :where(li[data-yakuman="true"]) strong {
+.riichi-win-yaku :where(li[data-yakuman='true']) strong {
   color: #342308;
 }
-.riichi-win-yaku li[data-visible="false"] {
+.riichi-win-yaku li[data-visible='false'] {
   opacity: 0;
   transform: translateX(20px);
 }
@@ -116,7 +116,7 @@
     opacity 300ms,
     transform 300ms;
 }
-.riichi-win-bonus[data-visible="false"] {
+.riichi-win-bonus[data-visible='false'] {
   opacity: 0;
   transform: rotateX(80deg);
 }
@@ -143,7 +143,7 @@
   margin-top: 18px;
   transition: opacity 200ms;
 }
-.riichi-win-total[data-visible="false"] {
+.riichi-win-total[data-visible='false'] {
   opacity: 0;
 }
 .riichi-win-total > span {
@@ -182,10 +182,10 @@
   font-size: 17px;
   font-weight: 700;
 }
-.riichi-result-score-table [data-positive="true"] em {
+.riichi-result-score-table [data-positive='true'] em {
   color: #68bf9b;
 }
-.riichi-result-score-table [data-positive="false"] em {
+.riichi-result-score-table [data-positive='false'] em {
   color: #e89586;
 }
 .riichi-win-growth {
@@ -235,11 +235,11 @@
   animation: riichi-gold-particle 1000ms both;
   animation-delay: var(--delay);
 }
-.riichi-win-presentation[data-effects="true"][data-tier="haneman"] {
+.riichi-win-presentation[data-effects='true'][data-tier='haneman'] {
   animation: riichi-win-shake-light 300ms;
 }
-.riichi-win-presentation[data-effects="true"][data-tier="baiman"],
-.riichi-win-presentation[data-effects="true"][data-tier="sanbaiman"] {
+.riichi-win-presentation[data-effects='true'][data-tier='baiman'],
+.riichi-win-presentation[data-effects='true'][data-tier='sanbaiman'] {
   animation: riichi-win-shake 400ms;
 }
 .riichi-result-modal.riichi-yakuman-dialog {
@@ -263,19 +263,19 @@
   text-shadow: 0 0 22px #bd9949;
   animation: riichi-yakuman-label 1400ms both;
 }
-.riichi-win-presentation[data-mode="simple"] *,
-.riichi-win-presentation[data-mode="off"] * {
+.riichi-win-presentation[data-mode='simple'] *,
+.riichi-win-presentation[data-mode='off'] * {
   animation: none;
   transition: none;
 }
-.riichi-win-presentation[data-mode="off"] .riichi-win-hand {
+.riichi-win-presentation[data-mode='off'] .riichi-win-hand {
   padding: 14px;
 }
-.riichi-win-presentation[data-mode="off"] .riichi-win-yaku li {
+.riichi-win-presentation[data-mode='off'] .riichi-win-yaku li {
   min-width: auto;
   padding: 5px 8px;
 }
-.riichi-win-presentation[data-mode="off"] .riichi-win-bonus {
+.riichi-win-presentation[data-mode='off'] .riichi-win-bonus {
   margin-top: 8px;
 }
 .riichi-draw-hands {
@@ -293,7 +293,7 @@
   justify-content: space-between;
   font-size: 12px;
 }
-.riichi-draw-hands :where([data-tenpai="true"] header) > span {
+.riichi-draw-hands :where([data-tenpai='true'] header) > span {
   color: var(--riichi-accent);
 }
 .riichi-draw-tiles {
@@ -503,7 +503,7 @@
   border-radius: 14px;
   background: var(--riichi-surface);
 }
-.riichi-review-decision[data-reason="dealIn"] {
+.riichi-review-decision[data-reason='dealIn'] {
   border-left: 3px solid #cb8373;
 }
 .riichi-review-decision header {
@@ -554,10 +554,10 @@
   line-height: 1.7;
   margin-left: 8px;
 }
-.riichi-review-comparison [data-choice="player"] .riichi-tile {
+.riichi-review-comparison [data-choice='player'] .riichi-tile {
   outline: 2px solid #d3947e;
 }
-.riichi-review-comparison [data-choice="ai"] .riichi-tile {
+.riichi-review-comparison [data-choice='ai'] .riichi-tile {
   outline: 2px solid #89baa2;
 }
 .riichi-review-opponents {

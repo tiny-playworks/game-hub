@@ -1,4 +1,4 @@
-import { expect, test } from '@rstest/core';
+import { expect, test } from 'rstack/test';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { LocaleProvider } from '../src/contexts/LocaleContext';
 import { ReplayViewer } from '../src/pages/mahjong/japanese/components/ReplayViewer';

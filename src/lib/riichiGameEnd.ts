@@ -1,9 +1,5 @@
 export type MatchEndReason =
-  | 'tobi'
-  | 'east4_end'
-  | 'south4_end'
-  | 'agari_yame'
-  | 'extension_end';
+  'tobi' | 'east4_end' | 'south4_end' | 'agari_yame' | 'extension_end';
 
 export interface MatchEndRules {
   /** 返点线：最后一局结束时需有人达到该分数，否则进入延长战 */

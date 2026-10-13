@@ -120,7 +120,7 @@ export function GameHeader({
             menuTriggerRef.current?.focus();
           }}
           showCloseButton={false}
-          className="riichi-menu-drawer !max-w-none"
+          className="riichi-menu-drawer max-w-none!"
           style={{
             position: 'fixed',
             top: 0,
@@ -153,8 +153,18 @@ export function GameHeader({
             <button type="button" onClick={() => closeAnd(onStart)}>
               <RotateCcw aria-hidden="true" size={18} />
               <span>
-                <strong>{t(ranked ? 'ranked.newTable' : 'riichi.modal.matchEnd.playAgain')}</strong>
-                <small>{t(ranked ? 'ranked.exitDetail' : 'riichi.menu.restartDetail')}</small>
+                <strong>
+                  {t(
+                    ranked
+                      ? 'ranked.newTable'
+                      : 'riichi.modal.matchEnd.playAgain',
+                  )}
+                </strong>
+                <small>
+                  {t(
+                    ranked ? 'ranked.exitDetail' : 'riichi.menu.restartDetail',
+                  )}
+                </small>
               </span>
             </button>
             <button type="button" onClick={() => closeAnd(onOpenGuide)}>
@@ -187,13 +197,15 @@ export function GameHeader({
                 <small>{t('riichi.menu.logDetail')}</small>
               </span>
             </button>
-            {!ranked && <button type="button" onClick={() => closeAnd(onOpenReplay)}>
-              <ScrollText aria-hidden="true" size={18} />
-              <span>
-                <strong>{t('riichi.replay.open')}</strong>
-                <small>{t('riichi.replay.export')}</small>
-              </span>
-            </button>}
+            {!ranked && (
+              <button type="button" onClick={() => closeAnd(onOpenReplay)}>
+                <ScrollText aria-hidden="true" size={18} />
+                <span>
+                  <strong>{t('riichi.replay.open')}</strong>
+                  <small>{t('riichi.replay.export')}</small>
+                </span>
+              </button>
+            )}
           </div>
 
           <RiichiSettingsPanel ranked={ranked} />

@@ -1,5 +1,6 @@
 import { gameStorage } from '@/lib/storage';
 import { arcadeMessages } from './arcadeMessages';
+import { aoiMessages } from './aoiMessages';
 export type Locale = 'zh' | 'en';
 
 const messages: Record<Locale, Record<string, string>> = {
@@ -4159,7 +4160,10 @@ const messages: Record<Locale, Record<string, string>> = {
 const warnedMissingKeys = new Set<string>();
 
 export function getMessage(locale: Locale, key: string): string {
-  const translated = arcadeMessages[locale]?.[key] ?? messages[locale]?.[key];
+  const translated =
+    aoiMessages[locale]?.[key] ??
+    arcadeMessages[locale]?.[key] ??
+    messages[locale]?.[key];
   if (translated !== undefined) return translated;
   if (process.env.NODE_ENV === 'development') {
     const id = `${locale}:${key}`;

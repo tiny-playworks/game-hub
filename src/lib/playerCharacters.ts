@@ -1,6 +1,7 @@
 import { appendGrowthFeedItem } from '@/lib/growthFeed';
 import { getPlayerStats } from '@/lib/playerStats';
 import { gameStorage } from '@/lib/storage';
+import { normalizeCharacterOutfits } from './characterOutfits';
 
 export const PLAYER_CHARACTER_STORAGE_KEY = 'game-hub-player-characters';
 export const CHARACTER_AFFINITY_THRESHOLDS = [5, 15, 30, 50] as const;
@@ -75,6 +76,8 @@ export interface CharacterDef {
 export interface PlayerCharacterState {
   version: 2;
   activeCharacterId: string;
+  /** Optional in historical v2 saves; outfits do not change character identity. */
+  outfitByCharacter?: Record<string, string>;
   unlockedCharacterIds: string[];
   affinityByCharacter: Record<string, number>;
   /** Rewards are permanent even if an older affinity value is restored. */
@@ -285,6 +288,26 @@ export const CHARACTER_DEFS: CharacterDef[] = [
   }),
 ];
 
+// Append: the historical roster order drives permanent cosmetic reward IDs.
+CHARACTER_DEFS.push(
+  defineCharacter({
+    id: 'aoi',
+    name: '葵',
+    tagline: '换一种心情，再认真打两圈。',
+    accent: 'from-slate-300 via-rose-100 to-stone-100',
+    rankBand: 'novice',
+    style: {
+      callAggression: 0.4,
+      riichiAggression: 0.55,
+      defenseBias: 0.6,
+      valueBias: 0.5,
+      flushBias: 0.25,
+    },
+    styleTagKeys: ['character.tag.balanced'],
+    unlockRule: { type: 'default', target: 0 },
+  }),
+);
+
 function getDefaultCharacter(): CharacterDef {
   // 新名册按段位排序，但老玩家的缺省主角色仍是澪。
   return (
@@ -304,6 +327,7 @@ export function createDefaultPlayerCharacterState(): PlayerCharacterState {
   return {
     version: 2,
     activeCharacterId: defaultCharacter.id,
+    outfitByCharacter: {},
     unlockedCharacterIds: CHARACTER_DEFS.filter(
       (character) => character.unlockRule.type === 'default',
     ).map((character) => character.id),
@@ -373,6 +397,7 @@ export function normalizePlayerCharacterState(
   return {
     version: 2,
     activeCharacterId,
+    outfitByCharacter: normalizeCharacterOutfits(parsed.outfitByCharacter),
     unlockedCharacterIds: mergedUnlockedIds,
     affinityByCharacter,
     rewardStageByCharacter,

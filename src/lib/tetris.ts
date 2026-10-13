@@ -9,11 +9,7 @@ export type TetrisStatus = 'idle' | 'playing' | 'paused' | 'over';
 export type TetrisBoard = number[][];
 export type TetrisSpecial = 'bomb' | 'ice' | 'wildcard';
 export type TetrisUpgrade =
-  | 'score_boost'
-  | 'slow_fall'
-  | 'skill_boost'
-  | 'bomb_rate'
-  | 'combo_boost';
+  'score_boost' | 'slow_fall' | 'skill_boost' | 'bomb_rate' | 'combo_boost';
 
 export interface TetrisState {
   board: TetrisBoard;

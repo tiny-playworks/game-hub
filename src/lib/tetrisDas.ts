@@ -67,7 +67,7 @@ export function dasArrTick(
 
   let dasElapsed = state.dasElapsed;
   let arrElapsed = state.arrElapsed;
-  let charged = state.charged;
+  const charged = state.charged;
   let fires = 0;
   let remaining = dtMs;
 
@@ -81,7 +81,6 @@ export function dasArrTick(
     }
     remaining -= need;
     dasElapsed = config.dasMs;
-    charged = true;
     fires += 1;
     arrElapsed = 0;
   }

@@ -11,7 +11,7 @@
   --riichi-btn-primary-text: #fffaf2;
   --riichi-btn-primary-hover: #af3d2f;
 }
-[data-table-felt="felt-venue"] {
+[data-table-felt='felt-venue'] {
   --cosmetic-felt: #172a3a;
   --cosmetic-felt-pattern: none;
 }
@@ -48,8 +48,8 @@
 }
 .riichi-header-round strong {
   font:
-    600 18px / 1.4 "Noto Serif SC",
-    "Songti SC",
+    600 18px / 1.4 'Noto Serif SC',
+    'Songti SC',
     serif;
 }
 .riichi-header-back,
@@ -409,9 +409,9 @@
   color: var(--foreground);
   padding: 12px;
 }
-.riichi-desktop-panel-body [class*="riichi-training"],
-.riichi-desktop-panel-body [class*="riichi-panel"],
-.riichi-desktop-panel-body [class*="riichi-hint"] {
+.riichi-desktop-panel-body [class*='riichi-training'],
+.riichi-desktop-panel-body [class*='riichi-panel'],
+.riichi-desktop-panel-body [class*='riichi-hint'] {
   --riichi-text: var(--foreground);
   --riichi-text-muted: var(--muted-foreground);
   --riichi-accent: var(--primary);
@@ -445,8 +445,8 @@
 }
 .riichi-lobby-intro h1 {
   font:
-    600 clamp(36px, 4vw, 60px) / 1.3 "Noto Serif SC",
-    "Songti SC",
+    600 clamp(36px, 4vw, 60px) / 1.3 'Noto Serif SC',
+    'Songti SC',
     serif;
 }
 .riichi-lobby-kicker,
@@ -510,7 +510,7 @@
   }
   .riichi-header-round strong {
     font:
-      600 12px / 1.4 "Noto Sans SC",
+      600 12px / 1.4 'Noto Sans SC',
       sans-serif;
   }
   .riichi-header-round > span {
@@ -864,10 +864,10 @@
     font-size: 7px;
   }
 }
-[data-table-felt="felt-venue"] {
-  --cosmetic-felt-pattern: url("../assets/venue/ink-cloth.png");
+[data-table-felt='felt-venue'] {
+  --cosmetic-felt-pattern: url('../assets/venue/ink-cloth.png');
 }
-[data-table-felt="felt-venue"] .riichi-table-surface {
+[data-table-felt='felt-venue'] .riichi-table-surface {
   background-size: cover, auto;
 }
 .riichi-tile-back .riichi-tile-back-rotator {
@@ -901,13 +901,332 @@
     --riichi-tile-height: 22px;
   }
 }
-.riichi-table-grid:has(.riichi-action-dock) { grid-template-rows: 90px minmax(0, 1fr) 232px; }
+.riichi-table-grid:has(.riichi-action-dock) {
+  grid-template-rows: 90px minmax(0, 1fr) 232px;
+}
 @media (max-width: 700px) {
-  .riichi-table-grid:has(.riichi-action-dock) { grid-template-rows: 64px minmax(0, 1fr) 208px; }
-  .riichi-table-grid:has(.riichi-self-melds:not(:empty)) { grid-template-rows: 64px minmax(0, 1fr) 208px; }
-  .riichi-table-grid:has(.riichi-self-melds:not(:empty)):has(.riichi-action-dock) { grid-template-rows: 64px minmax(0, 1fr) 232px; }
-  .riichi-self-play-row:has(.riichi-self-melds:not(:empty)) { margin-top: 34px; }
+  .riichi-table-grid:has(.riichi-action-dock) {
+    grid-template-rows: 64px minmax(0, 1fr) 208px;
+  }
+  .riichi-table-grid:has(.riichi-self-melds:not(:empty)) {
+    grid-template-rows: 64px minmax(0, 1fr) 208px;
+  }
+  .riichi-table-grid:has(.riichi-self-melds:not(:empty)):has(
+      .riichi-action-dock
+    ) {
+    grid-template-rows: 64px minmax(0, 1fr) 232px;
+  }
+  .riichi-self-play-row:has(.riichi-self-melds:not(:empty)) {
+    margin-top: 34px;
+  }
 }
 @media (max-height: 520px) and (min-width: 701px) {
-  .riichi-table-grid:has(.riichi-action-dock) { grid-template-rows: 38px minmax(0, 1fr) 118px; }
+  .riichi-table-grid:has(.riichi-action-dock) {
+    grid-template-rows: 38px minmax(0, 1fr) 118px;
+  }
+}
+
+/* Desktop composition follows the approved table: readable seats around a framed center. */
+.riichi-desktop-panel {
+  --riichi-text: var(--foreground);
+  --riichi-text-muted: var(--muted-foreground);
+  --riichi-accent: var(--primary);
+}
+@media (min-width: 1100px) and (min-height: 650px) {
+  .riichi-app-header {
+    height: 64px;
+    min-height: 64px;
+    flex-basis: 64px;
+  }
+  .riichi-header-round strong {
+    font-size: 22px;
+  }
+  .riichi-header-back,
+  .riichi-header-menu {
+    font-size: 15px;
+  }
+  .riichi-desktop-workspace {
+    height: calc(100dvh - 64px);
+  }
+  .riichi-desktop-rail--open {
+    width: 320px;
+    flex: 0 0 320px;
+  }
+  .riichi-desktop-rail-button {
+    font:
+      600 17px / 1.3 'Noto Serif SC',
+      'Songti SC',
+      serif;
+    flex: 1;
+  }
+  .riichi-desktop-rail-button svg {
+    display: none;
+  }
+  .riichi-desktop-panel-body {
+    padding: 14px;
+  }
+  .riichi-table-grid,
+  .riichi-table-grid:has(.riichi-action-dock) {
+    inset: 34px 16px 12px;
+    grid-template-columns: 140px minmax(0, 1fr) 140px;
+    grid-template-rows: 122px minmax(0, 1fr) 232px;
+    gap: 8px;
+  }
+  .riichi-table-surface::before {
+    display: block;
+    content: '';
+    position: absolute;
+    inset: 20px;
+    border: 1px solid #8ea4b32e;
+    border-radius: 24px;
+    pointer-events: none;
+    box-shadow:
+      0 0 0 4px #172a3a38,
+      inset 0 0 0 5px #172a3a38;
+  }
+  [data-table-felt='felt-venue'] .riichi-table-surface {
+    background-image:
+      linear-gradient(#0d243959, #0d243959),
+      url('../assets/venue/ink-cloth.png');
+    background-size: cover;
+  }
+  .riichi-seat .riichi-character-avatar {
+    width: 66px;
+    height: 66px;
+    min-width: 66px;
+    min-height: 66px;
+    border-radius: 50%;
+    border: 2px solid #c8ae8f;
+    box-shadow:
+      0 0 0 3px #172a3a,
+      0 0 0 4px #e2c5a066;
+  }
+  .riichi-seat .riichi-character-heading > div > strong {
+    font:
+      600 20px / 1.4 'Noto Serif SC',
+      'Songti SC',
+      serif;
+  }
+  .riichi-seat-card-main strong {
+    font:
+      24px / 1.3 Georgia,
+      serif;
+    white-space: nowrap;
+  }
+  .riichi-seat-wind {
+    width: 28px;
+    height: 32px;
+    font:
+      22px / 1.3 'Noto Serif SC',
+      'Songti SC',
+      serif;
+  }
+  .riichi-seat--top {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 0;
+  }
+  .riichi-seat--top .riichi-seat-card {
+    display: grid;
+    grid-template-columns: 76px auto;
+    grid-template-rows: 28px 34px;
+    column-gap: 8px;
+  }
+  .riichi-seat--top .riichi-character-heading {
+    display: contents;
+  }
+  .riichi-seat--top .riichi-character-heading > [role='img'] {
+    grid-column: 1;
+    grid-row: 1 / 3;
+  }
+  .riichi-seat--top .riichi-character-heading > div {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .riichi-seat--top .riichi-seat-card-main {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .riichi-seat--top .riichi-seat-name {
+    display: none;
+  }
+  .riichi-seat--side {
+    display: grid;
+    grid-template-columns: 88px 40px;
+    align-content: center;
+    align-items: center;
+    gap: 10px;
+    padding: 0;
+  }
+  .riichi-seat--side .riichi-seat-card {
+    align-items: center;
+    gap: 8px;
+  }
+  .riichi-seat--side .riichi-character-heading {
+    flex-direction: column;
+  }
+  .riichi-seat--side .riichi-seat-card-main {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .riichi-seat--side .riichi-seat-card-main strong {
+    font-size: 20px;
+  }
+  .riichi-seat--side .riichi-seat-card-meta {
+    font-size: 9px;
+    flex-wrap: wrap;
+  }
+  .riichi-seat--side[data-seat='1'] {
+    grid-template-columns: 40px 88px;
+  }
+  .riichi-seat--side[data-seat='1'] .riichi-seat-card {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .riichi-seat--side[data-seat='1'] .riichi-opponent-hand {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .riichi-seat--side .riichi-seat-melds {
+    grid-column: 1 / -1;
+  }
+  .riichi-opponent-hand-slot {
+    width: 30px;
+    height: 42px;
+  }
+  .riichi-seat--side .riichi-opponent-hand-slot {
+    width: 40px;
+    height: 26px;
+  }
+  .riichi-tile-back {
+    --riichi-tile-width: 28px;
+    --riichi-tile-height: 40px;
+  }
+  .riichi-center-board {
+    max-width: 620px;
+    grid-template-columns: minmax(0, 1fr) 170px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) 160px minmax(0, 1fr);
+    overflow: visible;
+  }
+  .riichi-center-console {
+    position: relative;
+    border: 1px solid #8295a3;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #243e4f, #112836);
+    box-shadow:
+      0 0 0 5px #18313e,
+      0 0 0 6px #607a8b,
+      inset 0 0 0 6px #112b3a,
+      inset 0 0 0 7px #526b7b;
+    gap: 10px;
+    padding: 16px;
+  }
+  .riichi-center-round strong {
+    font:
+      36px / 1.2 Georgia,
+      serif;
+  }
+  .riichi-center-round > span {
+    font-size: 28px;
+    color: #f5f2e9;
+  }
+  .riichi-center-round > small {
+    font-size: 12px;
+  }
+  .riichi-center-wall {
+    font-size: 18px;
+  }
+  .riichi-center-indicators .riichi-tile--indicator {
+    --riichi-tile-width: 26px;
+    --riichi-tile-height: 36px;
+  }
+  .riichi-seat--self {
+    padding: 4px 6px;
+    box-shadow: none;
+  }
+  .riichi-self-meta {
+    flex-direction: column;
+    justify-content: center;
+    min-height: 74px;
+    gap: 3px;
+  }
+  .riichi-self-meta .riichi-seat-card-main {
+    justify-content: center;
+    gap: 12px;
+  }
+  .riichi-self-meta .riichi-seat-name {
+    font:
+      20px / 1.4 'Noto Serif SC',
+      'Songti SC',
+      serif;
+  }
+  .riichi-self-meta .cosmetic-avatar-frame {
+    border-radius: 50%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .riichi-self-meta .riichi-character-avatar {
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    min-height: 56px;
+  }
+  .riichi-self-meta .riichi-seat-card-meta {
+    font-size: 9px;
+  }
+  .riichi-self-play-row {
+    margin: 5px 0;
+    min-height: 70px;
+  }
+  .riichi-self-instruction {
+    border: 1px solid #d2c9b5;
+    background: #f5f2e9;
+    color: #172a3a;
+    border-radius: 5px;
+    font:
+      600 17px / 1.4 'Noto Serif SC',
+      'Songti SC',
+      serif;
+    padding: 10px 20px;
+    text-align: left;
+    margin-top: auto;
+  }
+  .riichi-seat--self:has(.riichi-action-dock) .riichi-self-instruction {
+    display: none;
+  }
+  .riichi-action-dock {
+    min-height: 54px;
+  }
+  .riichi-self-clock {
+    width: min(540px, 80%);
+    align-self: center;
+  }
+}
+@media (min-width: 1600px) and (min-height: 1000px) {
+  .riichi-table-grid,
+  .riichi-table-grid:has(.riichi-action-dock) {
+    grid-template-rows: 142px minmax(0, 1fr) 252px;
+    grid-template-columns: 180px minmax(0, 1fr) 180px;
+  }
+  .riichi-center-board {
+    max-width: 700px;
+    grid-template-columns: minmax(0, 1fr) 200px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) 180px minmax(0, 1fr);
+  }
+  .riichi-river-grid {
+    --riichi-river-tile-width: 30px;
+    --riichi-river-tile-height: 42px;
+    --riichi-river-row-step: 38px;
+  }
+  .riichi-seat--side {
+    justify-content: center;
+  }
+  .riichi-seat--self,
+  [data-table-felt] .riichi-seat--self {
+    --hand-tile: 62px;
+  }
 }

@@ -150,7 +150,18 @@ export function createMatch(options: CreateMatchOptions): StepResult {
       matchLength: options.matchLength,
       seatCharacters: normalizeSeatCharacters(options.seatCharacters),
       seatAiLevels: normalizeSeatAiLevels(options.seatAiLevels, rules.aiLevel),
-      ...(options.ranked ? { ranked: options.ranked, seatCharacters: [null, ...options.ranked.opponents] as RiichiSeatCharacters, seatAiLevels: [...options.ranked.seatAiLevels] as RiichiSeatAiLevels } : {}),
+      ...(options.ranked
+        ? {
+            ranked: options.ranked,
+            seatCharacters: [
+              null,
+              ...options.ranked.opponents,
+            ] as RiichiSeatCharacters,
+            seatAiLevels: [
+              ...options.ranked.seatAiLevels,
+            ] as RiichiSeatAiLevels,
+          }
+        : {}),
       round,
       status: statusOf(round),
       matchEnd: null,
@@ -518,7 +529,10 @@ export function isReplayFile(value: unknown): value is RiichiReplayFile {
   };
   return (
     v.version === RIICHI_MATCH_VERSION &&
-    (v.ranked === undefined || (isRankedTicket(v.ranked) && v.ranked.seed === v.seed && v.ranked.matchLength === v.matchLength)) &&
+    (v.ranked === undefined ||
+      (isRankedTicket(v.ranked) &&
+        v.ranked.seed === v.seed &&
+        v.ranked.matchLength === v.matchLength)) &&
     Number.isSafeInteger(v.seed) &&
     (v.matchLength === 'east' || v.matchLength === 'south') &&
     Array.isArray(v.events) &&

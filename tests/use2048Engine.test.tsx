@@ -1,4 +1,4 @@
-import { afterEach, expect, rs, test } from '@rstest/core';
+import { afterEach, expect, rs, test } from 'rstack/test';
 import { act, renderHook } from '@testing-library/react';
 import { useEngine2048 } from '../src/hooks/use2048Engine';
 

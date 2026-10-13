@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, rstest, test } from '@rstest/core';
+import { beforeEach, describe, expect, rstest, test } from 'rstack/test';
 import { CHARACTER_STORIES } from '../src/lib/characterStories';
 import {
   COSMETIC_CATEGORIES,

@@ -9,6 +9,7 @@ import {
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
+import { CharacterOutfitPicker } from '@/components/characters/CharacterOutfitPicker';
 import { CharacterStoryPlayer } from '@/components/characters/CharacterStoryPlayer';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -101,6 +102,7 @@ export default function CharacterProfile() {
           </p>
         </section>
         <div className="space-y-5">
+          <CharacterOutfitPicker character={character} />
           <section className="paper-texture rounded-3xl border bg-card p-6">
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-3xl font-semibold">{t(character.nameKey)}</h1>

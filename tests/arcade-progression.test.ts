@@ -1,4 +1,4 @@
-import { beforeEach, expect, test } from '@rstest/core';
+import { beforeEach, expect, test } from 'rstack/test';
 import { games } from '../src/data/games';
 import {
   ACHIEVEMENTS,

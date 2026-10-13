@@ -74,7 +74,7 @@
   transform: translate(-50%, -100%);
 }
 
-.riichi-seat[data-seat="1"] .riichi-speech-bubble {
+.riichi-seat[data-seat='1'] .riichi-speech-bubble {
   right: calc(100% - 4px);
   left: auto;
 }

@@ -7,7 +7,10 @@ export function useRankedState() {
     window.addEventListener(RANKED_CHANGED_EVENT, refresh);
     window.addEventListener('storage', refresh);
     refresh();
-    return () => { window.removeEventListener(RANKED_CHANGED_EVENT, refresh); window.removeEventListener('storage', refresh); };
+    return () => {
+      window.removeEventListener(RANKED_CHANGED_EVENT, refresh);
+      window.removeEventListener('storage', refresh);
+    };
   }, []);
   return state;
 }

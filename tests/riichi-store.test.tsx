@@ -1,4 +1,4 @@
-import { afterEach, expect, rs, test } from '@rstest/core';
+import { afterEach, expect, rs, test } from 'rstack/test';
 import { act, renderHook } from '@testing-library/react';
 import { normalizeRiichiSettings } from '../src/lib/playerProfile';
 import * as progress from '../src/lib/riichiProgress';

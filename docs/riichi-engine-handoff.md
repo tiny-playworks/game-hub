@@ -21,28 +21,28 @@
 
 ### 规则库改动（`src/lib`）
 
-| 文件 | 改动 |
-| --- | --- |
-| `riichiRsAdapter` | 增加 `doubleRiichi` / `firstTake`（天和、地和、人和）/ `lastTile`（海底、河底）/ `allowDoubleYakuman`；删除 `calcWithRiichiRs` |
-| `riichiRules` | 结构分析结果按手牌 key 缓存 |
-| `riichiSettlement` | 新增 `settleWins`（双响、上家取り、包牌）和 `settleNagashiMangan`；不听罚符改为精确整数 |
-| `riichiGameEnd` | 延长战（南入 / 西入）；和了止め只在庄家和了时触发；新增 `MatchEndRules` 和 `extension_end` |
-| `riichiAbortiveDraw` | 流局原因改为代码：`kyuushu`、`suufon`、`suucha`、`suukaikan`、`sanchahou`；新增 `countKans` |
-| `riichiFuriten` | 删除无效的 `sutehai` 字段；新增 `getFuritenReason` |
-| `mahjongRiichi` | 删除旧的 TS 役种 / 符番代码；新增 `isYaochuu`、`compareTiles`、`isKanMeld` |
-| `riichiShanten`（新增） | 向听数与进张计算 |
-| `riichiAi` | 重写：危险度（现物、立直后现物、筋、壁、字牌已见枚数）与牌价值 |
+| 文件                    | 改动                                                                                                                           |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `riichiRsAdapter`       | 增加 `doubleRiichi` / `firstTake`（天和、地和、人和）/ `lastTile`（海底、河底）/ `allowDoubleYakuman`；删除 `calcWithRiichiRs` |
+| `riichiRules`           | 结构分析结果按手牌 key 缓存                                                                                                    |
+| `riichiSettlement`      | 新增 `settleWins`（双响、上家取り、包牌）和 `settleNagashiMangan`；不听罚符改为精确整数                                        |
+| `riichiGameEnd`         | 延长战（南入 / 西入）；和了止め只在庄家和了时触发；新增 `MatchEndRules` 和 `extension_end`                                     |
+| `riichiAbortiveDraw`    | 流局原因改为代码：`kyuushu`、`suufon`、`suucha`、`suukaikan`、`sanchahou`；新增 `countKans`                                    |
+| `riichiFuriten`         | 删除无效的 `sutehai` 字段；新增 `getFuritenReason`                                                                             |
+| `mahjongRiichi`         | 删除旧的 TS 役种 / 符番代码；新增 `isYaochuu`、`compareTiles`、`isKanMeld`                                                     |
+| `riichiShanten`（新增） | 向听数与进张计算                                                                                                               |
+| `riichiAi`              | 重写：危险度（现物、立直后现物、筋、壁、字牌已见枚数）与牌价值                                                                 |
 
 ### 引擎（`engine/`）
 
-| 文件 | 内容 |
-| --- | --- |
+| 文件                       | 内容                                                                                                                                                                                                                                    |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `types.ts`（在上一级目录） | 新的 `RiichiGameState`：死壁（岭上 4、宝牌池 5、里宝池 5）、鸣牌窗口 `claim`（各家同时响应）、`turnOptions`、`riichiPending`、`firstTurn`、`kuikaeForbidden`、`paoSeat`、`riichiDiscardIndex`、`riichiSafeTiles`、`result: RoundResult` |
-| `round.ts` | 摸打、鸣牌优先级（荣和 > 碰/杠 > 吃）、双响、三家和、立直棒在宣言牌通过后才支付、一发、见逃振听、食替、岭上和杠宝、抢杠（加杠；暗杠只限国士）、四开杠延迟判定、流局满贯、包牌 |
-| `options.ts` | 唯一的合法性来源：立直宣言牌、立直后暗杠不改待牌、加杠可用手中第 4 张、开杠的牌山条件 |
-| `match.ts` | `createMatch` / `applyEvent`（纯函数，非法事件返回 null）/ `undoLastHumanAction`（从开局快照重放）/ `replayMatch` / `toReplayFile` / `getNextRound`（流局换庄时本场 +1） |
-| `ai.ts` | 确定性 AI：按向听数和进张选牌；攻、守、平衡三种姿态；立直判断；鸣牌前检查役 |
-| `selectors.ts` | `getPendingSeats`、`getDecisionSeat`、`countAllTiles` |
+| `round.ts`                 | 摸打、鸣牌优先级（荣和 > 碰/杠 > 吃）、双响、三家和、立直棒在宣言牌通过后才支付、一发、见逃振听、食替、岭上和杠宝、抢杠（加杠；暗杠只限国士）、四开杠延迟判定、流局满贯、包牌                                                           |
+| `options.ts`               | 唯一的合法性来源：立直宣言牌、立直后暗杠不改待牌、加杠可用手中第 4 张、开杠的牌山条件                                                                                                                                                   |
+| `match.ts`                 | `createMatch` / `applyEvent`（纯函数，非法事件返回 null）/ `undoLastHumanAction`（从开局快照重放）/ `replayMatch` / `toReplayFile` / `getNextRound`（流局换庄时本场 +1）                                                                |
+| `ai.ts`                    | 确定性 AI：按向听数和进张选牌；攻、守、平衡三种姿态；立直判断；鸣牌前检查役                                                                                                                                                             |
+| `selectors.ts`             | `getPendingSeats`、`getDecisionSeat`、`countAllTiles`                                                                                                                                                                                   |
 
 ### 阶段 1 UI 集成
 

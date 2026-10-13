@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { Link } from 'react-router-dom';
 import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
+import { CharacterOutfitPicker } from '@/components/characters/CharacterOutfitPicker';
 import { PlayerAvatar } from '@/components/home/PlayerAvatar';
 import { DataManagementCard } from '@/components/profile/DataManagementCard';
 import { WalletCard } from '@/components/profile/WalletCard';
@@ -502,6 +503,7 @@ const Profile = () => {
                 </span>
               </div>
             </div>
+            <CharacterOutfitPicker character={activeCharacter} />
             <div className="venue-character-picker">
               {CHARACTER_DEFS.map((character) => {
                 const unlocked = characterState.unlockedCharacterIds.includes(

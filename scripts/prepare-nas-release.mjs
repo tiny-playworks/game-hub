@@ -36,7 +36,7 @@ if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(releaseId))
 if (!skipBuild) {
   const build = spawnSync(
     process.execPath,
-    [path.join(root, 'node_modules/@rsbuild/core/bin/rsbuild.js'), 'build'],
+    [path.join(root, 'node_modules/rstack/bin/rs.js'), 'build'],
     {
       cwd: root,
       stdio: 'inherit',

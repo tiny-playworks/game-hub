@@ -29,7 +29,7 @@ export function takeByBase(
 ): { rest: number[]; taken: number[] } | null {
   const rest = [...hand];
   const taken: number[] = [];
-  for (let i = 0; i < rest.length && taken.length < count; ) {
+  for (let i = 0; i < rest.length && taken.length < count;) {
     if (getBaseTile(rest[i]) === base) {
       taken.push(rest[i]);
       rest.splice(i, 1);

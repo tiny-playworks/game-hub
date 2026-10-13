@@ -19,8 +19,7 @@ import {
 export type GoDifficulty = 'easy' | 'normal' | 'hard';
 
 export type GoAiMove =
-  | { kind: 'play'; row: number; col: number }
-  | { kind: 'pass' };
+  { kind: 'play'; row: number; col: number } | { kind: 'pass' };
 
 const ADJ: [number, number][] = [
   [-1, 0],

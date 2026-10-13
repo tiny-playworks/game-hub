@@ -1,4 +1,4 @@
-import { expect, test } from '@rstest/core';
+import { expect, test } from 'rstack/test';
 import { games, getGameByPath, getGamesByCategory } from '../src/data/games';
 
 test('games 中每项均有 id、categoryId、name、path、difficulty、tags', () => {

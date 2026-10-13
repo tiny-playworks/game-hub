@@ -585,8 +585,7 @@ export class RubiksCubeEngine {
     return this.cubies.every((cubie) => {
       const homePos = cubie.userData.homePosition as Vector3 | undefined;
       const homeQuat = cubie.userData.homeQuaternion as
-        | { x: number; y: number; z: number; w: number }
-        | undefined;
+        { x: number; y: number; z: number; w: number } | undefined;
       if (!homePos || !homeQuat) return false;
       if (cubie.position.distanceTo(homePos) > 0.04) return false;
       const dot =

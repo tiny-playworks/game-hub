@@ -22,18 +22,19 @@
 
 参考色板（OKLCH，可微调但保持色相关系）：
 
-| Token | 亮色（白天雀庄） | 暗色（夜间雀庄） | 用途 |
-|-------|----------------|----------------|------|
-| `--background` | 米白纸 `oklch(0.97 0.015 85)` | 墨绿黑 `oklch(0.18 0.02 160)` | 页面底 |
-| `--card` | 象牙 `oklch(0.99 0.01 85)` | `oklch(0.23 0.025 160)` | 卡片 |
-| `--primary` | 毡绿 `oklch(0.45 0.09 160)` | `oklch(0.62 0.11 160)` | 主按钮 |
-| `--accent` | 金 `oklch(0.80 0.12 85)` | `oklch(0.75 0.12 85)` | 高亮、雀币、段位 |
-| `--secondary` | 暖木 `oklch(0.62 0.07 60)` | `oklch(0.45 0.06 60)` | 次要、边框装饰 |
-| `--destructive` | 朱红 `oklch(0.58 0.18 30)` | 同 | 危险、立直棒红点 |
+| Token           | 亮色（白天雀庄）              | 暗色（夜间雀庄）              | 用途             |
+| --------------- | ----------------------------- | ----------------------------- | ---------------- |
+| `--background`  | 米白纸 `oklch(0.97 0.015 85)` | 墨绿黑 `oklch(0.18 0.02 160)` | 页面底           |
+| `--card`        | 象牙 `oklch(0.99 0.01 85)`    | `oklch(0.23 0.025 160)`       | 卡片             |
+| `--primary`     | 毡绿 `oklch(0.45 0.09 160)`   | `oklch(0.62 0.11 160)`        | 主按钮           |
+| `--accent`      | 金 `oklch(0.80 0.12 85)`      | `oklch(0.75 0.12 85)`         | 高亮、雀币、段位 |
+| `--secondary`   | 暖木 `oklch(0.62 0.07 60)`    | `oklch(0.45 0.06 60)`         | 次要、边框装饰   |
+| `--destructive` | 朱红 `oklch(0.58 0.18 30)`    | 同                            | 危险、立直棒红点 |
 
 新增自定义 token（加在 `@theme inline`）：`--color-felt`、`--color-wood`、`--color-gold`、`--color-paper`。
 
 其他要求：
+
 - 字体：标题用 `Noto Serif SC`，正文 `Noto Sans SC`（Google Fonts，`font-display: swap`）。
 - 纸质感：用内联 SVG noise 做 `.paper-texture` 工具类，作为卡片背景叠层（透明度 ≤ 6%）。
 - 毡面：`.felt-surface` 工具类（毡绿 + 细微 noise + 内阴影），用于大厅主视觉区和牌桌外框。
@@ -78,15 +79,17 @@
 export type GameEventType = 'start' | 'finish' | 'win' | 'best';
 
 export interface GameEvent {
-  gameId: string;            // 与 src/data/games.ts 的 id 一致
+  gameId: string; // 与 src/data/games.ts 的 id 一致
   type: GameEventType;
-  score?: number;            // 分数/步数/用时等，由各游戏自定义含义
-  difficulty?: string;       // P6 使用
+  score?: number; // 分数/步数/用时等，由各游戏自定义含义
+  difficulty?: string; // P6 使用
   meta?: Record<string, unknown>; // 日麻：placement、matchLength、ranked 等
 }
 
 export function emitGameEvent(event: GameEvent): GameEventResult;
-export function subscribeGameEvents(listener: (e: GameEvent, r: GameEventResult) => void): () => void;
+export function subscribeGameEvents(
+  listener: (e: GameEvent, r: GameEventResult) => void,
+): () => void;
 ```
 
 - `emitGameEvent` 内部按顺序同步调用：playerStats → 钱包结算 → 任务 → 成就检查，并返回 `{ coinsEarned, unlockedAchievements, taskRewards }`。
@@ -103,20 +106,20 @@ interface WalletState {
   coins: number;
   lifetimeEarned: number;
   ledger: { at: number; delta: number; reasonKey: string }[]; // 保留最近 50 条
-  dailyArcadeEarned: { dateKey: string; amount: number };     // P6 副玩法日上限用
+  dailyArcadeEarned: { dateKey: string; amount: number }; // P6 副玩法日上限用
 }
 ```
 
 产出规则（P1 先实现日麻部分）：
 
-| 来源 | 雀币 |
-|------|------|
-| 日麻东风战完赛 | 60 |
-| 日麻半庄战完赛 | 100 |
-| 名次加成 | 1 位 +60 / 2 位 +30 / 3 位 +10 / 4 位 0（半庄 ×1.5） |
-| 每日任务领取 | 每条 +40 |
-| 每周任务领取 | 每条 +150 |
-| 签到 | 每日 +30，连签第 7 天 +200 |
+| 来源           | 雀币                                                 |
+| -------------- | ---------------------------------------------------- |
+| 日麻东风战完赛 | 60                                                   |
+| 日麻半庄战完赛 | 100                                                  |
+| 名次加成       | 1 位 +60 / 2 位 +30 / 3 位 +10 / 4 位 0（半庄 ×1.5） |
+| 每日任务领取   | 每条 +40                                             |
+| 每周任务领取   | 每条 +150                                            |
+| 签到           | 每日 +30，连签第 7 天 +200                           |
 
 - 顶栏显示雀币，获得时金币飞入 + 数字滚动（参考 `GrowthPointToast` 的事件模式，新增 `game-hub:coins-gained` 事件）。
 - 成长点/称号体系保留不动，雀币是并行的「可花费」货币。

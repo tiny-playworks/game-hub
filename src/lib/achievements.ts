@@ -22,10 +22,7 @@ export interface AchievementDef {
     metaAtMost?: Record<string, number>;
     stat?: keyof GameStats;
     riichiStat?:
-      | 'riichiWins'
-      | 'riichiRiichiCount'
-      | 'riichiTsumoCount'
-      | 'riichiRounds';
+      'riichiWins' | 'riichiRiichiCount' | 'riichiTsumoCount' | 'riichiRounds';
   };
   nameKey: string;
   descKey: string;
@@ -38,10 +35,7 @@ export interface AchievementDef {
 export type AchievementRarity = 'common' | 'rare' | 'epic' | 'legendary';
 
 export type AchievementProgressType =
-  | 'unlock'
-  | 'best-2048'
-  | 'best-snake'
-  | 'best-tetris-lines';
+  'unlock' | 'best-2048' | 'best-snake' | 'best-tetris-lines';
 
 export interface AchievementMeta {
   id: string;

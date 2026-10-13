@@ -1,4 +1,4 @@
-import { expect, test } from '@rstest/core';
+import { expect, test } from 'rstack/test';
 import { getMessage } from '../src/lib/i18n';
 import { formatLogEntry } from '../src/pages/mahjong/japanese/helpers';
 

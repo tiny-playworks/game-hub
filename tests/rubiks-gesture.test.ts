@@ -1,4 +1,4 @@
-import { expect, test } from '@rstest/core';
+import { expect, test } from 'rstack/test';
 import { PerspectiveCamera, Vector2, Vector3 } from 'three';
 import {
   belongsToLayer,

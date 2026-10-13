@@ -788,7 +788,9 @@ const GameMahjongJapanese = () => {
   const navigate = useNavigate();
   const rankedState = useRankedState();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activePanel, setActivePanel] = useState<ActiveDesktopPanel>(null);
+  const [activePanel, setActivePanel] = useState<ActiveDesktopPanel>(() =>
+    window.matchMedia('(min-width: 1100px)').matches ? 'hint' : null,
+  );
   const [loadError, setLoadError] = useState(false);
   const didHandleEntryRef = useRef(false);
   const { theme, setTheme } = useRiichiTheme();
@@ -874,7 +876,9 @@ const GameMahjongJapanese = () => {
       navigate('/');
       return;
     }
-    setActivePanel(null);
+    setActivePanel(
+      window.matchMedia('(min-width: 1100px)').matches ? 'hint' : null,
+    );
     setRiichiSelection(null);
     try {
       await preloadRiichiRules();

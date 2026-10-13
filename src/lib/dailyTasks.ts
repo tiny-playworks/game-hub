@@ -12,11 +12,7 @@ export const DAILY_TASK_STORAGE_KEY = 'game-hub-daily-tasks';
 export const DAILY_TASK_COUNT = 3;
 
 export type RiichiDailyEvent =
-  | 'enter-game'
-  | 'finish-round'
-  | 'declare-riichi'
-  | 'win-hand'
-  | 'tsumo-win';
+  'enter-game' | 'finish-round' | 'declare-riichi' | 'win-hand' | 'tsumo-win';
 
 export interface DailyTask {
   id: string;

@@ -1,4 +1,4 @@
-import { describe, expect, test } from '@rstest/core';
+import { describe, expect, test } from 'rstack/test';
 import { getMessage } from '../src/lib/i18n';
 import { getBaseTile } from '../src/lib/mahjongRiichi';
 import { CHARACTER_DEFS } from '../src/lib/playerCharacters';

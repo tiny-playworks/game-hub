@@ -12,11 +12,20 @@ export function RankedNavigationGuard() {
   const navigate = useNavigate();
   const { t } = useLocale();
   useLayoutEffect(() => {
-    const leftTable = previous.current === '/game/mahjong-japanese' && pathname !== previous.current;
+    const leftTable =
+      previous.current === '/game/mahjong-japanese' &&
+      pathname !== previous.current;
     previous.current = pathname;
     const store = useRiichiStore.getState();
-    if (!leftTable || store.view !== 'game' || !store.match?.ranked || !getRankedState().activeMatchId) return;
-    if (!confirmRankedExit(t)) navigate('/game/mahjong-japanese', { replace: true });
+    if (
+      !leftTable ||
+      store.view !== 'game' ||
+      !store.match?.ranked ||
+      !getRankedState().activeMatchId
+    )
+      return;
+    if (!confirmRankedExit(t))
+      navigate('/game/mahjong-japanese', { replace: true });
   }, [pathname, navigate, t]);
   return null;
 }

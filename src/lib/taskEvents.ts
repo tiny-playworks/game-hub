@@ -1,11 +1,7 @@
 import type { CategoryId } from '@/data/games';
 import type { GameEventType } from '@/lib/gameEvents';
 export type RiichiTaskEvent =
-  | 'enter-game'
-  | 'finish-round'
-  | 'declare-riichi'
-  | 'win-hand'
-  | 'tsumo-win';
+  'enter-game' | 'finish-round' | 'declare-riichi' | 'win-hand' | 'tsumo-win';
 export type TaskTrigger =
   | { scope: 'riichi'; event: RiichiTaskEvent }
   | {

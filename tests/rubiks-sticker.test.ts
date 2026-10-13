@@ -1,4 +1,4 @@
-import { expect, test } from '@rstest/core';
+import { expect, test } from 'rstack/test';
 import { drawStickerCanvas } from '../src/pages/rubiks/stickerTexture';
 
 test('贴纸纹理由 Canvas 绘制黑色底、圆角贴纸和高光渐变', () => {

@@ -1,4 +1,4 @@
-import { describe, expect, test } from '@rstest/core';
+import { describe, expect, test } from 'rstack/test';
 import { isMenzhen, isOpenMeld } from '../src/lib/mahjongRiichi';
 import { computeWaitingTilesRiichi } from '../src/lib/riichiWaitingTiles';
 import { getWaits } from '../src/pages/mahjong/japanese/engine/hand';

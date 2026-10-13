@@ -1,5 +1,5 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -88,8 +88,8 @@
   --color-wood: var(--wood);
   --color-gold: var(--gold);
   --color-paper: var(--paper);
-  --font-sans: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
-  --font-serif: "Noto Serif SC", "Songti SC", serif;
+  --font-sans: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-serif: 'Noto Serif SC', 'Songti SC', serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -138,7 +138,7 @@ body {
   margin: 0;
   color: var(--foreground);
   font-family:
-    "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+    'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
     sans-serif;
   background: var(--background);
 }
@@ -210,7 +210,7 @@ body {
   filter: blur(12px);
   opacity: 0.9;
   animation: premium-float 12s ease-in-out infinite;
-  content: "";
+  content: '';
   pointer-events: none;
 }
 
@@ -225,7 +225,7 @@ body {
     transparent 82%
   );
   animation: premium-shimmer 12s linear infinite;
-  content: "";
+  content: '';
   pointer-events: none;
 }
 
@@ -450,7 +450,7 @@ body {
 }
 
 /* 日麻多主题：通过 data-riichi-theme 切换，子元素用 var(--riichi-*) */
-[data-riichi-theme="green"] {
+[data-riichi-theme='green'] {
   --riichi-bg: #102218;
   --riichi-bg-to: #0b1610;
   --riichi-text: #f3efe3;
@@ -466,7 +466,7 @@ body {
   --riichi-tile-back-color: #35684d;
 }
 
-[data-riichi-theme="blue"] {
+[data-riichi-theme='blue'] {
   --riichi-bg: #0e1a2a;
   --riichi-bg-to: #080f19;
   --riichi-text: #e8f1ff;
@@ -482,7 +482,7 @@ body {
   --riichi-tile-back-color: #31597f;
 }
 
-[data-riichi-theme="warm"] {
+[data-riichi-theme='warm'] {
   --riichi-bg: #261c16;
   --riichi-bg-to: #17100d;
   --riichi-text: #f8efe3;
@@ -919,7 +919,7 @@ body {
       rgba(255, 255, 255, 0.115),
       transparent 43%
     ),
-    url("./assets/riichi/table-felt.svg"), var(--riichi-table);
+    url('./assets/riichi/table-felt.svg'), var(--riichi-table);
   background-size:
     cover,
     190px 190px,
@@ -935,7 +935,7 @@ body {
 .riichi-table-surface::after {
   position: absolute;
   pointer-events: none;
-  content: "";
+  content: '';
 }
 
 .riichi-table-surface::before {
@@ -1015,9 +1015,9 @@ body {
   inset: 58px 18px 18px;
   display: grid;
   grid-template-areas:
-    "top top top"
-    "left center right"
-    "self self self";
+    'top top top'
+    'left center right'
+    'self self self';
   grid-template-columns: 166px minmax(0, 1fr) 166px;
   grid-template-rows: 146px minmax(0, 1fr) 204px;
   gap: 11px;
@@ -1245,9 +1245,9 @@ body {
   aspect-ratio: 1;
   display: grid;
   grid-template-areas:
-    "river-top river-top river-top"
-    "river-left console river-right"
-    "river-bottom river-bottom river-bottom";
+    'river-top river-top river-top'
+    'river-left console river-right'
+    'river-bottom river-bottom river-bottom';
   grid-template-columns: minmax(0, 1fr) 154px minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) 154px minmax(0, 1fr);
   gap: 4px;
@@ -1385,8 +1385,8 @@ body {
 .riichi-seat--self {
   padding: 9px 13px 8px;
   background:
-    url("./assets/riichi/action-panel.webp") center / cover,
-    url("./assets/riichi/action-panel.svg") center / cover,
+    url('./assets/riichi/action-panel.webp') center / cover,
+    url('./assets/riichi/action-panel.svg') center / cover,
     color-mix(in srgb, var(--riichi-table) 82%, transparent);
 }
 
@@ -1579,8 +1579,8 @@ body {
   user-select: none;
 }
 
-.riichi-tile[data-rotation="90"],
-.riichi-tile[data-rotation="-90"] {
+.riichi-tile[data-rotation='90'],
+.riichi-tile[data-rotation='-90'] {
   width: var(--riichi-tile-height);
   height: var(--riichi-tile-width);
 }
@@ -1627,19 +1627,19 @@ body {
   transform-origin: center;
 }
 
-.riichi-tile[data-rotation="0"] .riichi-tile-rotator {
+.riichi-tile[data-rotation='0'] .riichi-tile-rotator {
   transform: translate(-50%, -50%);
 }
 
-.riichi-tile[data-rotation="90"] .riichi-tile-rotator {
+.riichi-tile[data-rotation='90'] .riichi-tile-rotator {
   transform: translate(-50%, -50%) rotate(90deg);
 }
 
-.riichi-tile[data-rotation="180"] .riichi-tile-rotator {
+.riichi-tile[data-rotation='180'] .riichi-tile-rotator {
   transform: translate(-50%, -50%) rotate(180deg);
 }
 
-.riichi-tile[data-rotation="-90"] .riichi-tile-rotator {
+.riichi-tile[data-rotation='-90'] .riichi-tile-rotator {
   transform: translate(-50%, -50%) rotate(-90deg);
 }
 
@@ -1740,8 +1740,8 @@ body {
   transform-origin: center;
 }
 
-.riichi-tile-back[data-rotation="90"],
-.riichi-tile-back[data-rotation="-90"] {
+.riichi-tile-back[data-rotation='90'],
+.riichi-tile-back[data-rotation='-90'] {
   width: var(--riichi-tile-height);
   height: var(--riichi-tile-width);
 }
@@ -1764,19 +1764,19 @@ body {
   transform-origin: center;
 }
 
-.riichi-tile-back[data-rotation="0"] .riichi-tile-back-rotator {
+.riichi-tile-back[data-rotation='0'] .riichi-tile-back-rotator {
   transform: translate(-50%, -50%);
 }
 
-.riichi-tile-back[data-rotation="90"] .riichi-tile-back-rotator {
+.riichi-tile-back[data-rotation='90'] .riichi-tile-back-rotator {
   transform: translate(-50%, -50%) rotate(90deg);
 }
 
-.riichi-tile-back[data-rotation="180"] .riichi-tile-back-rotator {
+.riichi-tile-back[data-rotation='180'] .riichi-tile-back-rotator {
   transform: translate(-50%, -50%) rotate(180deg);
 }
 
-.riichi-tile-back[data-rotation="-90"] .riichi-tile-back-rotator {
+.riichi-tile-back[data-rotation='-90'] .riichi-tile-back-rotator {
   transform: translate(-50%, -50%) rotate(-90deg);
 }
 
@@ -2100,7 +2100,7 @@ body {
   border-radius: 10px;
   color: color-mix(in srgb, var(--riichi-text) 88%, transparent);
   background: rgba(0, 0, 0, 0.18);
-  font-family: "Cascadia Code", Consolas, monospace;
+  font-family: 'Cascadia Code', Consolas, monospace;
   font-size: 9px;
   line-height: 1.65;
   white-space: pre-wrap;
@@ -2708,7 +2708,7 @@ body {
   height: 4px;
   border-radius: 99px;
   background: var(--riichi-accent);
-  content: "";
+  content: '';
 }
 
 .riichi-guide-rules {
@@ -3091,7 +3091,11 @@ body {
 .bg-home-ambient {
   background-color: #f8fafc;
   background-image:
-    radial-gradient(circle at 15% 0%, rgba(16, 185, 129, 0.12), transparent 40%),
+    radial-gradient(
+      circle at 15% 0%,
+      rgba(16, 185, 129, 0.12),
+      transparent 40%
+    ),
     radial-gradient(
       circle at 85% 100%,
       rgba(20, 184, 166, 0.12),
@@ -3108,7 +3112,11 @@ body {
 .dark .bg-home-ambient {
   background-color: #020617;
   background-image:
-    radial-gradient(circle at 15% 0%, rgba(16, 185, 129, 0.15), transparent 40%),
+    radial-gradient(
+      circle at 15% 0%,
+      rgba(16, 185, 129, 0.15),
+      transparent 40%
+    ),
     radial-gradient(
       circle at 85% 100%,
       rgba(20, 184, 166, 0.15),
@@ -3834,7 +3842,7 @@ body {
   z-index: 5;
 }
 
-.riichi-tile--riichi-discard[data-rotation="0"] .riichi-tile-rotator {
+.riichi-tile--riichi-discard[data-rotation='0'] .riichi-tile-rotator {
   transform: translate(-50%, -50%) rotate(90deg) scale(0.82);
   border-color: var(--riichi-accent);
 }
@@ -3996,8 +4004,8 @@ body {
     animation: none;
   }
   .riichi-riichi-stick,
-  [data-riichi-theme] [data-slot="dialog-content"],
-  [data-riichi-theme] [data-slot="dialog-overlay"] {
+  [data-riichi-theme] [data-slot='dialog-content'],
+  [data-riichi-theme] [data-slot='dialog-overlay'] {
     animation: none !important;
   }
   [data-riichi-theme] .riichi-tile {
@@ -4016,20 +4024,20 @@ body {
 h1,
 h2,
 h3 {
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: 'Noto Serif SC', 'Songti SC', serif;
 }
 .paper-texture,
 .felt-surface {
   position: relative;
   isolation: isolate;
 }
-.paper-texture[data-slot="dialog-content"] {
+.paper-texture[data-slot='dialog-content'] {
   position: fixed;
 }
 .paper-texture::before,
 .felt-surface::before,
 .game-shell-ambient::before {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
   border-radius: inherit;
@@ -4069,11 +4077,11 @@ h3 {
   background: var(--card);
   box-shadow: 0 10px 24px oklch(0.25 0.02 160 / 0.05);
 }
-[data-slot="button"] {
+[data-slot='button'] {
   transition-duration: var(--duration-fast);
 }
 @media (hover: hover) {
-  [data-slot="button"]:not(:disabled):hover {
+  [data-slot='button']:not(:disabled):hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 10px oklch(0.25 0.02 160 / 0.12);
   }
@@ -4106,14 +4114,14 @@ h3 {
 }
 @media (prefers-reduced-motion: reduce) {
   .lobby-page *,
-  [data-slot="button"],
-  [data-slot="dialog-content"],
-  [data-slot="dialog-overlay"] {
+  [data-slot='button'],
+  [data-slot='dialog-content'],
+  [data-slot='dialog-overlay'] {
     animation: none;
     transition: none;
     scroll-behavior: auto;
   }
-  [data-slot="button"]:not(:disabled):hover {
+  [data-slot='button']:not(:disabled):hover {
     transform: none;
   }
   .coin-flight {

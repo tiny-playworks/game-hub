@@ -18,3 +18,4 @@ coverage/
 .superpowers/
 output/nas
 output/playwright
+.playwright-cli

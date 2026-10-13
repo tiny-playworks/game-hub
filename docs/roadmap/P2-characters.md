@@ -18,16 +18,16 @@
 
 保留现有 3 人（id 不变，兼容老存档），新增 5 人。`rankBand` 决定其在段位战中出现的段位带（P3 使用）。
 
-| id | 名字 | 段位带 | 风格 | 一句话人设 |
-|----|------|--------|------|-----------|
-| `koharu` | 小春 | 初心 | 随性新手：爱鸣牌、不太防守 | 刚学会麻将的元气学妹，输了也开心 |
-| `mio` | 澪 | 初心 | 稳健防守 | 现有角色，冷静理性，先理顺手牌 |
-| `rin` | 凛 | 雀士 | 鸣牌速攻 | 现有角色，急性子，速度就是一切 |
-| `chitose` | 千岁 | 雀士 | 均衡门清 | 茶馆看板娘，教科书式打法 |
-| `sora` | 空 | 雀杰 | 大牌打点 | 现有角色，追求节奏与打点 |
-| `aya` | 绫 | 雀杰 | 立直狂 | 能立就立的赌徒气质大姐姐 |
-| `mahiru` | 真昼 | 雀豪 | 染手（混一/清一） | 偏爱一色的画家，牌河也要好看 |
-| `yoru` | 夜 | 雀圣 | 读牌大师（攻守兼备） | 雀庄的传说，最终 Boss，话很少 |
+| id        | 名字 | 段位带 | 风格                       | 一句话人设                       |
+| --------- | ---- | ------ | -------------------------- | -------------------------------- |
+| `koharu`  | 小春 | 初心   | 随性新手：爱鸣牌、不太防守 | 刚学会麻将的元气学妹，输了也开心 |
+| `mio`     | 澪   | 初心   | 稳健防守                   | 现有角色，冷静理性，先理顺手牌   |
+| `rin`     | 凛   | 雀士   | 鸣牌速攻                   | 现有角色，急性子，速度就是一切   |
+| `chitose` | 千岁 | 雀士   | 均衡门清                   | 茶馆看板娘，教科书式打法         |
+| `sora`    | 空   | 雀杰   | 大牌打点                   | 现有角色，追求节奏与打点         |
+| `aya`     | 绫   | 雀杰   | 立直狂                     | 能立就立的赌徒气质大姐姐         |
+| `mahiru`  | 真昼 | 雀豪   | 染手（混一/清一）          | 偏爱一色的画家，牌河也要好看     |
+| `yoru`    | 夜   | 雀圣   | 读牌大师（攻守兼备）       | 雀庄的传说，最终 Boss，话很少    |
 
 角色人设、bio、标签文案由执行方按上表撰写（zh + en）。
 
@@ -39,28 +39,36 @@
 type RankBand = 'novice' | 'adept' | 'expert' | 'master' | 'saint'; // 初心/雀士/雀杰/雀豪/雀圣
 
 interface CharacterStyle {
-  callAggression: number;   // 0–1 鸣牌倾向
+  callAggression: number; // 0–1 鸣牌倾向
   riichiAggression: number; // 0–1 立直倾向（vs 默听）
-  defenseBias: number;      // 0–1 越高越早弃和
-  valueBias: number;        // 0–1 越高越追求打点
-  flushBias: number;        // 0–1 染手倾向
+  defenseBias: number; // 0–1 越高越早弃和
+  valueBias: number; // 0–1 越高越追求打点
+  flushBias: number; // 0–1 染手倾向
 }
 
 type LineTrigger =
-  | 'match-start' | 'riichi' | 'ron' | 'tsumo' | 'deal-in'
-  | 'call' | 'ryuukyoku-tenpai' | 'match-top' | 'match-last';
+  | 'match-start'
+  | 'riichi'
+  | 'ron'
+  | 'tsumo'
+  | 'deal-in'
+  | 'call'
+  | 'ryuukyoku-tenpai'
+  | 'match-top'
+  | 'match-last';
 
 interface CharacterDef {
   // ...existing
   rankBand: RankBand;
   style: CharacterStyle;
-  styleTagKeys: string[];                   // 如 ['character.tag.defense']
+  styleTagKeys: string[]; // 如 ['character.tag.defense']
   expressions: { normal: string; happy: string; frustrated: string }; // 资源路径
-  lines: Record<LineTrigger, string[]>;     // i18n key 数组，每个触发 2–3 条随机
+  lines: Record<LineTrigger, string[]>; // i18n key 数组，每个触发 2–3 条随机
 }
 ```
 
 解锁规则扩展：`unlockRule.type` 新增 `'rank-band'`（达到该段位带即解锁，P3 生效）。
+
 - 默认解锁：`koharu`、`mio`。
 - `rin` / `sora` 保留旧规则，并与 `rank-band` 取「或」；老玩家已解锁的不回收。
 - 解锁 = 可设为**主角色**（大厅展示 + 自己的 Cut-in 头像）。作为对手出现不需要解锁。
@@ -85,13 +93,13 @@ consistent character design, high quality, no text, no watermark
 
 在 [ai.ts](../../src/pages/mahjong/japanese/engine/ai.ts) 中让 `decideAiTurn` / `decideAiClaim` 接收可选 `CharacterStyle`，用参数调制现有判断，**不重写 AI**：
 
-| 参数 | 作用点 |
-|------|--------|
-| `callAggression` | 是否吃/碰/明杠的阈值（高 → 有役即鸣、甚至为速度鸣牌） |
-| `riichiAggression` | 听牌时立直 vs 默听；低打点/差听牌时是否仍立直 |
-| `defenseBias` | 面对立直/副露威胁时转 defend 的向听数/打点阈值 |
-| `valueBias` | `evaluateTileValue` 中役牌、宝牌、断幺等打点要素的权重 |
-| `flushBias` | 某花色占比 ≥ 阈值时倾向保留该色、打出他色 |
+| 参数               | 作用点                                                 |
+| ------------------ | ------------------------------------------------------ |
+| `callAggression`   | 是否吃/碰/明杠的阈值（高 → 有役即鸣、甚至为速度鸣牌）  |
+| `riichiAggression` | 听牌时立直 vs 默听；低打点/差听牌时是否仍立直          |
+| `defenseBias`      | 面对立直/副露威胁时转 defend 的向听数/打点阈值         |
+| `valueBias`        | `evaluateTileValue` 中役牌、宝牌、断幺等打点要素的权重 |
+| `flushBias`        | 某花色占比 ≥ 阈值时倾向保留该色、打出他色              |
 
 - 风格在 beginner / standard 两档上都要生效（P3 再加 strong/expert）。
 - 对局状态里记录每个座位的 `characterId`（`RiichiMatchState` 增加 `seatCharacters: [null, id, id, id]`，座位 0 为玩家），存档/回放需兼容旧数据（缺省时用默认三人）。

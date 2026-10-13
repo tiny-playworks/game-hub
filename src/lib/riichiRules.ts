@@ -71,7 +71,7 @@ export class RiichiRulesError extends Error {
   }
 }
 
-type Calc = typeof import('riichi-rs-bundlers')['calc'];
+type Calc = (typeof import('riichi-rs-bundlers'))['calc'];
 let calcImpl: Calc | null = null;
 let loadPromise: Promise<void> | null = null;
 

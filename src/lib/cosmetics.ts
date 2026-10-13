@@ -217,11 +217,7 @@ export function equipCosmetic(id: string): boolean {
   return true;
 }
 export type PurchaseResult =
-  | 'purchased'
-  | 'owned'
-  | 'locked'
-  | 'insufficient'
-  | 'failed';
+  'purchased' | 'owned' | 'locked' | 'insufficient' | 'failed';
 /** Both local records commit together; restore the previous records if either write fails. */
 export function purchaseCosmetic(id: string, at = Date.now()): PurchaseResult {
   const def = getCosmetic(id);

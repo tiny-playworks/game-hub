@@ -1,12 +1,7 @@
 import type { RiichiWinResult } from '@/pages/mahjong/japanese/types';
 
 export type ScoreTier =
-  | 'mangan'
-  | 'haneman'
-  | 'baiman'
-  | 'sanbaiman'
-  | 'yakuman'
-  | 'doubleYakuman';
+  'mangan' | 'haneman' | 'baiman' | 'sanbaiman' | 'yakuman' | 'doubleYakuman';
 
 /** Use the same basic-point cap as settlement, including 3 han 70 fu. */
 export function getScoreTier(

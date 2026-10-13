@@ -1,4 +1,4 @@
-import { expect, test } from '@rstest/core';
+import { expect, test } from 'rstack/test';
 import { render, screen } from '@testing-library/react';
 import { MeldTiles } from '../src/pages/mahjong/japanese/components/MeldTiles';
 import { tile, tiles } from './helpers/riichiTiles';

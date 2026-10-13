@@ -47,7 +47,7 @@ export function emitGameEvent(event: GameEvent): GameEventResult {
     unlockedAchievements: [],
     taskRewards: [],
   };
-  const game = games.find(game => game.id === event.gameId);
+  const game = games.find((game) => game.id === event.gameId);
   if (!game) return result;
   const arcade = event.gameId !== 'mahjong-japanese';
   const difficulty = normalizeArcadeDifficulty(event.gameId, event.difficulty);

@@ -1,4 +1,4 @@
-import { describe, expect, test } from '@rstest/core';
+import { describe, expect, test } from 'rstack/test';
 import { getNextRound } from '../src/pages/mahjong/japanese/engine';
 
 describe('getNextRound 局数推进', () => {

@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
 @keyframes blink-red {
   0%,
@@ -59,6 +59,6 @@
 }
 
 .font-led {
-  font-family: "Share Tech Mono", monospace;
+  font-family: 'Share Tech Mono', monospace;
   text-shadow: 0 0 10px currentColor;
 }

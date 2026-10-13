@@ -1,4 +1,4 @@
-import { expect, test } from '@rstest/core';
+import { expect, test } from 'rstack/test';
 import { CHARACTER_DEFS } from '../src/lib/playerCharacters';
 
 test('CHARACTER_DEFS：每条定义含档案与挂载占位字段', () => {

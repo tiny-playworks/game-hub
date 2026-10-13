@@ -1,11 +1,7 @@
 import { getBaseTile, isKanMeld } from '@/lib/mahjongRiichi';
 
 export type AbortiveDrawReason =
-  | 'kyuushu'
-  | 'suufon'
-  | 'suucha'
-  | 'suukaikan'
-  | 'sanchahou';
+  'kyuushu' | 'suufon' | 'suucha' | 'suukaikan' | 'sanchahou';
 
 type RiichiMeldLike = {
   type: 'chi' | 'peng' | 'mingang' | 'angang' | 'kakan';

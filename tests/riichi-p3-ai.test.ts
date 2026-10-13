@@ -1,4 +1,4 @@
-import { describe, expect, test } from '@rstest/core';
+import { describe, expect, test } from 'rstack/test';
 import { getBaseTile } from '../src/lib/mahjongRiichi';
 import { getCharacterById } from '../src/lib/playerCharacters';
 import { evaluateDefensiveDanger } from '../src/lib/riichiAi';

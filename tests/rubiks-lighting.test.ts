@@ -1,4 +1,4 @@
-import { expect, test } from '@rstest/core';
+import { expect, test } from 'rstack/test';
 import { Vector3 } from 'three';
 import { RUBIKS_LIGHTING } from '../src/pages/rubiks/lighting';
 

@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { getCharacterAsset } from '@/assets/characters';
+import { getCharacterSheet } from '@/assets/characters/sheets';
+import { useCharacters } from '@/hooks/useCosmetics';
 import type { CharacterDef, CharacterExpression } from '@/lib/playerCharacters';
 import { cn } from '@/lib/utils';
 
@@ -17,6 +19,7 @@ export interface CharacterPortraitSlotProps {
   expression?: CharacterExpression;
   label: string;
   className?: string;
+  outfit?: string;
 }
 
 /**
@@ -28,27 +31,37 @@ export function CharacterPortraitSlot({
   expression = 'normal',
   label,
   className,
+  outfit,
 }: CharacterPortraitSlotProps) {
   const initial = character.name.slice(0, 1);
   const isPortrait = size === 'xl' || size === 'cutin';
+  const characters = useCharacters();
+  const sheet = getCharacterSheet(
+    character.id,
+    expression,
+    isPortrait,
+    outfit ?? characters.outfitByCharacter?.[character.id],
+  );
   const path =
     !isPortrait && expression === 'normal'
       ? character.avatar
       : character.expressions?.[expression];
   const src =
-    character.portraitKey && path ? getCharacterAsset(path) : undefined;
+    sheet?.src ??
+    (character.portraitKey && path ? getCharacterAsset(path) : undefined);
   const [failedSource, setFailedSource] = useState<string | null>(null);
   const hasImage = src && src !== failedSource;
   return (
     <div
       role="img"
       aria-label={label}
+      data-character-art={sheet ? 'sheet' : 'portrait'}
       className={cn(
         'relative flex shrink-0 items-center justify-center overflow-hidden rounded-2xl font-semibold',
         hasImage && isPortrait
           ? 'border border-transparent'
           : cn(
-              'border border-border bg-gradient-to-br shadow-inner',
+              'border border-border bg-linear-to-br shadow-inner',
               character.accent,
             ),
         sizeClass[size],
@@ -57,7 +70,22 @@ export function CharacterPortraitSlot({
         'text-slate-900',
       )}
     >
-      {hasImage ? (
+      {hasImage && sheet ? (
+        <svg
+          aria-hidden="true"
+          viewBox={sheet.viewBox}
+          preserveAspectRatio="xMidYMid slice"
+          className="h-full w-full"
+        >
+          <image
+            href={sheet.src}
+            width={sheet.width}
+            height={sheet.height}
+            // SVG <image> 支持加载失败回调；规则按 HTML 标签白名单误报
+            onError={() => setFailedSource(sheet.src)} // rslint-disable-line react/no-unknown-property
+          />
+        </svg>
+      ) : hasImage ? (
         <img
           src={src}
           alt=""

@@ -1,4 +1,4 @@
-import { describe, expect, test } from '@rstest/core';
+import { describe, expect, test } from 'rstack/test';
 import { ourTileToRs, rsHairiTileToOur } from '../src/lib/riichiRsAdapter';
 import { analyzeRiichiHand, evaluateRiichiWin } from '../src/lib/riichiRules';
 

@@ -1,4 +1,4 @@
-import { describe, expect, test } from '@rstest/core';
+import { describe, expect, test } from 'rstack/test';
 import { render, screen } from '@testing-library/react';
 import { getTileLabel } from '../src/lib/mahjongRiichi';
 import {

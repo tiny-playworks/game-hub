@@ -171,12 +171,10 @@ const Home = () => {
                   <h2 className="text-lg font-semibold">
                     {t('lobby.freePlay')}
                   </h2>
-                  <p className="mt-1 text-xs text-paper/65">
-                    {t('lobby.freeDescription')}
-                  </p>
                 </div>
               </div>
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="venue-free-actions mt-4 flex flex-wrap gap-2">
+                <p>{t('lobby.freeDescription')}</p>
                 <Button
                   asChild
                   className="flex-1 rounded-xl bg-gold text-[#24362a] hover:bg-gold/90"
@@ -240,6 +238,20 @@ const Home = () => {
                   <li key={task.id} className="py-3">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-sm font-medium">{t(task.titleKey)}</p>
+                      <div
+                        className="venue-task-meter"
+                        role="progressbar"
+                        aria-label={t(task.titleKey)}
+                        aria-valuemin={0}
+                        aria-valuemax={task.target}
+                        aria-valuenow={Math.min(task.progress, task.target)}
+                      >
+                        <i
+                          style={{
+                            width: `${Math.min(100, (task.progress / Math.max(1, task.target)) * 100)}%`,
+                          }}
+                        />
+                      </div>
                       {task.completed ? (
                         <Check className="size-4 shrink-0 text-primary" />
                       ) : (
