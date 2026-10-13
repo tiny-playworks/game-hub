@@ -73,7 +73,7 @@ export function GameHeader({
   };
 
   const { audioVolumes } = usePlayerProfile();
-  const isMuted = audioVolumes.sfx <= 0;
+  const isMuted = audioVolumes.sfx <= 0 && audioVolumes.voice <= 0;
   const toggleMute = () => {
     updatePlayerProfile({
       audioVolumes: {

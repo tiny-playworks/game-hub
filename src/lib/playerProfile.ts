@@ -206,7 +206,7 @@ if (typeof window !== 'undefined') {
   });
 }
 
-function normalizePlayerProfile(raw: unknown): PlayerProfile {
+export function normalizePlayerProfile(raw: unknown): PlayerProfile {
   const defaults = createDefaultPlayerProfile();
   if (!raw || typeof raw !== 'object') return defaults;
   const parsed = raw as Partial<PlayerProfile>;

@@ -234,7 +234,7 @@ export function buildDailyTaskSetForDate(
   return selected;
 }
 
-function normalizeState(raw: unknown): DailyTaskState | null {
+export function normalizeDailyTaskState(raw: unknown): DailyTaskState | null {
   if (!raw || typeof raw !== 'object') return null;
   const parsed = raw as Partial<DailyTaskState>;
   if (typeof parsed.dateKey !== 'string' || !Array.isArray(parsed.items)) {
@@ -294,7 +294,7 @@ export function getDailyTaskState(now = Date.now()): DailyTaskState {
   try {
     const raw = gameStorage.getItem(DAILY_TASK_STORAGE_KEY);
     if (!raw) return createDailyTaskState(now);
-    const parsed = normalizeState(JSON.parse(raw));
+    const parsed = normalizeDailyTaskState(JSON.parse(raw));
     if (!parsed || parsed.dateKey !== dateKey) return createDailyTaskState(now);
     return parsed;
   } catch {

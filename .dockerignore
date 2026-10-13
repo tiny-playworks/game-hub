@@ -1,0 +1,11 @@
+.git
+.playwright-cli
+coverage
+dist
+docs
+node_modules
+output
+server/data
+server/dist
+server/node_modules
+tests

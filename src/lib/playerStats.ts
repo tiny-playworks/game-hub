@@ -31,7 +31,7 @@ function safeCount(value: unknown): number {
     : 0;
 }
 
-function normalizeStats(raw: unknown): PlayerStatsState {
+export function normalizePlayerStats(raw: unknown): PlayerStatsState {
   const defaults = createDefaultPlayerStats();
   if (!raw || typeof raw !== 'object') return defaults;
   const parsed = raw as Partial<PlayerStatsState>;
@@ -61,14 +61,14 @@ export function getPlayerStats(): PlayerStatsState {
   try {
     const raw = gameStorage.getItem(PLAYER_STATS_STORAGE_KEY);
     if (!raw) return createDefaultPlayerStats();
-    return normalizeStats(JSON.parse(raw));
+    return normalizePlayerStats(JSON.parse(raw));
   } catch {
     return createDefaultPlayerStats();
   }
 }
 
 export function savePlayerStats(state: PlayerStatsState): PlayerStatsState {
-  const normalized = normalizeStats({ ...state, updatedAt: Date.now() });
+  const normalized = normalizePlayerStats({ ...state, updatedAt: Date.now() });
   if (typeof gameStorage === 'undefined') return normalized;
   gameStorage.setItem(PLAYER_STATS_STORAGE_KEY, JSON.stringify(normalized));
   return normalized;

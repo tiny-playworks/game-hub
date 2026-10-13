@@ -145,14 +145,14 @@ function createDefaultItems(weekKey: string): WeeklyTaskProgress[] {
   }));
 }
 
-function createWeeklyTaskState(now = Date.now()): WeeklyTaskState {
+export function createWeeklyTaskState(now = Date.now()): WeeklyTaskState {
   return {
     weekKey: getBeijingWeekKey(now),
     items: createDefaultItems(getBeijingWeekKey(now)),
   };
 }
 
-function normalizeState(raw: unknown): WeeklyTaskState | null {
+export function normalizeWeeklyTaskState(raw: unknown): WeeklyTaskState | null {
   if (!raw || typeof raw !== 'object') return null;
   const parsed = raw as Partial<WeeklyTaskState>;
   if (typeof parsed.weekKey !== 'string' || !Array.isArray(parsed.items)) {
@@ -206,7 +206,7 @@ export function getWeeklyTaskState(now = Date.now()): WeeklyTaskState {
   try {
     const raw = gameStorage.getItem(WEEKLY_TASK_STORAGE_KEY);
     if (!raw) return createWeeklyTaskState(now);
-    const parsed = normalizeState(JSON.parse(raw));
+    const parsed = normalizeWeeklyTaskState(JSON.parse(raw));
     if (!parsed || parsed.weekKey !== weekKey)
       return createWeeklyTaskState(now);
     return parsed;

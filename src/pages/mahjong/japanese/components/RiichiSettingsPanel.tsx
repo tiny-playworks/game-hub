@@ -22,7 +22,7 @@ export function RiichiSettingsPanel({ ranked = false }: { ranked?: boolean }) {
     value: RiichiPlayerSettings[K],
   ) => updatePlayerProfile({ riichiSettings: { [key]: value } });
 
-  const isMuted = audioVolumes.sfx <= 0;
+  const isMuted = audioVolumes.sfx <= 0 && audioVolumes.voice <= 0;
   const toggleMute = (muted: boolean) => {
     updatePlayerProfile({
       audioVolumes: {

@@ -30,7 +30,7 @@ export function createDefaultGrowthState(): GrowthState {
   };
 }
 
-function normalizeGrowthState(raw: unknown): GrowthState {
+export function normalizeGrowthState(raw: unknown): GrowthState {
   const defaults = createDefaultGrowthState();
   if (!raw || typeof raw !== 'object') return defaults;
   const parsed = raw as Partial<GrowthState>;

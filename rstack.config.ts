@@ -77,6 +77,16 @@ define.app(async () => {
     },
     server: {
       historyApiFallback: true,
+      proxy: {
+        '/api/v1': {
+          target: 'http://127.0.0.1:8787',
+          changeOrigin: false,
+        },
+        '/healthz': {
+          target: 'http://127.0.0.1:8787',
+          changeOrigin: false,
+        },
+      },
     },
   };
 });

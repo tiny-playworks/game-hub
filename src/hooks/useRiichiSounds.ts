@@ -71,18 +71,18 @@ export function useRiichiSounds() {
 
   const playVoice = useCallback(
     (name: Voice) => {
-      if (sfx <= 0) return;
+      if (voice <= 0) return;
       let audio = cache.current.get(name);
       if (!audio) {
         audio = new Audio(`${BASE}/${name}.m4a`);
         audio.preload = 'none';
         cache.current.set(name, audio);
       }
-      audio.volume = 0.8 * sfx;
+      audio.volume = 0.8 * voice;
       audio.currentTime = 0;
       void audio.play().catch(() => undefined);
     },
-    [sfx],
+    [voice],
   );
 
   return useMemo(

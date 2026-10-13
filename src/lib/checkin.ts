@@ -83,7 +83,7 @@ export function createDefaultCheckinState(now = Date.now()): CheckinState {
   };
 }
 
-function normalizeCheckinState(raw: unknown): CheckinState {
+export function normalizeCheckinState(raw: unknown): CheckinState {
   const defaults = createDefaultCheckinState();
   if (!raw || typeof raw !== 'object') return defaults;
   const parsed = raw as Partial<CheckinState>;
