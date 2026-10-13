@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from 'react';
@@ -11,6 +12,7 @@ import {
   type Locale,
   setStoredLocale,
 } from '@/lib/i18n';
+import { useOptionalHousehold } from '@/contexts/HouseholdContext';
 
 type LocaleContextValue = {
   locale: Locale;
@@ -21,12 +23,28 @@ type LocaleContextValue = {
 const LocaleContext = createContext<LocaleContextValue | null>(null);
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
+  const household = useOptionalHousehold();
+  const mode = household?.mode ?? 'guest-local';
+  const snapshot = household?.snapshot;
+  const updatePreferences = household?.updatePreferences;
   const [locale, setLocaleState] = useState<Locale>(getStoredLocale);
 
+  useEffect(() => {
+    setLocaleState(
+      mode === 'member-online' && snapshot
+        ? snapshot.preferences.locale
+        : getStoredLocale(),
+    );
+  }, [mode, snapshot?.memberId, snapshot?.preferences.locale]);
+
   const setLocale = useCallback((next: Locale) => {
+    if (mode === 'member-online') {
+      void updatePreferences?.({ locale: next }).catch(() => {});
+      return;
+    }
     setLocaleState(next);
     setStoredLocale(next);
-  }, []);
+  }, [mode, updatePreferences]);
 
   const t = useCallback((key: string) => getMessage(locale, key), [locale]);
 

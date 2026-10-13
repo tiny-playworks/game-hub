@@ -2,6 +2,7 @@ import type { MemberSnapshot } from '../../../shared/contracts/member';
 import { ACHIEVEMENT_UNLOCKED_EVENT } from '@/lib/achievements';
 import { COSMETICS_CHANGED_EVENT } from '@/lib/cosmetics';
 import { CHARACTERS_CHANGED_EVENT } from '@/lib/playerCharacters';
+import { PLAYER_PROFILE_STORAGE_KEY } from '@/lib/playerProfile';
 import { RANKED_CHANGED_EVENT } from '@/lib/ranked';
 import { WALLET_CHANGED_EVENT } from '@/lib/wallet';
 
@@ -81,5 +82,5 @@ export function notifyStorageStateChanged(): void {
   window.dispatchEvent(new Event(CHARACTERS_CHANGED_EVENT));
   window.dispatchEvent(new Event(RANKED_CHANGED_EVENT));
   window.dispatchEvent(new Event(ACHIEVEMENT_UNLOCKED_EVENT));
-  window.dispatchEvent(new StorageEvent('storage'));
+  window.dispatchEvent(new StorageEvent('storage', { key: PLAYER_PROFILE_STORAGE_KEY }));
 }

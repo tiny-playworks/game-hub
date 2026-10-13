@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useOptionalHousehold } from '@/contexts/HouseholdContext';
 import { claimDailyTask } from '@/lib/dailyTasks';
 import { claimWeeklyTask } from '@/lib/weeklyTasks';
 export function TaskClaimButton({
@@ -13,7 +14,9 @@ export function TaskClaimButton({
   onClaim: () => void;
 }) {
   const { t } = useLocale();
+  const household = useOptionalHousehold();
   const [error, setError] = useState(false);
+  const [busy, setBusy] = useState(false);
   if (!task.completed) return null;
   if (task.claimed)
     return (
@@ -24,13 +27,24 @@ export function TaskClaimButton({
       <Button
         size="sm"
         data-task-claim={task.id}
-        onClick={() => {
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
           try {
-            (scope === 'daily' ? claimDailyTask : claimWeeklyTask)(task.id);
+            if (household?.mode === 'member-online') {
+              await household.performProgressAction({
+                type: scope === 'daily' ? 'claim-daily-task' : 'claim-weekly-task',
+                taskId: task.id,
+              });
+            } else {
+              (scope === 'daily' ? claimDailyTask : claimWeeklyTask)(task.id);
+            }
             setError(false);
             onClaim();
           } catch {
             setError(true);
+          } finally {
+            setBusy(false);
           }
         }}
       >

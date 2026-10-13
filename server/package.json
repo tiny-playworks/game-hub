@@ -8,11 +8,12 @@
   "scripts": {
     "build": "node build.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "gate:arcade": "node dist/arcade-gate.mjs",
     "start": "node dist/index.mjs",
     "member": "node dist/member.mjs"
   },
   "dependencies": {
-    "fastify": "^5.12.5",
+    "fastify": "5.12.5",
     "riichi-rs-bundlers": "2.1.0"
   },
   "devDependencies": {

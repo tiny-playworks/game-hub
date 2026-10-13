@@ -5,6 +5,7 @@ import {
   readSnapshot,
   saveSnapshot,
   transaction,
+  type MemberRow,
 } from '../server/src/db';
 import {
   createEmptySnapshot,
@@ -75,7 +76,7 @@ describe('P10 Household Server Auth & Authority Logic', () => {
         VALUES (?, 'salt', 'hash', ?, 0, ?)
       `).run(id, JSON.stringify(initial), initial.updatedAt);
 
-      const row = db.prepare('SELECT * FROM members WHERE id = ?').get(id) as any;
+      const row = db.prepare('SELECT * FROM members WHERE id = ?').get(id) as unknown as MemberRow;
       expect(row.revision).toBe(0);
 
       const loaded = readSnapshot(row);
@@ -89,7 +90,7 @@ describe('P10 Household Server Auth & Authority Logic', () => {
       expect(updated.revision).toBe(1);
 
       // 再次读取
-      const updatedRow = db.prepare('SELECT * FROM members WHERE id = ?').get(id) as any;
+      const updatedRow = db.prepare('SELECT * FROM members WHERE id = ?').get(id) as unknown as MemberRow;
       expect(updatedRow.revision).toBe(1);
       expect(readSnapshot(updatedRow).wallet.coins).toBe(400);
 

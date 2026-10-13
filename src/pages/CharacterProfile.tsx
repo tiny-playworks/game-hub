@@ -13,6 +13,7 @@ import { CharacterOutfitPicker } from '@/components/characters/CharacterOutfitPi
 import { CharacterStoryPlayer } from '@/components/characters/CharacterStoryPlayer';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useOptionalHousehold } from '@/contexts/HouseholdContext';
 import { useCharacters } from '@/hooks/useCosmetics';
 import { type CharacterStory, getCharacterStory } from '@/lib/characterStories';
 import { COSMETIC_DEFS } from '@/lib/cosmetics';
@@ -28,6 +29,7 @@ import { cn } from '@/lib/utils';
 export default function CharacterProfile() {
   const { id } = useParams();
   const { t, locale } = useLocale();
+  const household = useOptionalHousehold();
   const state = useCharacters();
   const [expression, setExpression] = useState<CharacterExpression>('normal');
   const [story, setStory] = useState<CharacterStory | null>(null);
@@ -126,9 +128,11 @@ export default function CharacterProfile() {
             <Button
               className="mt-5"
               disabled={!unlocked || active}
-              onClick={() => {
+              onClick={async () => {
                 try {
-                  setActiveCharacter(character.id);
+                  if (household?.mode === 'member-online')
+                    await household.selectCharacter(character.id);
+                  else setActiveCharacter(character.id);
                   setError('');
                 } catch {
                   setError(t('shop.failed'));

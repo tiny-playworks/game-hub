@@ -62,6 +62,16 @@ function migrate(db: DatabaseSync): void {
       save_json TEXT NOT NULL,
       imported_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS arcade_rounds (
+      member_id TEXT NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+      round_id TEXT NOT NULL,
+      game_id TEXT NOT NULL,
+      difficulty TEXT NOT NULL,
+      started_at INTEGER NOT NULL,
+      finished_at INTEGER,
+      result_json TEXT,
+      PRIMARY KEY(member_id, round_id)
+    );
     CREATE INDEX IF NOT EXISTS sessions_expires_at ON sessions(expires_at);
   `);
 }

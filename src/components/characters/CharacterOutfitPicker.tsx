@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useOptionalHousehold } from '@/contexts/HouseholdContext';
 import { useCharacters } from '@/hooks/useCosmetics';
 import { AOI_OUTFITS } from '@/lib/characterOutfits';
 import {
@@ -14,6 +15,7 @@ export function CharacterOutfitPicker({
   character: CharacterDef;
 }) {
   const { t } = useLocale();
+  const household = useOptionalHousehold();
   const state = useCharacters();
   const [error, setError] = useState('');
   if (character.id !== 'aoi') return null;
@@ -28,14 +30,17 @@ export function CharacterOutfitPicker({
             type="button"
             aria-label={t(`outfit.${outfit}`)}
             aria-pressed={current === outfit}
-            onClick={() => {
+            onClick={async () => {
               try {
-                updatePlayerCharacterState((value) => ({
-                  outfitByCharacter: {
-                    ...value.outfitByCharacter,
-                    aoi: outfit,
-                  },
-                }));
+                if (household?.mode === 'member-online')
+                  await household.selectAoiOutfit(outfit);
+                else
+                  updatePlayerCharacterState((value) => ({
+                    outfitByCharacter: {
+                      ...value.outfitByCharacter,
+                      aoi: outfit,
+                    },
+                  }));
                 setError('');
               } catch {
                 setError(t('storage.title'));

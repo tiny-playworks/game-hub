@@ -2,7 +2,7 @@
 
 > 依赖：P7–P9；先通过 Node/WASM 运行门禁。先读 [README](./README.md)。
 > 目标：成员档案隔离，头像加 PIN 登录，NAS 保存权威成长与资产。
-> 状态：本机实现与验证完成（69 测试套件 / 514 项测试全通过）；真实 NAS 部署待现场验证。
+> 状态：本机部分实现与验证；街机已接服务端结算，日麻结算与真实 NAS 部署待完成。
 
 ## 涉及文件（先读）
 
@@ -16,7 +16,7 @@
 - [src/components/profile/DataManagementCard.tsx](../../src/components/profile/DataManagementCard.tsx) — 导入导出 UI。
 - [src/contexts/LocaleContext.tsx](../../src/contexts/LocaleContext.tsx) — 语言偏好。
 
-## 拟新增文件（计划新增，当前不要求存在）
+## 核心实现文件（现有）
 
 - `server/package.json` — 服务依赖与启动/构建命令。
 - `server/tsconfig.json` — 服务与共享类型编译范围。
@@ -25,6 +25,11 @@
 - `server/src/auth.ts` — PIN 哈希、Cookie、同源校验。
 - `server/src/routes/members.ts` — 成员会话与档案 API。
 - `server/src/routes/shop.ts` — 权威购买事务。
+- `server/src/routes/progress.ts` — 签到、里程碑与任务领取。
+- `server/src/routes/characters.ts` — 角色与服装选择。
+- `server/src/routes/arcade.ts` — 街机事件和幂等结算。
+- `server/src/arcade/gate.ts` — 无 DOM 的 Node 街机结算门禁。
+- `server/src/snapshotRuntime.ts` — 在成员快照上运行共享业务规则。
 - `server/src/cli/member.ts` — 本地建成员/重置 PIN。
 - `server/src/riichi/runtime.ts` — 同一 WASM 算分契约的 Node 装载。
 - `shared/contracts/member.ts` — 成员快照与身份类型。
@@ -59,18 +64,26 @@
 
 本地容器/进程模拟同域静态+API，资料不进入 Git。Nginx /api/v1 与 /ws 反代预留；历史静态入口保持可用直到授权切换。
 
-## 验收：本机
+## 本机进展（2026-10-13）
+
+- 已验证 Node/WASM 独立运行、成员会话与隔离、旧游客存档一次性迁移、购买事务。迁移现从游客 `localStorage` 读取，下载备份失败会停止导入；成员导出单独使用 schema 2，避免误走游客导入与重置。
+- 成员资料、语言与主题偏好、签到及里程碑、任务领取、角色与服装选择、商店购买及装备已走版本化 API 或服务端事务。本地浏览器验证签到、昵称、角色、装备在刷新后保留。
+- 街机开始/结束事件现由服务端按共享规则结算雀币、任务、成就和记录；每局编号在 SQLite 去重，失败页面可按原局编号重试。Node 无 DOM 门禁验证真实 HTTP 路径，浏览器实跑验证失败重试后入账 5 枚雀币，刷新后仍保留。
+- 日麻事件与终局奖励、段位等仍可能只改变客户端临时快照；这部分尚未满足 10.3 的服务端权威要求。街机目前接收客户端报告的结果，可信结果校验仍待设计。现阶段不得标记 P10 本机完成，也不得作为可用家庭服务部署。
+- 2026-10-13：全仓 72 个测试文件、519 项测试通过；前后端类型检查及构建、lint、Node 街机结算门禁通过。NAS 结果不计入本机验收。
+
+## 验收：本机（历史记录，需按上述缺口重新验收）
 
 1. Node/WASM 内核装载并完整推进一局；门禁脚本 `server/src/riichi/gate.ts` 在 Node 环境 90 步完赛，已通过。
 2. 两个成员分别登录，档案/钱包/段位/外观隔离；30 天记住/退出/错误 PIN 限速；`tests/household-storage.test.ts` 与 `tests/household-server.test.ts` 验证通过。
 3. 迁移旧存档成功且本地原件保留；重复迁移拒绝，失败事务无半份数据；`parseLegacyImport` 强校验及备份机制验证通过。
 4. 同成员两设备在线购买并发不出现负余额或重复物品；服务端事务与版本 revision 冲突机制已通过。
 5. 服务停止、Cookie 失效和 API 失败均有可恢复提示；`tests/household-interaction.test.tsx` 验证通过。
-- 自动化测试与构建：全仓 69 个测试套件、514 项测试全部通过；`pnpm typecheck` 与 `pnpm build`（0.43s）全部通过。
+- 早期验收记录为 69 个测试套件、514 项测试；其范围未覆盖全部在线业务写回，不能据此判定 10.3 已完成。
 
 ## 验收：真实 NAS（当前待现场验证）
 
-1. NAS CPU 架构与 Node 容器运行、卷权限、备份位置、反代 Cookie/Origin、端口核对。
+1. 2026-10-13 只读检查已确认 NAS x86_64、旧站点静态容器仍运行；家庭 API 未部署。新服务的容器运行、卷权限、备份位置、反代 Cookie/Origin、端口和回滚均待验证；当前 SSH 用户无 Docker daemon 操作权限。
 
 ## 不做
 

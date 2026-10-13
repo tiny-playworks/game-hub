@@ -34,7 +34,7 @@ P1–P6 的“纯本地、禁止后端/账号/联机、移动端不专门改造�
 | P7   | 使用可靠性与发布准备                   | 本机完成；NAS/容器/Windows待验                     | [P7](./P7-reliability.md)          |
 | P8   | 全站视觉重设计                         | 本机验收完成；NAS/家庭设备待验                 | [P8](./P8-visual-redesign.md)      |
 | P9   | 牌桌交互与视听品质                     | 本机验收完成；NAS现场待验                         | [P9](./P9-table-experience.md)     |
-| P10  | 家庭成员与 NAS 服务                    | 待实施                                             | [P10](./P10-household-service.md)  |
+| P10  | 家庭成员与 NAS 服务                    | 本机部分实现；街机已接服务端，日麻结算与真实 NAS 待完成 | [P10](./P10-household-service.md) |
 | P11  | 跨设备续玩与离线同步                   | 待实施                                             | [P11](./P11-save-sync.md)          |
 | P12  | 家庭真人牌桌                           | 待实施                                             | [P12](./P12-family-multiplayer.md) |
 | P13  | 重连、托管与恢复                       | 待实施                                             | [P13](./P13-reconnect-autoplay.md) |
@@ -57,17 +57,17 @@ graph LR
 | ------------------------------------------------ | ------------------------------------------------------------------ |
 | `src/`                                           | 已有 React 19、Rsbuild、Tailwind v4、shadcn/ui、Zustand 前端       |
 | `src/pages/mahjong/japanese/engine/`             | 已有日麻规则/AI；服务端复用同一内核，禁止复制第二套规则            |
-| `server/`                                        | P10 计划新增：Node 24 LTS、Fastify、SQLite 家庭服务                |
-| `shared/contracts/`                              | P10 计划新增：纯通信类型，不导入 DOM、React、浏览器持久化          |
+| `server/`                                        | 已有 Node 24、Fastify、SQLite 家庭服务，本机仍在完善               |
+| `shared/contracts/`                              | 已有成员通信类型，不导入 DOM、React、浏览器持久化                  |
 | `deploy/nas/`                                    | P7 新增静态发布准备；P10 扩为前端 + 服务端容器                     |
 | `scripts/deploy-to-nas.ps1`                      | 已有 Windows 部署入口；第二轮加入校验与回滚                        |
-| `/volume1/docker/game-hub/site/`                 | 已知 NAS 历史静态目录；不是已核对的容器挂载                        |
+| `/volume1/docker/game-hub/site/`                 | NAS 现有静态目录；旧 Nginx 容器通过 `./site` 只读挂载              |
 | `/volume1/docker/game-hub/releases/<releaseId>/` | 拟用不可变静态版本目录                                             |
 | `/volume1/docker/game-hub/assets/`               | 拟用跨版本哈希资源目录，保证已打开旧页面仍可加载资源；P7不自动清理 |
 | `/volume1/docker/game-hub/current`               | 拟用活动版本符号链接；容器须挂载父目录才能看见切换                 |
-| `/volume1/docker/game-hub/data/`                 | P10 拟用数据库、恢复记录、备份持久卷；不得放入静态网站目录         |
+| `/volume1/docker/game-hub/data/`                 | P10 拟用数据库、恢复记录、备份持久卷；当前尚未建立                 |
 
-当前 NAS 地址 `http://192.168.50.21:8089`，SSH 别名 `synology-nas`。NAS 无外网访问，当前环境不可达。容器挂载、端口占用、CPU 架构、权限、反向代理均**待现场核对**；不得假定现有挂载支持切换，也不得擅自替换容器。计划配置通过本地容器验证后，真实部署仍需明确授权。
+当前 NAS 地址 `http://192.168.50.21:8089`，SSH 别名 `synology-nas`。2026-10-13 只读核对：SSH 可达、CPU 为 x86_64、旧站点由 Nginx 静态容器运行；`/healthz` 与 `/api/v1/members` 仍返回旧站首页，家庭 API 尚未部署。当前 SSH 用户无 Docker daemon 操作权限，`releases/current/data` 尚不存在。新容器的卷权限、端口、反向代理与回滚仍待核对，不得擅自替换旧容器。真实部署仍需明确授权。
 
 ## 4. 跨阶段统一契约（唯一来源）
 

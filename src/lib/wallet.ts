@@ -140,11 +140,13 @@ export function addArcadeCoins(
     dailyArcadeEarned: { dateKey, amount: earned + delta },
   };
   gameStorage.setItem(WALLET_STORAGE_KEY, JSON.stringify(next));
-  window.dispatchEvent(new Event(WALLET_CHANGED_EVENT));
-  window.dispatchEvent(
-    new CustomEvent(COINS_GAINED_EVENT, {
-      detail: { coins: delta, balance: next.coins },
-    }),
-  );
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(WALLET_CHANGED_EVENT));
+    window.dispatchEvent(
+      new CustomEvent(COINS_GAINED_EVENT, {
+        detail: { coins: delta, balance: next.coins },
+      }),
+    );
+  }
   return delta;
 }

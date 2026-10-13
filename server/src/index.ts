@@ -2,7 +2,10 @@ import Fastify from 'fastify';
 import { ApiError, assertSameOrigin } from './auth';
 import { openDatabase } from './db';
 import { prepareRiichiRuntime } from './riichi/runtime';
+import { registerArcadeRoutes } from './routes/arcade';
+import { registerCharacterRoutes } from './routes/characters';
 import { registerMemberRoutes } from './routes/members';
+import { registerProgressRoutes } from './routes/progress';
 import { registerShopRoutes } from './routes/shop';
 
 const app = Fastify({
@@ -34,6 +37,9 @@ app.get('/healthz', async () => {
   return { status: 'ok' };
 });
 registerMemberRoutes(app, db);
+registerArcadeRoutes(app, db);
+registerCharacterRoutes(app, db);
+registerProgressRoutes(app, db);
 registerShopRoutes(app, db);
 
 app.addHook('onClose', async () => {

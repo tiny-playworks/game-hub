@@ -8,6 +8,7 @@ await build({
     index: `${root}/src/index.ts`,
     member: `${root}/src/cli/member.ts`,
     'riichi-gate': `${root}/src/riichi/gate.ts`,
+    'arcade-gate': `${root}/src/arcade/gate.ts`,
   },
   outdir: `${root}/dist`,
   outExtension: { '.js': '.mjs' },

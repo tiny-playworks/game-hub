@@ -1,35 +1,51 @@
 import {
   createContext,
+  Fragment,
   useCallback,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
 import type {
+  ArcadeMemberEvent,
+  ArcadeMemberResult,
   HouseholdMode,
   MemberSnapshot,
   MemberSummary,
+  ProgressAction,
+  ProgressActionResult,
 } from '../../shared/contracts/member';
 import {
   checkServerHealth,
+  equipMemberCosmetic,
   fetchCurrentMe,
   HouseholdApiError,
   importLegacySave,
   listMembers,
   loginSession,
   logoutSession,
+  performMemberProgressAction,
   purchaseCosmeticItem,
+  submitMemberArcadeEvent,
   updatePreferences as apiUpdatePreferences,
   updateProfile as apiUpdateProfile,
+  updateMemberCharacter,
 } from '@/lib/household/api';
 import {
   createStorageFromSnapshot,
   notifyStorageStateChanged,
 } from '@/lib/household/snapshotStorage';
-import { createSaveFile, downloadSaveFile } from '@/lib/saveTransfer';
+import {
+  createGuestSaveFile,
+  downloadSaveFile,
+  parseSaveFile,
+} from '@/lib/saveTransfer';
+import { setMemberProfileWriter, type PlayerProfilePatch } from '@/lib/playerProfile';
 import { setStorageDriver } from '@/lib/storage';
+import { useGameStore } from '@/store/gameStore';
 
 const DEVICE_ID_KEY = 'game-hub-device-id';
 
@@ -69,6 +85,15 @@ export interface HouseholdContextValue {
   purchaseCosmetic: (
     itemId: string,
   ) => Promise<{ snapshot: MemberSnapshot; itemId: string }>;
+  equipCosmetic: (itemId: string) => Promise<void>;
+  performProgressAction: (action: ProgressAction) => Promise<ProgressActionResult>;
+  performArcadeEvent: (event: ArcadeMemberEvent) => Promise<ArcadeMemberResult>;
+  selectCharacter: (characterId: string) => Promise<void>;
+  selectAoiOutfit: (outfit: string) => Promise<void>;
+  updateArcadeDifficulty: (
+    gameId: string,
+    difficulty: 'easy' | 'normal' | 'hard',
+  ) => Promise<void>;
   updatePreferences: (
     changes: Partial<MemberSnapshot['preferences']>,
   ) => Promise<void>;
@@ -88,18 +113,84 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
     null,
   );
   const [snapshot, setSnapshot] = useState<MemberSnapshot | null>(null);
+  const snapshotRef = useRef<MemberSnapshot | null>(null);
+  const profileWriterRef = useRef<((patch: PlayerProfilePatch) => Promise<void>) | null>(null);
+  const mutationQueue = useRef<Promise<void>>(Promise.resolve());
   const [error, setError] = useState<HouseholdApiError | Error | null>(null);
 
   const applySnapshot = useCallback((next: MemberSnapshot | null) => {
-    setSnapshot(next);
+    if (
+      next &&
+      snapshotRef.current?.memberId === next.memberId &&
+      snapshotRef.current.revision > next.revision
+    ) return;
     if (next) {
       const storage = createStorageFromSnapshot(next);
       setStorageDriver(storage);
+      setMemberProfileWriter((patch) => {
+        const writer = profileWriterRef.current;
+        if (!writer) return Promise.reject(new Error('Member profile writer unavailable'));
+        return writer(patch);
+      });
+      useGameStore.setState({ stats: next.arcade.stats, receipts: next.arcade.receipts });
     } else {
       setStorageDriver(null);
+      setMemberProfileWriter(null);
+      void useGameStore.persist.rehydrate();
+    }
+    snapshotRef.current = next;
+    setSnapshot(next);
+    if (next) {
+      const summary: MemberSummary = {
+        id: next.memberId,
+        nickname: next.profile.nickname,
+        avatarPresetId: next.profile.avatarPresetId,
+        avatarUploadDataUrl: next.profile.avatarUploadDataUrl,
+      };
+      setCurrentMember((previous) =>
+        previous?.id === next.memberId ? summary : previous);
+      setMembers((previous) => previous.map((member) =>
+        member.id === next.memberId ? summary : member));
     }
     notifyStorageStateChanged();
   }, []);
+
+  const enqueueMutation = useCallback(<T,>(work: () => Promise<T>): Promise<T> => {
+    const result = mutationQueue.current.then(work, work);
+    mutationQueue.current = result.then(() => {}, () => {});
+    return result;
+  }, []);
+
+  const reviseSnapshot = useCallback(<T extends { snapshot: MemberSnapshot }>(
+    operation: (revision: number) => Promise<T>,
+  ): Promise<T> => {
+    const owner = snapshotRef.current?.memberId;
+    if (!owner) return Promise.reject(new Error('Not logged in'));
+    return enqueueMutation(async () => {
+      try {
+        const current = snapshotRef.current;
+        if (!current || current.memberId !== owner)
+          throw new Error('Member changed before the update');
+        let result;
+        try {
+          result = await operation(current.revision);
+        } catch (err) {
+          if (!(err instanceof HouseholdApiError && err.status === 409)) throw err;
+          const { snapshot: latest } = await fetchCurrentMe();
+          if (latest.memberId !== owner)
+            throw Object.assign(new Error('Member changed before the update'), { cause: err });
+          applySnapshot(latest);
+          result = await operation(latest.revision);
+        }
+        if (snapshotRef.current?.memberId === owner) applySnapshot(result.snapshot);
+        setError(null);
+        return result;
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error(String(err)));
+        throw err;
+      }
+    });
+  }, [applySnapshot, enqueueMutation]);
 
   const refreshMembers = useCallback(async () => {
     try {
@@ -183,40 +274,88 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
 
   const purchaseCosmetic = useCallback(
     async (itemId: string) => {
-      const result = await purchaseCosmeticItem(itemId);
-      applySnapshot(result.snapshot);
-      return result;
+      const owner = snapshotRef.current?.memberId;
+      if (!owner) throw new Error('Not logged in');
+      return enqueueMutation(async () => {
+        if (snapshotRef.current?.memberId !== owner)
+          throw new Error('Member changed before the purchase');
+        const result = await purchaseCosmeticItem(itemId);
+        if (snapshotRef.current?.memberId === owner) applySnapshot(result.snapshot);
+        setError(null);
+        return result;
+      });
     },
-    [applySnapshot],
+    [applySnapshot, enqueueMutation],
   );
+
+  const equipCosmetic = useCallback(async (itemId: string) => {
+    await reviseSnapshot((revision) => equipMemberCosmetic(revision, itemId));
+  }, [reviseSnapshot]);
+
+  const performProgressAction = useCallback(async (action: ProgressAction) => {
+    const response = await reviseSnapshot((revision) =>
+      performMemberProgressAction(revision, action));
+    return response.result;
+  }, [reviseSnapshot]);
+
+  const performArcadeEvent = useCallback(async (event: ArcadeMemberEvent) => {
+    const response = await reviseSnapshot((revision) =>
+      submitMemberArcadeEvent(revision, event));
+    return response.result;
+  }, [reviseSnapshot]);
+
+  const selectCharacter = useCallback(async (characterId: string) => {
+    await reviseSnapshot((revision) =>
+      updateMemberCharacter(revision, { activeCharacterId: characterId }));
+  }, [reviseSnapshot]);
+
+  const selectAoiOutfit = useCallback(async (outfit: string) => {
+    await reviseSnapshot((revision) =>
+      updateMemberCharacter(revision, { aoiOutfit: outfit }));
+  }, [reviseSnapshot]);
+
+  const updateArcadeDifficulty = useCallback(async (
+    gameId: string,
+    difficulty: 'easy' | 'normal' | 'hard',
+  ) => {
+    await reviseSnapshot((revision) => {
+      const prefs = snapshotRef.current?.preferences.arcadePrefs ?? {};
+      const stored = prefs.difficulties;
+      const difficulties = stored && typeof stored === 'object' && !Array.isArray(stored)
+        ? stored as Record<string, unknown> : {};
+      return apiUpdatePreferences(revision, {
+        arcadePrefs: {
+          ...prefs,
+          difficulties: { ...difficulties, [gameId]: difficulty },
+        },
+      });
+    });
+  }, [reviseSnapshot]);
 
   const updatePreferences = useCallback(
     async (changes: Partial<MemberSnapshot['preferences']>) => {
-      if (!snapshot) return;
-      const result = await apiUpdatePreferences(snapshot.revision, changes);
-      applySnapshot(result.snapshot);
+      await reviseSnapshot((revision) => apiUpdatePreferences(revision, changes));
     },
-    [snapshot, applySnapshot],
+    [reviseSnapshot],
   );
 
   const updateProfile = useCallback(
     async (changes: Record<string, unknown>) => {
-      if (!snapshot) return;
-      const result = await apiUpdateProfile(snapshot.revision, changes);
-      applySnapshot(result.snapshot);
+      await reviseSnapshot((revision) => apiUpdateProfile(revision, changes));
     },
-    [snapshot, applySnapshot],
+    [reviseSnapshot],
   );
+
+  profileWriterRef.current = (patch) => updateProfile({ ...patch });
+  useEffect(() => () => setMemberProfileWriter(null), []);
 
   const importLocalSave = useCallback(async () => {
     if (!snapshot) throw new Error('Not logged in');
-    // 导入前先触发一次本地数据备份下载，确保万无一失
-    try {
-      downloadSaveFile();
-    } catch {
-      // 容错处理
-    }
-    const save = createSaveFile();
+    const save = parseSaveFile(JSON.stringify(createGuestSaveFile()));
+    if (Object.keys(save.data).length === 0)
+      throw new Error('No guest save is available to migrate');
+    // Download exactly the guest data that will be imported. Abort on failure.
+    downloadSaveFile(save);
     const result = await importLegacySave(save);
     applySnapshot(result.snapshot);
     return result;
@@ -258,6 +397,12 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
       refreshMe,
       refreshMembers,
       purchaseCosmetic,
+      equipCosmetic,
+      performProgressAction,
+      performArcadeEvent,
+      selectCharacter,
+      selectAoiOutfit,
+      updateArcadeDifficulty,
       updatePreferences,
       updateProfile,
       importLocalSave,
@@ -277,6 +422,12 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
       refreshMe,
       refreshMembers,
       purchaseCosmetic,
+      equipCosmetic,
+      performProgressAction,
+      performArcadeEvent,
+      selectCharacter,
+      selectAoiOutfit,
+      updateArcadeDifficulty,
       updatePreferences,
       updateProfile,
       importLocalSave,
@@ -285,7 +436,7 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
 
   return (
     <HouseholdContext.Provider value={value}>
-      {children}
+      <Fragment key={`${mode}:${currentMember?.id ?? ''}`}>{children}</Fragment>
     </HouseholdContext.Provider>
   );
 }
@@ -296,4 +447,8 @@ export function useHousehold(): HouseholdContextValue {
     throw new Error('useHousehold must be used within a HouseholdProvider');
   }
   return context;
+}
+
+export function useOptionalHousehold(): HouseholdContextValue | null {
+  return useContext(HouseholdContext);
 }

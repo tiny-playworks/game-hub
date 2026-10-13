@@ -12,6 +12,39 @@ import type { ArcadeStoredState } from '../../src/lib/arcadeStats';
 
 export type HouseholdMode = 'guest-local' | 'member-online';
 
+export type ProgressAction =
+  | { type: 'checkin' }
+  | { type: 'checkin-week' }
+  | { type: 'checkin-month' }
+  | { type: 'claim-daily-task'; taskId: string }
+  | { type: 'claim-weekly-task'; taskId: string };
+
+export interface ProgressActionResult {
+  ok: boolean;
+  awardedPoints: number;
+  awardedCoins: number;
+}
+
+export type ArcadeMemberEvent = {
+  type: 'start' | 'finish';
+  roundId: string;
+  gameId: string;
+  difficulty: 'easy' | 'normal' | 'hard';
+  score?: number;
+  outcome?: 'win' | 'lose' | 'draw';
+  meta?: Record<string, unknown>;
+};
+
+export interface ArcadeMemberResult {
+  coinsEarned: number;
+  capReached: boolean;
+  record?: {
+    isNewBest: boolean;
+    previousBest: number | null;
+    currentBest: number | null;
+  };
+}
+
 export interface MemberSummary {
   id: string;
   nickname: string;

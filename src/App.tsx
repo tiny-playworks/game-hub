@@ -9,7 +9,7 @@ import { RankedNavigationGuard } from '@/components/ranked/RankedNavigationGuard
 import { PageErrorBoundary } from '@/components/recovery/PageErrorBoundary';
 import { StorageNotice } from '@/components/recovery/StorageNotice';
 import { ArcadeSession } from '@/contexts/ArcadeContext';
-import { HouseholdProvider } from '@/contexts/HouseholdContext';
+import { HouseholdProvider, useHousehold } from '@/contexts/HouseholdContext';
 import { LocaleProvider } from '@/contexts/LocaleContext';
 import { CosmeticsProvider } from '@/hooks/useCosmetics';
 import { migrateLegacyArcadeStats } from '@/lib/achievements';
@@ -59,11 +59,18 @@ function TrackedPage({
   gameId: string;
   children: ReactElement;
 }) {
+  const { isLoading } = useHousehold();
+  if (isLoading) return <PageFallback />;
   return (
     <ArcadeSession key={gameId} gameId={gameId}>
       {children}
     </ArcadeSession>
   );
+}
+
+function HouseholdReady({ children }: { children: ReactElement }) {
+  const { isLoading } = useHousehold();
+  return isLoading ? <PageFallback /> : children;
 }
 
 const App = () => {
@@ -72,8 +79,8 @@ const App = () => {
   }, []);
   return (
     <BrowserRouter>
-      <LocaleProvider>
-        <HouseholdProvider>
+      <HouseholdProvider>
+        <LocaleProvider>
           <StorageNotice />
           <CosmeticsProvider>
           <VenueNavigation />
@@ -94,7 +101,7 @@ const App = () => {
                 <Route path="/category/:categoryId" element={<Category />} />
                 <Route
                   path="/game/mahjong-japanese"
-                  element={<GameMahjongJapanese />}
+                  element={<HouseholdReady><GameMahjongJapanese /></HouseholdReady>}
                 />
                 <Route
                   path="/game/guess-number"
@@ -228,8 +235,8 @@ const App = () => {
             </Suspense>
           </PageErrorBoundary>
         </CosmeticsProvider>
+        </LocaleProvider>
       </HouseholdProvider>
-    </LocaleProvider>
   </BrowserRouter>
   );
 };

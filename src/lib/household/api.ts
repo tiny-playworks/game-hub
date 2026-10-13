@@ -1,7 +1,11 @@
 import type { ApiErrorBody } from '../../../shared/contracts/api';
 import type {
+  ArcadeMemberEvent,
+  ArcadeMemberResult,
   MemberSnapshot,
   MemberSummary,
+  ProgressAction,
+  ProgressActionResult,
 } from '../../../shared/contracts/member';
 
 export class HouseholdApiError extends Error {
@@ -55,11 +59,15 @@ async function request<T>(
 }
 
 export async function checkServerHealth(): Promise<boolean> {
+  const controller = new AbortController();
+  const timeout = globalThis.setTimeout(() => controller.abort(), 3000);
   try {
-    const data = await request<{ status: string }>('/healthz');
+    const data = await request<{ status: string }>('/healthz', { signal: controller.signal });
     return data.status === 'ok';
   } catch {
     return false;
+  } finally {
+    globalThis.clearTimeout(timeout);
   }
 }
 
@@ -134,5 +142,45 @@ export async function purchaseCosmeticItem(
       method: 'POST',
       body: JSON.stringify({ itemId }),
     },
+  );
+}
+
+export async function equipMemberCosmetic(
+  baseRevision: number,
+  itemId: string,
+): Promise<{ snapshot: MemberSnapshot }> {
+  return request<{ snapshot: MemberSnapshot }>('/api/v1/me/cosmetics', {
+    method: 'PATCH',
+    body: JSON.stringify({ baseRevision, itemId }),
+  });
+}
+
+export async function performMemberProgressAction(
+  baseRevision: number,
+  action: ProgressAction,
+): Promise<{ snapshot: MemberSnapshot; result: ProgressActionResult }> {
+  return request<{ snapshot: MemberSnapshot; result: ProgressActionResult }>(
+    '/api/v1/me/progress/actions',
+    { method: 'POST', body: JSON.stringify({ baseRevision, action }) },
+  );
+}
+
+export async function updateMemberCharacter(
+  baseRevision: number,
+  change: { activeCharacterId: string } | { aoiOutfit: string },
+): Promise<{ snapshot: MemberSnapshot }> {
+  return request<{ snapshot: MemberSnapshot }>('/api/v1/me/characters', {
+    method: 'PATCH',
+    body: JSON.stringify({ baseRevision, ...change }),
+  });
+}
+
+export async function submitMemberArcadeEvent(
+  baseRevision: number,
+  event: ArcadeMemberEvent,
+): Promise<{ snapshot: MemberSnapshot; result: ArcadeMemberResult }> {
+  return request<{ snapshot: MemberSnapshot; result: ArcadeMemberResult }>(
+    '/api/v1/me/arcade/events',
+    { method: 'POST', body: JSON.stringify({ baseRevision, event }) },
   );
 }

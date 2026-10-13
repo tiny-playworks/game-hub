@@ -17,6 +17,7 @@ import { TaskClaimButton } from '@/components/TaskClaimButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useOptionalHousehold } from '@/contexts/HouseholdContext';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import {
   CHECKIN_MONTH_MILESTONES,
@@ -25,10 +26,10 @@ import {
   checkinToday,
   claimMonthMilestone,
   claimWeekMilestone,
-  ensureCheckinState,
+  getCheckinState,
   getBeijingDateKey,
 } from '@/lib/checkin';
-import { type DailyTaskState, ensureDailyTaskState } from '@/lib/dailyTasks';
+import { type DailyTaskState, getDailyTaskState } from '@/lib/dailyTasks';
 import { getGrowthOverview } from '@/lib/growth';
 import { type GrowthFeedItem, getFullGrowthFeed } from '@/lib/growthFeed';
 import {
@@ -57,7 +58,7 @@ import {
   resolveActiveTitle,
 } from '@/lib/titles';
 import { cn } from '@/lib/utils';
-import { ensureWeeklyTaskState, type WeeklyTaskState } from '@/lib/weeklyTasks';
+import { getWeeklyTaskState, type WeeklyTaskState } from '@/lib/weeklyTasks';
 
 function formatGrowthFeedLine(
   item: GrowthFeedItem,
@@ -100,18 +101,20 @@ function getCharacterUnlockText(
 
 const Profile = () => {
   const { t } = useLocale();
+  const household = useOptionalHousehold();
+  const memberMode = household?.mode === 'member-online';
   const profile = usePlayerProfile();
   const [nicknameDraft, setNicknameDraft] = useState(
     () => getPlayerProfile().nickname,
   );
   const [dailyTaskState, setDailyTaskState] = useState<DailyTaskState>(() =>
-    ensureDailyTaskState(),
+    getDailyTaskState(),
   );
   const [weeklyTaskState, setWeeklyTaskState] = useState<WeeklyTaskState>(() =>
-    ensureWeeklyTaskState(),
+    getWeeklyTaskState(),
   );
   const [checkinState, setCheckinState] = useState<CheckinState>(() =>
-    ensureCheckinState(),
+    getCheckinState(),
   );
   const [growthOverview, setGrowthOverview] = useState(() =>
     getGrowthOverview(),
@@ -125,25 +128,27 @@ const Profile = () => {
   const [recentFeed, setRecentFeed] = useState(() => getFullGrowthFeed());
   const growthHistoryMeta = useMemo(
     () =>
-      t('profile.growthHistory.meta').replace(
+      t(memberMode ? 'profile.growthHistory.memberMeta' : 'profile.growthHistory.meta').replace(
         '{{count}}',
         String(recentFeed.length),
       ),
-    [recentFeed.length, t],
+    [memberMode, recentFeed.length, t],
   );
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState('');
   const [checkinFeedback, setCheckinFeedback] = useState('');
+  const [characterError, setCharacterError] = useState('');
+  const [checkinBusy, setCheckinBusy] = useState(false);
 
   const refreshDashboard = useCallback(() => {
-    const nextDaily = ensureDailyTaskState();
-    const nextWeekly = ensureWeeklyTaskState();
-    const nextCheckin = ensureCheckinState();
+    const nextDaily = getDailyTaskState();
+    const nextWeekly = getWeeklyTaskState();
+    const nextCheckin = getCheckinState();
     const nextGrowth = getGrowthOverview();
     const nextStats = getPlayerStats();
-    const nextCharacterState = syncPlayerCharacterUnlocks(
-      getRankedState().peak.band,
-    ).state;
+    const nextCharacterState = memberMode
+      ? getPlayerCharacterState()
+      : syncPlayerCharacterUnlocks(getRankedState().peak.band).state;
     const currentProfile = getPlayerProfile();
     const resolvedTitleId = resolveActiveTitle(
       currentProfile.activeTitle,
@@ -161,11 +166,11 @@ const Profile = () => {
     setCharacterState(nextCharacterState);
     setRecentFeed(getFullGrowthFeed());
     setNicknameDraft(getPlayerProfile().nickname);
-  }, []);
+  }, [memberMode]);
 
   useEffect(() => {
     refreshDashboard();
-  }, [refreshDashboard]);
+  }, [refreshDashboard, household?.snapshot?.revision]);
 
   const saveNickname = () => {
     const next = updatePlayerProfile({
@@ -207,40 +212,68 @@ const Profile = () => {
     updatePlayerProfile({ activeTitle: titleId });
   };
 
-  const switchCharacter = (characterId: string) => {
-    const next = setActiveCharacter(characterId);
-    setCharacterState(next);
-  };
-
-  const checkinTodayAction = () => {
-    const result = checkinToday();
-    refreshDashboard();
-    setCheckinFeedback(
-      result.ok
-        ? `${t('profile.checkin.feedback.daily')}${result.awardedPoints} · +${result.awardedCoins} ${t('wallet.coins')}`
-        : t('profile.checkin.feedback.already'),
-    );
-  };
-
-  const claimWeekRewardAction = () => {
-    const milestone = CHECKIN_WEEK_MILESTONES[0];
-    const result = claimWeekMilestone(milestone);
-    refreshDashboard();
-    if (result.ok) {
-      setCheckinFeedback(
-        `${t('profile.checkin.feedback.week')}${result.awardedPoints}`,
-      );
+  const switchCharacter = async (characterId: string) => {
+    try {
+      if (memberMode) {
+        await household!.selectCharacter(characterId);
+        setCharacterState(getPlayerCharacterState());
+      } else {
+        setCharacterState(setActiveCharacter(characterId));
+      }
+      setCharacterError('');
+    } catch {
+      setCharacterError(t('save.failed'));
     }
   };
 
-  const claimMonthRewardAction = () => {
-    const milestone = CHECKIN_MONTH_MILESTONES[0];
-    const result = claimMonthMilestone(milestone);
-    refreshDashboard();
-    if (result.ok) {
+  const checkinTodayAction = async () => {
+    setCheckinBusy(true);
+    try {
+      const result = memberMode
+        ? await household!.performProgressAction({ type: 'checkin' })
+        : checkinToday();
+      refreshDashboard();
       setCheckinFeedback(
-        `${t('profile.checkin.feedback.month')}${result.awardedPoints}`,
+        result.ok
+          ? `${t('profile.checkin.feedback.daily')}${result.awardedPoints} · +${result.awardedCoins} ${t('wallet.coins')}`
+          : t('profile.checkin.feedback.already'),
       );
+    } catch {
+      setCheckinFeedback(t('save.failed'));
+    } finally {
+      setCheckinBusy(false);
+    }
+  };
+
+  const claimWeekRewardAction = async () => {
+    setCheckinBusy(true);
+    try {
+      const result = memberMode
+        ? await household!.performProgressAction({ type: 'checkin-week' })
+        : claimWeekMilestone(CHECKIN_WEEK_MILESTONES[0]);
+      refreshDashboard();
+      if (result.ok)
+        setCheckinFeedback(`${t('profile.checkin.feedback.week')}${result.awardedPoints}`);
+    } catch {
+      setCheckinFeedback(t('save.failed'));
+    } finally {
+      setCheckinBusy(false);
+    }
+  };
+
+  const claimMonthRewardAction = async () => {
+    setCheckinBusy(true);
+    try {
+      const result = memberMode
+        ? await household!.performProgressAction({ type: 'checkin-month' })
+        : claimMonthMilestone(CHECKIN_MONTH_MILESTONES[0]);
+      refreshDashboard();
+      if (result.ok)
+        setCheckinFeedback(`${t('profile.checkin.feedback.month')}${result.awardedPoints}`);
+    } catch {
+      setCheckinFeedback(t('save.failed'));
+    } finally {
+      setCheckinBusy(false);
     }
   };
 
@@ -323,7 +356,6 @@ const Profile = () => {
                     maxLength={16}
                     value={nicknameDraft}
                     onChange={(event) => setNicknameDraft(event.target.value)}
-                    onBlur={saveNickname}
                     className="h-10 border-border bg-card"
                   />
                   <Button
@@ -550,6 +582,7 @@ const Profile = () => {
                 );
               })}
             </div>
+            {characterError && <p role="alert" className="mt-2 text-sm text-destructive">{characterError}</p>}
           </section>
 
           <section className="rounded-3xl border border-border paper-texture bg-card p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
@@ -579,7 +612,7 @@ const Profile = () => {
                 size="sm"
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
                 onClick={checkinTodayAction}
-                disabled={checkedInToday}
+                disabled={checkedInToday || checkinBusy}
               >
                 {checkedInToday
                   ? t('profile.checkin.checkedIn')
@@ -591,7 +624,7 @@ const Profile = () => {
                 variant="outline"
                 className="border-border"
                 onClick={claimWeekRewardAction}
-                disabled={!canClaimWeek || weekClaimed}
+                disabled={!canClaimWeek || weekClaimed || checkinBusy}
               >
                 {weekClaimed
                   ? `${t('profile.checkin.weekMilestone')} ${t('profile.checkin.claimed')}`
@@ -603,7 +636,7 @@ const Profile = () => {
                 variant="outline"
                 className="border-border"
                 onClick={claimMonthRewardAction}
-                disabled={!canClaimMonth || monthClaimed}
+                disabled={!canClaimMonth || monthClaimed || checkinBusy}
               >
                 {monthClaimed
                   ? `${t('profile.checkin.monthMilestone')} ${t('profile.checkin.claimed')}`

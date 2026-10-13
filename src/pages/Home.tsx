@@ -17,15 +17,16 @@ import { RankedLobbyCard } from '@/components/ranked/RankedLobbyCard';
 import { TaskClaimButton } from '@/components/TaskClaimButton';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useOptionalHousehold } from '@/contexts/HouseholdContext';
 import { categories } from '@/data/categories';
 import { games } from '@/data/games';
 import { useCharacters } from '@/hooks/useCosmetics';
 import {
   checkinToday,
-  ensureCheckinState,
+  getCheckinState,
   getBeijingDateKey,
 } from '@/lib/checkin';
-import { ensureDailyTaskState } from '@/lib/dailyTasks';
+import { getDailyTaskState } from '@/lib/dailyTasks';
 import { getGrowthOverview } from '@/lib/growth';
 import { getRecentGrowthFeed } from '@/lib/growthFeed';
 import {
@@ -38,7 +39,7 @@ import { getPlayerProfile, updatePlayerProfile } from '@/lib/playerProfile';
 import { getRankedState } from '@/lib/ranked';
 import { resolveActiveTitle } from '@/lib/titles';
 import { cn } from '@/lib/utils';
-import { ensureWeeklyTaskState } from '@/lib/weeklyTasks';
+import { getWeeklyTaskState } from '@/lib/weeklyTasks';
 import {
   hasResumableMatch,
   useRiichiStore,
@@ -46,15 +47,19 @@ import {
 
 const Home = () => {
   const { t } = useLocale();
+  const household = useOptionalHousehold();
+  const memberMode = household?.mode === 'member-online';
   const isActive = useRiichiStore(
     (state) =>
       state.view === 'game' &&
       state.match !== null &&
       state.match.status !== 'matchEnd',
   );
-  const [daily, setDaily] = useState(ensureDailyTaskState);
-  const [weekly, setWeekly] = useState(ensureWeeklyTaskState);
-  const [checkin, setCheckin] = useState(ensureCheckinState);
+  const [daily, setDaily] = useState(getDailyTaskState);
+  const [weekly, setWeekly] = useState(getWeeklyTaskState);
+  const [checkin, setCheckin] = useState(getCheckinState);
+  const [checkinError, setCheckinError] = useState(false);
+  const [checkinBusy, setCheckinBusy] = useState(false);
   const characters = useCharacters();
   const [expression, setExpression] = useState<CharacterExpression>('normal');
   const [feed, setFeed] = useState(() => getRecentGrowthFeed(3));
@@ -63,9 +68,9 @@ const Home = () => {
   const signedToday = checkin.dateKey === getBeijingDateKey();
   const canResume = isActive || hasResumableMatch();
   const refresh = useCallback(() => {
-    setDaily(ensureDailyTaskState());
-    setWeekly(ensureWeeklyTaskState());
-    setCheckin(ensureCheckinState());
+    setDaily(getDailyTaskState());
+    setWeekly(getWeeklyTaskState());
+    setCheckin(getCheckinState());
     const nextGrowth = getGrowthOverview();
     const current = getPlayerProfile();
     const nextTitle = resolveActiveTitle(
@@ -74,12 +79,12 @@ const Home = () => {
     );
     if (nextTitle !== current.activeTitle)
       updatePlayerProfile({ activeTitle: nextTitle });
-    syncPlayerCharacterUnlocks(getRankedState().peak.band);
+    if (!memberMode) syncPlayerCharacterUnlocks(getRankedState().peak.band);
     setFeed(getRecentGrowthFeed(3));
-  }, []);
+  }, [memberMode]);
   useEffect(() => {
     refresh();
-  }, [refresh]);
+  }, [refresh, household?.snapshot?.revision]);
 
   return (
     <div className="venue-home lobby-page min-h-screen bg-background text-foreground">
@@ -218,10 +223,20 @@ const Home = () => {
                   <Button
                     variant="outline"
                     className="venue-checkin"
-                    disabled={signedToday}
-                    onClick={() => {
-                      checkinToday();
-                      refresh();
+                    disabled={signedToday || checkinBusy}
+                    onClick={async () => {
+                      setCheckinBusy(true);
+                      try {
+                        if (memberMode)
+                          await household!.performProgressAction({ type: 'checkin' });
+                        else checkinToday();
+                        setCheckinError(false);
+                        refresh();
+                      } catch {
+                        setCheckinError(true);
+                      } finally {
+                        setCheckinBusy(false);
+                      }
                     }}
                   >
                     <CalendarCheck className="size-4" />
@@ -231,6 +246,7 @@ const Home = () => {
                         : 'home.quick.checkin',
                     )}
                   </Button>
+                  {checkinError && <span role="alert" className="text-xs text-destructive">{t('save.failed')}</span>}
                 </div>
               </div>
               <ul className="mt-3 divide-y">

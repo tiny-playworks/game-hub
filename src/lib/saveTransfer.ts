@@ -1,8 +1,10 @@
 import {
   commitStorageChanges,
+  getStorageDriver,
   getStorageStatus,
   readGameSaveData,
 } from './storage';
+import type { MemberSnapshot } from '../../shared/contracts/member';
 
 export interface SaveFile {
   app: 'game-hub';
@@ -10,6 +12,14 @@ export interface SaveFile {
   exportedAt: string;
   data: Record<string, string>;
   recovery?: { partial: boolean; pendingCount: number };
+}
+
+export interface MemberBackupFile {
+  app: 'game-hub';
+  schema: 2;
+  exportedAt: string;
+  memberId: string;
+  snapshot: MemberSnapshot;
 }
 
 export class PartialSaveError extends Error {
@@ -36,6 +46,43 @@ export function createSaveFile(now = new Date()): SaveFile {
           },
         }
       : {}),
+  };
+}
+
+/** Read the browser's guest data even while a member snapshot is the active driver. */
+export function createGuestSaveFile(now = new Date()): SaveFile {
+  const data: Record<string, string> = {};
+  try {
+    const source = globalThis.localStorage;
+    if (!source) throw new PartialSaveError('Guest storage is unavailable');
+    for (let index = 0; index < source.length; index++) {
+      const key = source.key(index);
+      if (!key?.startsWith('game-hub-') || key === 'game-hub-device-id')
+        continue;
+      const value = source.getItem(key);
+      if (value !== null) data[key] = value;
+    }
+  } catch {
+    throw new PartialSaveError('Guest save could not be read completely');
+  }
+  if (getStorageDriver() === null) {
+    const status = getStorageStatus();
+    if (status.readFailed || status.conflicted || status.pendingCount > 0)
+      throw new PartialSaveError('Guest save has unsaved changes');
+  }
+  return { app: 'game-hub', schema: 1, exportedAt: now.toISOString(), data };
+}
+
+export function createMemberBackupFile(
+  snapshot: MemberSnapshot,
+  now = new Date(),
+): MemberBackupFile {
+  return {
+    app: 'game-hub',
+    schema: 2,
+    exportedAt: now.toISOString(),
+    memberId: snapshot.memberId,
+    snapshot,
   };
 }
 
@@ -80,14 +127,38 @@ export function importSaveFile(save: SaveFile): void {
   commitStorageChanges({ ...removed, ...validated.data });
 }
 
-export function downloadSaveFile(): void {
-  const save = createSaveFile();
+function downloadJsonFile(value: unknown, filename: string): void {
   const url = URL.createObjectURL(
-    new Blob([JSON.stringify(save, null, 2)], { type: 'application/json' }),
+    new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' }),
   );
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `game-hub-save-${new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()).replace(/-/g, '')}.json`;
-  link.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  try {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+  } finally {
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+}
+
+function backupDate(): string {
+  return new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+    .format(new Date())
+    .replace(/-/g, '');
+}
+
+export function downloadSaveFile(save = createSaveFile()): void {
+  downloadJsonFile(save, `game-hub-save-${backupDate()}.json`);
+}
+
+export function downloadMemberBackup(snapshot: MemberSnapshot): void {
+  downloadJsonFile(
+    createMemberBackupFile(snapshot),
+    `game-hub-member-${backupDate()}.json`,
+  );
 }

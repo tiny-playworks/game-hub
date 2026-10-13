@@ -262,6 +262,11 @@ export const GameShell = ({
                   label: t(difficultyLabelKey(arcade.gameId, value)),
                 }))}
               />
+              {arcade.settingsError && (
+                <p role="alert" className="mt-2 text-sm text-destructive">
+                  {t('save.failed')}
+                </p>
+              )}
             </div>
           )}
           {settings}

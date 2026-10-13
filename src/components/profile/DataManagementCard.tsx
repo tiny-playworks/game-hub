@@ -13,6 +13,7 @@ import { useLocale } from '@/contexts/LocaleContext';
 import { HouseholdApiError } from '@/lib/household/api';
 import { formatMessage } from '@/lib/i18n';
 import {
+  downloadMemberBackup,
   downloadSaveFile,
   importSaveFile,
   PartialSaveError,
@@ -39,7 +40,7 @@ export function DataManagementCard() {
     <section className="paper-texture rounded-3xl border bg-card p-5 text-foreground">
       <h2 className="text-lg font-semibold">{t('save.title')}</h2>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        {t('save.description')}
+        {t(mode === 'member-online' ? 'household.save.memberDescription' : 'save.description')}
       </p>
 
       {mode === 'member-online' && currentMember && (
@@ -76,36 +77,55 @@ export function DataManagementCard() {
       )}
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button
-          variant="outline"
-          onClick={() => {
-            try {
-              downloadSaveFile();
-              setError('');
-            } catch {
-              setError(t('save.failed'));
-            }
-          }}
-        >
-          <Download className="size-4" />
-          {t('save.export')}
-        </Button>
-        <Button variant="outline" onClick={() => input.current?.click()}>
-          <Upload className="size-4" />
-          {t('save.import')}
-        </Button>
-        <Button
-          variant="ghost"
-          className="text-destructive"
-          onClick={() => {
-            setError('');
-            setPending('reset');
-            setStep(1);
-          }}
-        >
-          <RotateCcw className="size-4" />
-          {t('save.reset')}
-        </Button>
+        {mode === 'member-online' && snapshot ? (
+          <Button
+            variant="outline"
+            onClick={() => {
+              try {
+                downloadMemberBackup(snapshot);
+                setError('');
+              } catch {
+                setError(t('save.failed'));
+              }
+            }}
+          >
+            <Download className="size-4" />
+            {t('household.save.exportMember')}
+          </Button>
+        ) : (
+          <>
+            <Button
+              variant="outline"
+              onClick={() => {
+                try {
+                  downloadSaveFile();
+                  setError('');
+                } catch {
+                  setError(t('save.failed'));
+                }
+              }}
+            >
+              <Download className="size-4" />
+              {t('save.export')}
+            </Button>
+            <Button variant="outline" onClick={() => input.current?.click()}>
+              <Upload className="size-4" />
+              {t('save.import')}
+            </Button>
+            <Button
+              variant="ghost"
+              className="text-destructive"
+              onClick={() => {
+                setError('');
+                setPending('reset');
+                setStep(1);
+              }}
+            >
+              <RotateCcw className="size-4" />
+              {t('save.reset')}
+            </Button>
+          </>
+        )}
       </div>
       <input
         ref={input}

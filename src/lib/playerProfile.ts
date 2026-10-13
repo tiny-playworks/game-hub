@@ -184,6 +184,18 @@ export function normalizeAudioVolumes(raw: unknown): AudioVolumes {
 }
 
 const profileListeners = new Set<() => void>();
+export type PlayerProfilePatch = Partial<Omit<PlayerProfile, 'updatedAt' | 'riichiSettings'>> & {
+  riichiSettings?: Partial<RiichiPlayerSettings>;
+};
+let memberProfileWriter:
+  | ((patch: PlayerProfilePatch) => Promise<void>)
+  | null = null;
+
+export function setMemberProfileWriter(
+  writer: typeof memberProfileWriter,
+): void {
+  memberProfileWriter = writer;
+}
 
 /** 与 gameStorage 原始串对齐，保证 getPlayerProfile 引用稳定（useSyncExternalStore 要求） */
 let profileSnapshotRaw: string | null = null;
@@ -278,9 +290,7 @@ export function savePlayerProfile(profile: PlayerProfile): PlayerProfile {
 }
 
 export function updatePlayerProfile(
-  patch: Partial<Omit<PlayerProfile, 'updatedAt' | 'riichiSettings'>> & {
-    riichiSettings?: Partial<RiichiPlayerSettings>;
-  },
+  patch: PlayerProfilePatch,
 ): PlayerProfile {
   const current = getPlayerProfile();
   const {
@@ -303,6 +313,12 @@ export function updatePlayerProfile(
         ? normalizeRiichiSettings({ ...current.riichiSettings, ...patchRiichi })
         : current.riichiSettings,
   };
+  if (memberProfileWriter) {
+    void memberProfileWriter(patch).catch(() => {
+      // The household provider surfaces the failed mutation to the user.
+    });
+    return merged;
+  }
   return savePlayerProfile(merged);
 }
 

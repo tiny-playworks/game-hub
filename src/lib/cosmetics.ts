@@ -4,6 +4,7 @@ import {
   CHARACTER_DEFS,
   CHARACTER_RANK_BANDS,
   getPlayerCharacterState,
+  type PlayerCharacterState,
   type RankBand,
 } from './playerCharacters';
 import { getRankedState } from './ranked';
@@ -166,10 +167,12 @@ function readCosmetics(): CosmeticsState {
     return normalizeCosmetics(null);
   }
 }
-function earnedRewards(): string[] {
-  const characters = getPlayerCharacterState();
-  const band = getRankedState().peak.band;
-  const achievements = new Set(getUnlockedIds());
+export function earnedCosmeticIds(
+  characters: PlayerCharacterState,
+  band: RankBand,
+  unlockedAchievementIds: readonly string[],
+): string[] {
+  const achievements = new Set(unlockedAchievementIds);
   return COSMETIC_DEFS.filter(({ unlock }) => {
     if (!unlock) return false;
     if (unlock.type === 'affinity')
@@ -189,7 +192,16 @@ export function getCosmeticsState(): CosmeticsState {
   const current = readCosmetics();
   return {
     ...current,
-    owned: [...new Set([...current.owned, ...earnedRewards()])],
+    owned: [
+      ...new Set([
+        ...current.owned,
+        ...earnedCosmeticIds(
+          getPlayerCharacterState(),
+          getRankedState().peak.band,
+          getUnlockedIds(),
+        ),
+      ]),
+    ],
   };
 }
 function notify(): void {

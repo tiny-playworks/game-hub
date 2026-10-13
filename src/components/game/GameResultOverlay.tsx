@@ -104,7 +104,12 @@ export const GameResultOverlay = ({
             {detail}
           </div>
         )}
-        {arcade?.result && (
+        {arcade?.result?.settlementFailed && (
+          <p role="alert" className="mt-3 text-sm text-destructive">
+            {t('arcade.settlementFailed')}
+          </p>
+        )}
+        {arcade?.result && !arcade.result.settlementFailed && (
           <p className="mt-3 text-sm text-primary">
             +{arcade.result.coinsEarned} {t('wallet.coins')}
             {arcade.result.capReached && (
@@ -115,7 +120,16 @@ export const GameResultOverlay = ({
           </p>
         )}
         <div className="mt-5 flex flex-col gap-2">
-          <Button onClick={onRestart} className="w-full">
+          {arcade?.result?.settlementFailed && (
+            <Button
+              onClick={arcade.retrySettlement}
+              disabled={arcade.settlementRetrying}
+              className="w-full"
+            >
+              {t('arcade.retrySettlement')}
+            </Button>
+          )}
+          <Button onClick={onRestart} disabled={arcade?.result?.settlementFailed} className="w-full">
             {restartLabel ?? t('common.playAgain')}
           </Button>
           {extraAction}

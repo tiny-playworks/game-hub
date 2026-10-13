@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PlayerAvatar } from '@/components/home/PlayerAvatar';
 import { Button } from '@/components/ui/button';
+import { useOptionalHousehold } from '@/contexts/HouseholdContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import { getAllAchievementProgresses } from '@/lib/achievements';
 import {
@@ -14,6 +15,7 @@ import {
   claimWeekMilestone,
   ensureCheckinState,
   getBeijingDateKey,
+  getCheckinState,
 } from '@/lib/checkin';
 import { getGrowthOverview } from '@/lib/growth';
 import {
@@ -72,6 +74,8 @@ export function QuickAccessPanel({
   onHallRefresh,
 }: Props) {
   const { t, locale } = useLocale();
+  const household = useOptionalHousehold();
+  const memberMode = household?.mode === 'member-online';
   const [profile, setProfile] = useState<PlayerProfile>(() =>
     getPlayerProfile(),
   );
@@ -83,6 +87,8 @@ export function QuickAccessPanel({
   );
   const [quickPanel, setQuickPanel] = useState<QuickPanel>(null);
   const [checkinFeedback, setCheckinFeedback] = useState('');
+  const [checkinError, setCheckinError] = useState(false);
+  const [checkinBusy, setCheckinBusy] = useState(false);
   const [checkinButtonFlashText, setCheckinButtonFlashText] = useState('');
   const quickPanelRef = useRef<HTMLDivElement | null>(null);
   const checkinFlashTimerRef = useRef<number | null>(null);
@@ -135,7 +141,7 @@ export function QuickAccessPanel({
     checkinState.totalDays >= monthMilestone && !monthClaimed;
 
   useEffect(() => {
-    const nextCheckin = ensureCheckinState();
+    const nextCheckin = memberMode ? getCheckinState() : ensureCheckinState();
     const nextGrowth = getGrowthOverview();
     const currentProfile = getPlayerProfile();
     const nextTitleId = resolveActiveTitle(
@@ -149,7 +155,7 @@ export function QuickAccessPanel({
     setCheckinState(nextCheckin);
     setGrowthOverview(nextGrowth);
     setProfile(syncedProfile);
-  }, []);
+  }, [memberMode, household?.snapshot?.revision]);
 
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {
@@ -185,47 +191,48 @@ export function QuickAccessPanel({
     setProfile(syncedProfile);
   };
 
-  const checkinTodayAction = () => {
-    const result = checkinToday();
-    setCheckinState(result.state);
-    syncGrowthAndTitle();
-    onHallRefresh?.();
-    if (result.ok) {
-      setCheckinButtonFlashText(`+${result.awardedPoints}`);
-      if (checkinFlashTimerRef.current) {
-        window.clearTimeout(checkinFlashTimerRef.current);
+  const performCheckinAction = async (
+    type: 'checkin' | 'checkin-week' | 'checkin-month',
+  ) => {
+    setCheckinBusy(true);
+    try {
+      const result = memberMode
+        ? await household!.performProgressAction({ type })
+        : type === 'checkin'
+          ? checkinToday()
+          : type === 'checkin-week'
+            ? claimWeekMilestone(weekMilestone)
+            : claimMonthMilestone(monthMilestone);
+      setCheckinState(getCheckinState());
+      syncGrowthAndTitle();
+      onHallRefresh?.();
+      setCheckinError(false);
+      if (type === 'checkin' && result.ok) {
+        setCheckinButtonFlashText(`+${result.awardedPoints}`);
+        if (checkinFlashTimerRef.current)
+          window.clearTimeout(checkinFlashTimerRef.current);
+        checkinFlashTimerRef.current = window.setTimeout(() => {
+          setCheckinButtonFlashText('');
+        }, 1200);
       }
-      checkinFlashTimerRef.current = window.setTimeout(() => {
-        setCheckinButtonFlashText('');
-      }, 1200);
+      if (result.ok || type === 'checkin')
+        setCheckinFeedback(
+          result.ok
+            ? `${t(
+                type === 'checkin'
+                  ? 'home.quick.checkin.feedback.daily'
+                  : type === 'checkin-week'
+                    ? 'home.quick.checkin.feedback.week'
+                    : 'home.quick.checkin.feedback.month',
+              )}${result.awardedPoints}`
+            : t('home.quick.checkin.feedback.already'),
+        );
+    } catch {
+      setCheckinError(true);
+      setCheckinFeedback(t('household.actionFailed'));
+    } finally {
+      setCheckinBusy(false);
     }
-    setCheckinFeedback(
-      result.ok
-        ? `${t('home.quick.checkin.feedback.daily')}${result.awardedPoints}`
-        : t('home.quick.checkin.feedback.already'),
-    );
-  };
-
-  const claimWeekRewardAction = () => {
-    const result = claimWeekMilestone(weekMilestone);
-    if (!result.ok) return;
-    setCheckinState(result.state);
-    syncGrowthAndTitle();
-    onHallRefresh?.();
-    setCheckinFeedback(
-      `${t('home.quick.checkin.feedback.week')}${result.awardedPoints}`,
-    );
-  };
-
-  const claimMonthRewardAction = () => {
-    const result = claimMonthMilestone(monthMilestone);
-    if (!result.ok) return;
-    setCheckinState(result.state);
-    syncGrowthAndTitle();
-    onHallRefresh?.();
-    setCheckinFeedback(
-      `${t('home.quick.checkin.feedback.month')}${result.awardedPoints}`,
-    );
   };
 
   const buttonClass = compact
@@ -241,7 +248,7 @@ export function QuickAccessPanel({
       ref={quickPanelRef}
     >
       <button
-        type="button"
+        type='button'
         className={`${buttonClass} ${
           quickPanel === 'achievements'
             ? 'border-emerald-400 bg-emerald-50 text-emerald-800'
@@ -257,7 +264,7 @@ export function QuickAccessPanel({
         {t('home.quick.achievements')}
       </button>
       <button
-        type="button"
+        type='button'
         className={`${buttonClass} ${
           quickPanel === 'checkin'
             ? 'border-emerald-400 bg-emerald-50 text-emerald-800'
@@ -271,61 +278,61 @@ export function QuickAccessPanel({
         {t('home.quick.checkin')}
       </button>
       <Link
-        to="/profile"
+        to='/profile'
         className={`${buttonClass} border-slate-200 bg-white text-slate-700 hover:bg-slate-50`}
         aria-label={t('home.quick.profile')}
         title={t('home.quick.profile')}
       >
-        <PlayerAvatar profile={profile} size="sm" />
+        <PlayerAvatar profile={profile} size='sm' />
       </Link>
       {withLocaleSwitcher ? <LanguageSwitcher /> : null}
 
       {quickPanel === 'achievements' && (
         <div className={`${panelClass} w-72`}>
-          <p className="text-sm font-semibold text-slate-900">
+          <p className='text-sm font-semibold text-slate-900'>
             {t('achievements.title')}
           </p>
-          <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-            <div className="rounded-lg border border-slate-200 p-2">
-              <p className="text-slate-500">
+          <div className='mt-2 grid grid-cols-2 gap-2 text-xs'>
+            <div className='rounded-lg border border-slate-200 p-2'>
+              <p className='text-slate-500'>
                 {t('achievements.unlockedCount')}
               </p>
-              <p className="mt-1 font-semibold text-slate-900">
+              <p className='mt-1 font-semibold text-slate-900'>
                 {growthOverview.unlockedAchievements}/
                 {growthOverview.totalAchievements}
               </p>
             </div>
-            <div className="rounded-lg border border-slate-200 p-2">
-              <p className="text-slate-500">{t('achievements.totalPoints')}</p>
-              <p className="mt-1 font-semibold text-slate-900">
+            <div className='rounded-lg border border-slate-200 p-2'>
+              <p className='text-slate-500'>{t('achievements.totalPoints')}</p>
+              <p className='mt-1 font-semibold text-slate-900'>
                 {growthOverview.achievementPoints}
               </p>
             </div>
           </div>
-          <p className="mt-2 text-xs text-slate-500">
+          <p className='mt-2 text-xs text-slate-500'>
             {t('achievements.taskPoints')}：{growthOverview.taskPoints}
           </p>
-          <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-2">
-            <p className="text-[11px] font-medium text-slate-600">
+          <div className='mt-3 rounded-lg border border-slate-200 bg-slate-50 p-2'>
+            <p className='text-[11px] font-medium text-slate-600'>
               {inProgressLabel}
             </p>
             {achievementQuickProgress.length === 0 ? (
-              <p className="mt-1 text-xs text-slate-500">
+              <p className='mt-1 text-xs text-slate-500'>
                 {allAchievementsUnlockedText}
               </p>
             ) : (
-              <div className="mt-2 space-y-2">
+              <div className='mt-2 space-y-2'>
                 {achievementQuickProgress.map((achievement) => (
                   <div key={achievement.id}>
-                    <div className="flex items-center justify-between gap-2 text-[11px] text-slate-600">
-                      <span className="truncate">{t(achievement.nameKey)}</span>
-                      <span className="shrink-0">
+                    <div className='flex items-center justify-between gap-2 text-[11px] text-slate-600'>
+                      <span className='truncate'>{t(achievement.nameKey)}</span>
+                      <span className='shrink-0'>
                         {achievement.current}/{achievement.target}
                       </span>
                     </div>
-                    <div className="mt-1 h-1.5 rounded-full bg-slate-200">
+                    <div className='mt-1 h-1.5 rounded-full bg-slate-200'>
                       <div
-                        className="h-1.5 rounded-full bg-emerald-600"
+                        className='h-1.5 rounded-full bg-emerald-600'
                         style={{ width: `${achievement.progressPercent}%` }}
                       />
                     </div>
@@ -336,24 +343,24 @@ export function QuickAccessPanel({
           </div>
           <Button
             asChild
-            size="sm"
-            variant="outline"
-            className="mt-3 w-full border-slate-200"
+            size='sm'
+            variant='outline'
+            className='mt-3 w-full border-slate-200'
           >
-            <Link to="/achievements">{t('home.quick.achievementsDetail')}</Link>
+            <Link to='/achievements'>{t('home.quick.achievementsDetail')}</Link>
           </Button>
         </div>
       )}
 
       {quickPanel === 'checkin' && (
         <div className={`${panelClass} w-[320px]`}>
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-slate-900">
+          <div className='flex items-center justify-between'>
+            <p className='text-sm font-semibold text-slate-900'>
               {t('profile.checkin.title')}
             </p>
-            <span className="text-xs text-slate-500">{monthLabel}</span>
+            <span className='text-xs text-slate-500'>{monthLabel}</span>
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-700">
+          <div className='mt-2 grid grid-cols-2 gap-2 text-xs text-slate-700'>
             <p>
               {t('profile.checkin.streak')}：{checkinState.streakDays}
             </p>
@@ -362,20 +369,20 @@ export function QuickAccessPanel({
             </p>
           </div>
 
-          <div className="mt-3 grid grid-cols-7 gap-1">
+          <div className='mt-3 grid grid-cols-7 gap-1'>
             {weekHeaders.map((weekday) => (
               <div
                 key={weekday}
-                className="flex h-6 items-center justify-center text-[11px] font-medium text-slate-500"
+                className='flex h-6 items-center justify-center text-[11px] font-medium text-slate-500'
               >
                 {weekday}
               </div>
             ))}
           </div>
-          <div className="mt-3 grid grid-cols-7 gap-1">
+          <div className='mt-3 grid grid-cols-7 gap-1'>
             {Array.from({ length: monthCalendar.leadingBlanks }).map(
               (_, index) => (
-                <div key={`blank-${index}`} className="h-8 rounded" />
+                <div key={`blank-${index}`} className='h-8 rounded' />
               ),
             )}
             {monthCalendar.days.map((dateKey) => {
@@ -402,11 +409,11 @@ export function QuickAccessPanel({
           </div>
 
           <Button
-            type="button"
-            size="sm"
-            className="mt-3 w-full bg-emerald-800 text-white hover:bg-emerald-700"
-            onClick={checkinTodayAction}
-            disabled={checkedInToday}
+            type='button'
+            size='sm'
+            className='mt-3 w-full bg-emerald-800 text-white hover:bg-emerald-700'
+            onClick={() => void performCheckinAction('checkin')}
+            disabled={checkedInToday || checkinBusy}
           >
             {checkinButtonFlashText ||
               (checkedInToday
@@ -414,44 +421,44 @@ export function QuickAccessPanel({
                 : t('profile.checkin.action'))}
           </Button>
 
-          <div className="mt-3 space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <p className="text-slate-600">
+          <div className='mt-3 space-y-2'>
+            <div className='flex items-center justify-between text-xs'>
+              <p className='text-slate-600'>
                 {t('profile.checkin.weekMilestone')} {weekMilestone}
               </p>
               {weekClaimed ? (
-                <span className="rounded-md bg-slate-100 px-2 py-1 text-slate-600">
+                <span className='rounded-md bg-slate-100 px-2 py-1 text-slate-600'>
                   {t('profile.checkin.claimed')}
                 </span>
               ) : (
                 <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-7 border-slate-200 px-2 text-xs"
-                  onClick={claimWeekRewardAction}
-                  disabled={!canClaimWeek}
+                  type='button'
+                  size='sm'
+                  variant='outline'
+                  className='h-7 border-slate-200 px-2 text-xs'
+                  onClick={() => void performCheckinAction('checkin-week')}
+                  disabled={!canClaimWeek || checkinBusy}
                 >
                   {t('profile.checkin.claim')}
                 </Button>
               )}
             </div>
-            <div className="flex items-center justify-between text-xs">
-              <p className="text-slate-600">
+            <div className='flex items-center justify-between text-xs'>
+              <p className='text-slate-600'>
                 {t('profile.checkin.monthMilestone')} {monthMilestone}
               </p>
               {monthClaimed ? (
-                <span className="rounded-md bg-slate-100 px-2 py-1 text-slate-600">
+                <span className='rounded-md bg-slate-100 px-2 py-1 text-slate-600'>
                   {t('profile.checkin.claimed')}
                 </span>
               ) : (
                 <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-7 border-slate-200 px-2 text-xs"
-                  onClick={claimMonthRewardAction}
-                  disabled={!canClaimMonth}
+                  type='button'
+                  size='sm'
+                  variant='outline'
+                  className='h-7 border-slate-200 px-2 text-xs'
+                  onClick={() => void performCheckinAction('checkin-month')}
+                  disabled={!canClaimMonth || checkinBusy}
                 >
                   {t('profile.checkin.claim')}
                 </Button>
@@ -460,7 +467,15 @@ export function QuickAccessPanel({
           </div>
 
           {checkinFeedback ? (
-            <p className="mt-2 text-xs text-emerald-700">{checkinFeedback}</p>
+            <p
+              role={checkinError ? 'alert' : undefined}
+              className={cn(
+                'mt-2 text-xs',
+                checkinError ? 'text-destructive' : 'text-emerald-700',
+              )}
+            >
+              {checkinFeedback}
+            </p>
           ) : null}
         </div>
       )}

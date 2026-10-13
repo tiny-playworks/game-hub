@@ -61,7 +61,11 @@ export default function Shop() {
   const { t, locale } = useLocale();
   const cosmetics = useCosmetics();
   const { coins } = useWallet();
-  const { mode, purchaseCosmetic: onlinePurchaseCosmetic } = useHousehold();
+  const {
+    mode,
+    purchaseCosmetic: onlinePurchaseCosmetic,
+    equipCosmetic: onlineEquipCosmetic,
+  } = useHousehold();
   const unlockText = useCosmeticUnlockText();
   const [searchParams] = useSearchParams();
   const requestedItem = getCosmetic(searchParams.get('item') ?? '');
@@ -79,12 +83,13 @@ export default function Shop() {
   const owned = cosmetics.owned.includes(selected.id);
   const equipped = cosmetics.equipped[selected.category] === selected.id;
   const price = selected.price;
-  const equip = () => {
+  const equip = async (itemId: string) => {
     try {
-      equipCosmetic(selected.id);
+      if (mode === 'member-online') await onlineEquipCosmetic(itemId);
+      else equipCosmetic(itemId);
       setError('');
-    } catch {
-      setError(t('shop.failed'));
+    } catch (err) {
+      setError(err instanceof HouseholdApiError ? t(err.messageKey) : t('shop.failed'));
     }
   };
   return (
@@ -223,7 +228,7 @@ export default function Shop() {
             </p>
             <div className="mt-5 border-t pt-4">
               {owned ? (
-                <Button className="w-full" disabled={equipped} onClick={equip}>
+                <Button className="w-full" disabled={equipped} onClick={() => void equip(selected.id)}>
                   {equipped ? (
                     <Check className="size-4" />
                   ) : (
@@ -338,14 +343,9 @@ export default function Shop() {
               {t('shop.later')}
             </Button>
             <Button
-              onClick={() => {
-                try {
-                  if (acquired) equipCosmetic(acquired);
-                  setAcquired(null);
-                } catch {
-                  setAcquired(null);
-                  setError(t('shop.failed'));
-                }
+              onClick={async () => {
+                if (acquired) await equip(acquired);
+                setAcquired(null);
               }}
             >
               {t('shop.equip')}
