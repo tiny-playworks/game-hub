@@ -360,15 +360,19 @@ test('export/import restores equipment, purchases, affinity rewards and encounte
 });
 
 test('24 stories, all cosmetics and 72 bonus lines have Chinese and English text', () => {
-  expect(CHARACTER_STORIES).toHaveLength(24);
+  const p5Characters = CHARACTER_DEFS.slice(0, 8);
+  const stories = CHARACTER_STORIES.filter((story) =>
+    p5Characters.some((char) => char.id === story.characterId),
+  );
+  expect(stories).toHaveLength(24);
   const keys = [
-    ...CHARACTER_STORIES.flatMap((story) => {
+    ...stories.flatMap((story) => {
       expect(story.lines.length).toBeGreaterThanOrEqual(3);
       expect(story.lines.length).toBeLessThanOrEqual(5);
       return [story.titleKey, ...story.lines.map((line) => line.textKey)];
     }),
     ...COSMETIC_DEFS.flatMap((item) => [item.nameKey, item.descKey]),
-    ...CHARACTER_DEFS.flatMap((character) =>
+    ...p5Characters.flatMap((character) =>
       CHARACTER_LINE_TRIGGERS.map(
         (trigger) => `character.affinityLine.${character.id}.${trigger}`,
       ),

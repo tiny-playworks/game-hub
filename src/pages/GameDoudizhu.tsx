@@ -238,7 +238,7 @@ const GameDoudizhu = () => {
           </div>
 
           {/* 我方上一手 */}
-          <div className="mt-3 flex min-h-[4.25rem] items-center justify-center">
+          <div className="mt-3 flex min-h-17 items-center justify-center">
             {actions[SEAT_ME]?.kind === 'play' ? (
               <CardFan cards={actions[SEAT_ME].cards} size="sm" animate />
             ) : actions[SEAT_ME]?.kind === 'pass' ? (
@@ -254,7 +254,7 @@ const GameDoudizhu = () => {
         </div>
 
         {/* 手牌：一行叠放，牌多时自动收窄，避免换行成一团 */}
-        <div className="mt-4 flex min-h-[5.75rem] justify-center px-2 pt-3">
+        <div className="mt-4 flex min-h-23 justify-center px-2 pt-3">
           <CardFan
             cards={myHand}
             selected={selected}
@@ -362,11 +362,11 @@ const OpponentSeat = ({
     >
       {isLandlord && <Crown className="size-3.5 text-amber-500" />}
       <span className="text-[11px] font-medium whitespace-nowrap">{name}</span>
-      <CardBack className="!h-3.5 !w-2.5" />
+      <CardBack className="h-3.5! w-2.5!" />
       <span className="text-[11px] font-semibold tabular-nums">{count}</span>
     </div>
 
-    <div className="flex min-h-[3.5rem] items-start">
+    <div className="flex min-h-14 items-start">
       {action?.kind === 'play' ? (
         <CardFan
           cards={action.cards}

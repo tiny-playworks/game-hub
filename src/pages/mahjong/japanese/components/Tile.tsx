@@ -13,7 +13,12 @@ export type RiichiTileProps = {
   variant: RiichiTileVariant;
   rotation?: 0 | 90 | 180 | -90;
   state?: RiichiTileState;
+  selected?: boolean;
+  tileKey?: string;
   onClick?: () => void;
+  onTouchStart?: (event: React.TouchEvent<HTMLButtonElement>) => void;
+  onTouchMove?: (event: React.TouchEvent<HTMLButtonElement>) => void;
+  onTouchEnd?: (event: React.TouchEvent<HTMLButtonElement>) => void;
   onFocus?: () => void;
   onBlur?: () => void;
   onPointerEnter?: () => void;
@@ -117,7 +122,12 @@ export function RiichiTile({
   variant,
   rotation = 0,
   state = 'normal',
+  selected = false,
+  tileKey,
   onClick,
+  onTouchStart,
+  onTouchMove,
+  onTouchEnd,
   onFocus,
   onBlur,
   onPointerEnter,
@@ -130,7 +140,8 @@ export function RiichiTile({
     'riichi-tile',
     `riichi-tile--${variant}`,
     `riichi-tile--${state}`,
-    onClick && 'riichi-tile--interactive',
+    selected && 'riichi-tile--selected',
+    (onClick || onTouchStart) && 'riichi-tile--interactive',
     highlighted && 'riichi-tile--matching',
     danger && `riichi-tile--danger-${danger}`,
   );
@@ -145,19 +156,24 @@ export function RiichiTile({
     </span>
   );
 
-  if (onClick) {
+  if (onClick || onTouchStart) {
     return (
       <button
         type="button"
         className={className}
         data-rotation={rotation}
+        data-tile-key={tileKey}
         onClick={onClick}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
         onFocus={onFocus}
         onBlur={onBlur}
         onPointerEnter={onPointerEnter}
         onPointerLeave={onPointerLeave}
         disabled={state === 'disabled'}
         aria-label={tileLabel}
+        aria-pressed={selected}
         title={title}
       >
         {face}

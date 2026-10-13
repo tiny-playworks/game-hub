@@ -227,7 +227,7 @@ const GameShengji = () => {
           </div>
 
           {/* 出牌区 */}
-          <div className="relative grid min-h-[8.5rem] grid-cols-3 grid-rows-3 place-items-center gap-1 sm:min-h-[9.5rem]">
+          <div className="relative grid min-h-34 grid-cols-3 grid-rows-3 place-items-center gap-1 sm:min-h-38">
             <TrickSlot
               card={cardBySeat.get(2)}
               className="col-start-2 row-start-1"
@@ -270,7 +270,7 @@ const GameShengji = () => {
         </div>
 
         {/* 手牌：主牌金框、分牌绿框，本墩不能出的会变灰 */}
-        <div className="mt-3 flex min-h-[5.5rem] justify-center px-1 pt-3">
+        <div className="mt-3 flex min-h-22 justify-center px-1 pt-3">
           <div className="flex items-end">
             {sortedHand.map((card, index) => {
               const canPlayThis =
@@ -351,7 +351,7 @@ const TrickSlot = ({
   card === undefined ? (
     <div
       className={cn(
-        'h-[3.25rem] w-[2.25rem] rounded-md border border-dashed border-white/20',
+        'h-13 w-9 rounded-md border border-dashed border-white/20',
         className,
       )}
     />
@@ -389,7 +389,7 @@ const SeatBadge = ({
       {teammate ? ' ★' : ''}
     </span>
     <span className="flex items-center gap-1">
-      <CardBack className="!h-3.5 !w-2.5" />
+      <CardBack className="h-3.5! w-2.5!" />
       <span className="text-[11px] font-semibold tabular-nums">{count}</span>
     </span>
   </div>

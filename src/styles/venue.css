@@ -917,7 +917,7 @@ a {
 }
 .venue-companion {
   min-height: 490px;
-  background: url('../assets/venue/ink-cloth.png') center / cover;
+  background: url('../assets/venue/ink-cloth.webp') center / cover;
 }
 .venue-companion-portrait {
   top: 0;
@@ -1077,14 +1077,14 @@ a {
   min-height: 185px;
 }
 [data-tile-back='back-blue'] {
-  --cosmetic-back: url('../assets/venue/ink-cloth.png') center / cover;
+  --cosmetic-back: url('../assets/venue/ink-cloth.webp') center / cover;
   --cosmetic-back-color: #253c4c;
 }
 [data-tile-back='back-vermilion'] {
-  --cosmetic-back: url('../assets/venue/asanoha.svg') center / 36px 42px;
+  --cosmetic-back: url('../assets/venue/asanoha.webp') center / cover;
 }
 [data-tile-back='back-sakura'] {
-  --cosmetic-back: url('../assets/venue/sakura.svg') center / cover;
+  --cosmetic-back: url('../assets/venue/sakura.webp') center / cover;
   --cosmetic-back-color: #94606b;
 }
 @media (min-width: 1280px) {
@@ -1400,19 +1400,19 @@ a {
 
 /* Concept fidelity: illustrated cosmetics share one surface in shop and play. */
 [data-tile-back='back-gold'] {
-  --cosmetic-back: url('../assets/venue/back-gold.jpg') center / cover;
+  --cosmetic-back: url('../assets/venue/back-gold.webp') center / cover;
   --cosmetic-back-color: #b88a3f;
 }
 [data-tile-back='back-koharu'] {
-  --cosmetic-back: url('../assets/venue/back-koharu.jpg') center / cover;
+  --cosmetic-back: url('../assets/venue/back-koharu.webp') center / cover;
   --cosmetic-back-color: #ae8b4d;
 }
 [data-tile-back='back-rin'] {
-  --cosmetic-back: url('../assets/venue/back-rin.jpg') center / cover;
+  --cosmetic-back: url('../assets/venue/back-rin.webp') center / cover;
   --cosmetic-back-color: #274d6b;
 }
 [data-tile-back='back-sora'] {
-  --cosmetic-back: url('../assets/venue/back-sora.jpg') center / cover;
+  --cosmetic-back: url('../assets/venue/back-sora.webp') center / cover;
   --cosmetic-back-color: #b39759;
 }
 .venue-task-stack {
@@ -1891,7 +1891,7 @@ a {
   margin-top: 8px;
 }
 [data-tile-back='back-aoi'] {
-  --cosmetic-back: url('../assets/venue/asanoha.svg') center / 36px 42px;
+  --cosmetic-back: url('../assets/venue/asanoha.webp') center / cover;
   --cosmetic-back-color: #a23e36;
 }
 [data-avatar-frame='frame-aoi'] {

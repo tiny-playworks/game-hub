@@ -33,7 +33,7 @@ export default function Characters() {
                         : t('characters.unknown')
                     }
                     className={cn(
-                      '!h-full !w-full',
+                      'h-full! w-full!',
                       !encountered && 'character-silhouette',
                     )}
                   />

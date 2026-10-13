@@ -16,16 +16,44 @@ const switches = [
 
 export function RiichiSettingsPanel({ ranked = false }: { ranked?: boolean }) {
   const { t } = useLocale();
-  const { riichiSettings } = usePlayerProfile();
+  const { riichiSettings, audioVolumes } = usePlayerProfile();
   const set = <K extends keyof RiichiPlayerSettings>(
     key: K,
     value: RiichiPlayerSettings[K],
   ) => updatePlayerProfile({ riichiSettings: { [key]: value } });
 
+  const isMuted = audioVolumes.sfx <= 0;
+  const toggleMute = (muted: boolean) => {
+    updatePlayerProfile({
+      audioVolumes: {
+        ...audioVolumes,
+        sfx: muted ? 0 : 1,
+        voice: muted ? 0 : 1,
+      },
+    });
+  };
+
+  const setAudioVolume = (type: 'sfx' | 'voice', value: number) => {
+    updatePlayerProfile({
+      audioVolumes: {
+        ...audioVolumes,
+        [type]: value,
+      },
+    });
+  };
+
   return (
     <fieldset className="riichi-settings-panel">
       <legend>{t('riichi.settings.title')}</legend>
       <div className="riichi-settings-grid">
+        <label>
+          <span>{t('riichi.settings.audioMute')}</span>
+          <input
+            type="checkbox"
+            checked={isMuted}
+            onChange={(event) => toggleMute(event.target.checked)}
+          />
+        </label>
         {switches
           .filter((key) => !ranked || key !== 'dangerHint')
           .map((key) => (
@@ -39,6 +67,34 @@ export function RiichiSettingsPanel({ ranked = false }: { ranked?: boolean }) {
             </label>
           ))}
       </div>
+      {!isMuted && (
+        <div className="riichi-settings-volumes mt-3 space-y-2">
+          <label className="flex items-center justify-between text-xs">
+            <span>{t('riichi.settings.sfxVolume')}</span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={Math.round(audioVolumes.sfx * 100)}
+              onChange={(e) => setAudioVolume('sfx', Number(e.target.value) / 100)}
+              className="w-32 h-2 accent-[#c54838] cursor-pointer"
+            />
+            <span className="w-8 text-right font-mono">{Math.round(audioVolumes.sfx * 100)}%</span>
+          </label>
+          <label className="flex items-center justify-between text-xs">
+            <span>{t('riichi.settings.voiceVolume')}</span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={Math.round(audioVolumes.voice * 100)}
+              onChange={(e) => setAudioVolume('voice', Number(e.target.value) / 100)}
+              className="w-32 h-2 accent-[#c54838] cursor-pointer"
+            />
+            <span className="w-8 text-right font-mono">{Math.round(audioVolumes.voice * 100)}%</span>
+          </label>
+        </div>
+      )}
       {!ranked && (
         <label className="riichi-settings-level">
           <span>{t('riichi.settings.aiLevel')}</span>

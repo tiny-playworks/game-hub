@@ -1,6 +1,6 @@
 import { getBaseTile } from '@/lib/mahjongRiichi';
 import type { RiichiMeld } from '../types';
-import { RiichiTile } from './Tile';
+import { RiichiTile, TileBack } from './Tile';
 
 type Rotation = 0 | 90 | 180 | -90;
 
@@ -15,6 +15,7 @@ export function MeldTiles({
   rotation?: Rotation;
   highlightedBase?: number | null;
 }) {
+  const isAnkan = meld.type === 'angang';
   const tiles =
     meld.type === 'kakan' ? meld.tiles.slice(0, 3) : [...meld.tiles];
   const source =
@@ -45,14 +46,21 @@ export function MeldTiles({
       highlighted={getBaseTile(tile) === highlightedBase}
     />
   );
-  return tiles.map((tile, index) => (
-    <span className="riichi-meld-call-slot" key={`${tile}-${index}`}>
-      {renderTile(tile, index === calledIndex ? sideways : rotation)}
-      {meld.type === 'kakan' && index === calledIndex && (
-        <span className="riichi-meld-added">
-          {renderTile(meld.tiles[3], sideways)}
-        </span>
-      )}
-    </span>
-  ));
+  return tiles.map((tile, index) => {
+    const isAnkanFaceDown = isAnkan && (index === 0 || index === tiles.length - 1);
+    return (
+      <span className="riichi-meld-call-slot" key={`${tile}-${index}`}>
+        {isAnkanFaceDown ? (
+          <TileBack rotation={rotation} />
+        ) : (
+          renderTile(tile, index === calledIndex ? sideways : rotation)
+        )}
+        {meld.type === 'kakan' && index === calledIndex && (
+          <span className="riichi-meld-added">
+            {renderTile(meld.tiles[3], sideways)}
+          </span>
+        )}
+      </span>
+    );
+  });
 }

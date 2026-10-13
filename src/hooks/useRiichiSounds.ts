@@ -1,5 +1,5 @@
 /** 日麻音效仅在首次播放时加载；短促摸打声使用本地合成音。 */
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { playBeep, speak } from '@/lib/speech';
 
@@ -39,6 +39,36 @@ export function useRiichiSounds() {
   const { audioVolumes } = usePlayerProfile();
   const { sfx, voice } = audioVolumes;
   const cache = useRef(new Map<Voice, HTMLAudioElement>());
+
+  // User gesture unlock for mobile audio environments
+  useEffect(() => {
+    const unlock = () => {
+      try {
+        const Ctx =
+          window.AudioContext ||
+          (
+            window as typeof window & {
+              webkitAudioContext?: typeof AudioContext;
+            }
+          ).webkitAudioContext;
+        if (Ctx) {
+          const ctx = new Ctx();
+          if (ctx.state === 'suspended') {
+            void ctx.resume();
+          }
+          void ctx.close().catch(() => undefined);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener('pointerdown', unlock, {
+      once: true,
+      passive: true,
+    });
+    return () => window.removeEventListener('pointerdown', unlock);
+  }, []);
+
   const playVoice = useCallback(
     (name: Voice) => {
       if (sfx <= 0) return;

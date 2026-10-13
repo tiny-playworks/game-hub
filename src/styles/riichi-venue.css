@@ -865,7 +865,7 @@
   }
 }
 [data-table-felt='felt-venue'] {
-  --cosmetic-felt-pattern: url('../assets/venue/ink-cloth.png');
+  --cosmetic-felt-pattern: url('../assets/venue/ink-cloth.webp');
 }
 [data-table-felt='felt-venue'] .riichi-table-surface {
   background-size: cover, auto;
@@ -987,7 +987,7 @@
   [data-table-felt='felt-venue'] .riichi-table-surface {
     background-image:
       linear-gradient(#0d243959, #0d243959),
-      url('../assets/venue/ink-cloth.png');
+      url('../assets/venue/ink-cloth.webp');
     background-size: cover;
   }
   .riichi-seat .riichi-character-avatar {

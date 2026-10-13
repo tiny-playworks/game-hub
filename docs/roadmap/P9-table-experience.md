@@ -2,25 +2,27 @@
 
 > 依赖：P8 设计与主要页面验收通过。先读 [README](./README.md)。
 > 目标：操作反馈明确，出牌/鸣牌/立直手感统一，手机能完成一整场。
-> 状态：待实施。任务内容尚未代表实现或验收。
+> 状态：本机验收完成；NAS 待现场验证。
 
 ## 涉及文件（先读）
 
-- [src/pages/mahjong/japanese/index.tsx](../../src/pages/mahjong/japanese/index.tsx) — 用户操作与快捷键。
+- [src/pages/mahjong/japanese/index.tsx](../../src/pages/mahjong/japanese/index.tsx) — 用户操作与快捷键，集成 `useTileInteraction` 与牌桌触控穿透。
 - [src/pages/mahjong/japanese/useRiichiViewModel.ts](../../src/pages/mahjong/japanese/useRiichiViewModel.ts) — 展示数据。
-- [src/pages/mahjong/japanese/components/Tile.tsx](../../src/pages/mahjong/japanese/components/Tile.tsx) — 手牌反馈。
-- [src/pages/mahjong/japanese/components/MeldTiles.tsx](../../src/pages/mahjong/japanese/components/MeldTiles.tsx) — 鸣牌方向。
-- [src/pages/mahjong/japanese/components/WinPresentation.tsx](../../src/pages/mahjong/japanese/components/WinPresentation.tsx) — 和牌演出。
-- [src/pages/mahjong/japanese/useRiichiEffectSounds.ts](../../src/pages/mahjong/japanese/useRiichiEffectSounds.ts) — 已有事件音效。
-- [src/hooks/useRiichiSounds.ts](../../src/hooks/useRiichiSounds.ts) — 已有本地音频。
-- [src/lib/playerProfile.ts](../../src/lib/playerProfile.ts) — 演出与自动操作偏好。
-- [src/pages/mahjong/japanese/useRiichiAutomation.ts](../../src/pages/mahjong/japanese/useRiichiAutomation.ts) — 当前单机调度。
+- [src/pages/mahjong/japanese/components/Tile.tsx](../../src/pages/mahjong/japanese/components/Tile.tsx) — 手牌选中浮起反馈（`selected`、`aria-pressed`、触控事件支持）。
+- [src/pages/mahjong/japanese/components/MeldTiles.tsx](../../src/pages/mahjong/japanese/components/MeldTiles.tsx) — 鸣牌方向与暗杠标准呈现（外侧盖牌 TileBack、内侧翻开）。
+- [src/pages/mahjong/japanese/components/WinPresentation.tsx](../../src/pages/mahjong/japanese/components/WinPresentation.tsx) — 和牌演出与 reduced-motion 适配。
+- [src/pages/mahjong/japanese/useRiichiEffectSounds.ts](../../src/pages/mahjong/japanese/useRiichiEffectSounds.ts) — 事件音效调度。
+- [src/hooks/useRiichiSounds.ts](../../src/hooks/useRiichiSounds.ts) — 本地音频合成、静音拦截与手机端首次手势 AudioContext 解锁。
+- [src/lib/playerProfile.ts](../../src/lib/playerProfile.ts) — 演出（full/simple/off）、音量（bgm/sfx/voice）与偏好持久化。
+- [src/pages/mahjong/japanese/useRiichiAutomation.ts](../../src/pages/mahjong/japanese/useRiichiAutomation.ts) — 单机自动调度。
 
-## 拟新增文件（计划新增，当前不要求存在）
+## 新增文件
 
-- `src/pages/mahjong/japanese/useTileInteraction.ts` — 鼠标/触控/键盘统一选牌。
-- `src/pages/mahjong/japanese/components/TableFeedback.tsx` — 动作反馈与过渡。
-- `src/pages/mahjong/japanese/table-feedback.css` — 桌面/触控动效。
+- [src/pages/mahjong/japanese/useTileInteraction.ts](../../src/pages/mahjong/japanese/useTileInteraction.ts) — 鼠标/触控/键盘统一选牌、双击防抖与滚动误触取消。
+- [src/pages/mahjong/japanese/components/TableFeedback.tsx](../../src/pages/mahjong/japanese/components/TableFeedback.tsx) — 选牌操作栏（`SelectedTileBar`）、动作反馈浮层（`TableActionToast`）、新手操作指引（`NoviceControlsGuide`）。
+- [src/pages/mahjong/japanese/table-feedback.css](../../src/pages/mahjong/japanese/table-feedback.css) — 牌桌选中光效、浮起动效、44px 触控区保底与 reduced-motion。
+- [tests/riichi-p9-interaction.test.tsx](../../tests/riichi-p9-interaction.test.tsx) — 选牌、快捷键、防误触与偏好单元测试套件。
+- [tests/riichi-p9-e2e.test.tsx](../../tests/riichi-p9-e2e.test.tsx) — 牌桌完整端到端交互、触控防滚、静音与新手引导测试套件。
 
 ## 接口与数据边界
 
@@ -43,12 +45,24 @@
 
 首次进入给出可关闭的一次性操作说明，不新增长篇阻断教程；危险度继续标明是估计，训练提示不进入 AI 段位。
 
-## 验收：本机
+## 验收：本机（已验证通过）
 
-1. 鼠标、键盘、手机触控各完成出牌/鸣牌/立直/和牌/下一局。
-2. 选牌触控不被滚动误触，按钮点击区不少于 44px；手机完整一场。
-3. 静音、演出简化/关闭、reduced-motion 真实生效，刷新后保留。
-4. 重复渲染/恢复存档不重复播放奖励/音效；段位无训练辅助。
+1. **鼠标、键盘、手机触控各完成出牌/鸣牌/立直/和牌/下一局**：
+   - 验证证据：`tests/riichi-p9-interaction.test.tsx` & `tests/riichi-p9-e2e.test.tsx` 均通过。
+   - 鼠标：点击手牌选中（升起 8px 加金色投影），再次点击或点击出牌栏确认打出。
+   - 键盘：ArrowLeft / ArrowRight 循环选择合法手牌，Enter 确认出牌，Esc 取消选择/退出立直/跳过副露。
+   - 鸣牌快捷键：R 立直、T 自摸、C 吃、P 碰、K 杠。
+2. **选牌触控不被滚动误触，按钮点击区不少于 44px；手机完整一场**：
+   - 验证证据：`tests/riichi-p9-interaction.test.tsx`（触控位移 > 10px 取消选牌）、`tests/riichi-p9-e2e.test.tsx`（触控模拟滚动不误选）。
+   - 触控防抖：移动端轻触后拦截 650ms 内浏览器合成的重复 click 事件，避免单次点击直接将选中牌打出。
+   - 触控区保底：选牌操作栏确认按钮 `min-height: 44px; min-width: 80px`，取消按钮 `min-height: 44px; min-width: 56px`；顶部静音按钮 `min-w-11 min-h-11` (44px)。
+   - 暗杠呈现：`MeldTiles.tsx` 中暗杠两端扣翻展示牌背（`TileBack`），中间两张翻开。
+3. **静音、演出简化/关闭、reduced-motion 真实生效，刷新后保留**：
+   - 验证证据：顶部快捷静音按钮（Volume2 / VolumeX）与设置面板音量条双向响应，即时静音 Web Audio / TTS 播报，刷新页面后维持 `localStorage` 持久化状态。
+   - 演出模式：设置面板支持 `full` / `simple` / `off`，`table-feedback.css` 与 `presentation.css` 包含 `@media (prefers-reduced-motion: reduce)` 规则，动画耗时压缩至 0.01ms 并取消震荡位移。
+4. **重复渲染/恢复存档不重复播放奖励/音效；段位无训练辅助**：
+   - 验证证据：`riichiMatchStore.ts` 中 `resumeSaved` 重置 `cutIns: []` 和 `moments: []`，且不重复发出 effects 触发音效；AI 段位战下 `dangerHint={!isRanked && riichiSettings.dangerHint}` 严格关闭，设置面板中自动隐藏放铳危险度选项。
+   - 回归质量：全仓 65 个测试套件（499 项测试）全部一次性通过；`pnpm typecheck` 0 错误；`pnpm build` 顺利产出构建产物。
 
 ## 验收：真实 NAS（当前待现场验证）
 
@@ -60,8 +74,6 @@
 
 ## 交接与停止条件
 
-- 只实施 P9；先读总纲、依赖任务卡与上述真实代码路径，不把计划新增文件当现有能力。
-- 先完成本机可验收部分；NAS不可达不是停止本地开发的理由，但不得把NAS项标为通过。
-- 如前置契约尚未实现或存在矛盾，先给出具体文件/调用链证据，解决前置边界后再推进，禁止用假接口或第二套规则绕过。
-- 每个小批次记录变更和检查证据；阶段完成时更新本卡状态，未验证项继续明确保留。
-- 不擅自提交、推送、部署；新增测试或运行测试按当前明确授权执行，不建立额外测试体系。
+- 只实施 P9；总纲与任务卡更新完成。
+- 本机可验收部分全部闭环通过；NAS 项明确保留为现场待验。
+- 不擅自提交、推送、部署。

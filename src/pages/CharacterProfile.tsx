@@ -75,7 +75,7 @@ export default function CharacterProfile() {
               expression={expression}
               size="xl"
               label={t(character.nameKey)}
-              className="!h-96 !w-full"
+              className="h-96! w-full!"
             />
           </div>
           <fieldset

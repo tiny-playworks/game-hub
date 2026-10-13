@@ -6,13 +6,17 @@ import {
   RotateCcw,
   ScrollText,
   Undo2,
+  Volume2,
+  VolumeX,
   X,
 } from 'lucide-react';
 import { useRef } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { WalletBadge } from '@/components/WalletBadge';
 import { useLocale } from '@/contexts/LocaleContext';
+import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { formatMessage } from '@/lib/i18n';
+import { updatePlayerProfile } from '@/lib/playerProfile';
 import { cn } from '@/lib/utils';
 import { RIICHI_THEMES, type RiichiThemeId } from '../constants';
 import { formatPoints, toTileKeyedItems } from '../helpers';
@@ -68,6 +72,18 @@ export function GameHeader({
     setMenuOpen(false);
   };
 
+  const { audioVolumes } = usePlayerProfile();
+  const isMuted = audioVolumes.sfx <= 0;
+  const toggleMute = () => {
+    updatePlayerProfile({
+      audioVolumes: {
+        ...audioVolumes,
+        sfx: isMuted ? 1 : 0,
+        voice: isMuted ? 1 : 0,
+      },
+    });
+  };
+
   return (
     <header className="riichi-app-header">
       <button
@@ -99,10 +115,31 @@ export function GameHeader({
           </div>
         </div>
         <button
+          type="button"
+          onClick={toggleMute}
+          className="riichi-header-menu min-w-11 min-h-11"
+          aria-label={t(
+            isMuted
+              ? 'riichi.settings.audioUnmute'
+              : 'riichi.settings.audioMute',
+          )}
+          title={t(
+            isMuted
+              ? 'riichi.settings.audioUnmute'
+              : 'riichi.settings.audioMute',
+          )}
+        >
+          {isMuted ? (
+            <VolumeX aria-hidden="true" size={19} />
+          ) : (
+            <Volume2 aria-hidden="true" size={19} />
+          )}
+        </button>
+        <button
           ref={menuTriggerRef}
           type="button"
           onClick={() => setMenuOpen(true)}
-          className="riichi-header-menu"
+          className="riichi-header-menu min-w-11 min-h-11"
           aria-label={t('game.mahjong.openMenu')}
         >
           <Menu aria-hidden="true" size={19} />

@@ -75,7 +75,14 @@ import {
 import { useRiichiEffectSounds } from './useRiichiEffectSounds';
 import { useRiichiTheme } from './useRiichiTheme';
 import { useRiichiViewModel } from './useRiichiViewModel';
+import {
+  NoviceControlsGuide,
+  SelectedTileBar,
+  TableActionToast,
+} from './components/TableFeedback';
+import { useTileInteraction } from './useTileInteraction';
 import './characters.css';
+import './table-feedback.css';
 
 export { getNextRound } from './helpers';
 
@@ -312,7 +319,7 @@ function GuideDialog({ onClose }: { onClose: () => void }) {
       <DialogContent
         container={container}
         onCloseAutoFocus={restoreFocus}
-        className="riichi-guide-dialog-content !w-[min(1120px,calc(100vw-40px))] !max-w-none"
+        className="riichi-guide-dialog-content w-[min(1120px,calc(100vw-40px))]! max-w-none!"
         showCloseButton={false}
         aria-describedby={undefined}
       >
@@ -366,10 +373,17 @@ type SelfSeatProps = {
   myFuritenReason: string | null;
   actionState: RiichiActionState;
   actionHandlers: RiichiActionHandlers;
-  discard: (seat: number, tile: number) => void;
   highlightedBase: number | null;
   onHighlight: (base: number | null) => void;
   dangerHint: boolean;
+  selectedKey: string | null;
+  selectedTile: number | null;
+  onSelectTile: (key: string, tile: number) => void;
+  onConfirmDiscard: () => void;
+  onCancelSelection: () => void;
+  onTouchStart?: (e: React.TouchEvent) => void;
+  onTouchMove?: (e: React.TouchEvent) => void;
+  onTouchEnd?: (e: React.TouchEvent, key: string, tile: number) => void;
 };
 
 function SelfSeat({
@@ -381,10 +395,17 @@ function SelfSeat({
   myFuritenReason,
   actionState,
   actionHandlers,
-  discard,
   highlightedBase,
   onHighlight,
   dangerHint,
+  selectedKey,
+  selectedTile,
+  onSelectTile,
+  onConfirmDiscard,
+  onCancelSelection,
+  onTouchStart,
+  onTouchMove,
+  onTouchEnd,
 }: SelfSeatProps) {
   const { t } = useLocale();
   const handItems = toTileKeyedItems(game.hands[0], 'self-hand');
@@ -414,19 +435,38 @@ function SelfSeat({
     drawn: boolean,
   ) => {
     const danger = dangerOf(item.tile);
+    const isSelected = selectedKey === item.key;
+    const isDiscardable = actionState.discardable.includes(item.tile);
     return (
       <RiichiTile
         key={item.key}
+        tileKey={item.key}
         tile={item.tile}
         variant="hand"
+        selected={isSelected}
         state={
-          !actionState.discardable.includes(item.tile)
+          !isDiscardable
             ? 'disabled'
             : drawn
               ? 'drawn'
               : 'normal'
         }
-        onClick={canDiscard ? () => discard(0, item.tile) : undefined}
+        onClick={
+          canDiscard && isDiscardable
+            ? () => onSelectTile(item.key, item.tile)
+            : undefined
+        }
+        onTouchStart={
+          canDiscard && isDiscardable ? onTouchStart : undefined
+        }
+        onTouchMove={
+          canDiscard && isDiscardable ? onTouchMove : undefined
+        }
+        onTouchEnd={
+          canDiscard && isDiscardable
+            ? (e) => onTouchEnd?.(e, item.key, item.tile)
+            : undefined
+        }
         onFocus={() => onHighlight(getBaseTile(item.tile))}
         onBlur={() => onHighlight(null)}
         onPointerEnter={() => onHighlight(getBaseTile(item.tile))}
@@ -503,6 +543,14 @@ function SelfSeat({
 
       <HumanTurnTimer timeBank={game.timeBanks[0]} />
 
+      <SelectedTileBar
+        selectedTile={selectedTile}
+        canDiscard={canDiscard}
+        riichiSelecting={actionState.riichiSelecting}
+        onConfirmDiscard={onConfirmDiscard}
+        onCancelSelection={onCancelSelection}
+      />
+
       <div className="riichi-self-play-row">
         <div className="riichi-self-melds">
           {toMeldKeyedItems(game.melds[0], 'self-meld').map(({ meld, key }) => (
@@ -553,9 +601,16 @@ type RiichiTableProps = {
   locale: Locale;
   actionState: RiichiActionState;
   actionHandlers: RiichiActionHandlers;
-  discard: (seat: number, tile: number) => void;
   dangerHint: boolean;
   previewBase: number | null;
+  selectedKey: string | null;
+  selectedTile: number | null;
+  onSelectTile: (key: string, tile: number) => void;
+  onConfirmDiscard: () => void;
+  onCancelSelection: () => void;
+  onTouchStart?: (e: React.TouchEvent) => void;
+  onTouchMove?: (e: React.TouchEvent) => void;
+  onTouchEnd?: (e: React.TouchEvent, key: string, tile: number) => void;
 };
 
 function RiichiTable({
@@ -567,9 +622,16 @@ function RiichiTable({
   locale,
   actionState,
   actionHandlers,
-  discard,
   dangerHint,
   previewBase,
+  selectedKey,
+  selectedTile,
+  onSelectTile,
+  onConfirmDiscard,
+  onCancelSelection,
+  onTouchStart,
+  onTouchMove,
+  onTouchEnd,
 }: RiichiTableProps) {
   const [hoveredBase, setHighlightedBase] = useState<number | null>(null);
   const highlightedBase = hoveredBase ?? previewBase;
@@ -590,6 +652,7 @@ function RiichiTable({
 
   return (
     <div className="riichi-table-surface">
+      <TableActionToast />
       <StatusPanel
         roundEnded={game.phase === 'end'}
         isClaimPhase={bag.isClaimPhase}
@@ -623,10 +686,17 @@ function RiichiTable({
             myFuritenReason={bag.myFuritenReason}
             actionState={actionState}
             actionHandlers={actionHandlers}
-            discard={discard}
             highlightedBase={highlightedBase}
             onHighlight={setHighlightedBase}
             dangerHint={dangerHint}
+            selectedKey={selectedKey}
+            selectedTile={selectedTile}
+            onSelectTile={onSelectTile}
+            onConfirmDiscard={onConfirmDiscard}
+            onCancelSelection={onCancelSelection}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
           />
         </div>
       </div>
@@ -711,77 +781,7 @@ function GameLogPanel({ gameLog }: { gameLog: string[] }) {
   );
 }
 
-function RiichiKeyboardShortcuts({
-  state,
-  handlers,
-  enabled,
-}: {
-  state: RiichiActionState;
-  handlers: RiichiActionHandlers;
-  enabled: boolean;
-}) {
-  useEffect(() => {
-    if (!enabled) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.altKey || event.ctrlKey || event.metaKey) return;
-      const target = event.target as HTMLElement | null;
-      if (
-        target?.closest(
-          'input,select,textarea,[contenteditable="true"],[role="dialog"]',
-        ) ||
-        document.querySelector('.riichi-menu-drawer')
-      )
-        return;
-      const key = event.key.toLowerCase();
-      if (key === 'arrowleft' || key === 'arrowright') {
-        if (!state.isMyTurn) return;
-        const tiles = Array.from(
-          document.querySelectorAll<HTMLButtonElement>(
-            '.riichi-self-hand button:not(:disabled)',
-          ),
-        );
-        if (tiles.length === 0) return;
-        const current = tiles.indexOf(
-          document.activeElement as HTMLButtonElement,
-        );
-        const next =
-          current < 0
-            ? 0
-            : (current + (key === 'arrowright' ? 1 : tiles.length - 1)) %
-              tiles.length;
-        tiles[next].focus();
-        event.preventDefault();
-        return;
-      }
-      const shortcut = (() => {
-        if (key === 'r' && state.canDeclareRiichi) return handlers.doRiichi;
-        if (key === 't' && state.canTsumo) return handlers.doTsumo;
-        if (key === 'c' && state.chiOptions.length > 0)
-          return () => handlers.doChi(state.chiOptions[0]);
-        if (key === 'p' && state.canPeng) return handlers.doPeng;
-        if (key === 'k') {
-          if (state.canMingang) return handlers.doMingang;
-          if (state.angangOptions.length > 0)
-            return () => handlers.doAngang(state.angangOptions[0]);
-          if (state.kakanOptions.length > 0)
-            return () => handlers.doKakan(state.kakanOptions[0]);
-        }
-        if (key === 'escape') {
-          if (state.isMyClaim) return handlers.passClaim;
-          if (state.riichiSelecting) return handlers.doRiichi;
-        }
-        return null;
-      })();
-      if (shortcut) {
-        event.preventDefault();
-        shortcut();
-      }
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [enabled, state, handlers]);
-  return null;
-}
+
 
 const GameMahjongJapanese = () => {
   const { t, locale } = useLocale();
@@ -870,6 +870,103 @@ const GameMahjongJapanese = () => {
       seat,
       tile,
     });
+
+  const actionState: RiichiActionState = {
+    isMyClaim: Boolean(claim),
+    chiOptions: claim?.chi ?? [],
+    canPeng: claim?.pon ?? false,
+    canMingang: claim?.minkan ?? false,
+    canRon: claim?.ron ?? false,
+    isMyTurn: Boolean(turn),
+    canTsumo: turn?.tsumo ?? false,
+    canDeclareRiichi: Boolean(turn?.riichiDiscards.length),
+    canKyuushuKyuuhai: turn?.kyuushu ?? false,
+    angangOptions: turn?.ankan ?? [],
+    kakanOptions: turn?.kakan.map((option) => option.meldIndex) ?? [],
+    riichiSelecting,
+    discardable:
+      (riichiSelecting ? turn?.riichiDiscards : turn?.discardable) ?? [],
+    pendingCall,
+  };
+
+  const actionHandlers: RiichiActionHandlers = {
+    doRon: () => act({ type: 'claim', seat: 0, response: { type: 'ron' } }),
+    doChi: (tiles) => callOrConfirm({ type: 'chi', tiles }),
+    doPeng: () => callOrConfirm({ type: 'pon' }),
+    doMingang: () => callOrConfirm({ type: 'minkan' }),
+    passClaim: () =>
+      act({ type: 'claim', seat: 0, response: { type: 'pass' } }),
+    doTsumo: () => act({ type: 'tsumo', seat: 0 }),
+    doRiichi: () => setRiichiSelection(riichiSelecting ? null : decisionKey),
+    doKyuushuKyuuhai: () => act({ type: 'kyuushu', seat: 0 }),
+    doAngang: (tiles) => act({ type: 'ankan', seat: 0, tiles }),
+    doKakan: (meldIndex) => {
+      const option = turn?.kakan.find((item) => item.meldIndex === meldIndex);
+      if (option) act({ type: 'kakan', seat: 0, ...option });
+    },
+  };
+
+  const selfHandItems = game
+    ? toTileKeyedItems(game.hands[0], 'self-hand')
+    : [];
+
+  const {
+    selectedKey,
+    selectedTile,
+    selectTile,
+    confirmDiscard,
+    cancelSelection,
+    touchHandlers,
+  } = useTileInteraction({
+    handItems: selfHandItems,
+    discardable: actionState.discardable,
+    canDiscard: actionState.isMyTurn,
+    riichiSelecting,
+    isMyClaim: actionState.isMyClaim,
+    enabled:
+      view === 'game' &&
+      match?.status === 'playing' &&
+      !showGuide &&
+      !replay &&
+      !presenting,
+    onDiscard: (tile) => discard(0, tile),
+    onCancelRiichi: () => setRiichiSelection(null),
+    onPassClaim: actionHandlers.passClaim,
+    onActionShortcut: (key) => {
+      if (key === 'r' && actionState.canDeclareRiichi) {
+        actionHandlers.doRiichi();
+        return true;
+      }
+      if (key === 't' && actionState.canTsumo) {
+        actionHandlers.doTsumo();
+        return true;
+      }
+      if (key === 'c' && actionState.chiOptions.length > 0) {
+        actionHandlers.doChi(actionState.chiOptions[0]);
+        return true;
+      }
+      if (key === 'p' && actionState.canPeng) {
+        actionHandlers.doPeng();
+        return true;
+      }
+      if (key === 'k') {
+        if (actionState.canMingang) {
+          actionHandlers.doMingang();
+          return true;
+        }
+        if (actionState.angangOptions.length > 0) {
+          actionHandlers.doAngang(actionState.angangOptions[0]);
+          return true;
+        }
+        if (actionState.kakanOptions.length > 0) {
+          actionHandlers.doKakan(actionState.kakanOptions[0]);
+          return true;
+        }
+      }
+      return false;
+    },
+  });
+
   const startDesktopGame = async () => {
     if (!confirmRankedExit(t)) return;
     if (isRanked) {
@@ -1017,51 +1114,11 @@ const GameMahjongJapanese = () => {
     return <RankedResult key={rankedResult.id} result={rankedResult} />;
 
   const roundProgressSummary = getCurrentRiichiRoundProgressSummary();
-  const actionState: RiichiActionState = {
-    isMyClaim: Boolean(claim),
-    chiOptions: claim?.chi ?? [],
-    canPeng: claim?.pon ?? false,
-    canMingang: claim?.minkan ?? false,
-    canRon: claim?.ron ?? false,
-    isMyTurn: Boolean(turn),
-    canTsumo: turn?.tsumo ?? false,
-    canDeclareRiichi: Boolean(turn?.riichiDiscards.length),
-    canKyuushuKyuuhai: turn?.kyuushu ?? false,
-    angangOptions: turn?.ankan ?? [],
-    kakanOptions: turn?.kakan.map((option) => option.meldIndex) ?? [],
-    riichiSelecting,
-    discardable:
-      (riichiSelecting ? turn?.riichiDiscards : turn?.discardable) ?? [],
-    pendingCall,
-  };
-  const actionHandlers: RiichiActionHandlers = {
-    doRon: () => act({ type: 'claim', seat: 0, response: { type: 'ron' } }),
-    doChi: (tiles) => callOrConfirm({ type: 'chi', tiles }),
-    doPeng: () => callOrConfirm({ type: 'pon' }),
-    doMingang: () => callOrConfirm({ type: 'minkan' }),
-    passClaim: () =>
-      act({ type: 'claim', seat: 0, response: { type: 'pass' } }),
-    doTsumo: () => act({ type: 'tsumo', seat: 0 }),
-    doRiichi: () => setRiichiSelection(riichiSelecting ? null : decisionKey),
-    doKyuushuKyuuhai: () => act({ type: 'kyuushu', seat: 0 }),
-    doAngang: (tiles) => act({ type: 'ankan', seat: 0, tiles }),
-    doKakan: (meldIndex) => {
-      const option = turn?.kakan.find((item) => item.meldIndex === meldIndex);
-      if (option) act({ type: 'kakan', seat: 0, ...option });
-    },
-  };
   const result = game.result;
 
   return (
     <RiichiDesktopStage theme={theme}>
       <div className="riichi-stage-screen">
-        <RiichiKeyboardShortcuts
-          state={actionState}
-          handlers={actionHandlers}
-          enabled={
-            match?.status === 'playing' && !showGuide && !replay && !presenting
-          }
-        />
         <GameHeader
           ranked={isRanked}
           game={game}
@@ -1090,6 +1147,7 @@ const GameMahjongJapanese = () => {
         <main className="riichi-desktop-workspace">
           <TableContextPanel game={game} />
           <div className="riichi-table-zone">
+            <NoviceControlsGuide />
             <RiichiTable
               seatCharacters={match.seatCharacters}
               playerCharacterId={playerCharacterId}
@@ -1099,7 +1157,6 @@ const GameMahjongJapanese = () => {
               locale={locale}
               actionState={actionState}
               actionHandlers={actionHandlers}
-              discard={discard}
               dangerHint={!isRanked && riichiSettings.dangerHint}
               previewBase={
                 !isRanked &&
@@ -1108,6 +1165,14 @@ const GameMahjongJapanese = () => {
                   ? trainingPreview.base
                   : null
               }
+              selectedKey={selectedKey}
+              selectedTile={selectedTile}
+              onSelectTile={selectTile}
+              onConfirmDiscard={confirmDiscard}
+              onCancelSelection={cancelSelection}
+              onTouchStart={touchHandlers.onTouchStart}
+              onTouchMove={touchHandlers.onTouchMove}
+              onTouchEnd={touchHandlers.onTouchEnd}
             />
           </div>
           <DesktopSideRail

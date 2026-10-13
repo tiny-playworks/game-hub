@@ -1,10 +1,10 @@
 import type { CharacterExpression } from '@/lib/playerCharacters';
 import type { AoiOutfit } from '@/lib/characterOutfits';
-import casual from './aoi/casual.jpg';
-import moonlight from './aoi/moonlight.jpg';
-import vermilion from './aoi/vermilion.jpg';
-import ink from './aoi/ink.jpg';
-import blossom from './aoi/blossom.jpg';
+import casual from './aoi/casual.webp';
+import moonlight from './aoi/moonlight.webp';
+import vermilion from './aoi/vermilion.webp';
+import ink from './aoi/ink.webp';
+import blossom from './aoi/blossom.webp';
 
 // Viewports exclude board labels and neighboring panels, without repainting the source art.
 const sheets = {

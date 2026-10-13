@@ -216,7 +216,7 @@ export function RulesView({
             event.preventDefault();
             guideTriggerRef.current?.focus();
           }}
-          className="riichi-guide-dialog-content !w-[min(1120px,calc(100vw-40px))] !max-w-none"
+          className="riichi-guide-dialog-content w-[min(1120px,calc(100vw-40px))]! max-w-none!"
           showCloseButton={false}
           aria-describedby={undefined}
         >

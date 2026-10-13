@@ -62,7 +62,7 @@ export function ResultDialog({
       <DialogContent
         container={container}
         onCloseAutoFocus={restoreFocus}
-        className={`riichi-result-modal !w-[min(840px,calc(100vw-40px))] !max-w-none animate-riichi-modal-in ${className}`}
+        className={`riichi-result-modal w-[min(840px,calc(100vw-40px))]! max-w-none! animate-riichi-modal-in ${className}`}
         showCloseButton={false}
         aria-describedby={undefined}
         onClick={onClick}

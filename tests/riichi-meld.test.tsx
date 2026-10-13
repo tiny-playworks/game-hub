@@ -45,3 +45,21 @@ test('加杠显示四张牌，第四张叠在原被鸣牌上', () => {
     container.querySelector('.riichi-meld-added [role="img"]'),
   ).toHaveAttribute('data-rotation', '90');
 });
+
+test('暗杠显示四张牌，首尾两张为牌背，中间两张亮牌', () => {
+  const { container } = render(
+    <MeldTiles
+      seat={0}
+      meld={{
+        type: 'angang',
+        tiles: tiles('7777s'),
+      }}
+    />,
+  );
+  const slots = container.querySelectorAll('.riichi-meld-call-slot');
+  expect(slots).toHaveLength(4);
+  expect(slots[0].querySelector('.riichi-tile-back')).not.toBeNull();
+  expect(slots[3].querySelector('.riichi-tile-back')).not.toBeNull();
+  expect(slots[1].querySelector('.riichi-tile')).not.toBeNull();
+  expect(slots[2].querySelector('.riichi-tile')).not.toBeNull();
+});
