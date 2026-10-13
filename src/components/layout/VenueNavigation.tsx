@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
+import { MemberSelector } from '@/components/household/MemberSelector';
 import { ThemeSwitcher } from '@/components/common/ThemeSwitcher';
 import { WalletBadge } from '@/components/WalletBadge';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -32,6 +33,7 @@ export function VenueNavigation() {
           ))}
         </nav>
         <div className="venue-nav-tools">
+          <MemberSelector />
           <WalletBadge />
           <LanguageSwitcher />
           <ThemeSwitcher />

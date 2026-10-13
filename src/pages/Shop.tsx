@@ -20,8 +20,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useWallet } from '@/components/WalletBadge';
+import { useHousehold } from '@/contexts/HouseholdContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useCosmetics } from '@/hooks/useCosmetics';
+import { HouseholdApiError } from '@/lib/household/api';
 import {
   COSMETIC_CATEGORIES,
   COSMETIC_DEFS,
@@ -59,6 +61,7 @@ export default function Shop() {
   const { t, locale } = useLocale();
   const cosmetics = useCosmetics();
   const { coins } = useWallet();
+  const { mode, purchaseCosmetic: onlinePurchaseCosmetic } = useHousehold();
   const unlockText = useCosmeticUnlockText();
   const [searchParams] = useSearchParams();
   const requestedItem = getCosmetic(searchParams.get('item') ?? '');
@@ -86,7 +89,7 @@ export default function Shop() {
   };
   return (
     <div className="venue-shop lobby-page min-h-screen bg-background text-foreground">
-      <main className="mx-auto max-w-[1440px] px-4 py-7 sm:px-8">
+      <main className="mx-auto max-w-360 px-4 py-7 sm:px-8">
         <div className="venue-page-heading">
           <h1 className="mt-2 text-3xl font-semibold">{t('shop.title')}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -277,14 +280,28 @@ export default function Shop() {
               {t('save.cancel')}
             </Button>
             <Button
-              onClick={() => {
+              onClick={async () => {
                 setConfirm(false);
-                const result = purchaseCosmetic(selected.id);
-                if (result === 'purchased') setAcquired(selected.id);
-                else if (result !== 'owned')
-                  setError(
-                    t(`shop.${result === 'locked' ? 'failed' : result}`),
-                  );
+                if (mode === 'member-online') {
+                  try {
+                    await onlinePurchaseCosmetic(selected.id);
+                    setAcquired(selected.id);
+                    setError('');
+                  } catch (err) {
+                    if (err instanceof HouseholdApiError) {
+                      setError(t(err.messageKey));
+                    } else {
+                      setError(t('shop.failed'));
+                    }
+                  }
+                } else {
+                  const result = purchaseCosmetic(selected.id);
+                  if (result === 'purchased') setAcquired(selected.id);
+                  else if (result !== 'owned')
+                    setError(
+                      t(`shop.${result === 'locked' ? 'failed' : result}`),
+                    );
+                }
               }}
             >
               {t('shop.confirmBuy')}

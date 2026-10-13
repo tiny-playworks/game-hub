@@ -34,3 +34,20 @@ Original prompt: 可以 提交然后 p6吧
   - `pnpm build`：成功产出静态资源。
 - 遗留：实际手机音频首次手势解锁、低性能设备现场检查（须依赖真实 NAS 部署与现场真机，已明确保留为待现场验证）。
 
+## 2026-10-13 P10 家庭成员与 NAS 服务（本机实施）
+
+- 状态：P10 本机服务、契约、API Client、Context 状态机、UI 入口及数据隔离已全部实施并通过验收；真实 NAS 部署与局域网反代明确保留为待现场验证。
+- 代码层与实现：
+  1. 共享契约与 API：`shared/contracts/member.ts` 与 `shared/contracts/api.ts` 规范化 `HouseholdMode`、`MemberSummary`、`MemberSnapshot` (schema 1, revision) 与 API 错误。
+  2. 客户端封装与存储隔离：`src/lib/household/api.ts` 封装同域通信；`snapshotStorage.ts` 实现 `MemoryStorage` 与快照字段双向映射；`src/lib/storage.ts` 支持可插拔 `activeDriver`，实现成员登录与本地游客 localStorage 零冲突绝对隔离。
+  3. 会话与上下文管理：`src/contexts/HouseholdContext.tsx` 管理 `deviceId`、服务心跳探测、双模式切换、登录/登出/刷新、权威购买与旧存档一次性迁移。
+  4. 界面与交互入口：`src/components/household/MemberSelector.tsx` 在主导航栏集成家庭成员选择与 4 位 PIN 数字小键盘（支持软键盘与物理键盘、防刷锁定）；`src/pages/Shop.tsx` 在线模式下路由至服务端权威购买事务；`src/components/profile/DataManagementCard.tsx` 集成旧游客存档安全迁移至成员云端（带自动备份与单次防重）。
+  5. 国际化支持：`src/lib/i18n.ts` 补充完整的中英文 `household.*` 界面文案与统一错误映射。
+- 测试与验证：
+  - `server/src/riichi/gate.ts`：Node 24/22 环境无头跑通整局日麻（90 events 顺利和牌），10.1 运行门禁通过。
+  - 新增测试用例：`tests/household-storage.test.ts`、`tests/household-api.test.ts`、`tests/household-server.test.ts`、`tests/household-interaction.test.tsx`。
+  - `pnpm typecheck`：通过（0 error）。
+  - `pnpm test`：全仓 69 个测试套件，514 项测试 100% 全部通过。
+  - `pnpm build`：Rsbuild 0.43s 生产打包成功。
+- 遗留：真实 NAS 环境（ARM/x86 Docker 容器运行、SQLite 卷持久化权限、局域网 HTTPS/反代现场联调，待现场验证）。
+

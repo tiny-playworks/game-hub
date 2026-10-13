@@ -39,7 +39,22 @@ function updateStatus(
   });
 }
 
+let activeDriver: Storage | null = null;
+
+export function setStorageDriver(driver: Storage | null): void {
+  activeDriver = driver;
+  cached.clear();
+  pending.clear();
+  readable.clear();
+  updateStatus(false, false, false);
+}
+
+export function getStorageDriver(): Storage | null {
+  return activeDriver;
+}
+
 function persistent(): Storage {
+  if (activeDriver) return activeDriver;
   const storage = globalThis.localStorage;
   if (!storage) throw new Error('Browser storage is unavailable');
   return storage;

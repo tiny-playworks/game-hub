@@ -9,6 +9,7 @@ import { RankedNavigationGuard } from '@/components/ranked/RankedNavigationGuard
 import { PageErrorBoundary } from '@/components/recovery/PageErrorBoundary';
 import { StorageNotice } from '@/components/recovery/StorageNotice';
 import { ArcadeSession } from '@/contexts/ArcadeContext';
+import { HouseholdProvider } from '@/contexts/HouseholdContext';
 import { LocaleProvider } from '@/contexts/LocaleContext';
 import { CosmeticsProvider } from '@/hooks/useCosmetics';
 import { migrateLegacyArcadeStats } from '@/lib/achievements';
@@ -72,8 +73,9 @@ const App = () => {
   return (
     <BrowserRouter>
       <LocaleProvider>
-        <StorageNotice />
-        <CosmeticsProvider>
+        <HouseholdProvider>
+          <StorageNotice />
+          <CosmeticsProvider>
           <VenueNavigation />
           <RankedNavigationGuard />
           <AchievementUnlockToast />
@@ -226,8 +228,9 @@ const App = () => {
             </Suspense>
           </PageErrorBoundary>
         </CosmeticsProvider>
-      </LocaleProvider>
-    </BrowserRouter>
+      </HouseholdProvider>
+    </LocaleProvider>
+  </BrowserRouter>
   );
 };
 

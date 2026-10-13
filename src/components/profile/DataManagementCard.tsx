@@ -1,4 +1,4 @@
-import { Download, RotateCcw, Upload } from 'lucide-react';
+import { CloudUpload, Download, RotateCcw, Upload } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,7 +8,10 @@ import {
   DialogFooter,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useHousehold } from '@/contexts/HouseholdContext';
 import { useLocale } from '@/contexts/LocaleContext';
+import { HouseholdApiError } from '@/lib/household/api';
+import { formatMessage } from '@/lib/i18n';
 import {
   downloadSaveFile,
   importSaveFile,
@@ -19,9 +22,13 @@ import {
 } from '@/lib/saveTransfer';
 
 export function DataManagementCard() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const { mode, snapshot, currentMember, importLocalSave } = useHousehold();
   const input = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<SaveFile | 'reset' | null>(null);
+  const [showMigrateConfirm, setShowMigrateConfirm] = useState(false);
+  const [isMigrating, setIsMigrating] = useState(false);
+  const [migrateSuccess, setMigrateSuccess] = useState(false);
   const [step, setStep] = useState(1);
   const [error, setError] = useState('');
   const close = () => {
@@ -34,6 +41,40 @@ export function DataManagementCard() {
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
         {t('save.description')}
       </p>
+
+      {mode === 'member-online' && currentMember && (
+        <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold">
+                {formatMessage(locale, 'household.save.cloudTitle', { nickname: currentMember.nickname })}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {snapshot?.revision === 0
+                  ? t('household.save.canMigrateDesc')
+                  : formatMessage(locale, 'household.save.migratedDesc', { rev: snapshot?.revision ?? 1 })}
+              </p>
+            </div>
+            {snapshot?.revision === 0 && (
+              <Button
+                size="sm"
+                className="gap-1.5"
+                disabled={isMigrating || migrateSuccess}
+                onClick={() => {
+                  setError('');
+                  setShowMigrateConfirm(true);
+                }}
+              >
+                <CloudUpload className="size-4" />
+                {migrateSuccess
+                  ? t('household.save.migratedSuccess')
+                  : t('household.save.migrateBtn')}
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="mt-4 flex flex-wrap gap-2">
         <Button
           variant="outline"
@@ -147,6 +188,56 @@ export function DataManagementCard() {
                     : 'save.confirmReset'
                   : 'save.confirmImport',
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={showMigrateConfirm}
+        onOpenChange={(open) => {
+          if (!open) setShowMigrateConfirm(false);
+        }}
+      >
+        <DialogContent className="paper-texture rounded-3xl bg-card">
+          <DialogTitle className="text-xl font-semibold">
+            {t('household.save.migrateConfirmTitle')}
+          </DialogTitle>
+          <DialogDescription className="text-sm leading-6">
+            {t('household.save.migrateConfirmDesc')}
+          </DialogDescription>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={isMigrating}
+              onClick={() => setShowMigrateConfirm(false)}
+            >
+              {t('save.cancel')}
+            </Button>
+            <Button
+              disabled={isMigrating}
+              onClick={async () => {
+                setIsMigrating(true);
+                try {
+                  await importLocalSave();
+                  setShowMigrateConfirm(false);
+                  setMigrateSuccess(true);
+                  setError('');
+                } catch (err) {
+                  setShowMigrateConfirm(false);
+                  if (err instanceof HouseholdApiError) {
+                    setError(t(err.messageKey));
+                  } else {
+                    setError(t('household.save.migrateFailed'));
+                  }
+                } finally {
+                  setIsMigrating(false);
+                }
+              }}
+            >
+              {isMigrating
+                ? t('household.save.migrating')
+                : t('household.save.confirmMigrate')}
             </Button>
           </DialogFooter>
         </DialogContent>
