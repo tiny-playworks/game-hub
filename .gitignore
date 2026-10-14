@@ -21,3 +21,4 @@ output/
 .playwright-cli
 .workbuddy-ai/
 .workbuddy/
+.cursor
