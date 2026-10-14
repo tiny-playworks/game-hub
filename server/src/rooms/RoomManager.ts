@@ -16,12 +16,13 @@ import {
   createMatch,
   nextServerAiEvent,
 } from '../riichi/runtime';
-import type {
-  RiichiEvent,
-  RiichiMatchState,
+import {
+  toReplayFile,
+  type RiichiEvent,
+  type RiichiMatchState,
 } from '@/pages/mahjong/japanese/engine/match';
 import { recordRiichiMatchFinish } from '@/lib/riichiProgress';
-import { getMember, readSnapshot, saveSnapshot } from '../db';
+import { archiveReplay, getMember, readSnapshot, saveSnapshot } from '../db';
 import { runSnapshotMutation } from '../snapshotRuntime';
 import { createPlayerView } from './projectView';
 import {
@@ -787,6 +788,31 @@ export class RoomManager {
           } catch {
             // ignore per member settlement issue
           }
+        }
+      }
+    }
+
+    // 归档整场终局牌谱供参赛成员回放（总纲 4.5 & P15）
+    const replayFile = toReplayFile(room.match);
+    const replayJson = JSON.stringify(replayFile);
+    for (const seat of room.summary.seats) {
+      if (seat.type === 'human') {
+        const placement = ranking.indexOf(seat.seatIndex) + 1;
+        const finalScore = room.match.matchEnd.finalScores[seat.seatIndex] ?? 25000;
+        try {
+          archiveReplay(this.db, seat.memberId, {
+            matchId,
+            source: 'family',
+            roomId: room.summary.id,
+            viewerSeat: seat.seatIndex,
+            playerCharacterId: (room.match.seatCharacters[seat.seatIndex] as string) ?? 'koharu',
+            ranking: placement,
+            finalScore,
+            matchLength,
+            replayJson,
+          });
+        } catch {
+          // ignore per member archive error
         }
       }
     }

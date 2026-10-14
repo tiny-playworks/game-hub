@@ -11,6 +11,7 @@ import { CharacterPortraitSlot } from '@/components/characters/CharacterPortrait
 import { CharacterOutfitPicker } from '@/components/characters/CharacterOutfitPicker';
 import { PlayerAvatar } from '@/components/home/PlayerAvatar';
 import { DataManagementCard } from '@/components/profile/DataManagementCard';
+import { TrainingSummary } from '@/components/profile/TrainingSummary';
 import { WalletCard } from '@/components/profile/WalletCard';
 import { RankedProfilePanel } from '@/components/ranked/RankedProfilePanel';
 import { TaskClaimButton } from '@/components/TaskClaimButton';
@@ -941,6 +942,10 @@ const Profile = () => {
                   </div>
                 </div>
               ))}
+            </div>
+
+            <div className="mt-4">
+              <TrainingSummary />
             </div>
 
             <div className="mt-4 rounded-xl border border-border bg-card p-3">

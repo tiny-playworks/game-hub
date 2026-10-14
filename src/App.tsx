@@ -46,6 +46,8 @@ const GameTictactoe = lazyPage(() => import('@/pages/GameTictactoe'));
 const GameXiangqi = lazyPage(() => import('@/pages/GameXiangqi'));
 const FamilyLobby = lazyPage(() => import('@/pages/FamilyLobby'));
 const FamilyRoom = lazyPage(() => import('@/pages/FamilyRoom'));
+const ReplayArchive = lazyPage(() => import('@/pages/ReplayArchive'));
+const RiichiTraining = lazyPage(() => import('@/pages/RiichiTraining'));
 
 function PageFallback() {
   return (
@@ -100,6 +102,8 @@ const App = () => {
                 <Route path="/family" element={<HouseholdReady><FamilyLobby /></HouseholdReady>} />
                 <Route path="/family/:roomId" element={<HouseholdReady><FamilyRoom /></HouseholdReady>} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/replays" element={<ReplayArchive />} />
+                <Route path="/replays/training" element={<RiichiTraining />} />
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/characters" element={<Characters />} />
                 <Route path="/characters/:id" element={<CharacterProfile />} />

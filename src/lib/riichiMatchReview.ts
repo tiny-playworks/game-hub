@@ -48,6 +48,7 @@ export interface ReviewDecision {
 }
 
 export interface MatchReview {
+  viewerSeat: number;
   frames: RiichiMatchState[];
   decisions: ReviewDecision[];
   stats: {
@@ -70,17 +71,18 @@ function decisionAt(
   frameIndex: number,
   tile: number,
   riichi: boolean,
+  viewerSeat = 0,
 ): DecisionCandidate {
   const state = match.round;
-  const ai = decideAiTurn(state, 0, 'expert', undefined, match.rules);
+  const ai = decideAiTurn(state, viewerSeat, 'expert', undefined, match.rules);
   const recommended =
     ai?.type === 'discard' || ai?.type === 'riichi' ? ai.tile : tile;
   const analysis = analyzeRiichiHand({
-    hand: state.hands[0],
-    melds: state.melds[0],
+    hand: state.hands[viewerSeat],
+    melds: state.melds[viewerSeat],
   });
-  const actual = getDiscardAdvice(state, tile, analysis);
-  const preferred = getDiscardAdvice(state, recommended, analysis);
+  const actual = getDiscardAdvice(state, tile, analysis, viewerSeat);
+  const preferred = getDiscardAdvice(state, recommended, analysis, viewerSeat);
   const shantenDifference = (actual?.shanten ?? 0) - (preferred?.shanten ?? 0);
   const ukeireDifference = (preferred?.ukeire ?? 0) - (actual?.ukeire ?? 0);
   return {
@@ -89,9 +91,9 @@ function decisionAt(
     wind: state.roundWind,
     roundNumber: state.roundNumber,
     honba: state.honba,
-    turn: state.discardPiles[0].length + 1,
-    hand: [...state.hands[0]],
-    melds: state.melds[0],
+    turn: state.discardPiles[viewerSeat].length + 1,
+    hand: [...state.hands[viewerSeat]],
+    melds: state.melds[viewerSeat],
     played: tile,
     recommended,
     playerRiichi: riichi,
@@ -123,10 +125,12 @@ function nextSlice() {
 export async function buildMatchReview(
   file: RiichiReplayFile,
   options: {
+    viewerSeat?: number;
     signal?: AbortSignal;
     onProgress?: (progress: number) => void;
   } = {},
 ): Promise<MatchReview> {
+  const viewerSeat = options.viewerSeat ?? 0;
   options.onProgress?.(0);
   await preloadRiichiRules();
   if (options.signal?.aborted)
@@ -153,13 +157,14 @@ export async function buildMatchReview(
     const event = file.events[index];
     if (
       (event.type === 'discard' || event.type === 'riichi') &&
-      event.seat === 0
+      event.seat === viewerSeat
     ) {
       const decision = decisionAt(
         match,
         index,
         event.tile,
         event.type === 'riichi',
+        viewerSeat,
       );
       lastDiscard = decision;
       if (
@@ -170,19 +175,18 @@ export async function buildMatchReview(
         candidates.set(index, decision);
       if (
         decision.comparable &&
-        !match.round.riichiDeclared[0] &&
+        !match.round.riichiDeclared[viewerSeat] &&
         decision.tenpai &&
-        match.round.turnOptions?.riichiDiscards.includes(event.tile) &&
         decision.playerRiichi !== decision.aiRiichi
       )
         declarationChoices.push(decision);
     }
     // A robbed added kan also has a concrete tile and must appear among deal-ins.
-    if (event.type === 'kakan' && event.seat === 0) {
-      lastDiscard = decisionAt(match, index, event.tile, false);
+    if (event.type === 'kakan' && event.seat === viewerSeat) {
+      lastDiscard = decisionAt(match, index, event.tile, false, viewerSeat);
     }
-    if (event.type === 'ankan' && event.seat === 0) {
-      lastDiscard = decisionAt(match, index, event.tiles[0], false);
+    if (event.type === 'ankan' && event.seat === viewerSeat) {
+      lastDiscard = decisionAt(match, index, event.tiles[0], false, viewerSeat);
     }
     const step = applyEvent(match, event);
     if (!step) throw new Error(`Invalid replay event at step ${index + 1}`);
@@ -191,12 +195,12 @@ export async function buildMatchReview(
     const result = next.round.result;
     if (match.round.phase !== 'end' && next.round.phase === 'end' && result) {
       stats.rounds++;
-      if (next.round.riichiDeclared[0]) stats.riichi++;
-      if (next.round.melds[0].some((meld) => meld.type !== 'angang'))
+      if (next.round.riichiDeclared[viewerSeat]) stats.riichi++;
+      if (next.round.melds[viewerSeat].some((meld) => meld.type !== 'angang'))
         stats.calls++;
       const ownWin =
         result.type === 'win'
-          ? result.wins.find((win) => win.winner === 0)
+          ? result.wins.find((win) => win.winner === viewerSeat)
           : undefined;
       if (ownWin) {
         stats.wins++;
@@ -204,24 +208,24 @@ export async function buildMatchReview(
       }
       const ronWinners =
         result.type === 'win'
-          ? result.wins.filter((win) => win.ronFrom === 0)
+          ? result.wins.filter((win) => win.ronFrom === viewerSeat)
           : [];
       if (ronWinners.length > 0) {
         stats.dealIns++;
         if (lastDiscard) {
           const state = frames[lastDiscard.frameIndex].round;
-          const visible = visibleCountsFor(state, 0);
-          const legal = [...(state.turnOptions?.discardable ?? [])];
+          const visible = visibleCountsFor(state, viewerSeat);
+          const legal = [...(state.turnOptions?.discardable ?? state.hands[viewerSeat])];
           const safest =
             legal.sort(
               (a, b) =>
-                dangerFor(state, 0, a, visible, 'expert') -
-                  dangerFor(state, 0, b, visible, 'expert') || a - b,
+                dangerFor(state, viewerSeat, a, visible, 'expert') -
+                  dangerFor(state, viewerSeat, b, visible, 'expert') || a - b,
             )[0] ?? lastDiscard.recommended;
-          const loss = Math.max(0, -result.settlement.deltas[0]);
+          const loss = Math.max(0, -result.settlement.deltas[viewerSeat]);
           const safer =
-            dangerFor(state, 0, safest, visible, 'expert') <
-            dangerFor(state, 0, lastDiscard.played, visible, 'expert');
+            dangerFor(state, viewerSeat, safest, visible, 'expert') <
+            dangerFor(state, viewerSeat, lastDiscard.played, visible, 'expert');
           candidates.set(lastDiscard.frameIndex, {
             ...lastDiscard,
             recommended: safer ? safest : lastDiscard.recommended,
@@ -244,10 +248,10 @@ export async function buildMatchReview(
       // These are observations of the actual outcome, never a claim about an alternate win.
       for (const choice of declarationChoices) {
         const lostStick =
-          choice.playerRiichi && !ownWin && next.round.riichiDeclared[0];
+          choice.playerRiichi && !ownWin && next.round.riichiDeclared[viewerSeat];
         const valueDifference = ownWin && ownWin.ten >= 3900;
         const exposedLoss =
-          choice.playerRiichi && result.settlement.deltas[0] <= -4000;
+          choice.playerRiichi && result.settlement.deltas[viewerSeat] <= -4000;
         if (
           !(lostStick || valueDifference || exposedLoss) ||
           candidates.get(choice.frameIndex)?.reason === 'dealIn'
@@ -256,7 +260,7 @@ export async function buildMatchReview(
         candidates.set(choice.frameIndex, {
           ...choice,
           reason: choice.aiRiichi ? 'riichi' : 'dama',
-          impact: 5000 + (exposedLoss ? -result.settlement.deltas[0] : 0),
+          impact: 5000 + (exposedLoss ? -result.settlement.deltas[viewerSeat] : 0),
           loss: lostStick ? 1000 : 0,
         });
       }
@@ -276,6 +280,7 @@ export async function buildMatchReview(
   stats.averageWin = stats.wins ? Math.round(totalWin / stats.wins) : 0;
   options.onProgress?.(1);
   return {
+    viewerSeat,
     frames,
     stats,
     decisions: [...candidates.values()]

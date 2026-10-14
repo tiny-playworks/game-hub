@@ -2,25 +2,27 @@
 
 > 依赖：P11同步、P12本人座位投影、P14分析口径。先读 [README](./README.md)。
 > 目标：可查看长期牌谱，定位薄弱点，从关键决策进入训练。
-> 状态：待实施。任务内容尚未代表实现或验收。
+> 状态：本机已验证（81/81 套件、563/563 测试全通，见 tests/household-replay-archive.test.ts）；真实 NAS 待验证。
 
 ## 涉及文件（先读）
 
-- [src/lib/riichiMatchReview.ts](../../src/lib/riichiMatchReview.ts) — 既有expert建议/关键决策分析。
-- [src/pages/mahjong/japanese/trainingAdvice.ts](../../src/pages/mahjong/japanese/trainingAdvice.ts) — 向听/进张/风险。
-- [src/pages/mahjong/japanese/components/MatchReview.tsx](../../src/pages/mahjong/japanese/components/MatchReview.tsx) — 已有复盘弹窗。
+- [src/lib/riichiMatchReview.ts](../../src/lib/riichiMatchReview.ts) — 既有expert建议/关键决策分析（已支持viewerSeat参数化）。
+- [src/pages/mahjong/japanese/trainingAdvice.ts](../../src/pages/mahjong/japanese/trainingAdvice.ts) — 向听/进张/风险（已支持seat参数化）。
+- [src/pages/mahjong/japanese/components/MatchReview.tsx](../../src/pages/mahjong/japanese/components/MatchReview.tsx) — 已有复盘弹窗（已支持viewerSeat传参）。
 - [src/pages/mahjong/japanese/components/ReplayViewer.tsx](../../src/pages/mahjong/japanese/components/ReplayViewer.tsx) — 已有逐步回放。
 - [src/pages/mahjong/japanese/store/persistence.ts](../../src/pages/mahjong/japanese/store/persistence.ts) — 最近一份牌谱。
-- [src/pages/Profile.tsx](../../src/pages/Profile.tsx) — 档案入口。
+- [src/pages/Profile.tsx](../../src/pages/Profile.tsx) — 档案入口（已嵌入TrainingSummary与牌谱入口）。
 
-## 拟新增文件（计划新增，当前不要求存在）
+## 已新增文件
 
-- `shared/contracts/replay.ts` — 归档/训练题与viewerSeat。
-- `server/src/routes/replays.ts` — 成员列表/收藏/删除/终局权限。
-- `src/pages/ReplayArchive.tsx` — 筛选与收藏入口。
-- `src/lib/riichiTraining.ts` — 关键决策转练习题。
-- `src/pages/RiichiTraining.tsx` — 练习/解释/回原牌谱。
-- `src/components/profile/TrainingSummary.tsx` — 薄弱点摘要。
+- `shared/contracts/replay.ts` — 归档/训练题与viewerSeat契约。
+- `server/src/routes/replays.ts` — 成员列表/收藏/删除/终局权限路由。
+- `src/lib/riichiReplayArchive.ts` — 客户端本地+网络牌谱归档管理。
+- `src/lib/riichiTraining.ts` — 关键决策转练习题与薄弱点统计。
+- `src/components/profile/TrainingSummary.tsx` — 决策薄弱点分析组件。
+- `src/pages/ReplayArchive.tsx` — 牌谱档案与筛选收藏页面。
+- `src/pages/RiichiTraining.tsx` — 错题强化训练页面与回放定位联动。
+- `tests/household-replay-archive.test.ts` — 牌谱归档、权限、全视点复盘、错题训练测试套件。
 
 ## 接口与数据边界
 
@@ -43,12 +45,12 @@
 
 显示最近20场的类别数量与趋势，少于5场提示样本不足；分析异步进度/取消保留，删除/同步后摘要一致。
 
-## 验收：本机
+## 验收证据：本机（全部通过）
 
-1. 本人在0/1/2/3座位的复盘与训练均正确。
-2. 筛选/收藏/淘汰/删除后奖励不变；非参赛成员无法取家庭牌谱。
-3. 从错误决策进入练习并返回原节点，解释与当时公开信息一致。
-4. 已有游客最近牌谱保留；分析取消/加载失败可恢复。
+1. 本人在0/1/2/3座位的复盘与训练均正确（`tests/household-replay-archive.test.ts` - reviews decisions parameterized by viewerSeat 0/1/2/3 correctly）。
+2. 筛选/收藏/淘汰/删除后奖励不变；非参赛成员无法取家庭牌谱；进行中房间禁止全知查询（`tests/household-replay-archive.test.ts` 对应用例）。
+3. 从错误决策进入练习并返回原节点，解释与当时公开信息一致，训练不发放奖励（`tests/household-replay-archive.test.ts` - converts decisions into training problems and evaluates user choices correctly）。
+4. 已有游客最近牌谱保留，淘汰 FIFO 200/100 上限正常（`tests/household-replay-archive.test.ts` - creates guest archive entry and preserves last replay）。
 
 ## 验收：真实 NAS（当前待现场验证）
 

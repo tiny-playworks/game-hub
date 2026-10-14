@@ -9,6 +9,7 @@ import { registerProgressRoutes } from './routes/progress';
 import { registerRiichiRoutes } from './routes/riichi';
 import { registerShopRoutes } from './routes/shop';
 import { registerSyncRoutes } from './routes/sync';
+import { registerReplayRoutes } from './routes/replays';
 import { RoomManager } from './rooms/RoomManager';
 import { registerRoomRoutes } from './routes/rooms';
 import { setupRoomWebSocket } from './rooms/socket';
@@ -48,6 +49,7 @@ registerProgressRoutes(app, db);
 registerRiichiRoutes(app, db);
 registerShopRoutes(app, db);
 registerSyncRoutes(app, db);
+registerReplayRoutes(app, db);
 
 const roomManager = new RoomManager(db);
 registerRoomRoutes(app, db, roomManager);

@@ -163,9 +163,11 @@ function DecisionCard({
 
 export function MatchReviewDialog({
   file,
+  viewerSeat,
   onClose,
 }: {
   file: RiichiReplayFile;
+  viewerSeat?: number;
   onClose: () => void;
 }) {
   const { t, locale } = useLocale();
@@ -182,6 +184,7 @@ export function MatchReviewDialog({
     setProgress(0);
     setError(false);
     void buildMatchReview(file, {
+      viewerSeat,
       signal: controller.signal,
       onProgress: (value) => {
         if (!controller.signal.aborted) setProgress(value);
@@ -194,7 +197,7 @@ export function MatchReviewDialog({
         if (!controller.signal.aborted) setError(true);
       });
     return () => controller.abort();
-  }, [file]);
+  }, [file, viewerSeat]);
   if (!container) return null;
   if (review && replayIndex !== null)
     return (

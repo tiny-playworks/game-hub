@@ -127,6 +127,21 @@ function migrate(db: DatabaseSync): void {
       created_at INTEGER NOT NULL,
       PRIMARY KEY(room_id, command_id)
     );
+    CREATE TABLE IF NOT EXISTS riichi_replays (
+      member_id TEXT NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+      match_id TEXT NOT NULL,
+      source TEXT NOT NULL CHECK(source IN ('free', 'ai-ranked', 'family')),
+      room_id TEXT,
+      viewer_seat INTEGER NOT NULL,
+      player_character_id TEXT NOT NULL,
+      ranking INTEGER NOT NULL,
+      final_score INTEGER NOT NULL,
+      match_length TEXT NOT NULL,
+      replay_json TEXT NOT NULL,
+      is_favorite INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      PRIMARY KEY(member_id, match_id)
+    );
     CREATE INDEX IF NOT EXISTS sessions_expires_at ON sessions(expires_at);
     CREATE INDEX IF NOT EXISTS riichi_matches_active
       ON riichi_matches(member_id, device_id, finished_at, updated_at);
@@ -134,6 +149,10 @@ function migrate(db: DatabaseSync): void {
       ON resume_saves(member_id, updated_at DESC);
     CREATE INDEX IF NOT EXISTS room_commands_order
       ON room_commands(room_id, revision ASC);
+    CREATE INDEX IF NOT EXISTS riichi_replays_member_created
+      ON riichi_replays(member_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS riichi_replays_member_fav
+      ON riichi_replays(member_id, is_favorite, created_at DESC);
   `);
 }
 
@@ -183,3 +202,192 @@ export function saveSnapshot(
   if (result.changes !== 1) throw new Error('Member revision conflict');
   return next;
 }
+
+export interface ReplayRow {
+  member_id: string;
+  match_id: string;
+  source: 'free' | 'ai-ranked' | 'family';
+  room_id: string | null;
+  viewer_seat: number;
+  player_character_id: string;
+  ranking: number;
+  final_score: number;
+  match_length: string;
+  replay_json: string;
+  is_favorite: number;
+  created_at: number;
+}
+
+export function archiveReplay(
+  db: DatabaseSync,
+  memberId: string,
+  entry: {
+    matchId: string;
+    source: 'free' | 'ai-ranked' | 'family';
+    roomId?: string | null;
+    viewerSeat: number;
+    playerCharacterId: string;
+    ranking: number;
+    finalScore: number;
+    matchLength: string;
+    replayJson: string;
+    createdAt?: number;
+  },
+): void {
+  transaction(db, () => {
+    // 检查是否已存在
+    const existing = db
+      .prepare('SELECT match_id, is_favorite FROM riichi_replays WHERE member_id = ? AND match_id = ?')
+      .get(memberId, entry.matchId) as { match_id: string; is_favorite: number } | undefined;
+
+    const createdAt = entry.createdAt ?? Date.now();
+
+    if (!existing) {
+      // 检查普通未收藏牌谱数量，保留最近 200 场（总纲 4.5）
+      const countRow = db
+        .prepare('SELECT count(*) as count FROM riichi_replays WHERE member_id = ? AND is_favorite = 0')
+        .get(memberId) as { count: number };
+
+      if (countRow.count >= 200) {
+        const excess = countRow.count - 199;
+        db.prepare(`
+          DELETE FROM riichi_replays
+          WHERE member_id = ? AND is_favorite = 0 AND match_id IN (
+            SELECT match_id FROM riichi_replays
+            WHERE member_id = ? AND is_favorite = 0
+            ORDER BY created_at ASC
+            LIMIT ?
+          )
+        `).run(memberId, memberId, excess);
+      }
+    }
+
+    db.prepare(`
+      INSERT OR REPLACE INTO riichi_replays (
+        member_id, match_id, source, room_id, viewer_seat,
+        player_character_id, ranking, final_score, match_length,
+        replay_json, is_favorite, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT is_favorite FROM riichi_replays WHERE member_id = ? AND match_id = ?), 0), ?)
+    `).run(
+      memberId,
+      entry.matchId,
+      entry.source,
+      entry.roomId ?? null,
+      entry.viewerSeat,
+      entry.playerCharacterId,
+      entry.ranking,
+      entry.finalScore,
+      entry.matchLength,
+      entry.replayJson,
+      memberId,
+      entry.matchId,
+      createdAt,
+    );
+  });
+}
+
+export function getReplay(
+  db: DatabaseSync,
+  memberId: string,
+  matchId: string,
+): ReplayRow | null {
+  return (
+    (db
+      .prepare('SELECT * FROM riichi_replays WHERE member_id = ? AND match_id = ?')
+      .get(memberId, matchId) as unknown as ReplayRow | undefined) ?? null
+  );
+}
+
+export function listReplays(
+  db: DatabaseSync,
+  memberId: string,
+  query: {
+    source?: 'all' | 'free' | 'ai-ranked' | 'family';
+    ranking?: 'all' | 1 | 2 | 3 | 4;
+    favoriteOnly?: boolean;
+    limit?: number;
+    offset?: number;
+  } = {},
+): { total: number; favoritesCount: number; items: ReplayRow[] } {
+  const conditions: string[] = ['member_id = ?'];
+  const params: (string | number)[] = [memberId];
+
+  if (query.source && query.source !== 'all') {
+    conditions.push('source = ?');
+    params.push(query.source);
+  }
+
+  if (query.ranking && query.ranking !== 'all') {
+    conditions.push('ranking = ?');
+    params.push(query.ranking);
+  }
+
+  if (query.favoriteOnly) {
+    conditions.push('is_favorite = 1');
+  }
+
+  const whereClause = conditions.join(' AND ');
+
+  const totalRow = db
+    .prepare(`SELECT count(*) as count FROM riichi_replays WHERE ${whereClause}`)
+    .get(...params) as { count: number };
+
+  const favRow = db
+    .prepare('SELECT count(*) as count FROM riichi_replays WHERE member_id = ? AND is_favorite = 1')
+    .get(memberId) as { count: number };
+
+  const limit = Math.min(Math.max(query.limit ?? 20, 1), 100);
+  const offset = Math.max(query.offset ?? 0, 0);
+
+  const items = db
+    .prepare(
+      `SELECT * FROM riichi_replays WHERE ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+    )
+    .all(...params, limit, offset) as unknown as ReplayRow[];
+
+  return {
+    total: totalRow.count,
+    favoritesCount: favRow.count,
+    items,
+  };
+}
+
+export function toggleFavoriteReplay(
+  db: DatabaseSync,
+  memberId: string,
+  matchId: string,
+  isFavorite: boolean,
+): { success: boolean; code?: string } {
+  return transaction(db, () => {
+    const replay = getReplay(db, memberId, matchId);
+    if (!replay) return { success: false, code: 'REPLAY_NOT_FOUND' };
+
+    if (isFavorite) {
+      const favCount = db
+        .prepare('SELECT count(*) as count FROM riichi_replays WHERE member_id = ? AND is_favorite = 1')
+        .get(memberId) as { count: number };
+      if (favCount.count >= 100) {
+        return { success: false, code: 'FAVORITE_LIMIT_REACHED' };
+      }
+    }
+
+    db.prepare('UPDATE riichi_replays SET is_favorite = ? WHERE member_id = ? AND match_id = ?').run(
+      isFavorite ? 1 : 0,
+      memberId,
+      matchId,
+    );
+    return { success: true };
+  });
+}
+
+export function deleteReplay(
+  db: DatabaseSync,
+  memberId: string,
+  matchId: string,
+): boolean {
+  const result = db
+    .prepare('DELETE FROM riichi_replays WHERE member_id = ? AND match_id = ?')
+    .run(memberId, matchId);
+  return result.changes > 0;
+}
+

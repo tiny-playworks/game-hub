@@ -7,9 +7,9 @@ import { selectRankedOpponents, saveRankedState } from '@/lib/ranked';
 import { settleRankedMatch } from '@/lib/rankedSettlement';
 import { recordRiichiMatchFinish, recordRiichiProgressEvent } from '@/lib/riichiProgress';
 import { type RiichiEvent, type RiichiMatchState, type RiichiEffect,
-  getSeatTurnOptions, isReplayFile, selectSeatCharacters } from '@/pages/mahjong/japanese/engine';
+  getSeatTurnOptions, isReplayFile, selectSeatCharacters, toReplayFile } from '@/pages/mahjong/japanese/engine';
 import { apiError, requireSession } from '../auth';
-import { getMember, readSnapshot, saveSnapshot, transaction } from '../db';
+import { archiveReplay, getMember, readSnapshot, saveSnapshot, transaction } from '../db';
 import { runSnapshotMutation } from '../snapshotRuntime';
 import { applyEvent, createMatch, nextServerAiEvent } from '../riichi/runtime';
 
@@ -220,6 +220,25 @@ export function registerRiichiRoutes(app: FastifyInstance, db: DatabaseSync): vo
         WHERE member_id = ? AND match_id = ?`)
         .run(JSON.stringify(step.match), now, step.match.status === 'matchEnd' ? now : null,
           member.id, row.match_id);
+
+      if (step.match.status === 'matchEnd' && step.match.matchEnd) {
+        try {
+          const replayFile = toReplayFile(step.match);
+          archiveReplay(db, member.id, {
+            matchId: row.match_id,
+            source: row.source,
+            viewerSeat: 0,
+            playerCharacterId: row.player_character_id,
+            ranking: step.match.matchEnd.ranking.indexOf(0) + 1,
+            finalScore: step.match.matchEnd.finalScores[0] ?? 25000,
+            matchLength: step.match.matchLength,
+            replayJson: JSON.stringify(replayFile),
+          });
+        } catch {
+          // ignore replay archive error
+        }
+      }
+
       return { snapshot: next, match: step.match, matchId: row.match_id,
         playerCharacterId: row.player_character_id, effects: step.effects };
     });
