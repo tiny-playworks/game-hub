@@ -2,7 +2,7 @@
 
 > 依赖：P1–P6；当前 HTTP UUID 修复已在 main。先读 [README](./README.md)。
 > 目标：页面报错能恢复，保存失败可见且当前进度可备份；准备安全的静态发布与回滚。
-> 状态：2026-10-12 本机实现及验收通过；真实 NAS、Docker/Nginx 运行与 Windows PowerShell 入口仍待验证。
+> 状态：2026-10-12 本机实现及验收通过；2026-10-14 NAS 发布、Docker/Nginx 和 Windows PowerShell 入口已验证，手动回滚待验证。
 
 ## 涉及文件（先读）
 
@@ -64,10 +64,12 @@
 5. 类型、改动文件静态检查、构建通过；桌面/手机恢复界面截图。
 6. 本地准备清单与脚本 dry-run/回滚路径核对；没有 Docker/PowerShell 时明确记录未运行项。
 
-## 验收：真实 NAS（当前待现场验证）
+## 验收：真实 NAS（发布切换已验；手动回滚仍待验证）
 
-1. 核对 NAS 当前 Nginx 根目录、父目录挂载、旧 site 保留及权限。
-2. 第二台设备深链接刷新、WASM MIME、更新前后资源一致；真实切换/失败回滚需要授权。
+1. 2026-10-14 已核对 NAS x86_64、8089 端口、运行中 Nginx 容器的只读父目录挂载 `/volume1/docker/game-hub`，以及 API 的持久数据挂载；旧 `site/` 仍保留。
+2. 已从 Windows 入口发布 `p16-nas-20261014c`，SHA-256 清单校验通过，`current` 指向该版本、`previous` 保留 `p15-nas-20261014c`；发布后的 `/`、`/profile`、哈希 JS 与 WASM 均返回 HTTP 200，WASM MIME 为 `application/wasm`。
+3. 发布脚本的上传步骤现逐项传输版本包顶层文件，避免 OpenSSH `scp -O` 拒绝 `/.` 路径；NAS 脚本实现健康检查失败时恢复原 `current`，本次未注入失败验证。
+4. 未在使用中的站点上切回旧版验证手动回滚；自动回滚和手动回滚仍待专门验收。
 
 ## 不做
 
@@ -114,6 +116,8 @@ pnpm run deploy:nas -Rollback
 
 默认不带模式时只本地准备。`PreflightOnly`只读取current/previous指针，**不能证明挂载/端口已正确**。
 
-首次上线须先检查现有容器，保留旧site及旧容器配置；父目录挂载、current与assets资源路由核对后，才将新模板用于真实站点。首次容器切换的回滚还包括恢复旧容器配置，不能仅依赖符号链接。`activate`失败会恢复current，旧site不修改。Linux分支与PowerShell入口当前未实际运行，本机没有Docker、Nginx或PowerShell可执行程序；下一位执行方必须完成该环境验收后才能宣称可上线。
+Git 提交/推送不会自动发布 NAS：`.github/workflows/ci.yml` 只在 `main`/`master` 上运行 CI，没有部署任务；NAS 位于家庭局域网。需要从可访问 NAS 的机器显式运行 `-Activate`。该 Windows 入口负责静态版本；家庭 API 需同步构建源码后用 NAS Compose 单独重建。
+
+真实 NAS 已核对 Nginx 根目录、父目录挂载、端口、只读权限、静态发布和健康检查。首次容器配置切换不在本批执行；手动回滚仍须单独验收。`server/`、`shared/contracts/`与家庭服务均不属于 P7 的实现范围。
 
 `server/`、`shared/contracts/`与家庭服务均未在P7实现；后续按P10–P13执行。P7不承担公网与完整离线启动。

@@ -1,8 +1,8 @@
-# 晚间交接文档：面向具备真实 NAS 环境与生图能力的 ChatGPT
+# Game Hub 交接状态（2026-10-14）
 
-> **当前工程基线**：分支 `codex/p15-replay-training`（Commit `662967d`，已推送到远端 GitHub）。  
-> **运行环境**：Node 24（必须执行 `source ~/.nvm/nvm.sh && nvm use 24`，因内置 Node.js 原生 `node:sqlite`）。  
-> **质量基线**：`pnpm typecheck`（0 error）、`pnpm lint`（344 文件 0 error 0 warning）、`pnpm test`（81 个测试套件，563 个用例全通）、`pnpm build`（Rsbuild 0.36s 正常打包）。
+> **代码基线**：分支 `codex/p16-challenges-stories`，P16 已提交并推送；当前 NAS 部署版本为 `p16-nas-20261014c`。
+> **运行环境**：Windows 工作区，Node 24 与 pnpm；NAS 通过 SSH 别名 `synology-nas` 管理。
+> **验证状态**：P15 基线为 81 个测试套件/563 项通过；P16 的类型检查和生产构建通过，但 P16 功能回归未运行。NAS 静态站、API、深链、WASM 和基础健康检查已通过；真实成员跨设备、玩法与恢复场景仍待验证。
 
 ---
 
@@ -24,7 +24,7 @@
 
 ### 任务 1：真实 NAS 现场环境验收与排查（现场硬指标验证）
 
-> 此前 P10 ~ P15 由于本地无 NAS 环境，所有任务卡均明确标注了“真实 NAS 待验证”项。你今晚需直接在实际 NAS 硬件与网络环境下进行实体验收，补齐任务卡证据。
+> P10–P16 当前代码已部署到真实 NAS，站点与 API 基础连通性已验证。此前“NAS待验证”包含了“尚未部署”和“玩法尚未实测”两种不同状态；现在只对尚未实际执行的成员、设备和玩法场景保留待验，不要重复把已验证的部署状态记为未部署。
 
 1. **真实网络与多设备租约接管验证**：
    - 使用两台真实设备（例如一台 PC 桌面浏览器、一台移动端手机）同时连接家庭房间。
@@ -40,23 +40,20 @@
 
 ---
 
-### 任务 2：实施终章 P16（主题挑战、角色故事与收藏目标）
+### 任务 2：完成 P16 现场验收（主题挑战、角色故事与收藏目标）
 
-> 严格遵照 [`docs/roadmap/P16-challenges-stories.md`](./P16-challenges-stories.md) 和 [`docs/roadmap/README.md`](./README.md) 第 4 节执行。
+> P16 实现与 NAS 部署已完成。剩余工作是按 [`docs/roadmap/P16-challenges-stories.md`](./P16-challenges-stories.md) 和 [`docs/roadmap/README.md`](./README.md) 第 4 节执行功能与设备验收，不要重新实现已完成内容。
 
 #### 1. 分支与工作流
-- 从 `codex/p15-replay-training` 切出新分支：
-  ```bash
-  git checkout -b codex/p16-challenges-stories
-  ```
-- 保持增量小步提交，完成前不得破坏现有 81 个测试套件。
+- 当前分支为 `codex/p16-challenges-stories`，P16 代码已推送；提交前先检查当前工作区与远端状态。
+- 保持增量小步，P16 功能回归仍需执行并记录结果。
 
 #### 2. 契约与数据库（`shared/contracts/challenge.ts` & `server/src/db.ts`）
 - 挑战集合 ID 固定为 `venue-v1`，schema 为 1。
 - 初版 3 条固定主题挑战：
   1. `menzen-win`：门清和牌一次（无吃碰明杠）。
-  2. `hanchan-nodealin`：完成一场完整半庄且放铳次数为 0。
-  3. `riichi-three-matches`：完成三场日麻对局。
+  2. `safe-south`：完成一场完整南风半庄且放铳次数为 0。
+  3. `three-matches`：完成三场日麻对局。
 - 计数口径：**仅计入新开始的自由对局与 AI 段位匹配，训练模式与 1 真人家庭桌不计**。
 - 奖励发放：每条挑战完成发放 **40 雀币 + 30 成长点**，服务端唯一约束凭据防重复刷奖（不可重领）。
 
@@ -65,7 +62,7 @@
 - 中英文双语齐全，阅读权限与原角色解锁条件严格保持一致（已解锁角色可读，未解锁角色展示锁定原因）。
 - 三条主题挑战全部完成时，触发故事集解锁标识。
 
-#### 4. 收藏目标看板（`src/components/profile/CollectionGoalsCard.tsx`）
+#### 4. 收藏目标看板（`src/pages/Profile.tsx`）
 - 梳理未拥有的称号、装扮与外观道具，列出清晰的真实获取途径（如“角色好感度达 3 级”、“达到雀杰段位”、“雀庄商店 120 雀币购买”等）。
 - 所有跳转按钮必须指向真实有效页面（如 `/shop`、`/characters`、`/category/mahjong`），严禁不可点击的假按钮。
 
@@ -115,8 +112,8 @@ pnpm test
 pnpm build
 
 # 6. 本地/NAS 启动服务
-pnpm start:server
+pnpm --dir server start
 pnpm dev
 ```
 
-请按上述指引，接棒推进真实 NAS 验证与 P16 终章落地！祝顺利！
+P16 前后端和静态站已部署至 NAS。后续按任务卡继续完成真实成员、多设备、玩法和恢复验收；没有实际执行的场景继续标为待验。

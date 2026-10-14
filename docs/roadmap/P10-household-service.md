@@ -2,7 +2,7 @@
 
 > 依赖：P7–P9；先通过 Node/WASM 运行门禁。先读 [README](./README.md)。
 > 目标：成员档案隔离，头像加 PIN 登录，NAS 保存权威成长与资产。
-> 状态：本机验收完成（含日麻成员对局权威结算与街机结果校验）；真实 NAS 容器部署与局域网反代待现场验证。
+> 状态：本机验收完成（含日麻成员对局权威结算与街机结果校验）；NAS 容器/反代/基础 API 已验，成员业务场景待现场验证。
 
 ## 涉及文件（先读）
 
@@ -83,9 +83,11 @@
 5. 服务停止、Cookie 失效和 API 失败均有可恢复提示；`tests/household-interaction.test.tsx` 验证通过。
 6. 街机与日麻在线权威结算、防重、超时、段位弃赛与续局恢复均已通过 `tests/household-arcade.test.ts` 与 `tests/household-riichi.test.ts` 自动化验收。
 
-## 验收：真实 NAS（当前待现场验证）
+## 验收：真实 NAS（基础部署与连通性已验；业务场景待验证）
 
-1. 2026-10-13 只读检查已确认 NAS x86_64、旧站点静态容器仍运行；家庭 API 未部署。新服务的容器运行、卷权限、备份位置、反代 Cookie/Origin、端口和回滚均待验证；当前 SSH 用户无 Docker daemon 操作权限。
+1. 2026-10-14 已确认 NAS 静态 Nginx 与家庭 API 容器均健康；`/healthz` 和 `/api/v1/members` 返回 HTTP 200。Nginx 通过只读父目录挂载提供站点，API 数据保存在 `/volume1/docker/game-hub/data`。
+2. P16 发布时 API 已从仓库源码重建，启动迁移创建挑战表；数据库 `PRAGMA integrity_check` 返回 `ok`。迁移前在线 SQLite 快照已保存并校验于 `/volume1/docker/game-hub/data/backups/pre-p16-nas-20261014a.sqlite`。
+3. 成员实际登录、Cookie/Origin、PIN 限速、存档迁移、购买与结算等 P10 业务场景尚未在 NAS 逐项实测，不能据此标记 P10 全验收完成。
 
 ## 不做
 

@@ -2,7 +2,7 @@
 
 > 依赖：P11同步、P12本人座位投影、P14分析口径。先读 [README](./README.md)。
 > 目标：可查看长期牌谱，定位薄弱点，从关键决策进入训练。
-> 状态：本机已验证（81/81 套件、563/563 测试全通，见 tests/household-replay-archive.test.ts）；真实 NAS 待验证。
+> 状态：本机已验证（81/81 套件、563/563 测试全通，见 tests/household-replay-archive.test.ts）；代码已部署 NAS，牌谱与训练场景待现场验证。
 
 ## 涉及文件（先读）
 
@@ -52,9 +52,9 @@
 3. 从错误决策进入练习并返回原节点，解释与当时公开信息一致，训练不发放奖励（`tests/household-replay-archive.test.ts` - converts decisions into training problems and evaluates user choices correctly）。
 4. 已有游客最近牌谱保留，淘汰 FIFO 200/100 上限正常（`tests/household-replay-archive.test.ts` - creates guest archive entry and preserves last replay）。
 
-## 验收：真实 NAS（当前待现场验证）
+## 验收：真实 NAS（代码已部署；牌谱与训练场景待现场验证）
 
-1. NAS牌谱查询、手机复盘布局与较长事件日志加载耗时。
+1. P16 当前版本包含 P15 前后端代码，NAS 基础健康、深链与静态资源已验证；尚未在成员会话中实测 NAS 牌谱查询、手机复盘布局及较长事件日志加载耗时。
 
 ## 不做
 

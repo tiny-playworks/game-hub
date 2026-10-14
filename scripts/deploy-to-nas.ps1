@@ -46,8 +46,11 @@ try {
     }
     Write-Host "激活前必须已核对 deploy/nas/nginx.conf 和父目录挂载；原 site 不会自动删除。"
     Invoke-NasRelease "stage" $ReleaseId
-    scp -O -r "$releasePath/." "${NasHost}:${NasRoot}/releases/${ReleaseId}/"
-    if ($LASTEXITCODE -ne 0) { throw "上传失败，当前活动版本未切换。" }
+    foreach ($entry in (Get-ChildItem -LiteralPath $releasePath -Force)) {
+        scp -O -r $entry.FullName "${NasHost}:${NasRoot}/releases/${ReleaseId}/"
+        if ($LASTEXITCODE -ne 0) { throw "上传失败（$($entry.Name)）；当前活动版本未切换。" }
+    }
+    Invoke-NasRelease "check" $ReleaseId
     Invoke-NasRelease "activate" $ReleaseId
     Write-Host "版本健康检查通过：$ReleaseId，$BaseUrl"
 } finally {

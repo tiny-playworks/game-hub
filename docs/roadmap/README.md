@@ -31,16 +31,16 @@ P1–P6 的“纯本地、禁止后端/账号/联机、移动端不专门改造�
 | P4   | 局内演出、终局复盘、闲聊               | 已完成                                             | [P4](./P4-presentation.md)         |
 | P5   | 商店、外观、好感故事                   | 已完成                                             | [P5](./P5-shop-affinity.md)        |
 | P6   | 副玩法统一与成长循环                   | 已完成                                             | [P6](./P6-arcade.md)               |
-| P7   | 使用可靠性与发布准备                   | 本机完成；NAS/容器/Windows待验                     | [P7](./P7-reliability.md)          |
-| P8   | 全站视觉重设计                         | 本机验收完成（含锁定牌背实战）；NAS/家庭设备待验   | [P8](./P8-visual-redesign.md)      |
-| P9   | 牌桌交互与视听品质                     | 本机验收完成（含整场动作链与移动端）；真机音频/NAS 待验 | [P9](./P9-table-experience.md)     |
-| P10  | 家庭成员与 NAS 服务                    | 本机验收完成（含日麻权威结算与街机校验）；真实 NAS 待验 | [P10](./P10-household-service.md) |
-| P11  | 跨设备续玩与离线同步                   | 本机验收完成（含离线凭据归并与多设备续局）；真实 NAS 待验 | [P11](./P11-save-sync.md)          |
-| P12  | 家庭真人牌桌                           | 本机验收完成（含局域网房间、私有视角投影与真人结算）；真实 NAS 待验 | [P12](./P12-family-multiplayer.md) |
-| P13  | 重连、托管与恢复                       | 本机验收完成（含掉线托管、抢控租约与重启恢复）；真实 NAS 待验 | [P13](./P13-reconnect-autoplay.md) |
-| P14  | AI 与竞技可信度                        | 本机验收完成（含四档确定性、无作弊与性能基准）；真实 NAS 待验 | [P14](./P14-ai-ranked-quality.md)  |
-| P15  | 牌谱档案与训练闭环                     | 本机已验证（81 套件/563 项）；真实 NAS 待验        | [P15](./P15-replay-training.md)    |
-| P16  | 挑战、故事与收藏目标                   | 本机实现完成，类型检查/构建通过；行为与 NAS 待验 | [P16](./P16-challenges-stories.md) |
+| P7   | 使用可靠性与发布准备                   | NAS 发布、资源校验、深链与 WASM MIME 已验；手动回滚待验 | [P7](./P7-reliability.md)          |
+| P8   | 全站视觉重设计                         | 本机验收完成（含锁定牌背实战）；NAS/家庭设备目视待验 | [P8](./P8-visual-redesign.md)      |
+| P9   | 牌桌交互与视听品质                     | 本机验收完成（含整场动作链与移动端）；真机音频/操作待验 | [P9](./P9-table-experience.md)     |
+| P10  | 家庭成员与 NAS 服务                    | NAS 前后端健康、成员列表接口已验；成员业务流程待验 | [P10](./P10-household-service.md) |
+| P11  | 跨设备续玩与离线同步                   | NAS 已部署；真实设备离线同步/续局待验               | [P11](./P11-save-sync.md)          |
+| P12  | 家庭真人牌桌                           | NAS 已部署；多设备真人整场与 WebSocket 待验         | [P12](./P12-family-multiplayer.md) |
+| P13  | 重连、托管与恢复                       | NAS 已部署；真实断线与服务重启恢复待验             | [P13](./P13-reconnect-autoplay.md) |
+| P14  | AI 与竞技可信度                        | NAS 已部署；真实半庄/并发性能待验                   | [P14](./P14-ai-ranked-quality.md)  |
+| P15  | 牌谱档案与训练闭环                     | NAS 已部署；牌谱查询、训练和移动布局待验            | [P15](./P15-replay-training.md)    |
+| P16  | 挑战、故事与收藏目标                   | NAS 前后端部署与健康检查已验；挑战同步/恢复待验     | [P16](./P16-challenges-stories.md) |
 
 ```mermaid
 graph LR
@@ -57,17 +57,19 @@ graph LR
 | ------------------------------------------------ | ------------------------------------------------------------------ |
 | `src/`                                           | 已有 React 19、Rsbuild、Tailwind v4、shadcn/ui、Zustand 前端       |
 | `src/pages/mahjong/japanese/engine/`             | 已有日麻规则/AI；服务端复用同一内核，禁止复制第二套规则            |
-| `server/`                                        | 已有 Node 24、Fastify、SQLite 家庭服务，本机仍在完善               |
+| `server/`                                        | Node 24、Fastify、SQLite 家庭服务，与前端共享业务规则               |
 | `shared/contracts/`                              | 已有成员通信类型，不导入 DOM、React、浏览器持久化                  |
 | `deploy/nas/`                                    | P7 新增静态发布准备；P10 扩为前端 + 服务端容器                     |
 | `scripts/deploy-to-nas.ps1`                      | 已有 Windows 部署入口；第二轮加入校验与回滚                        |
-| `/volume1/docker/game-hub/site/`                 | NAS 现有静态目录；旧 Nginx 容器通过 `./site` 只读挂载              |
-| `/volume1/docker/game-hub/releases/<releaseId>/` | 拟用不可变静态版本目录                                             |
-| `/volume1/docker/game-hub/assets/`               | 拟用跨版本哈希资源目录，保证已打开旧页面仍可加载资源；P7不自动清理 |
-| `/volume1/docker/game-hub/current`               | 拟用活动版本符号链接；容器须挂载父目录才能看见切换                 |
-| `/volume1/docker/game-hub/data/`                 | P10 拟用数据库、恢复记录、备份持久卷；当前尚未建立                 |
+| `/volume1/docker/game-hub/site/`                 | 旧静态副本，保留作回退参考                                         |
+| `/volume1/docker/game-hub/releases/<releaseId>/` | 不可变静态版本；当前为 `p16-nas-20261014c`                         |
+| `/volume1/docker/game-hub/assets/`               | 跨版本哈希资源目录，供已打开的旧页面继续加载                       |
+| `/volume1/docker/game-hub/current`               | 活动版本符号链接；Nginx 只读挂载父目录                             |
+| `/volume1/docker/game-hub/data/`                 | SQLite 成员数据库与备份持久卷                                      |
 
-当前 NAS 地址 `http://192.168.50.21:8089`，SSH 别名 `synology-nas`。2026-10-13 只读核对：SSH 可达、CPU 为 x86_64、旧站点由 Nginx 静态容器运行；`/healthz` 与 `/api/v1/members` 仍返回旧站首页，家庭 API 尚未部署。当前 SSH 用户无 Docker daemon 操作权限，`releases/current/data` 尚不存在。新容器的卷权限、端口、反向代理与回滚仍待核对，不得擅自替换旧容器。真实部署仍需明确授权。
+当前 NAS 地址为 `http://192.168.50.21:8089`，SSH 别名为 `synology-nas`；家庭入口 `http://192.168.50.21:8088/` 可直接进入 Game Hub。2026-10-14 已确认 NAS 为 x86_64，静态 Nginx 与家庭 API 容器均健康；Nginx 只读挂载 `/volume1/docker/game-hub`，API 持久挂载 `/volume1/docker/game-hub/data`。当前静态版本为 `p16-nas-20261014c`，前一版本为 `p15-nas-20261014c`。`/`、`/profile`、哈希 JS、WASM、`/healthz` 和 `/api/v1/members` 均返回 HTTP 200；挑战表已迁移，SQLite 完整性检查通过。部署前数据库快照位于 `/volume1/docker/game-hub/data/backups/pre-p16-nas-20261014a.sqlite`。
+
+上述结果证明发布和基础连通正常，不代表每个阶段的玩法已完成真实设备验收；跨设备同步、多人牌桌、重连恢复、AI 性能、牌谱训练、挑战奖励及恢复幂等仍按各卡列出的场景继续验收。
 
 ## 4. 跨阶段统一契约（唯一来源）
 
@@ -124,7 +126,7 @@ graph LR
 - 每阶段先检查真实仓库/分支/已有改动。小批完成；不做无关重构、不覆盖他人改动。
 - 类型检查 `pnpm typecheck`，样式/静态检查限定改动文件，构建 `pnpm build`。`pnpm check` 会全仓自动格式化，谨慎使用，不把无关格式化混入阶段改动。
 - 不另建大测试体系。按当前授权运行直接相关现有检查和任务卡浏览器验收；截图/故障注入用隔离浏览器，不能修改用户实际存档。
-- 任务卡验收分为“本机已验证”和“真实 NAS 待验证”；NAS 不可达时只能完成前者。进行中与已完成须写明证据，不把任务卡目标标成已实现。
+- 任务卡分别记录 NAS 部署/健康检查和真实设备功能验收；部署成功不代表玩法已通过。每项完成状态都写明现场证据；NAS 不可达时只能完成本机验收。
 - 真实 NAS 发布须先核对挂载、权限、端口和 CPU 架构，并检查备份、回滚；提交、推送、发布、外部上传只有明确要求时执行。
 
 ## 6. 交接提示词
