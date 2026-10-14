@@ -88,4 +88,22 @@ Original prompt: 可以 提交然后 p6吧
   - 生产打包构建：`pnpm build` 成功通过（0.41s）。
 - 遗留：真实 NAS 局域网真机现场联调（已明确保留为待现场验证）。
 
+## 2026-10-14 P13 重连、托管与服务恢复（当前分支 codex/p13-reconnect-autoplay）
+
+- 目标：掉线可重连，AI 临时接手，多设备控制租约隔离，服务重启不丢牌局与防重复结算。
+- 代码与契约层：
+  1. `shared/contracts/room.ts`：扩展 `HumanSeat`（`leaseDeviceId`, `connected`, `disconnectedAt`, `isAutoplay`）、`PlayerSeatPrivateState`（`hasControlLease`）、`RoomSummary` 与 `PlayerViewSnapshot`（`isPaused`），新增 `takeover_control`, `toggle_autoplay`, `resume_game` 指令与 `lease_lost` 消息类型。
+  2. `server/src/db.ts`：新增 `active_rooms` 与 `room_commands` 状态表与指令防重流水表。
+  3. `server/src/rooms/recovery.ts`：实现牌桌与指令流水的持久化、重启恢复加载与终局清理。
+  4. `server/src/rooms/controlLease.ts`：实现多设备控制权租约管理（`takeoverSeatControl`）、60s 离线宽限期判断（`shouldTriggerAutoplay`）与掉线时间戳标记。
+  5. `server/src/rooms/RoomManager.ts`：整合崩溃自动恢复（构造函数加载 `loadActiveRooms`）、60s 宽限期与 AI 自动摸打托管、多设备抢控拦截与定向通知、全真人离线自动暂停（`isPaused = true`）与真人重连自动唤醒。
+  6. `server/src/rooms/socket.ts` 与 `server/src/rooms/projectView.ts`：向非租约设备下发只读视角（`hasControlLease: false`, `turnOptions: null`），抢控时发送 `lease_lost`。
+  7. `src/components/household/ConnectionNotice.tsx` 与 `src/lib/household/roomClient.ts`：实现网络状态、托管提示、抢控提示与全离线暂停唤醒条，支持一键接管控制权。
+- 测试与验证：
+  - 新增测试套件：`tests/household-room-recovery.test.ts`，覆盖 5 大核心场景（60s 宽限期默认摸切、超 60s AI 托管与重连解除、多设备抢控租约与只读隔离、崩溃重启恢复与幂等发奖、全真人离线自动暂停与重连唤醒）。
+  - 全仓类型检查：`pnpm typecheck`（`src/`、`tests/`、`server/`）通过（0 error）。
+  - 全仓测试执行：`pnpm test` 全仓 79 个测试套件，551 项测试 100% 全部通过。
+  - 生产打包构建：`pnpm build` 成功通过（0.43s）。
+- 遗留：真实 NAS 容器实际重启、家庭 Wi-Fi 抖动与移动端锁屏后台恢复（已明确保留为待现场验证）。
+
 

@@ -109,11 +109,31 @@ function migrate(db: DatabaseSync): void {
       updated_at INTEGER NOT NULL,
       PRIMARY KEY(member_id, device_id, save_id)
     );
+    CREATE TABLE IF NOT EXISTS active_rooms (
+      room_id TEXT PRIMARY KEY,
+      summary_json TEXT NOT NULL,
+      match_json TEXT,
+      server_deadline INTEGER,
+      is_paused INTEGER NOT NULL DEFAULT 0,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS room_commands (
+      room_id TEXT NOT NULL,
+      command_id TEXT NOT NULL,
+      member_id TEXT NOT NULL,
+      device_id TEXT NOT NULL,
+      revision INTEGER NOT NULL,
+      command_json TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      PRIMARY KEY(room_id, command_id)
+    );
     CREATE INDEX IF NOT EXISTS sessions_expires_at ON sessions(expires_at);
     CREATE INDEX IF NOT EXISTS riichi_matches_active
       ON riichi_matches(member_id, device_id, finished_at, updated_at);
     CREATE INDEX IF NOT EXISTS resume_saves_member
       ON resume_saves(member_id, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS room_commands_order
+      ON room_commands(room_id, revision ASC);
   `);
 }
 

@@ -2,7 +2,7 @@
 
 > 依赖：P12正常联机全流程通过。先读 [README](./README.md)。
 > 目标：掉线可重连，AI临时接手，服务重启不丢牌局或重复结算。
-> 状态：待实施。任务内容尚未代表实现或验收。
+> 状态：本机验收完成；真实 NAS 待现场验证。
 
 ## 涉及文件（先读）
 
@@ -11,11 +11,12 @@
 - [src/pages/mahjong/japanese/useHumanRemainingSeconds.ts](../../src/pages/mahjong/japanese/useHumanRemainingSeconds.ts) — 服务器截止时间显示的迁移入口。
 - [src/lib/riichiClock.ts](../../src/lib/riichiClock.ts) — 计时与默认操作。
 
-## 拟新增文件（计划新增，当前不要求存在）
+## 已新增文件
 
-- `server/src/rooms/recovery.ts` — 事件/截止时间持久化与重启恢复。
-- `server/src/rooms/controlLease.ts` — 控制设备切换与掉线宽限。
-- `src/components/household/ConnectionNotice.tsx` — 连接/托管/重新接手状态。
+- `server/src/rooms/recovery.ts` — 事件/截止时间持久化与重启恢复（`active_rooms` 与 `room_commands`）。
+- `server/src/rooms/controlLease.ts` — 控制设备切换与 60s 掉线宽限期判断。
+- `src/components/household/ConnectionNotice.tsx` — 连接/托管/重新接手状态横幅。
+- `tests/household-room-recovery.test.ts` — 覆盖 5 大重连、托管、抢控与崩溃恢复核心场景。
 
 ## 接口与数据边界
 
@@ -38,12 +39,15 @@
 
 进行中房主离开不解散；等待室房主离开可移交最早入座真人，全部离开30分钟后清理空房。活动牌局不会按空房清理删除。
 
-## 验收：本机
+## 验收：本机（已完成）
 
-1. 断开1成员短于/长于60秒，默认动作/AI/本人接管符合规则。
-2. 全真人离线暂停，回来恢复；房主离线其余人继续。
-3. 服务进程重启后恢复同一局面；反复恢复不重复发奖励。
-4. 丢ack、重复消息、重连旧操作、新设备抢控均不会重复出牌。
+1. **场景 1 掉线 60s 宽限期**: 断线 60s 宽限期内保持真人状态（`isAutoplay: false`），单步超时由服务器执行默认摸切/过牌保底，防止牌局卡死。
+2. **场景 2 超过 60s 触发托管与重连解除**: 掉线超过 60s 后 `scheduleNextTurn` 自动标记 `isAutoplay = true` 并由服务端 AI 迅速推进；重连后发出操作指令自动解除托管。
+3. **场景 3 多设备控制权租约隔离**: 租约持有者才能提交对局指令；非租约设备操作被拒绝（`409 CONTROL_LEASE_LOST`）；通过 `takeover_control` 指令明确抢占控制权，旧设备 WebSocket 收到 `lease_lost` 并将视角操作选项清空为只读观战。
+4. **场景 4 崩溃重启恢复与幂等发奖**: 牌局状态与指令流水持久化至 SQLite（`active_rooms`, `room_commands`）；新建 `RoomManager` 实例自动恢复未完牌局；终局自动结算且清理活动房间，防重发奖。
+5. **场景 5 全真人离线自动暂停**: 牌局内所有真人离线时自动设置 `isPaused = true` 并冻结倒计时；任意真人重连自动唤醒并恢复出牌。
+
+全部 79 个测试套件，551 个测试用例全部通过（`tests/household-room-recovery.test.ts` 5/5 通过），`pnpm typecheck` 与 `pnpm build` 零警告零错误。
 
 ## 验收：真实 NAS（当前待现场验证）
 

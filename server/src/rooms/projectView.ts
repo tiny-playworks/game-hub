@@ -14,6 +14,7 @@ export function createPlayerView(
   match: RiichiMatchState,
   room: RoomSummary,
   serverDeadline: number | null = null,
+  viewerDeviceId?: string,
 ): PlayerViewSnapshot {
   const round = match.round;
 
@@ -43,6 +44,13 @@ export function createPlayerView(
     const melds = round.melds[seatIndex] ?? [];
     const discards = round.discardPiles[seatIndex] ?? [];
 
+    const isHuman = roomSeat.type === 'human';
+    const connected = isHuman ? roomSeat.connected : true;
+    const isAutoplay = isHuman ? roomSeat.isAutoplay : false;
+    const hasControlLease = isHuman
+      ? !viewerDeviceId || roomSeat.leaseDeviceId === viewerDeviceId
+      : false;
+
     return {
       seatIndex,
       identity,
@@ -54,10 +62,13 @@ export function createPlayerView(
       score: round.scores[seatIndex] ?? 25000,
       isRiichi: Boolean(round.riichiDeclared[seatIndex]),
       isDealer: round.dealer === seatIndex,
-      // 只有自家且轮到自家行牌时才下发 turnOptions
-      turnOptions: isSelf ? round.turnOptions : null,
-      // 只有自家且鸣牌窗口未响应时才下发 claimOptions
-      claimOptions: isSelf ? getSeatClaimOptions(round, seatIndex) : null,
+      connected,
+      isAutoplay,
+      hasControlLease,
+      // 只有自家且持有控制权且轮到自家行牌时才下发 turnOptions
+      turnOptions: isSelf && hasControlLease && !isAutoplay ? round.turnOptions : null,
+      // 只有自家且持有控制权且鸣牌窗口未响应时才下发 claimOptions
+      claimOptions: isSelf && hasControlLease && !isAutoplay ? getSeatClaimOptions(round, seatIndex) : null,
     };
   }) as [
     PlayerSeatPrivateState,
@@ -72,6 +83,7 @@ export function createPlayerView(
     viewerSeat,
     revision,
     status: match.status,
+    isPaused: room.isPaused ?? false,
     round: {
       roundWind: round.roundWind,
       roundNumber: round.roundNumber,

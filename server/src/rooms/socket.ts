@@ -68,6 +68,8 @@ export function setupRoomWebSocket(
           activeRoomId = targetRoomId;
           if (unsubscribe) unsubscribe();
 
+          roomManager.handleReconnect(targetRoomId, member.id, session.device_id);
+
           const room = roomManager.getRoom(targetRoomId);
           if (room) {
             sendJson({ type: 'room_update', room });
@@ -75,7 +77,7 @@ export function setupRoomWebSocket(
               (s) => s.type === 'human' && s.memberId === member.id,
             );
             const viewerSeat = seatIndex !== -1 ? seatIndex : 0;
-            const view = roomManager.getPlayerView(targetRoomId, viewerSeat);
+            const view = roomManager.getPlayerView(targetRoomId, viewerSeat, session.device_id);
             if (view) sendJson({ type: 'match_update', view });
           }
 
@@ -89,6 +91,29 @@ export function setupRoomWebSocket(
                 ?.seats.findIndex((s) => s.type === 'human' && s.memberId === member.id);
               const viewerSeat = seatIndex !== -1 && seatIndex !== undefined ? seatIndex : 0;
               if (msg.view.viewerSeat === viewerSeat) {
+                // 如果当前设备不是 Lease 拥有者，turnOptions 和 claimOptions 置空
+                const isLeaseOwner =
+                  roomManager.getRoom(targetRoomId)?.seats[viewerSeat]?.type === 'human'
+                    ? (roomManager.getRoom(targetRoomId)?.seats[viewerSeat] as any).leaseDeviceId ===
+                      session.device_id
+                    : false;
+
+                if (!isLeaseOwner && msg.view.seats[viewerSeat]) {
+                  const sanitized = {
+                    ...msg.view,
+                    seats: msg.view.seats.map((s: any, idx: number) =>
+                      idx === viewerSeat
+                        ? { ...s, turnOptions: null, claimOptions: null, hasControlLease: false }
+                        : s,
+                    ),
+                  };
+                  sendJson({ type: 'match_update', view: sanitized as any });
+                } else {
+                  sendJson(msg);
+                }
+              }
+            } else if (msg.type === 'lease_lost') {
+              if (msg.memberId === member.id && msg.newDeviceId !== session.device_id) {
                 sendJson(msg);
               }
             }
@@ -119,6 +144,9 @@ export function setupRoomWebSocket(
     });
 
     ws.on('close', () => {
+      if (activeRoomId) {
+        roomManager.handleDisconnect(activeRoomId, member.id, session.device_id);
+      }
       if (unsubscribe) unsubscribe();
     });
   });

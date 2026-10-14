@@ -144,7 +144,7 @@ export function registerRoomRoutes(
 
   // 获取本人的私有视角（根据当前 memberId 的座位过滤手牌）
   app.get('/api/v1/rooms/:roomId/view', async (request) => {
-    const { member } = requireSession(db, request);
+    const { member, session } = requireSession(db, request);
     const { roomId } = request.params as { roomId: string };
 
     const room = roomManager.getRoom(roomId);
@@ -153,7 +153,7 @@ export function registerRoomRoutes(
     const seatIndex = room.seats.findIndex((s) => s.type === 'human' && s.memberId === member.id);
     const viewerSeat = seatIndex !== -1 ? seatIndex : 0;
 
-    const view = roomManager.getPlayerView(roomId, viewerSeat);
+    const view = roomManager.getPlayerView(roomId, viewerSeat, session.device_id);
     if (!view) throw apiError(404, 'VIEW_NOT_AVAILABLE');
     return view;
   });
@@ -166,7 +166,7 @@ export function registerRoomRoutes(
 
     const result = roomManager.dispatchAction(roomId, member.id, session.device_id, command);
     if (!result.accepted) {
-      throw apiError(400, result.code ?? 'ACTION_REJECTED');
+      throw apiError(result.code === 'CONTROL_LEASE_LOST' ? 409 : 400, result.code ?? 'ACTION_REJECTED');
     }
     return result;
   });

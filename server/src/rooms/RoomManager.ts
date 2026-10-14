@@ -22,12 +22,25 @@ import { recordRiichiMatchFinish } from '@/lib/riichiProgress';
 import { getMember, readSnapshot, saveSnapshot } from '../db';
 import { runSnapshotMutation } from '../snapshotRuntime';
 import { createPlayerView } from './projectView';
+import {
+  deleteRoomState,
+  loadActiveRooms,
+  recordRoomCommand,
+  saveRoomState,
+} from './recovery';
+import {
+  hasControlLease,
+  markSeatConnected,
+  markSeatDisconnected,
+  shouldTriggerAutoplay,
+  takeoverSeatControl,
+} from './controlLease';
 
 export interface RoomInstance {
   summary: RoomSummary;
   match: RiichiMatchState | null;
   executedCommandIds: Set<string>;
-  turnTimeoutTimer: NodeJS.Timeout | null;
+  turnTimeoutTimer: ReturnType<typeof setTimeout> | null;
   serverDeadline: number | null;
   subscribers: Set<(msg: any) => void>;
 }
@@ -43,7 +56,9 @@ const AI_POOL = ['aoi', 'mio', 'rin', 'sora', 'koharu', 'chitose', 'kuro', 'shir
 export class RoomManager {
   private rooms = new Map<string, RoomInstance>();
 
-  constructor(private db: DatabaseSync) {}
+  constructor(private db: DatabaseSync) {
+    this.restoreFromDb();
+  }
 
   createRoom(
     hostMemberId: string,
@@ -63,8 +78,11 @@ export class RoomManager {
         nickname: hostNickname,
         avatarPresetId,
         deviceId,
+        leaseDeviceId: deviceId,
         isReady: true, // 房主默认就绪
         connected: true,
+        disconnectedAt: null,
+        isAutoplay: false,
       },
       { type: 'empty', seatIndex: 1 },
       { type: 'empty', seatIndex: 2 },
@@ -83,6 +101,7 @@ export class RoomManager {
       createdAt: Date.now(),
       updatedAt: Date.now(),
       revision: 1,
+      isPaused: false,
     };
 
     const instance: RoomInstance = {
@@ -95,6 +114,7 @@ export class RoomManager {
     };
 
     this.rooms.set(roomId, instance);
+    saveRoomState(this.db, summary, null, null, false);
     return summary;
   }
 
@@ -142,8 +162,11 @@ export class RoomManager {
       nickname,
       avatarPresetId,
       deviceId,
+      leaseDeviceId: deviceId,
       isReady: memberId === room.summary.hostMemberId,
       connected: true,
+      disconnectedAt: null,
+      isAutoplay: false,
     };
 
     room.summary.seats[seatIndex] = newSeat;
@@ -151,6 +174,7 @@ export class RoomManager {
     room.summary.revision++;
     room.summary.updatedAt = Date.now();
 
+    saveRoomState(this.db, room.summary, room.match, room.serverDeadline, room.summary.isPaused);
     this.broadcastRoom(room);
     return room.summary;
   }
@@ -184,10 +208,12 @@ export class RoomManager {
         room.summary.hostNickname = nextHuman.nickname;
       } else {
         this.rooms.delete(roomId);
+        deleteRoomState(this.db, roomId);
         return room.summary;
       }
     }
 
+    saveRoomState(this.db, room.summary, room.match, room.serverDeadline, room.summary.isPaused);
     this.broadcastRoom(room);
     return room.summary;
   }
@@ -203,20 +229,17 @@ export class RoomManager {
     if (room.summary.status !== 'waiting') throw new Error('GAME_ALREADY_STARTED');
     if (seatIndex < 0 || seatIndex > 3) throw new Error('INVALID_SEAT_INDEX');
 
-    const currentSeat = room.summary.seats[seatIndex];
-    if (currentSeat.type === 'human') throw new Error('SEAT_OCCUPIED_BY_HUMAN');
+    const targetSeat = room.summary.seats[seatIndex];
+    if (targetSeat.type === 'human') throw new Error('SEAT_OCCUPIED_BY_HUMAN');
 
-    const chosenChar =
-      characterId ??
-      AI_POOL[seatIndex % AI_POOL.length] ??
-      'aoi';
-    const chosenLevel = aiLevel ?? room.summary.settings.defaultAiLevel;
+    const resolvedCharacter = characterId ?? AI_POOL[seatIndex % AI_POOL.length] ?? 'aoi';
+    const resolvedLevel = aiLevel ?? room.summary.settings.defaultAiLevel;
 
     const aiSeat: AiSeat = {
       type: 'ai',
       seatIndex,
-      characterId: chosenChar,
-      aiLevel: chosenLevel,
+      characterId: resolvedCharacter,
+      aiLevel: resolvedLevel,
     };
 
     room.summary.seats[seatIndex] = aiSeat;
@@ -224,6 +247,7 @@ export class RoomManager {
     room.summary.revision++;
     room.summary.updatedAt = Date.now();
 
+    saveRoomState(this.db, room.summary, room.match, room.serverDeadline, room.summary.isPaused);
     this.broadcastRoom(room);
     return room.summary;
   }
@@ -232,15 +256,17 @@ export class RoomManager {
     const room = this.rooms.get(roomId);
     if (!room) throw new Error('ROOM_NOT_FOUND');
     if (room.summary.status !== 'waiting') throw new Error('GAME_ALREADY_STARTED');
+    if (seatIndex < 0 || seatIndex > 3) throw new Error('INVALID_SEAT_INDEX');
 
-    const s = room.summary.seats[seatIndex];
-    if (s.type !== 'ai') throw new Error('NOT_AN_AI_SEAT');
+    const targetSeat = room.summary.seats[seatIndex];
+    if (targetSeat.type !== 'ai') throw new Error('NOT_AN_AI_SEAT');
 
     room.summary.seats[seatIndex] = { type: 'empty', seatIndex };
     this.refreshCounts(room.summary);
     room.summary.revision++;
     room.summary.updatedAt = Date.now();
 
+    saveRoomState(this.db, room.summary, room.match, room.serverDeadline, room.summary.isPaused);
     this.broadcastRoom(room);
     return room.summary;
   }
@@ -256,6 +282,7 @@ export class RoomManager {
     room.summary.revision++;
     room.summary.updatedAt = Date.now();
 
+    saveRoomState(this.db, room.summary, room.match, room.serverDeadline, room.summary.isPaused);
     this.broadcastRoom(room);
     return room.summary;
   }
@@ -315,7 +342,9 @@ export class RoomManager {
     room.summary.currentMatchId = matchId;
     room.summary.revision++;
     room.summary.updatedAt = Date.now();
+    room.summary.isPaused = false;
 
+    saveRoomState(this.db, room.summary, room.match, room.serverDeadline, room.summary.isPaused);
     this.scheduleNextTurn(room);
     this.broadcastRoom(room);
     this.broadcastViews(room);
@@ -340,16 +369,77 @@ export class RoomManager {
     }
 
     // 校验执行者在哪个座位
-    const seatIndex = room.summary.seats.findIndex(
-      (s): s is HumanSeat => s.type === 'human' && s.memberId === memberId && s.deviceId === deviceId,
+    const seat = room.summary.seats.find(
+      (s): s is HumanSeat => s.type === 'human' && s.memberId === memberId,
     );
-    if (seatIndex === -1) {
+    if (!seat) {
       return { accepted: false, code: 'UNAUTHORIZED_OR_NOT_IN_SEAT', revision: room.summary.revision };
     }
 
+    const payload = command.payload as any;
+
+    // 特殊指令 1: 接管控制权 (Takeover control)
+    if (command.type === 'takeover_control') {
+      const { changed, previousDeviceId } = takeoverSeatControl(seat, deviceId);
+      if (changed && previousDeviceId) {
+        this.broadcastMessage(room, {
+          type: 'lease_lost',
+          roomId,
+          memberId,
+          newDeviceId: deviceId,
+        });
+      }
+      room.executedCommandIds.add(command.commandId);
+      recordRoomCommand(this.db, roomId, command, memberId, deviceId);
+      saveRoomState(this.db, room.summary, room.match, room.serverDeadline, room.summary.isPaused);
+      this.broadcastRoom(room);
+      this.broadcastViews(room);
+      return { accepted: true, revision: room.summary.revision };
+    }
+
+    // 特殊指令 2: 切换托管 (Toggle autoplay)
+    if (command.type === 'toggle_autoplay') {
+      if (!hasControlLease(seat, deviceId)) {
+        return { accepted: false, code: 'CONTROL_LEASE_LOST', revision: room.summary.revision };
+      }
+      seat.isAutoplay = Boolean(payload?.isAutoplay);
+      room.executedCommandIds.add(command.commandId);
+      recordRoomCommand(this.db, roomId, command, memberId, deviceId);
+      saveRoomState(this.db, room.summary, room.match, room.serverDeadline, room.summary.isPaused);
+      if (seat.isAutoplay) {
+        this.scheduleNextTurn(room);
+      }
+      this.broadcastRoom(room);
+      this.broadcastViews(room);
+      return { accepted: true, revision: room.summary.revision };
+    }
+
+    // 特殊指令 3: 恢复对局 (Resume game)
+    if (command.type === 'resume_game') {
+      if (room.summary.isPaused) {
+        room.summary.isPaused = false;
+        this.scheduleNextTurn(room);
+        saveRoomState(this.db, room.summary, room.match, room.serverDeadline, room.summary.isPaused);
+        this.broadcastRoom(room);
+        this.broadcastViews(room);
+      }
+      return { accepted: true, revision: room.summary.revision };
+    }
+
+    // 常规对局行牌指令必须持有 Lease
+    if (!hasControlLease(seat, deviceId)) {
+      return { accepted: false, code: 'CONTROL_LEASE_LOST', revision: room.summary.revision };
+    }
+
+    // 玩家手动操作自动解除托管
+    if (seat.isAutoplay) {
+      seat.isAutoplay = false;
+    }
+
+    const seatIndex = seat.seatIndex;
+
     // 构造 RiichiEvent
     let riichiEvent: RiichiEvent | null = null;
-    const payload = command.payload as any;
 
     switch (command.type) {
       case 'discard':
@@ -408,6 +498,8 @@ export class RoomManager {
 
     room.match = step.match;
     room.executedCommandIds.add(command.commandId);
+    recordRoomCommand(this.db, roomId, command, memberId, deviceId);
+
     room.summary.revision++;
     room.summary.updatedAt = Date.now();
 
@@ -418,11 +510,88 @@ export class RoomManager {
       this.scheduleNextTurn(room);
     }
 
+    saveRoomState(this.db, room.summary, room.match, room.serverDeadline, room.summary.isPaused);
     this.broadcastViews(room);
     return { accepted: true, revision: room.summary.revision };
   }
 
-  getPlayerView(roomId: string, viewerSeat: number): PlayerViewSnapshot | null {
+  handleDisconnect(roomId: string, memberId: string, _deviceId?: string): void {
+    const room = this.rooms.get(roomId);
+    if (!room) return;
+
+    const seat = room.summary.seats.find(
+      (s): s is HumanSeat => s.type === 'human' && s.memberId === memberId,
+    );
+    if (!seat) return;
+
+    markSeatDisconnected(seat);
+
+    // 检查是否全真人离线
+    const allHumansOffline = room.summary.seats.every(
+      (s) => s.type !== 'human' || !s.connected,
+    );
+
+    if (allHumansOffline && room.summary.status === 'playing') {
+      room.summary.isPaused = true;
+      if (room.turnTimeoutTimer) {
+        clearTimeout(room.turnTimeoutTimer);
+        room.turnTimeoutTimer = null;
+      }
+    }
+
+    saveRoomState(this.db, room.summary, room.match, room.serverDeadline, room.summary.isPaused);
+    this.broadcastRoom(room);
+    this.broadcastViews(room);
+  }
+
+  handleReconnect(roomId: string, memberId: string, deviceId: string): void {
+    const room = this.rooms.get(roomId);
+    if (!room) return;
+
+    const seat = room.summary.seats.find(
+      (s): s is HumanSeat => s.type === 'human' && s.memberId === memberId,
+    );
+    if (!seat) return;
+
+    markSeatConnected(seat, deviceId);
+
+    // 如果房间处于全员离线暂停状态，任意真人重连后恢复对局
+    if (room.summary.isPaused && room.summary.status === 'playing') {
+      room.summary.isPaused = false;
+      this.scheduleNextTurn(room);
+    }
+
+    saveRoomState(this.db, room.summary, room.match, room.serverDeadline, room.summary.isPaused);
+    this.broadcastRoom(room);
+    this.broadcastViews(room);
+  }
+
+  takeoverControl(roomId: string, memberId: string, deviceId: string): boolean {
+    const room = this.rooms.get(roomId);
+    if (!room) return false;
+
+    const seat = room.summary.seats.find(
+      (s): s is HumanSeat => s.type === 'human' && s.memberId === memberId,
+    );
+    if (!seat) return false;
+
+    const { changed, previousDeviceId } = takeoverSeatControl(seat, deviceId);
+    if (changed && previousDeviceId) {
+      this.broadcastMessage(room, {
+        type: 'lease_lost',
+        roomId,
+        memberId,
+        newDeviceId: deviceId,
+      });
+    }
+
+    saveRoomState(this.db, room.summary, room.match, room.serverDeadline, room.summary.isPaused);
+    this.broadcastRoom(room);
+    this.broadcastViews(room);
+    return true;
+  }
+
+  getPlayerView(roomId: string, viewerSeat: number, viewerDeviceId?: string): PlayerViewSnapshot | null {
     const room = this.rooms.get(roomId);
     if (!room || !room.match) return null;
     return createPlayerView(
@@ -433,6 +602,7 @@ export class RoomManager {
       room.match,
       room.summary,
       room.serverDeadline,
+      viewerDeviceId,
     );
   }
 
@@ -476,35 +646,113 @@ export class RoomManager {
     }
   }
 
+  private broadcastMessage(room: RoomInstance, msg: any): void {
+    for (const sub of room.subscribers) {
+      try {
+        sub(msg);
+      } catch {
+        // ignore
+      }
+    }
+  }
+
   private scheduleNextTurn(room: RoomInstance): void {
     if (!room.match || room.match.status !== 'playing') return;
+    if (room.summary.isPaused) return;
 
     if (room.turnTimeoutTimer) {
       clearTimeout(room.turnTimeoutTimer);
       room.turnTimeoutTimer = null;
     }
 
-    const isAiSeat = (seat: number) => room.summary.seats[seat]?.type === 'ai';
+    const isAutoSeat = (seat: number) => {
+      const s = room.summary.seats[seat];
+      if (!s) return false;
+      if (s.type === 'ai') return true;
+      if (s.type === 'human') {
+        const trigger = shouldTriggerAutoplay(s);
+        if (trigger && !s.isAutoplay) {
+          s.isAutoplay = true;
+        }
+        return trigger;
+      }
+      return false;
+    };
 
-    let autoEvent = nextServerAiEvent(room.match, isAiSeat);
-    while (autoEvent && room.match.status === 'playing') {
+    // 循环推进所有 AI 或已超 60 秒托管的席位
+    let autoEvent = nextServerAiEvent(room.match, isAutoSeat);
+    while (autoEvent && room.match.status === 'playing' && !room.summary.isPaused) {
       const step = applyEvent(room.match, autoEvent);
       if (!step) break;
       room.match = step.match;
       room.summary.revision++;
       room.summary.updatedAt = Date.now();
+      saveRoomState(this.db, room.summary, room.match, room.serverDeadline, room.summary.isPaused);
       if (room.match.status === 'matchEnd') {
         this.settleMatchEnd(room);
         return;
       }
-      autoEvent = nextServerAiEvent(room.match, isAiSeat);
+      autoEvent = nextServerAiEvent(room.match, isAutoSeat);
     }
 
-    if (room.match.status !== 'playing') return;
+    if (room.match.status !== 'playing' || room.summary.isPaused) return;
 
-    // 轮到真人时，设定超时截止时间
+    // 当前轮到真人手牌或真人鸣牌决策
     const deadline = Date.now() + room.summary.settings.turnTimeLimitSeconds * 1000;
     room.serverDeadline = deadline;
+    saveRoomState(this.db, room.summary, room.match, room.serverDeadline, room.summary.isPaused);
+
+    // 设定倒计时定时器：如果到期未操作且离线，触发默认摸切/过牌
+    room.turnTimeoutTimer = setTimeout(() => {
+      this.handleTurnTimeout(room.summary.id);
+    }, room.summary.settings.turnTimeLimitSeconds * 1000);
+  }
+
+  private handleTurnTimeout(roomId: string): void {
+    const room = this.rooms.get(roomId);
+    if (!room || !room.match || room.match.status !== 'playing' || room.summary.isPaused) return;
+
+    const round = room.match.round;
+    if (round.phase === 'discard') {
+      const currentSeat = round.currentPlayer;
+      const seat = room.summary.seats[currentSeat];
+      if (seat.type === 'human') {
+        const turnOpts = round.turnOptions;
+        if (turnOpts && turnOpts.discardable.length > 0) {
+          const tile = turnOpts.discardable[turnOpts.discardable.length - 1];
+          const step = applyEvent(room.match, { type: 'discard', seat: currentSeat, tile });
+          if (step) {
+            room.match = step.match;
+            room.summary.revision++;
+            room.summary.updatedAt = Date.now();
+            saveRoomState(this.db, room.summary, room.match, room.serverDeadline, room.summary.isPaused);
+            this.scheduleNextTurn(room);
+            this.broadcastViews(room);
+          }
+        }
+      }
+    } else if (round.phase === 'claim' && round.claim) {
+      for (let s = 0; s < 4; s++) {
+        if (round.claim.options[s] !== null && round.claim.responses[s] === null) {
+          const seat = room.summary.seats[s];
+          if (seat.type === 'human') {
+            const step = applyEvent(room.match, {
+              type: 'claim',
+              seat: s,
+              response: { type: 'pass' },
+            });
+            if (step) {
+              room.match = step.match;
+              room.summary.revision++;
+              room.summary.updatedAt = Date.now();
+            }
+          }
+        }
+      }
+      saveRoomState(this.db, room.summary, room.match, room.serverDeadline, room.summary.isPaused);
+      this.scheduleNextTurn(room);
+      this.broadcastViews(room);
+    }
   }
 
   private settleMatchEnd(room: RoomInstance): void {
@@ -538,6 +786,35 @@ export class RoomManager {
     room.summary.status = 'finished';
     room.summary.revision++;
     room.summary.updatedAt = Date.now();
+    deleteRoomState(this.db, room.summary.id);
     this.broadcastRoom(room);
+  }
+
+  private restoreFromDb(): void {
+    const recovered = loadActiveRooms(this.db);
+    for (const data of recovered) {
+      // 恢复时标记真人连接为断开（因为进程刚重启，连接未建立）
+      for (const s of data.summary.seats) {
+        if (s.type === 'human') {
+          s.connected = false;
+          s.disconnectedAt = Date.now();
+        }
+      }
+
+      // 重启恢复的未完房间默认暂停，等待真人上线
+      const isPaused = data.summary.status === 'playing' ? true : data.isPaused;
+      data.summary.isPaused = isPaused;
+
+      const instance: RoomInstance = {
+        summary: data.summary,
+        match: data.match,
+        executedCommandIds: new Set(),
+        turnTimeoutTimer: null,
+        serverDeadline: data.serverDeadline,
+        subscribers: new Set(),
+      };
+
+      this.rooms.set(data.summary.id, instance);
+    }
   }
 }

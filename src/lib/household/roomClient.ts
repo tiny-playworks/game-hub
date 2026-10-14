@@ -23,6 +23,7 @@ export function useRoomClient(roomId?: string, memberId?: string) {
   const [room, setRoom] = useState<RoomSummary | null>(null);
   const [view, setView] = useState<PlayerViewSnapshot | null>(null);
   const [connected, setConnected] = useState(false);
+  const [leaseLost, setLeaseLost] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const socketRef = useRef<WebSocket | null>(null);
@@ -76,6 +77,8 @@ export function useRoomClient(roomId?: string, memberId?: string) {
               setRoom(msg.room);
             } else if (msg.type === 'match_update') {
               setView(msg.view);
+            } else if (msg.type === 'lease_lost') {
+              setLeaseLost(true);
             } else if (msg.type === 'error') {
               setError(msg.code);
             }
@@ -225,6 +228,22 @@ export function useRoomClient(roomId?: string, memberId?: string) {
     [sendCommand],
   );
 
+  const takeoverControl = useCallback(async () => {
+    await sendCommand('takeover_control');
+    setLeaseLost(false);
+  }, [sendCommand]);
+
+  const toggleAutoplay = useCallback(
+    async (isAutoplay: boolean) => {
+      await sendCommand('toggle_autoplay', { isAutoplay });
+    },
+    [sendCommand],
+  );
+
+  const resumeGame = useCallback(async () => {
+    await sendCommand('resume_game');
+  }, [sendCommand]);
+
   // 计算本人坐在第几号席位 (0..3)，未入座则为 -1
   const mySeatIndex =
     room && memberId
@@ -237,6 +256,7 @@ export function useRoomClient(roomId?: string, memberId?: string) {
     room,
     view,
     connected,
+    leaseLost,
     error,
     mySeatIndex,
     isHost,
@@ -254,6 +274,9 @@ export function useRoomClient(roomId?: string, memberId?: string) {
     passClaim,
     declareClaim,
     nextRound,
+    takeoverControl,
+    toggleAutoplay,
+    resumeGame,
     sendCommand,
   };
 }

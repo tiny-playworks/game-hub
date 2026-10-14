@@ -16,8 +16,11 @@ export interface HumanSeat {
   nickname: string;
   avatarPresetId: string;
   deviceId: string;
+  leaseDeviceId: string; // 当前持有控制权的设备 ID
   isReady: boolean;
   connected: boolean;
+  disconnectedAt: number | null; // 最近离线时间戳
+  isAutoplay: boolean; // 是否处于 AI 临时接手托管状态
 }
 
 export interface AiSeat {
@@ -53,6 +56,7 @@ export interface RoomSummary {
   updatedAt: number;
   revision: number;
   currentMatchId?: string;
+  isPaused?: boolean; // 全真人离线时自动暂停
 }
 
 export interface RoomCommand {
@@ -79,7 +83,10 @@ export type RoomCommandType =
   | 'tsumo'
   | 'ron'
   | 'pass'
-  | 'next_round';
+  | 'next_round'
+  | 'takeover_control'
+  | 'toggle_autoplay'
+  | 'resume_game';
 
 export interface PlayerSeatPrivateState {
   seatIndex: number;
@@ -96,8 +103,11 @@ export interface PlayerSeatPrivateState {
   score: number; // 当前点数
   isRiichi: boolean; // 是否立直
   isDealer: boolean; // 是否当前局庄家
-  turnOptions: SeatTurnOptions | null; // 仅本人合法操作；他人为 null
-  claimOptions: SeatClaimOptions | null; // 仅本人待鸣牌操作；他人为 null
+  connected: boolean; // 是否在线
+  isAutoplay: boolean; // 是否托管中
+  hasControlLease: boolean; // 当前 viewer 是否持有该席位的控制权
+  turnOptions: SeatTurnOptions | null; // 仅本人且持有控制权合法操作；他人为 null
+  claimOptions: SeatClaimOptions | null; // 仅本人且持有控制权待鸣牌操作；他人为 null
 }
 
 export interface PlayerViewSnapshot {
@@ -106,6 +116,7 @@ export interface PlayerViewSnapshot {
   viewerSeat: number; // 0..3 本人绝对座次
   revision: number;
   status: 'playing' | 'roundEnd' | 'matchEnd';
+  isPaused?: boolean;
   round: {
     roundWind: number; // 0: 东, 1: 南
     roundNumber: number;
@@ -144,4 +155,6 @@ export type ServerMessage =
       code?: string;
       revision: number;
     }
+  | { type: 'lease_lost'; roomId: string; memberId: string; newDeviceId: string }
   | { type: 'error'; code: string; messageKey: string };
+
