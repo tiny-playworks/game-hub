@@ -32,9 +32,9 @@ P1–P6 的“纯本地、禁止后端/账号/联机、移动端不专门改造�
 | P5   | 商店、外观、好感故事                   | 已完成                                             | [P5](./P5-shop-affinity.md)        |
 | P6   | 副玩法统一与成长循环                   | 已完成                                             | [P6](./P6-arcade.md)               |
 | P7   | 使用可靠性与发布准备                   | 本机完成；NAS/容器/Windows待验                     | [P7](./P7-reliability.md)          |
-| P8   | 全站视觉重设计                         | 本机验收完成；NAS/家庭设备待验                 | [P8](./P8-visual-redesign.md)      |
-| P9   | 牌桌交互与视听品质                     | 基础交互已核对；整场操作链与真机音频待验           | [P9](./P9-table-experience.md)     |
-| P10  | 家庭成员与 NAS 服务                    | 本机部分实现；日麻成员服务代码已接入但运行态未验，NAS 待验 | [P10](./P10-household-service.md) |
+| P8   | 全站视觉重设计                         | 本机验收完成（含锁定牌背实战）；NAS/家庭设备待验   | [P8](./P8-visual-redesign.md)      |
+| P9   | 牌桌交互与视听品质                     | 本机验收完成（含整场动作链与移动端）；真机音频/NAS 待验 | [P9](./P9-table-experience.md)     |
+| P10  | 家庭成员与 NAS 服务                    | 本机验收完成（含日麻权威结算与街机校验）；真实 NAS 待验 | [P10](./P10-household-service.md) |
 | P11  | 跨设备续玩与离线同步                   | 待实施                                             | [P11](./P11-save-sync.md)          |
 | P12  | 家庭真人牌桌                           | 待实施                                             | [P12](./P12-family-multiplayer.md) |
 | P13  | 重连、托管与恢复                       | 待实施                                             | [P13](./P13-reconnect-autoplay.md) |

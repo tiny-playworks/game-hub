@@ -290,23 +290,23 @@ describe('Whole-match affinity and legacy saves', () => {
     );
     expect(getPlayerCharacterState().affinityByCharacter.mio).toBe(2);
   });
-  test('live free-match completion and cold resume keep the original companion, and each length gives +2', () => {
+  test('live free-match completion and cold resume keep the original companion, and each length gives +2', async () => {
     for (const matchLength of ['east', 'south'] as const) {
       setActiveCharacter('mio');
       useRiichiStore.getState().setMatchLength(matchLength);
-      useRiichiStore.getState().startMatch({
+      await useRiichiStore.getState().startMatch({
         seed: 7,
         seatCharacters: [null, 'koharu', 'rin', 'chitose'],
       });
       const id = useRiichiStore.getState().sessionId;
-      for (let i = 0; i < 12; i++) step();
+      for (let i = 0; i < 12; i++) await step();
       setActiveCharacter('koharu');
       useRiichiStore.setState({
         match: null,
         playerCharacterId: 'koharu',
         sessionId: '',
       });
-      expect(useRiichiStore.getState().resumeSaved()).toBe(true);
+      expect(await useRiichiStore.getState().resumeSaved()).toBe(true);
       expect(useRiichiStore.getState().sessionId).toBe(id);
       expect(useRiichiStore.getState().playerCharacterId).toBe('mio');
       for (
@@ -314,7 +314,7 @@ describe('Whole-match affinity and legacy saves', () => {
         i < 3000 && useRiichiStore.getState().match?.status !== 'matchEnd';
         i++
       )
-        step();
+        await step();
       expect(useRiichiStore.getState().match?.status).toBe('matchEnd');
       expect(getPlayerCharacterState().affinityByCharacter.mio).toBe(
         matchLength === 'east' ? 2 : 4,
@@ -323,13 +323,13 @@ describe('Whole-match affinity and legacy saves', () => {
       expect(getWalletState().rewardedMatchIds).toContain(id);
     }
     expect(getPlayerCharacterState().rewardedMatchIds).toHaveLength(2);
-    function step() {
+    async function step() {
       const store = useRiichiStore.getState();
       store.clearCutIns();
       if (!store.match) throw new Error('Missing match');
       const event = nextAutoEvent(store.match);
       if (!event) throw new Error('No event');
-      expect(store.dispatch(event)).toBe(true);
+      expect(await store.dispatch(event)).toBe(true);
     }
   }, 30000);
 });

@@ -31,7 +31,9 @@ afterEach(() => {
 
 test('指南和牌谱重叠打开时只暂停一次，全部关闭后继续原读秒', () => {
   const now = rs.spyOn(Date, 'now');
-  const file = toReplayFile(createMatch({ seed: 909 }).match);
+  const file = toReplayFile(
+    createMatch({ seed: 909, matchLength: 'east' }).match,
+  );
   useRiichiStore.setState({
     view: 'game',
     decisionClock: { key: 'same-turn', startedAt: 1000 },
@@ -57,7 +59,7 @@ test.each(['guide', 'menu', 'replay'])(
   '调度器在 $0 内不自动超时，关闭后用剩余时间完成合法舍牌',
   (dialog) => {
     rs.useFakeTimers();
-    const match = createMatch({ seed: 910 }).match;
+    const match = createMatch({ seed: 910, matchLength: 'east' }).match;
     useRiichiStore.setState({ match, view: 'game', decisionClock: null });
     const settings = {
       ...normalizeRiichiSettings(null),
@@ -93,29 +95,29 @@ test.each(['guide', 'menu', 'replay'])(
   },
 );
 
-test('恢复已计入进度的对局不再发放进入奖励', () => {
+test('恢复已计入进度的对局不再发放进入奖励', async () => {
   const record = rs.spyOn(progress, 'recordRiichiProgressEvent');
-  useRiichiStore.getState().startMatch({ seed: 911 });
+  await useRiichiStore.getState().startMatch({ seed: 911 });
   expect(record).toHaveBeenCalledTimes(1);
-  expect(useRiichiStore.getState().resumeSaved()).toBe(true);
+  expect(await useRiichiStore.getState().resumeSaved()).toBe(true);
   expect(record).toHaveBeenCalledTimes(1);
   expect(useRiichiStore.getState().processedProgress).toEqual([
     '911:enter-game',
   ]);
 });
 
-test('回退后重新立直不会重复计入成长进度', () => {
+test('回退后重新立直不会重复计入成长进度', async () => {
   const record = rs.spyOn(progress, 'recordRiichiProgressEvent');
-  let match = createMatch({ seed: 1 }).match;
+  let match = createMatch({ seed: 1, matchLength: 'east' }).match;
   for (let index = 0; index < 4000; index++) {
     const event = nextAutoEvent(match);
     if (!event) break;
     if (event.type === 'riichi' && event.seat === 0) {
       useRiichiStore.setState({ match, view: 'game', processedProgress: [] });
-      expect(useRiichiStore.getState().dispatch(event)).toBe(true);
+      expect(await useRiichiStore.getState().dispatch(event)).toBe(true);
       expect(record).toHaveBeenCalledTimes(1);
       expect(useRiichiStore.getState().undo()).toBe(true);
-      expect(useRiichiStore.getState().dispatch(event)).toBe(true);
+      expect(await useRiichiStore.getState().dispatch(event)).toBe(true);
       expect(record).toHaveBeenCalledTimes(1);
       return;
     }
