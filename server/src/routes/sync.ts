@@ -14,6 +14,7 @@ import { getMember, readSnapshot, saveSnapshot, transaction } from '../db';
 import {
   processOfflineArcadeReceipt,
   processOfflineRiichiReceipt,
+  recordMemberThemeChallengeMatch,
 } from '../services/progression';
 
 export function registerSyncRoutes(app: FastifyInstance, db: DatabaseSync): void {
@@ -103,6 +104,8 @@ export function registerSyncRoutes(app: FastifyInstance, db: DatabaseSync): void
           continue;
         }
 
+        const previousSnapshot = snapshot;
+        db.exec('SAVEPOINT offline_receipt_settlement');
         try {
           let settleResult: {
             snapshot: typeof snapshot;
@@ -110,15 +113,20 @@ export function registerSyncRoutes(app: FastifyInstance, db: DatabaseSync): void
           };
 
           if (receipt.matchSource === 'free') {
-            settleResult = processOfflineRiichiReceipt(snapshot, receipt);
+            settleResult = processOfflineRiichiReceipt(snapshot, receipt, (match) =>
+              recordMemberThemeChallengeMatch(
+                db,
+                member.id,
+                receipt.matchId,
+                'free',
+                match,
+              ),
+            );
           } else if (receipt.matchSource === 'arcade') {
             settleResult = processOfflineArcadeReceipt(snapshot, receipt);
           } else {
             throw new Error('UNKNOWN_MATCH_SOURCE');
           }
-
-          snapshot = settleResult.snapshot;
-          accepted.push(settleResult.result);
 
           db.prepare(
             `INSERT INTO offline_receipts (member_id, event_id, device_id, match_id, source, occurred_at, payload_json, status, result_json, created_at)
@@ -134,7 +142,13 @@ export function registerSyncRoutes(app: FastifyInstance, db: DatabaseSync): void
             JSON.stringify(settleResult.result),
             Date.now(),
           );
+          db.exec('RELEASE SAVEPOINT offline_receipt_settlement');
+          snapshot = settleResult.snapshot;
+          accepted.push(settleResult.result);
         } catch (err: unknown) {
+          db.exec('ROLLBACK TO SAVEPOINT offline_receipt_settlement');
+          db.exec('RELEASE SAVEPOINT offline_receipt_settlement');
+          snapshot = previousSnapshot;
           const code = err instanceof Error ? err.message : 'SETTLEMENT_FAILED';
           rejected.push({
             eventId: receipt.eventId,

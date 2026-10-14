@@ -8,6 +8,15 @@ import {
   type RiichiMatchState,
 } from '@/pages/mahjong/japanese/engine/match';
 import { recordRiichiMatchFinish } from '@/lib/riichiProgress';
+import {
+  THEME_CHALLENGE_SET_ID,
+  type ThemeChallengeId,
+} from '../../../shared/contracts/challenge';
+import {
+  recordThemeChallengeMatch,
+  THEME_CHALLENGE_REWARD_POINTS,
+} from '@/lib/themeChallenges';
+import type { DatabaseSync } from 'node:sqlite';
 import { gameStore } from '@/store/gameStoreCore';
 import type { MemberSnapshot } from '../../../shared/contracts/member';
 import type {
@@ -70,6 +79,7 @@ export function validatePlausibleArcadeFinish(
 export function processOfflineRiichiReceipt(
   snapshot: MemberSnapshot,
   receipt: OfflineReceipt,
+  recordChallenges?: (match: RiichiMatchState) => number,
 ): { snapshot: MemberSnapshot; result: OfflineReceiptResult } {
   if (receipt.payload.source !== 'free' || !('riichi' in receipt.payload)) {
     throw new Error('INVALID_PAYLOAD');
@@ -110,6 +120,7 @@ export function processOfflineRiichiReceipt(
       opponents: match.seatCharacters.slice(1) as string[],
       ranking,
     });
+    return recordChallenges?.(match) ?? 0;
   });
 
   const coinsEarned = Math.max(0, updated.snapshot.wallet.coins - prevCoins);
@@ -122,13 +133,56 @@ export function processOfflineRiichiReceipt(
       matchId: receipt.matchId,
       source: 'free',
       coinsEarned,
-      pointsEarned: 0,
+      pointsEarned: updated.result,
       affinityEarned: {
         characterId: playerCharacterId,
         amount: affinityAmount,
       },
     },
   };
+}
+
+/** Persist unique accepted match and completion credentials in the caller's DB transaction. */
+export function recordMemberThemeChallengeMatch(
+  db: DatabaseSync,
+  memberId: string,
+  matchId: string,
+  source: 'free' | 'ai-ranked',
+  match: RiichiMatchState,
+): number {
+  const receipt = db.prepare(`
+    INSERT OR IGNORE INTO theme_challenge_matches
+      (member_id, challenge_set_id, match_id, source, created_at)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(memberId, THEME_CHALLENGE_SET_ID, matchId, source, Date.now());
+  if (receipt.changes !== 1) return 0;
+
+  const rows = db.prepare(`
+    SELECT challenge_id FROM theme_challenge_completions
+    WHERE member_id = ? AND challenge_set_id = ?
+  `).all(memberId, THEME_CHALLENGE_SET_ID) as Array<{ challenge_id: string }>;
+  const completed = rows
+    .map((row) => row.challenge_id)
+    .filter((id): id is ThemeChallengeId =>
+      id === 'menzen-win' || id === 'safe-south' || id === 'three-matches',
+    );
+  const result = recordThemeChallengeMatch(match, matchId, source, completed);
+  for (const challengeId of result.newlyCompleted) {
+    const completion = db.prepare(`
+      INSERT OR IGNORE INTO theme_challenge_completions
+        (member_id, challenge_set_id, challenge_id, match_id, completed_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(
+      memberId,
+      THEME_CHALLENGE_SET_ID,
+      challengeId,
+      matchId,
+      Date.now(),
+    );
+    if (completion.changes !== 1)
+      throw new Error('THEME_CHALLENGE_CREDENTIAL_CONFLICT');
+  }
+  return result.newlyCompleted.length * THEME_CHALLENGE_REWARD_POINTS;
 }
 
 export function processOfflineArcadeReceipt(

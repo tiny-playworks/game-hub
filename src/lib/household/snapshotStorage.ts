@@ -1,10 +1,12 @@
 import type { MemberSnapshot } from '../../../shared/contracts/member';
+import { normalizeThemeChallengeState } from '../../../shared/contracts/challenge';
 import { ACHIEVEMENT_UNLOCKED_EVENT } from '@/lib/achievements';
 import { COSMETICS_CHANGED_EVENT } from '@/lib/cosmetics';
 import { CHARACTERS_CHANGED_EVENT } from '@/lib/playerCharacters';
 import { PLAYER_PROFILE_STORAGE_KEY } from '@/lib/playerProfile';
 import { RANKED_CHANGED_EVENT } from '@/lib/ranked';
 import { WALLET_CHANGED_EVENT } from '@/lib/wallet';
+import { THEME_CHALLENGES_CHANGED_EVENT } from '@/lib/themeChallenges';
 
 export class MemoryStorage implements Storage {
   private map = new Map<string, string>();
@@ -52,6 +54,10 @@ export function createStorageFromSnapshot(snapshot: MemberSnapshot): MemoryStora
   storage.setItem('game-hub-player-stats', JSON.stringify(snapshot.stats));
   storage.setItem('game-hub-daily-tasks', JSON.stringify(snapshot.dailyTasks));
   storage.setItem('game-hub-weekly-tasks', JSON.stringify(snapshot.weeklyTasks));
+  storage.setItem(
+    'game-hub-theme-challenges-v1',
+    JSON.stringify(normalizeThemeChallengeState(snapshot.themeChallenges)),
+  );
   storage.setItem('game-hub-checkin-state', JSON.stringify(snapshot.checkin));
   storage.setItem('game-hub-ranked-v1', JSON.stringify(snapshot.ranked));
   storage.setItem('game-hub-locale', snapshot.preferences.locale);
@@ -65,7 +71,10 @@ export function createStorageFromSnapshot(snapshot: MemberSnapshot): MemoryStora
 
   if (snapshot.legacyData) {
     for (const [key, value] of Object.entries(snapshot.legacyData)) {
-      if (typeof value === 'string') {
+      if (
+        typeof value === 'string' &&
+        key !== 'game-hub-theme-challenges-v1'
+      ) {
         storage.setItem(key, value);
       }
     }
@@ -81,6 +90,7 @@ export function notifyStorageStateChanged(): void {
   window.dispatchEvent(new Event(COSMETICS_CHANGED_EVENT));
   window.dispatchEvent(new Event(CHARACTERS_CHANGED_EVENT));
   window.dispatchEvent(new Event(RANKED_CHANGED_EVENT));
+  window.dispatchEvent(new Event(THEME_CHALLENGES_CHANGED_EVENT));
   window.dispatchEvent(new Event(ACHIEVEMENT_UNLOCKED_EVENT));
   window.dispatchEvent(new StorageEvent('storage', { key: PLAYER_PROFILE_STORAGE_KEY }));
 }

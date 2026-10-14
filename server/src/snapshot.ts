@@ -17,6 +17,7 @@ import {
 import { createDefaultPlayerStats, normalizePlayerStats } from '@/lib/playerStats';
 import { normalizeRankedState } from '@/lib/ranked';
 import { normalizeWalletState } from '@/lib/wallet';
+import { normalizeThemeChallengeState } from '../../shared/contracts/challenge';
 import {
   createWeeklyTaskState,
   normalizeWeeklyTaskState,
@@ -34,6 +35,7 @@ const KNOWN_KEYS = new Set([
   'game-hub-player-stats',
   'game-hub-daily-tasks',
   'game-hub-weekly-tasks',
+  'game-hub-theme-challenges-v1',
   'game-hub-checkin-state',
   'game-hub-ranked-v1',
   'game-hub-locale',
@@ -82,6 +84,7 @@ export function createEmptySnapshot(memberId: string, nickname: string): MemberS
     stats: createDefaultPlayerStats(),
     dailyTasks: createDailyTaskState(),
     weeklyTasks: createWeeklyTaskState(),
+    themeChallenges: normalizeThemeChallengeState(null),
     checkin: createDefaultCheckinState(),
     ranked: normalizeRankedState(null),
     preferences: {
@@ -162,6 +165,9 @@ export function parseLegacyImport(
     if (!normalized) throw new Error('Invalid weekly tasks');
     snapshot.weeklyTasks = normalized;
   }
+  snapshot.themeChallenges = normalizeThemeChallengeState(
+    optionalObject(data, 'game-hub-theme-challenges-v1'),
+  );
   snapshot.checkin = normalizeCheckinState(optionalObject(data, 'game-hub-checkin-state'));
   snapshot.ranked = normalizeRankedState(rankedRaw);
   snapshot.preferences.locale = data['game-hub-locale'] === 'en' ? 'en' : 'zh';

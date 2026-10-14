@@ -8,13 +8,13 @@ export interface StoryLine {
 export interface CharacterStory {
   id: string;
   characterId: string;
-  stage: 1 | 2 | 3;
+  stage: 1 | 2 | 3 | 4;
   titleKey: string;
   lines: StoryLine[];
 }
 export const CHARACTER_STORIES: CharacterStory[] = CHARACTER_DEFS.flatMap(
   (character) =>
-    ([1, 2, 3] as const).map((stage) => ({
+    ([1, 2, 3, 4] as const).map((stage) => ({
       id: `${character.id}-${stage}`,
       characterId: character.id,
       stage,

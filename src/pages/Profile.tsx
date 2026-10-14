@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useOptionalHousehold } from '@/contexts/HouseholdContext';
+import { useCosmetics } from '@/hooks/useCosmetics';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import {
   CHECKIN_MONTH_MILESTONES,
@@ -33,6 +34,12 @@ import {
 import { type DailyTaskState, getDailyTaskState } from '@/lib/dailyTasks';
 import { getGrowthOverview } from '@/lib/growth';
 import { type GrowthFeedItem, getFullGrowthFeed } from '@/lib/growthFeed';
+import { COSMETIC_CATEGORIES, COSMETIC_DEFS } from '@/lib/cosmetics';
+import { formatMessage } from '@/lib/i18n';
+import {
+  getThemeChallengeState,
+  THEME_CHALLENGES_CHANGED_EVENT,
+} from '@/lib/themeChallenges';
 import {
   CHARACTER_DEFS,
   type CharacterDef,
@@ -100,11 +107,39 @@ function getCharacterUnlockText(
   return `${t('profile.companion.unlock.winsPrefix')} ${stats.riichiWins}/${character.unlockRule.target} · ${t('profile.companion.unlock.or')} ${rankText}`;
 }
 
+function getCosmeticGoalText(
+  item: (typeof COSMETIC_DEFS)[number],
+  locale: 'zh' | 'en',
+  t: (key: string) => string,
+): string {
+  const unlock = item.unlock;
+  if (unlock?.type === 'rank') {
+    return formatMessage(locale, 'shop.unlock.rank', {
+      rank: t(`character.rank.${unlock.band}`),
+    });
+  }
+  if (unlock?.type === 'affinity') {
+    return formatMessage(locale, 'shop.unlock.affinity', {
+      character: t(getCharacterById(unlock.characterId).nameKey),
+      stage: unlock.stage,
+    });
+  }
+  if (unlock?.type === 'achievement') {
+    return formatMessage(locale, 'shop.unlock.achievement', {
+      achievement: t(`achievement.${unlock.achievementId}.name`),
+    });
+  }
+  return item.price === 0
+    ? t('profile.collection.shopFree')
+    : formatMessage(locale, 'shop.buy', { price: item.price ?? 0 });
+}
+
 const Profile = () => {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const household = useOptionalHousehold();
   const memberMode = household?.mode === 'member-online';
   const profile = usePlayerProfile();
+  const cosmetics = useCosmetics();
   const [nicknameDraft, setNicknameDraft] = useState(
     () => getPlayerProfile().nickname,
   );
@@ -126,6 +161,7 @@ const Profile = () => {
   const [characterState, setCharacterState] = useState<PlayerCharacterState>(
     getPlayerCharacterState,
   );
+  const [themeChallenges, setThemeChallenges] = useState(getThemeChallengeState);
   const [recentFeed, setRecentFeed] = useState(() => getFullGrowthFeed());
   const growthHistoryMeta = useMemo(
     () =>
@@ -165,6 +201,7 @@ const Profile = () => {
     setGrowthOverview(nextGrowth);
     setPlayerStats(nextStats);
     setCharacterState(nextCharacterState);
+    setThemeChallenges(getThemeChallengeState());
     setRecentFeed(getFullGrowthFeed());
     setNicknameDraft(getPlayerProfile().nickname);
   }, [memberMode]);
@@ -172,6 +209,11 @@ const Profile = () => {
   useEffect(() => {
     refreshDashboard();
   }, [refreshDashboard, household?.snapshot?.revision]);
+
+  useEffect(() => {
+    window.addEventListener(THEME_CHALLENGES_CHANGED_EVENT, refreshDashboard);
+    return () => window.removeEventListener(THEME_CHALLENGES_CHANGED_EVENT, refreshDashboard);
+  }, [refreshDashboard]);
 
   const saveNickname = () => {
     const next = updatePlayerProfile({
@@ -584,6 +626,76 @@ const Profile = () => {
               })}
             </div>
             {characterError && <p role="alert" className="mt-2 text-sm text-destructive">{characterError}</p>}
+          </section>
+
+          <section className="rounded-3xl border border-border paper-texture bg-card p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-medium tracking-[0.2em] text-primary/80 uppercase">
+                  {t('profile.collection.eyebrow')}
+                </p>
+                <h2 className="mt-1 text-lg font-semibold">
+                  {t('profile.collection.title')}
+                </h2>
+              </div>
+              <span className="rounded-full bg-muted px-3 py-1 text-xs tabular-nums text-muted-foreground">
+                {cosmetics.owned.length}/{COSMETIC_DEFS.length}
+              </span>
+            </div>
+            <p className="mt-2 text-xs leading-5 text-muted-foreground">
+              {t('profile.collection.description')}
+            </p>
+            <ul className="mt-3 space-y-2">
+              {COSMETIC_CATEGORIES.map((category) => {
+                const items = COSMETIC_DEFS.filter(
+                  (item) => item.category === category,
+                );
+                const ownedCount = items.filter((item) =>
+                  cosmetics.owned.includes(item.id),
+                ).length;
+                const nextGoal = items.find(
+                  (item) => !cosmetics.owned.includes(item.id),
+                );
+                return (
+                  <li
+                    key={category}
+                    className="rounded-xl border border-border bg-card p-3"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-medium">
+                        {t(`shop.category.${category}`)}
+                      </p>
+                      <span className="text-xs tabular-nums text-muted-foreground">
+                        {ownedCount}/{items.length}
+                      </span>
+                    </div>
+                    {nextGoal ? (
+                      <Link
+                        to={`/shop?item=${encodeURIComponent(nextGoal.id)}`}
+                        className="mt-1.5 flex flex-wrap items-center justify-between gap-2 text-xs text-primary hover:underline"
+                      >
+                        <span>{t(nextGoal.nameKey)}</span>
+                        <span className="text-muted-foreground">
+                          {getCosmeticGoalText(nextGoal, locale, t)}
+                        </span>
+                      </Link>
+                    ) : (
+                      <p className="mt-1.5 text-xs text-primary">
+                        {t('profile.collection.categoryComplete')}
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="mt-3 text-xs text-muted-foreground">
+              {formatMessage(locale, 'profile.collection.challengeProgress', {
+                completed: themeChallenges.completedIds.length,
+                total: 3,
+              })}
+              {' · '}
+              {t('challenge.reward')}
+            </p>
           </section>
 
           <section className="rounded-3xl border border-border paper-texture bg-card p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">

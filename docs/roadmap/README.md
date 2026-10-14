@@ -40,7 +40,7 @@ P1–P6 的“纯本地、禁止后端/账号/联机、移动端不专门改造�
 | P13  | 重连、托管与恢复                       | 本机验收完成（含掉线托管、抢控租约与重启恢复）；真实 NAS 待验 | [P13](./P13-reconnect-autoplay.md) |
 | P14  | AI 与竞技可信度                        | 本机验收完成（含四档确定性、无作弊与性能基准）；真实 NAS 待验 | [P14](./P14-ai-ranked-quality.md)  |
 | P15  | 牌谱档案与训练闭环                     | 待实施                                             | [P15](./P15-replay-training.md)    |
-| P16  | 挑战、故事与收藏目标                   | 待实施                                             | [P16](./P16-challenges-stories.md) |
+| P16  | 挑战、故事与收藏目标                   | 本机实现完成，类型检查/构建通过；行为与 NAS 待验 | [P16](./P16-challenges-stories.md) |
 
 ```mermaid
 graph LR

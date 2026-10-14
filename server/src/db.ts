@@ -3,6 +3,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import type { MemberSnapshot } from '../../shared/contracts/member';
+import { normalizeThemeChallengeState } from '../../shared/contracts/challenge';
 
 export interface MemberRow {
   id: string;
@@ -100,6 +101,26 @@ function migrate(db: DatabaseSync): void {
     CREATE UNIQUE INDEX IF NOT EXISTS offline_receipts_match
       ON offline_receipts(member_id, match_id, source)
       WHERE status = 'accepted';
+    CREATE TABLE IF NOT EXISTS theme_challenge_matches (
+      member_id TEXT NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+      challenge_set_id TEXT NOT NULL,
+      match_id TEXT NOT NULL,
+      source TEXT NOT NULL CHECK(source IN ('free', 'ai-ranked')),
+      created_at INTEGER NOT NULL,
+      PRIMARY KEY(member_id, challenge_set_id, match_id)
+    );
+    CREATE TABLE IF NOT EXISTS theme_challenge_completions (
+      member_id TEXT NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+      challenge_set_id TEXT NOT NULL,
+      challenge_id TEXT NOT NULL,
+      match_id TEXT NOT NULL,
+      completed_at INTEGER NOT NULL,
+      PRIMARY KEY(member_id, challenge_set_id, challenge_id),
+      CHECK(challenge_id IN ('menzen-win', 'safe-south', 'three-matches')),
+      FOREIGN KEY(member_id, challenge_set_id, match_id)
+        REFERENCES theme_challenge_matches(member_id, challenge_set_id, match_id)
+        ON DELETE CASCADE
+    );
     CREATE TABLE IF NOT EXISTS resume_saves (
       member_id TEXT NOT NULL REFERENCES members(id) ON DELETE CASCADE,
       device_id TEXT NOT NULL,
@@ -208,7 +229,10 @@ export function readSnapshot(row: MemberRow): MemberSnapshot {
   ) {
     throw new Error('Member snapshot is inconsistent');
   }
-  return snapshot;
+  return {
+    ...snapshot,
+    themeChallenges: normalizeThemeChallengeState(snapshot.themeChallenges),
+  };
 }
 
 export function saveSnapshot(

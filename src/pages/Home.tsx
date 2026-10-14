@@ -13,6 +13,7 @@ import { Link } from 'react-router-dom';
 import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
 import { PersonalBest } from '@/components/game/PersonalBest';
 import { VenueGameGlyph } from '@/components/home/VenueGameGlyph';
+import { ThemeChallengePanel } from '@/components/home/ThemeChallengePanel';
 import { RankedLobbyCard } from '@/components/ranked/RankedLobbyCard';
 import { TaskClaimButton } from '@/components/TaskClaimButton';
 import { Button } from '@/components/ui/button';
@@ -213,6 +214,7 @@ const Home = () => {
             </article>
           </div>
           <aside className="venue-task-stack">
+            <ThemeChallengePanel />
             <section className="venue-task-panel venue-daily">
               <div className="flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-base font-semibold">

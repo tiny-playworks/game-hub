@@ -6,6 +6,7 @@ import { markCharactersEncountered, recordCharacterMatchFinish, CHARACTER_DEFS }
 import { selectRankedOpponents, saveRankedState } from '@/lib/ranked';
 import { settleRankedMatch } from '@/lib/rankedSettlement';
 import { recordRiichiMatchFinish, recordRiichiProgressEvent } from '@/lib/riichiProgress';
+import { recordMemberThemeChallengeMatch } from '../services/progression';
 import { type RiichiEvent, type RiichiMatchState, type RiichiEffect,
   getSeatTurnOptions, isReplayFile, selectSeatCharacters, toReplayFile } from '@/pages/mahjong/japanese/engine';
 import { apiError, requireSession } from '../auth';
@@ -213,6 +214,13 @@ export function registerRiichiRoutes(app: FastifyInstance, db: DatabaseSync): vo
               opponents: step.match.seatCharacters.slice(1) as string[],
               ranking: step.match.matchEnd.ranking });
           }
+          recordMemberThemeChallengeMatch(
+            db,
+            member.id,
+            row.match_id,
+            row.source,
+            step.match,
+          );
         }
       });
       const next = saveSnapshot(db, current, updated.snapshot);

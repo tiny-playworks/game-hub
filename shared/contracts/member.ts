@@ -9,6 +9,7 @@ import type { RankedState } from '../../src/lib/ranked';
 import type { WalletState } from '../../src/lib/wallet';
 import type { WeeklyTaskState } from '../../src/lib/weeklyTasks';
 import type { ArcadeStoredState } from '../../src/lib/arcadeStats';
+import type { ThemeChallengeState } from './challenge';
 
 export type HouseholdMode = 'guest-local' | 'member-online';
 
@@ -67,6 +68,7 @@ export interface MemberSnapshot {
   stats: PlayerStatsState;
   dailyTasks: DailyTaskState;
   weeklyTasks: WeeklyTaskState;
+  themeChallenges: ThemeChallengeState;
   checkin: CheckinState;
   ranked: RankedState;
   preferences: {

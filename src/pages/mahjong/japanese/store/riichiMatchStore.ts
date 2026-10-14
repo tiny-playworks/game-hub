@@ -18,6 +18,7 @@ import {
   recordRiichiProgressEvent,
   resetCurrentRiichiRoundProgressSummary,
 } from '@/lib/riichiProgress';
+import { recordThemeChallengeMatch } from '@/lib/themeChallenges';
 import { randomSeed } from '@/lib/seededRandom';
 import { getStorageDriver } from '@/lib/storage';
 import { createUuid } from '@/lib/uuid';
@@ -148,6 +149,21 @@ function processProgress(
         next = [...next, key].slice(-400);
       } catch {
         // A failed wallet write must not interrupt the match.
+      }
+    }
+  }
+  if (match.status === 'matchEnd' && match.matchEnd) {
+    const key = `${match.seed}:theme-challenges`;
+    if (!next.includes(key)) {
+      try {
+        recordThemeChallengeMatch(
+          match,
+          session.sessionId,
+          match.ranked ? 'ai-ranked' : 'free',
+        );
+        next = [...next, key].slice(-400);
+      } catch {
+        // Challenge rewards are optional progress and must not interrupt a match.
       }
     }
   }
@@ -498,9 +514,24 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
         }
         const saved = loadSavedMatch();
         if (!saved) return false;
+        const playerCharacterId =
+          saved.match.ranked?.characterId ??
+          saved.playerCharacterId ??
+          getPlayerCharacterState().activeCharacterId;
+        let processedProgress = saved.processedProgress;
         if (saved.match.ranked) {
           const ranked = getRankedState();
           if (saved.match.status === 'matchEnd' && saved.match.matchEnd) {
+            processedProgress = processProgress(
+              saved.match,
+              [],
+              processedProgress,
+              { sessionId: saved.sessionId, playerCharacterId },
+            );
+            saveMatch(saved.match, processedProgress, {
+              sessionId: saved.sessionId,
+              playerCharacterId,
+            });
             if (
               !settleRankedMatch(
                 saved.match.ranked,
@@ -518,10 +549,7 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
           decisionClock: null,
           view: 'game',
           showMenu: false,
-          playerCharacterId:
-            saved.match.ranked?.characterId ??
-            saved.playerCharacterId ??
-            getPlayerCharacterState().activeCharacterId,
+          playerCharacterId,
           sessionId: saved.sessionId,
           cutIns: [],
           moments: [],

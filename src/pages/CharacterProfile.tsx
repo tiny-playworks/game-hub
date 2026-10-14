@@ -6,7 +6,7 @@ import {
   ScrollText,
   Sparkles,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
 import { CharacterOutfitPicker } from '@/components/characters/CharacterOutfitPicker';
@@ -18,6 +18,10 @@ import { useCharacters } from '@/hooks/useCosmetics';
 import { type CharacterStory, getCharacterStory } from '@/lib/characterStories';
 import { COSMETIC_DEFS } from '@/lib/cosmetics';
 import { formatMessage } from '@/lib/i18n';
+import {
+  getThemeChallengeState,
+  THEME_CHALLENGES_CHANGED_EVENT,
+} from '@/lib/themeChallenges';
 import {
   CHARACTER_AFFINITY_THRESHOLDS,
   CHARACTER_DEFS,
@@ -31,10 +35,18 @@ export default function CharacterProfile() {
   const { t, locale } = useLocale();
   const household = useOptionalHousehold();
   const state = useCharacters();
+  const [challengeState, setChallengeState] = useState(getThemeChallengeState);
   const [expression, setExpression] = useState<CharacterExpression>('normal');
   const [story, setStory] = useState<CharacterStory | null>(null);
   const [error, setError] = useState('');
+  useEffect(() => {
+    const refresh = () => setChallengeState(getThemeChallengeState());
+    window.addEventListener(THEME_CHALLENGES_CHANGED_EVENT, refresh);
+    return () => window.removeEventListener(THEME_CHALLENGES_CHANGED_EVENT, refresh);
+  }, [household?.snapshot?.revision]);
   const character = CHARACTER_DEFS.find((item) => item.id === id);
+  const challengeStory = character ? getCharacterStory(character.id, 4) : undefined;
+  const storySetUnlocked = challengeState.completedIds.length === 3;
   const known =
     character &&
     (state.unlockedCharacterIds.includes(character.id) ||
@@ -194,7 +206,9 @@ export default function CharacterProfile() {
                     item.unlock.characterId === character.id &&
                     item.unlock.stage === rewardStage,
                 );
-                const chapter = getCharacterStory(character.id, rewardStage);
+                const chapter = rewardStage <= 3
+                  ? getCharacterStory(character.id, rewardStage)
+                  : undefined;
                 return (
                   <article
                     className={cn('affinity-node', reached && 'is-unlocked')}
@@ -244,6 +258,47 @@ export default function CharacterProfile() {
                 );
               })}
             </div>
+          </section>
+          <section className="paper-texture rounded-3xl border bg-card p-6">
+            <div className="flex items-center gap-2">
+              <ScrollText className="size-4 text-primary" />
+              <h2 className="text-lg font-semibold">
+                {t('challenge.storySetTitle')}
+              </h2>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              {t('challenge.storySetDescription')}
+            </p>
+            {storySetUnlocked ? (
+              unlocked ? (
+                <Button
+                  className="mt-4"
+                  variant="outline"
+                  onClick={() => challengeStory && setStory(challengeStory)}
+                  disabled={!challengeStory}
+                >
+                  <ScrollText className="size-4" />
+                  {t(challengeStory?.titleKey ?? 'challenge.storySetTitle')}
+                </Button>
+              ) : (
+                <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+                  <LockKeyhole className="size-4" />
+                  {t('challenge.characterUnlockRequired')}
+                </p>
+              )
+            ) : (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-muted-foreground">
+                  {formatMessage(locale, 'challenge.storyProgress', {
+                    completed: challengeState.completedIds.length,
+                    total: 3,
+                  })}
+                </p>
+                <Button asChild size="sm" variant="outline">
+                  <Link to="/">{t('challenge.viewGoals')}</Link>
+                </Button>
+              </div>
+            )}
           </section>
           <section className="paper-texture rounded-3xl border bg-card p-6">
             <h2 className="text-lg font-semibold">
