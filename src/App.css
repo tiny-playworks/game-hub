@@ -3042,6 +3042,19 @@ body {
     transition: none;
   }
 }
+
+@media (max-width: 639px) {
+  .family-room-hand .riichi-tile--hand,
+  .family-room-hand .riichi-tile-back {
+    --riichi-tile-width: min(26px, calc((100vw - 60px) / 14));
+    --riichi-tile-height: clamp(31px, 10vw, 42px);
+  }
+
+  .family-room-opponent-hand .riichi-tile-back {
+    --riichi-tile-width: min(28px, calc((100vw - 48px) / 14));
+    --riichi-tile-height: clamp(30px, 9vw, 40px);
+  }
+}
 /* =========================================
    Home UI Glassmorphism & Animations
    ========================================= */

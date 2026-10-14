@@ -615,6 +615,22 @@ export class RoomManager {
     );
   }
 
+  getSpectatorView(roomId: string): PlayerViewSnapshot | null {
+    const room = this.rooms.get(roomId);
+    if (!room || !room.match) return null;
+    return createPlayerView(
+      roomId,
+      room.summary.currentMatchId ?? '',
+      0,
+      room.summary.revision,
+      room.match,
+      room.summary,
+      room.serverDeadline,
+      undefined,
+      true,
+    );
+  }
+
   subscribe(roomId: string, listener: (msg: ServerMessage) => void): () => void {
     const room = this.rooms.get(roomId);
     if (!room) return () => {};

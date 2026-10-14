@@ -138,6 +138,7 @@ function migrate(db: DatabaseSync): void {
       final_score INTEGER NOT NULL,
       match_length TEXT NOT NULL,
       replay_json TEXT NOT NULL,
+      rounds_count INTEGER,
       is_favorite INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL,
       PRIMARY KEY(member_id, match_id)
@@ -154,6 +155,32 @@ function migrate(db: DatabaseSync): void {
     CREATE INDEX IF NOT EXISTS riichi_replays_member_fav
       ON riichi_replays(member_id, is_favorite, created_at DESC);
   `);
+  const replayColumns = db.prepare('PRAGMA table_info(riichi_replays)').all() as Array<{ name: string }>;
+  if (!replayColumns.some((column) => column.name === 'rounds_count')) {
+    transaction(db, () => {
+      db.exec('ALTER TABLE riichi_replays ADD COLUMN rounds_count INTEGER');
+      const rows = db.prepare('SELECT member_id, match_id, replay_json FROM riichi_replays').all() as Array<{
+        member_id: string;
+        match_id: string;
+        replay_json: string;
+      }>;
+      const update = db.prepare('UPDATE riichi_replays SET rounds_count = ? WHERE member_id = ? AND match_id = ?');
+      for (const row of rows) {
+        update.run(countReplayRounds(row.replay_json), row.member_id, row.match_id);
+      }
+    });
+  }
+}
+
+function countReplayRounds(json: string): number | null {
+  try {
+    const file = JSON.parse(json) as { events?: Array<{ type?: string }> };
+    return Array.isArray(file.events)
+      ? file.events.filter((event) => event.type === 'nextRound').length + 1
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 export function transaction<T>(db: DatabaseSync, run: () => T): T {
@@ -214,9 +241,12 @@ export interface ReplayRow {
   final_score: number;
   match_length: string;
   replay_json: string;
+  rounds_count: number | null;
   is_favorite: number;
   created_at: number;
 }
+
+export type ReplaySummaryRow = Omit<ReplayRow, 'replay_json'>;
 
 export function archiveReplay(
   db: DatabaseSync,
@@ -241,6 +271,7 @@ export function archiveReplay(
       .get(memberId, entry.matchId) as { match_id: string; is_favorite: number } | undefined;
 
     const createdAt = entry.createdAt ?? Date.now();
+    const roundsCount = countReplayRounds(entry.replayJson);
 
     if (!existing) {
       // 检查普通未收藏牌谱数量，保留最近 200 场（总纲 4.5）
@@ -266,8 +297,8 @@ export function archiveReplay(
       INSERT OR REPLACE INTO riichi_replays (
         member_id, match_id, source, room_id, viewer_seat,
         player_character_id, ranking, final_score, match_length,
-        replay_json, is_favorite, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT is_favorite FROM riichi_replays WHERE member_id = ? AND match_id = ?), 0), ?)
+        replay_json, rounds_count, is_favorite, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT is_favorite FROM riichi_replays WHERE member_id = ? AND match_id = ?), 0), ?)
     `).run(
       memberId,
       entry.matchId,
@@ -279,6 +310,7 @@ export function archiveReplay(
       entry.finalScore,
       entry.matchLength,
       entry.replayJson,
+      roundsCount,
       memberId,
       entry.matchId,
       createdAt,
@@ -308,7 +340,7 @@ export function listReplays(
     limit?: number;
     offset?: number;
   } = {},
-): { total: number; favoritesCount: number; items: ReplayRow[] } {
+): { total: number; favoritesCount: number; items: ReplaySummaryRow[] } {
   const conditions: string[] = ['member_id = ?'];
   const params: (string | number)[] = [memberId];
 
@@ -341,9 +373,11 @@ export function listReplays(
 
   const items = db
     .prepare(
-      `SELECT * FROM riichi_replays WHERE ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      `SELECT member_id, match_id, source, room_id, viewer_seat, player_character_id,
+        ranking, final_score, match_length, rounds_count, is_favorite, created_at
+        FROM riichi_replays WHERE ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
     )
-    .all(...params, limit, offset) as unknown as ReplayRow[];
+    .all(...params, limit, offset) as unknown as ReplaySummaryRow[];
 
   return {
     total: totalRow.count,

@@ -11,21 +11,11 @@ import {
   getReplay,
   listReplays,
   toggleFavoriteReplay,
-  type ReplayRow,
+  type ReplaySummaryRow,
 } from '../db';
 import type { RiichiReplayFile } from '@/pages/mahjong/japanese/engine';
 
-function toSummary(row: ReplayRow): ReplayArchiveSummary {
-  let roundsCount: number | undefined;
-  try {
-    const parsed = JSON.parse(row.replay_json) as RiichiReplayFile;
-    if (Array.isArray(parsed.events)) {
-      roundsCount = parsed.events.filter((e) => e.type === 'nextRound').length + 1;
-    }
-  } catch {
-    // ignore json parse error for summary
-  }
-
+function toSummary(row: ReplaySummaryRow): ReplayArchiveSummary {
   return {
     matchId: row.match_id,
     source: row.source,
@@ -37,7 +27,7 @@ function toSummary(row: ReplayRow): ReplayArchiveSummary {
     matchLength: row.match_length as 'east' | 'south',
     isFavorite: Boolean(row.is_favorite),
     createdAt: row.created_at,
-    roundsCount,
+    roundsCount: row.rounds_count ?? undefined,
   };
 }
 

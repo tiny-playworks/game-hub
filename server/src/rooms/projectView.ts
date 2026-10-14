@@ -15,11 +15,12 @@ export function createPlayerView(
   room: RoomSummary,
   serverDeadline: number | null = null,
   viewerDeviceId?: string,
+  spectator = false,
 ): PlayerViewSnapshot {
   const round = match.round;
 
   const seats = [0, 1, 2, 3].map((seatIndex): PlayerSeatPrivateState => {
-    const isSelf = seatIndex === viewerSeat;
+    const isSelf = !spectator && seatIndex === viewerSeat;
     const roomSeat = room.seats[seatIndex];
 
     const identity: PlayerSeatPrivateState['identity'] =
@@ -47,7 +48,7 @@ export function createPlayerView(
     const isHuman = roomSeat.type === 'human';
     const connected = isHuman ? roomSeat.connected : true;
     const isAutoplay = isHuman ? roomSeat.isAutoplay : false;
-    const hasControlLease = isHuman
+    const hasControlLease = isSelf && isHuman
       ? !viewerDeviceId || roomSeat.leaseDeviceId === viewerDeviceId
       : false;
 
@@ -81,6 +82,7 @@ export function createPlayerView(
     roomId,
     matchId,
     viewerSeat,
+    isSpectator: spectator,
     revision,
     status: match.status,
     isPaused: room.isPaused ?? false,

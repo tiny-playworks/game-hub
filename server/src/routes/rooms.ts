@@ -174,9 +174,9 @@ export function registerRoomRoutes(
     if (!room) throw apiError(404, 'ROOM_NOT_FOUND');
 
     const seatIndex = room.seats.findIndex((s) => s.type === 'human' && s.memberId === member.id);
-    const viewerSeat = seatIndex !== -1 ? seatIndex : 0;
-
-    const view = roomManager.getPlayerView(roomId, viewerSeat, session.device_id);
+    const view = seatIndex === -1
+      ? roomManager.getSpectatorView(roomId)
+      : roomManager.getPlayerView(roomId, seatIndex, session.device_id);
     if (!view) throw apiError(404, 'VIEW_NOT_AVAILABLE');
     return view;
   });

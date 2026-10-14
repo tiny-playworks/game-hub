@@ -1,11 +1,12 @@
 import { createHash } from 'node:crypto';
 import Fastify from '../server/node_modules/fastify/fastify.js';
-import { afterEach, describe, expect, it } from 'rstack/test';
+import { afterEach, beforeAll, describe, expect, it } from 'rstack/test';
 import { ApiError } from '../server/src/auth';
 import { openDatabase, readSnapshot, type MemberRow } from '../server/src/db';
 import { RoomManager, type RoomInstance } from '../server/src/rooms/RoomManager';
 import { registerRoomRoutes } from '../server/src/routes/rooms';
 import { createEmptySnapshot } from '../server/src/snapshot';
+import { preloadRiichiRules } from '../src/lib/riichiRules';
 import type { RoomCommand } from '../shared/contracts/room';
 
 interface TestRoomManagerHooks {
@@ -14,6 +15,10 @@ interface TestRoomManagerHooks {
 
 afterEach(() => {
   delete process.env.GAME_HUB_DB_PATH;
+});
+
+beforeAll(async () => {
+  await preloadRiichiRules();
 });
 
 function createTestContext() {
@@ -85,6 +90,44 @@ function createTestContext() {
 }
 
 describe('P12 家庭真人牌桌服务端测试', () => {
+  it('未入座成员观战时只收到公开牌面', async () => {
+    const { app, cookieA, cookieB } = createTestContext();
+    const createRes = await app.inject({
+      method: 'POST',
+      url: '/api/v1/rooms',
+      headers: { cookie: cookieA },
+      payload: { nickname: 'Host' },
+    });
+    const roomId = createRes.json().id;
+    const startRes = await app.inject({
+      method: 'POST',
+      url: `/api/v1/rooms/${roomId}/start`,
+      headers: { cookie: cookieA },
+    });
+    expect(startRes.statusCode).toBe(200);
+
+    const participant = await app.inject({
+      method: 'GET',
+      url: `/api/v1/rooms/${roomId}/view`,
+      headers: { cookie: cookieA },
+    });
+    const spectator = await app.inject({
+      method: 'GET',
+      url: `/api/v1/rooms/${roomId}/view`,
+      headers: { cookie: cookieB },
+    });
+    expect(participant.json().seats[0].hand.length).toBeGreaterThanOrEqual(13);
+    expect(spectator.statusCode).toBe(200);
+    expect(spectator.json().isSpectator).toBe(true);
+    for (const seat of spectator.json().seats) {
+      expect(seat.hand).toEqual([]);
+      expect(seat.turnOptions).toBeNull();
+      expect(seat.claimOptions).toBeNull();
+      expect(seat.hasControlLease).toBe(false);
+      expect(seat.tileCount).toBeGreaterThanOrEqual(13);
+    }
+  });
+
   it('支持创建房间、查看房间列表与详情', async () => {
     const { app, cookieA, memberA } = createTestContext();
 

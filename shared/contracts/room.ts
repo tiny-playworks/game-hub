@@ -114,6 +114,7 @@ export interface PlayerViewSnapshot {
   roomId: string;
   matchId: string;
   viewerSeat: number; // 0..3 本人绝对座次
+  isSpectator?: boolean; // 观战时所有暗手牌与操作选项均隐藏
   revision: number;
   status: 'playing' | 'roundEnd' | 'matchEnd';
   isPaused?: boolean;

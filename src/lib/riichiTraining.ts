@@ -80,7 +80,7 @@ export function evaluateTrainingChoice(
 }
 
 export function computeWeaknessSummary(
-  recentReviews: MatchReview[],
+  recentReviews: Array<{ decisions: Array<{ reason: TrainingCategory }> }>,
 ): TrainingWeaknessSummary {
   const total = recentReviews.length;
   const counts: Record<TrainingCategory, number> = {
@@ -101,25 +101,25 @@ export function computeWeaknessSummary(
 
   const hasEnoughSamples = total >= 5;
 
-  // 趋势判断：若后半段失误数少于前半段则为改善
+  // 列表按时间倒序：最近半段与更早半段比较。
   let trend: 'improving' | 'stable' | 'needsAttention' = 'stable';
   if (total >= 6) {
     const half = Math.floor(total / 2);
-    const firstHalf = recentReviews.slice(0, half);
-    const secondHalf = recentReviews.slice(half);
+    const recentHalf = recentReviews.slice(0, half);
+    const olderHalf = recentReviews.slice(half);
 
-    const firstCount = firstHalf.reduce(
+    const recentCount = recentHalf.reduce(
       (acc, cur) => acc + cur.decisions.length,
       0,
     );
-    const secondCount = secondHalf.reduce(
+    const olderCount = olderHalf.reduce(
       (acc, cur) => acc + cur.decisions.length,
       0,
     );
 
-    if (secondCount < firstCount) {
+    if (recentCount < olderCount) {
       trend = 'improving';
-    } else if (secondCount > firstCount * 1.25) {
+    } else if (recentCount > olderCount * 1.25) {
       trend = 'needsAttention';
     }
   }

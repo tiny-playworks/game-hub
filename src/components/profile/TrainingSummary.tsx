@@ -5,46 +5,88 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useHousehold } from '@/contexts/HouseholdContext';
-import type { TrainingWeaknessSummary } from '../../../shared/contracts/replay';
+import { formatMessage } from '@/lib/i18n';
+import type { ReplayArchiveSummary, TrainingCategory, TrainingWeaknessSummary } from '../../../shared/contracts/replay';
 import { fetchReplayDetail, fetchReplayList } from '@/lib/riichiReplayArchive';
-import { buildMatchReview, type MatchReview } from '@/lib/riichiMatchReview';
+import { buildMatchReview } from '@/lib/riichiMatchReview';
 import { computeWeaknessSummary } from '@/lib/riichiTraining';
+
+const CACHE_PREFIX = 'game-hub-weakness-v1';
+const CATEGORIES = new Set<TrainingCategory>(['shanten', 'ukeire', 'dealIn', 'riichi', 'dama']);
+
+function cacheKey(owner: string, item: ReplayArchiveSummary): string {
+  return `${CACHE_PREFIX}:${owner}:${item.matchId}:${item.createdAt}:${item.viewerSeat}`;
+}
+
+function readCachedReasons(key: string): TrainingCategory[] | null {
+  try {
+    const value = JSON.parse(sessionStorage.getItem(key) ?? 'null');
+    return Array.isArray(value) && value.every((reason) => CATEGORIES.has(reason))
+      ? value as TrainingCategory[]
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveCachedReasons(key: string, reasons: TrainingCategory[]): void {
+  try {
+    sessionStorage.setItem(key, JSON.stringify(reasons));
+  } catch {
+    // Private browsing or quota limits should not block the analysis.
+  }
+}
 
 export function TrainingSummary({
   onNavigateToReplays,
 }: {
   onNavigateToReplays?: () => void;
 }) {
-  const { t } = useLocale();
-  const { mode } = useHousehold();
+  const { t, locale } = useLocale();
+  const { mode, currentMember } = useHousehold();
   const isMember = mode === 'member-online';
+  const owner = isMember ? currentMember?.id ?? 'loading' : 'guest';
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<TrainingWeaknessSummary | null>(null);
+  const [progress, setProgress] = useState({ done: 0, total: 0 });
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
 
     async function loadData() {
       try {
         setLoading(true);
+        setSummary(null);
+        setProgress({ done: 0, total: 0 });
         const list = await fetchReplayList({ limit: 20 }, isMember);
         if (cancelled) return;
 
-        // 加载最多最近 20 份牌谱做薄弱点分析
-        const reviews: MatchReview[] = [];
-        for (const item of list.items.slice(0, 20)) {
+        const items = list.items.slice(0, 20);
+        setProgress({ done: 0, total: items.length });
+        const reviews: Array<{ decisions: Array<{ reason: TrainingCategory }> }> = [];
+        for (const item of items) {
           if (cancelled) break;
-          const detail = await fetchReplayDetail(item.matchId, isMember);
-          if (detail) {
-            try {
-              const r = await buildMatchReview(detail.file, {
-                viewerSeat: detail.summary.viewerSeat,
-              });
-              reviews.push(r);
-            } catch {
-              // skip incomplete replay
+          const key = cacheKey(owner, item);
+          let reasons = readCachedReasons(key);
+          if (!reasons) {
+            const detail = await fetchReplayDetail(item.matchId, isMember);
+            if (detail) {
+              try {
+                const review = await buildMatchReview(detail.file, {
+                  viewerSeat: detail.summary.viewerSeat,
+                  signal: controller.signal,
+                });
+                reasons = review.decisions.map((decision) => decision.reason);
+                saveCachedReasons(key, reasons);
+              } catch {
+                if (controller.signal.aborted) return;
+                // An incomplete replay should not hide valid older matches.
+              }
             }
           }
+          if (reasons) reviews.push({ decisions: reasons.map((reason) => ({ reason })) });
+          if (!cancelled) setProgress({ done: reviews.length, total: items.length });
         }
 
         if (!cancelled) {
@@ -60,15 +102,18 @@ export function TrainingSummary({
     void loadData();
     return () => {
       cancelled = true;
+      controller.abort();
     };
-  }, [isMember]);
+  }, [isMember, owner]);
 
   if (loading) {
     return (
       <Card className="riichi-training-summary-card">
         <CardContent className="pt-6 text-sm text-muted-foreground flex items-center justify-center py-8">
           <BookOpen className="mr-2 h-4 w-4 animate-spin" />
-          {t('riichi.review.computing')}
+          {progress.total > 0
+            ? formatMessage(locale, 'riichi.training.weakness.progress', progress)
+            : t('riichi.review.computing')}
         </CardContent>
       </Card>
     );
@@ -111,6 +156,13 @@ export function TrainingSummary({
         )}
       </CardHeader>
       <CardContent className="space-y-3">
+        {summary.totalMatchesAnalyzed === 0 ? (
+          <div className="rounded-xl border border-dashed bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
+            <BookOpen className="mx-auto mb-2 h-6 w-6 opacity-50" />
+            {t('riichi.training.weakness.noMatches')}
+          </div>
+        ) : (
+          <>
         {!summary.hasEnoughSamples && (
           <div className="rounded-md bg-amber-500/10 p-2.5 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-2">
             <AlertCircle className="h-4 w-4 shrink-0" />
@@ -140,6 +192,8 @@ export function TrainingSummary({
               {summary.trend === 'improving' ? '提升中' : summary.trend === 'stable' ? '平稳' : '需重点复盘'}
             </span>
           </div>
+        )}
+          </>
         )}
       </CardContent>
     </Card>

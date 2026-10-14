@@ -14,13 +14,20 @@ import { Button } from '@/components/ui/button';
 import { useOptionalHousehold } from '@/contexts/HouseholdContext';
 import { ConnectionNotice } from '@/components/household/ConnectionNotice';
 import { useRoomClient } from '@/lib/household/roomClient';
+import { getCharacterById } from '@/lib/playerCharacters';
 import { MeldTiles } from '@/pages/mahjong/japanese/components/MeldTiles';
 import { RiichiTile, TileBack } from '@/pages/mahjong/japanese/components/Tile';
 import {
   usePlayerSeatView,
   WIND_NAMES,
 } from '@/pages/mahjong/japanese/usePlayerSeatView';
-import type { RoomSeat } from '../../shared/contracts/room';
+import type { PlayerSeatPrivateState, RoomSeat } from '../../shared/contracts/room';
+
+function seatName(identity: PlayerSeatPrivateState['identity']): string {
+  return identity.type === 'ai' && identity.characterId
+    ? getCharacterById(identity.characterId).name
+    : identity.name;
+}
 
 const AI_CANDIDATES = [
   { id: 'aoi', name: '葵' },
@@ -66,6 +73,7 @@ export default function FamilyRoom() {
   } = useRoomClient(roomId, currentMember?.id);
 
   const { selfSeat, rightSeat, topSeat, leftSeat } = usePlayerSeatView(view);
+  const isSpectator = view?.isSpectator === true;
 
   // 倒计时剩余秒数状态
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
@@ -250,7 +258,7 @@ export default function FamilyRoom() {
                       </div>
                       <div>
                         <span className="font-semibold text-sm block">
-                          AI·{seat.characterId}
+                          AI·{getCharacterById(seat.characterId).name}
                         </span>
                         <span className="text-xs text-muted-foreground capitalize">
                           难度: {seat.aiLevel}
@@ -332,17 +340,17 @@ export default function FamilyRoom() {
 
   // 2. 对局中 / 终局结算界面
   const round = view?.round;
-  const isMyTurn = selfSeat?.isCurrentTurn ?? false;
+  const isMyTurn = !isSpectator && (selfSeat?.isCurrentTurn ?? false);
   const turnOptions = selfSeat?.seat.turnOptions;
   const claimOptions = selfSeat?.seat.claimOptions;
   const canDiscard =
     isMyTurn && turnOptions !== null && round?.phase === 'discard';
 
   return (
-    <div className="min-h-screen bg-[#0d1811] text-[#e8f2ea] flex flex-col justify-between p-2 md:p-6 select-none overflow-x-hidden">
+    <div className="min-h-[calc(100dvh-6.25rem)] md:min-h-[calc(100dvh-4rem)] bg-[#0d1811] text-[#e8f2ea] flex flex-col justify-between p-2 md:p-6 select-none overflow-x-hidden">
       {/* 顶部状态与倒计时 */}
-      <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-black/40 backdrop-blur border border-white/10 text-xs">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-2 py-2 md:px-3 rounded-xl bg-black/40 backdrop-blur border border-white/10 text-xs">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 md:gap-3">
           <Button
             variant="ghost"
             size="sm"
@@ -356,8 +364,13 @@ export default function FamilyRoom() {
             {round ? (round.roundWind === 0 ? '东' : '南') : '东'}{' '}
             {round?.roundNumber ?? 1} 局
           </span>
-          <span className="text-white/60">{round?.honba ?? 0} 本场</span>
-          <span className="text-amber-300">
+          {isSpectator && (
+            <span className="rounded-full border border-white/20 px-2 py-0.5 text-white/75">
+              观战 · 暗牌已隐藏
+            </span>
+          )}
+          <span className="hidden sm:inline text-white/60">{round?.honba ?? 0} 本场</span>
+          <span className="hidden sm:inline text-amber-300">
             供托: {(round?.riichiPot ?? 0) * 1000}点
           </span>
           <span className="text-white/60">
@@ -365,7 +378,7 @@ export default function FamilyRoom() {
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
           {/* 宝牌指示牌 */}
           <div className="flex items-center gap-1">
             <span className="text-white/60 mr-1">宝牌:</span>
@@ -405,7 +418,7 @@ export default function FamilyRoom() {
       </div>
 
       {/* 牌桌核心对战场区 */}
-      <div className="relative flex-1 my-4 flex flex-col justify-between max-w-4xl w-full mx-auto">
+      <div className="relative flex-1 my-2 md:my-4 flex flex-col justify-between max-w-4xl w-full mx-auto">
         {/* 对家 (上方) */}
         {topSeat && (
           <div className="flex flex-col items-center gap-1">
@@ -413,7 +426,7 @@ export default function FamilyRoom() {
               <span className="text-amber-400 font-bold">
                 {topSeat.windName}
               </span>
-              <span className="font-medium">{topSeat.seat.identity.name}</span>
+              <span className="font-medium">{seatName(topSeat.seat.identity)}</span>
               <span className="text-white/60 font-mono">
                 {topSeat.seat.score}点
               </span>
@@ -425,7 +438,7 @@ export default function FamilyRoom() {
             </div>
 
             {/* 对家手牌 (暗牌背，隐私隔离) */}
-            <div className="flex items-center gap-0.5 justify-center">
+            <div className="family-room-opponent-hand flex items-center gap-0.5 justify-center">
               {Array.from({ length: topSeat.seat.tileCount }).map((_, i) => (
                 <TileBack
                   key={i}
@@ -463,7 +476,7 @@ export default function FamilyRoom() {
                   {leftSeat.windName}
                 </span>
                 <span className="font-medium truncate max-w-17.5">
-                  {leftSeat.seat.identity.name}
+                  {seatName(leftSeat.seat.identity)}
                 </span>
                 <span className="text-white/60 font-mono">
                   {leftSeat.seat.score}
@@ -483,7 +496,7 @@ export default function FamilyRoom() {
           <div className="text-center p-3 rounded-2xl bg-black/40 border border-white/10 backdrop-blur space-y-1">
             <span className="text-xs text-white/50 block">当前行牌</span>
             <span className="text-sm font-bold text-emerald-400">
-              {view?.round.currentPlayer === selfSeat?.absSeat
+              {isMyTurn
                 ? '轮到你行动'
                 : `等待席位 ${view?.round.currentPlayer !== undefined ? view.round.currentPlayer + 1 : ''}`}
             </span>
@@ -497,7 +510,7 @@ export default function FamilyRoom() {
                   {rightSeat.windName}
                 </span>
                 <span className="font-medium truncate max-w-17.5">
-                  {rightSeat.seat.identity.name}
+                  {seatName(rightSeat.seat.identity)}
                 </span>
                 <span className="text-white/60 font-mono">
                   {rightSeat.seat.score}
@@ -535,13 +548,13 @@ export default function FamilyRoom() {
             </div>
 
             {/* 本人信息栏与动作按纽栏 */}
-            <div className="flex items-center justify-between w-full max-w-2xl px-3 py-1.5 rounded-xl bg-black/60 border border-white/10">
+            <div className="flex flex-wrap items-center justify-between gap-2 w-full max-w-2xl px-3 py-1.5 rounded-xl bg-black/60 border border-white/10">
               <div className="flex items-center gap-2 text-xs">
                 <span className="text-amber-400 font-bold text-sm">
-                  {selfSeat.windName} (自家)
+                  {selfSeat.windName} {isSpectator ? '(观战视角)' : '(自家)'}
                 </span>
                 <span className="font-semibold">
-                  {selfSeat.seat.identity.name}
+                  {seatName(selfSeat.seat.identity)}
                 </span>
                 <span className="font-mono text-emerald-400 text-sm">
                   {selfSeat.seat.score} 点
@@ -628,9 +641,11 @@ export default function FamilyRoom() {
               </div>
             </div>
 
-            {/* 本人暗手牌 (只有本人可见完整牌面) */}
-            <div className="flex items-center gap-1 justify-center py-2 px-3 rounded-2xl bg-black/40 border border-white/10 shadow-lg">
-              {selfSeat.seat.hand.map((tile, i) => {
+            {/* 观战时仅显示牌背，不发送任何暗手牌 */}
+            <div className="family-room-hand flex items-center gap-0.5 md:gap-1 justify-center py-2 px-2 md:px-3 rounded-2xl bg-black/40 border border-white/10 shadow-lg">
+              {isSpectator ? Array.from({ length: selfSeat.seat.tileCount }).map((_, i) => (
+                <TileBack key={i} className="scale-75 origin-center" />
+              )) : selfSeat.seat.hand.map((tile, i) => {
                 const isDiscardable = Boolean(
                   canDiscard && turnOptions?.discardable.includes(tile),
                 );
@@ -674,7 +689,7 @@ export default function FamilyRoom() {
                       <span className="text-sm text-white/70">和牌席位:</span>
                       <span className="text-lg font-bold text-amber-400 ml-2">
                         {WIND_NAMES[win.winner]} 席 (
-                        {view.seats[win.winner]?.identity.name})
+                        {view.seats[win.winner] ? seatName(view.seats[win.winner].identity) : ''})
                       </span>
                     </div>
                     <div className="p-3 rounded-xl bg-black/40 border border-white/10 space-y-1">
@@ -726,6 +741,8 @@ export default function FamilyRoom() {
                 >
                   返回大厅
                 </Button>
+              ) : isSpectator ? (
+                <p className="w-full text-center text-sm text-white/70">等待牌桌成员进入下一局…</p>
               ) : (
                 <Button
                   onClick={nextRound}

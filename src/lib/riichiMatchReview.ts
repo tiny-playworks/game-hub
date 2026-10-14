@@ -115,11 +115,7 @@ function decisionAt(
 
 /** One short task per slice; cancellation also prevents stale progress after closing. */
 function nextSlice() {
-  return new Promise<void>((resolve) => {
-    if (typeof window !== 'undefined' && window.requestIdleCallback) {
-      window.requestIdleCallback(() => resolve(), { timeout: 40 });
-    } else setTimeout(resolve, 0);
-  });
+  return new Promise<void>((resolve) => setTimeout(resolve, 0));
 }
 
 export async function buildMatchReview(
@@ -268,7 +264,7 @@ export async function buildMatchReview(
       declarationChoices = [];
     }
     match = next;
-    if (performance.now() - sliceStart >= 8 || index % 8 === 7) {
+    if (performance.now() - sliceStart >= 8 || index % 64 === 63) {
       options.onProgress?.((index + 1) / Math.max(1, file.events.length));
       await nextSlice();
       sliceStart = performance.now();

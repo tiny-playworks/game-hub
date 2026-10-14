@@ -82,8 +82,9 @@ export function setupRoomWebSocket(
             const seatIndex = room.seats.findIndex(
               (s) => s.type === 'human' && s.memberId === member.id,
             );
-            const viewerSeat = seatIndex !== -1 ? seatIndex : 0;
-            const view = roomManager.getPlayerView(targetRoomId, viewerSeat, session.device_id);
+            const view = seatIndex === -1
+              ? roomManager.getSpectatorView(targetRoomId)
+              : roomManager.getPlayerView(targetRoomId, seatIndex, session.device_id);
             if (view) sendJson({ type: 'match_update', view });
           }
 
@@ -95,8 +96,14 @@ export function setupRoomWebSocket(
               const seatIndex = roomManager
                 .getRoom(targetRoomId)
                 ?.seats.findIndex((s) => s.type === 'human' && s.memberId === member.id);
-              const viewerSeat = seatIndex !== -1 && seatIndex !== undefined ? seatIndex : 0;
+              const isSpectator = seatIndex === -1 || seatIndex === undefined;
+              const viewerSeat = isSpectator ? 0 : seatIndex;
               if (msg.view.viewerSeat === viewerSeat) {
+                if (isSpectator) {
+                  const view = roomManager.getSpectatorView(targetRoomId);
+                  if (view) sendJson({ type: 'match_update', view });
+                  return;
+                }
                 // 如果当前设备不是 Lease 拥有者，turnOptions 和 claimOptions 置空
                 const targetSeat = roomManager.getRoom(targetRoomId)?.seats[viewerSeat];
                 const isLeaseOwner =

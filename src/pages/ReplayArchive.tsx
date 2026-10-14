@@ -40,6 +40,7 @@ export default function ReplayArchive() {
   const [replays, setReplays] = useState<ReplayArchiveSummary[]>([]);
   const [total, setTotal] = useState(0);
   const [favoritesCount, setFavoritesCount] = useState(0);
+  const [loadError, setLoadError] = useState(false);
 
   // 筛选状态
   const [sourceFilter, setSourceFilter] = useState<'all' | ReplaySource>('all');
@@ -50,7 +51,7 @@ export default function ReplayArchive() {
   const [reviewTarget, setReviewTarget] = useState<{ file: RiichiReplayFile; viewerSeat: number } | null>(null);
   const [replayTarget, setReplayTarget] = useState<{ file: RiichiReplayFile; review: MatchReview } | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [favoriteError, setFavoriteError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -67,8 +68,9 @@ export default function ReplayArchive() {
       setReplays(res.items);
       setTotal(res.total);
       setFavoritesCount(res.favoritesCount);
+      setLoadError(false);
     } catch {
-      // ignore load error
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -79,35 +81,54 @@ export default function ReplayArchive() {
   }, [loadData]);
 
   const handleToggleFavorite = async (matchId: string, current: boolean) => {
-    setFavoriteError(null);
-    const res = await setReplayFavorite(matchId, !current, isMember);
-    if (!res.success) {
-      if (res.error === 'FAVORITE_LIMIT_REACHED') {
-        setFavoriteError(t('riichi.archive.favoriteLimit'));
+    setActionError(null);
+    try {
+      const res = await setReplayFavorite(matchId, !current, isMember);
+      if (!res.success) {
+        setActionError(res.error === 'FAVORITE_LIMIT_REACHED'
+          ? t('riichi.archive.favoriteLimit')
+          : t('riichi.archive.actionError'));
+        return;
       }
-      return;
+      void loadData();
+    } catch {
+      setActionError(t('riichi.archive.actionError'));
     }
-    void loadData();
   };
 
   const handleDelete = async (matchId: string) => {
-    await removeReplay(matchId, isMember);
-    setDeleteConfirmId(null);
-    void loadData();
+    try {
+      const removed = await removeReplay(matchId, isMember);
+      if (!removed) throw new Error('REMOVE_FAILED');
+      setDeleteConfirmId(null);
+      setActionError(null);
+      void loadData();
+    } catch {
+      setActionError(t('riichi.archive.actionError'));
+      setDeleteConfirmId(null);
+    }
   };
 
   const handleOpenReview = async (matchId: string, viewerSeat: number) => {
-    const detail = await fetchReplayDetail(matchId, isMember);
-    if (detail) {
+    try {
+      const detail = await fetchReplayDetail(matchId, isMember);
+      if (!detail) throw new Error('REPLAY_NOT_FOUND');
       setReviewTarget({ file: detail.file, viewerSeat });
+      setActionError(null);
+    } catch {
+      setActionError(t('riichi.archive.detailError'));
     }
   };
 
   const handleOpenReplay = async (matchId: string, viewerSeat: number) => {
-    const detail = await fetchReplayDetail(matchId, isMember);
-    if (detail) {
+    try {
+      const detail = await fetchReplayDetail(matchId, isMember);
+      if (!detail) throw new Error('REPLAY_NOT_FOUND');
       const review = await buildMatchReview(detail.file, { viewerSeat });
       setReplayTarget({ file: detail.file, review });
+      setActionError(null);
+    } catch {
+      setActionError(t('riichi.archive.detailError'));
     }
   };
 
@@ -158,9 +179,9 @@ export default function ReplayArchive() {
         </div>
       </div>
 
-      {favoriteError && (
-        <div className="rounded-lg bg-rose-500/10 border border-rose-500/20 p-3 text-xs text-rose-600 dark:text-rose-400">
-          {favoriteError}
+      {actionError && (
+        <div role="alert" className="rounded-lg bg-rose-500/10 border border-rose-500/20 p-3 text-xs text-rose-600 dark:text-rose-400">
+          {actionError}
         </div>
       )}
 
@@ -223,6 +244,14 @@ export default function ReplayArchive() {
           <RotateCcw className="mr-2 h-4 w-4 animate-spin" />
           {t('riichi.review.computing')}
         </div>
+      ) : loadError ? (
+        <Card className="text-center py-12">
+          <CardContent className="space-y-4">
+            <BookOpen className="mx-auto h-10 w-10 text-muted-foreground opacity-40" />
+            <p role="alert" className="text-sm text-muted-foreground">{t('riichi.archive.loadError')}</p>
+            <Button variant="outline" size="sm" onClick={() => void loadData()}>{t('riichi.archive.retry')}</Button>
+          </CardContent>
+        </Card>
       ) : replays.length === 0 ? (
         <Card className="text-center py-16">
           <CardContent className="space-y-3">
@@ -257,7 +286,7 @@ export default function ReplayArchive() {
                           {t(`riichi.archive.ranking.${item.ranking}`)}
                         </span>
                         <span className="text-sm font-semibold">
-                          {formatPoints(item.finalScore)} 点
+                          {formatPoints(item.finalScore, locale)}
                         </span>
                         <span className="inline-flex items-center rounded-full border bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
                           {t(`riichi.archive.source.${item.source}`)}

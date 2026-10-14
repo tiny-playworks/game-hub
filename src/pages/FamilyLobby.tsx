@@ -11,44 +11,62 @@ import {
 import { Button } from '@/components/ui/button';
 import { useOptionalHousehold } from '@/contexts/HouseholdContext';
 import { createRoom, listRooms } from '@/lib/household/api';
+import { getCharacterById } from '@/lib/playerCharacters';
 import type { RoomSeat, RoomSettings, RoomSummary } from '../../shared/contracts/room';
 
 export default function FamilyLobby() {
   const navigate = useNavigate();
   const household = useOptionalHousehold();
   const member = household?.currentMember;
+  const isMember = household?.mode === 'member-online';
 
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [listError, setListError] = useState<string | null>(null);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   // 创建房间表单状态
   const [matchLength, setMatchLength] = useState<'east' | 'south'>('east');
   const [defaultAiLevel, setDefaultAiLevel] = useState<RoomSettings['defaultAiLevel']>('standard');
   const [turnLimit, setTurnLimit] = useState(15);
+  const aiLevelLabel: Record<RoomSettings['defaultAiLevel'], string> = {
+    beginner: '新手',
+    standard: '标准',
+    expert: '进阶',
+    strong: '强力',
+  };
 
   const fetchRooms = useCallback(async () => {
+    if (!isMember) {
+      setRooms([]);
+      setListError(null);
+      return;
+    }
     setLoading(true);
     try {
       const data = await listRooms();
       setRooms(data);
+      setListError(null);
     } catch {
-      // ignore
+      setListError('暂时无法获取牌桌，请检查 NAS 连接后重试。');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isMember]);
 
   useEffect(() => {
-    fetchRooms();
+    void fetchRooms();
+    if (!isMember) return;
     const interval = setInterval(fetchRooms, 3000);
     return () => clearInterval(interval);
-  }, [fetchRooms]);
+  }, [fetchRooms, isMember]);
 
   const handleCreateRoom = async () => {
     if (!member) return;
     setCreating(true);
+    setCreateError(null);
     try {
       const created = await createRoom(
         {
@@ -62,7 +80,7 @@ export default function FamilyLobby() {
       setShowCreateModal(false);
       navigate(`/family/${created.id}`);
     } catch {
-      // ignore
+      setCreateError('创建失败，请检查网络连接并重试。');
     } finally {
       setCreating(false);
     }
@@ -75,21 +93,23 @@ export default function FamilyLobby() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight">家庭真人牌桌</h1>
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-              <ShieldCheck className="h-3.5 w-3.5" /> 局域网纯净同步
-            </span>
+            {household?.isServerAvailable && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                <ShieldCheck className="h-3.5 w-3.5" /> 家庭服务已连接
+              </span>
+            )}
           </div>
           <p className="text-sm text-muted-foreground mt-1">
             支持 2~4 名家庭成员同桌竞技，空位自动由家庭 AI 补齐。暗手牌隐私隔离，两真人完赛发放家庭雀币。
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={fetchRooms}
-            disabled={loading}
+            disabled={loading || !isMember}
             className="flex items-center gap-1.5"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -97,7 +117,7 @@ export default function FamilyLobby() {
           </Button>
 
           <Button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => { setCreateError(null); setShowCreateModal(true); }}
             disabled={!member}
             className="flex items-center gap-1.5 bg-primary text-primary-foreground font-semibold shadow"
           >
@@ -126,12 +146,21 @@ export default function FamilyLobby() {
           活跃房间列表 ({rooms.length})
         </h2>
 
-        {rooms.length === 0 ? (
+        {listError && isMember && (
+          <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm">
+            <p>{listError}</p>
+            <Button variant="outline" size="sm" onClick={() => void fetchRooms()}>
+              重新连接
+            </Button>
+          </div>
+        )}
+
+        {!listError && rooms.length === 0 ? (
           <div className="text-center py-16 border border-dashed border-border rounded-2xl bg-card/50">
             <Users className="h-10 w-10 mx-auto text-muted-foreground mb-3 opacity-40" />
-            <p className="text-base font-medium text-foreground">当前暂无活跃牌桌</p>
+            <p className="text-base font-medium text-foreground">{isMember ? '当前暂无活跃牌桌' : '登录家庭成员后查看牌桌'}</p>
             <p className="text-sm text-muted-foreground mt-1">
-              点击上方“创建对局桌”即可成为房主，邀请家庭设备加入！
+              {isMember ? '点击上方“创建对局桌”即可成为房主，邀请家庭设备加入！' : '请先在页面顶部选择家庭成员。'}
             </p>
             {member && (
               <Button
@@ -143,7 +172,7 @@ export default function FamilyLobby() {
               </Button>
             )}
           </div>
-        ) : (
+        ) : rooms.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {rooms.map((room) => {
               const isPlaying = room.status === 'playing';
@@ -191,7 +220,7 @@ export default function FamilyLobby() {
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="font-medium text-foreground">AI 补位:</span>
-                        <span>{room.settings.defaultAiLevel}</span>
+                        <span>{aiLevelLabel[room.settings.defaultAiLevel]}</span>
                       </div>
                     </div>
 
@@ -211,7 +240,7 @@ export default function FamilyLobby() {
                           {seat.type === 'human'
                             ? seat.nickname
                             : seat.type === 'ai'
-                              ? `AI·${seat.characterId}`
+                              ? `AI·${getCharacterById(seat.characterId).name}`
                               : '空席'}
                         </div>
                       ))}
@@ -230,7 +259,7 @@ export default function FamilyLobby() {
               );
             })}
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* 创建房间弹窗 */}
@@ -320,6 +349,12 @@ export default function FamilyLobby() {
                 </div>
               </div>
             </div>
+
+            {createError && (
+              <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                {createError}
+              </p>
+            )}
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
               <Button

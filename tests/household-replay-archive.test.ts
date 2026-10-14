@@ -361,6 +361,12 @@ describe('P15 Replay Archive and Training Closed Loop', () => {
     const summaryLong = computeWeaknessSummary(mockReviewsLong);
     expect(summaryLong.totalMatchesAnalyzed).toBe(6);
     expect(summaryLong.hasEnoughSamples).toBe(true);
+
+    const fewerRecentMistakes = [0, 0, 0, 2, 2, 2].map((count) => ({
+      decisions: Array.from({ length: count }, () => ({ reason: 'shanten' as const })),
+    }));
+    expect(computeWeaknessSummary(fewerRecentMistakes).trend).toBe('improving');
+    expect(computeWeaknessSummary([...fewerRecentMistakes].reverse()).trend).toBe('needsAttention');
   });
 
   it('creates guest archive entry and preserves last replay', () => {
