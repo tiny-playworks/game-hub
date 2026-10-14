@@ -7,6 +7,12 @@ import type {
   ProgressAction,
   ProgressActionResult,
 } from '../../../shared/contracts/member';
+import type { RiichiEvent } from '@/pages/mahjong/japanese/engine';
+import type {
+  MemberRiichiCurrent,
+  MemberRiichiSession,
+  MemberRiichiStart,
+} from './riichiBridge';
 
 export class HouseholdApiError extends Error {
   readonly status: number;
@@ -183,4 +189,34 @@ export async function submitMemberArcadeEvent(
     '/api/v1/me/arcade/events',
     { method: 'POST', body: JSON.stringify({ baseRevision, event }) },
   );
+}
+
+export async function startMemberRiichiMatch(
+  input: MemberRiichiStart,
+): Promise<MemberRiichiSession> {
+  return request<MemberRiichiSession>('/api/v1/me/riichi/matches', {
+    method: 'POST', body: JSON.stringify(input),
+  });
+}
+
+export async function submitMemberRiichiEvent(input: {
+  matchId: string;
+  expectedTurn: number;
+  event: RiichiEvent;
+}): Promise<MemberRiichiSession> {
+  return request<MemberRiichiSession>('/api/v1/me/riichi/events', {
+    method: 'POST', body: JSON.stringify(input),
+  });
+}
+
+export async function fetchCurrentRiichiMatch(): Promise<MemberRiichiCurrent> {
+  return request<MemberRiichiCurrent>('/api/v1/me/riichi/current');
+}
+
+export async function forfeitMemberRiichiMatch(
+  matchId: string,
+): Promise<MemberRiichiSession> {
+  return request<MemberRiichiSession>('/api/v1/me/riichi/forfeit', {
+    method: 'POST', body: JSON.stringify({ matchId }),
+  });
 }

@@ -5,6 +5,7 @@ import { CharacterPortraitSlot } from '@/components/characters/CharacterPortrait
 import { AvatarFrame } from '@/components/cosmetics/AvatarFrame';
 import { RankedResult } from '@/components/ranked/RankedResult';
 import { confirmRankedExit } from '@/components/ranked/RankedStartButton';
+import { useOptionalHousehold } from '@/contexts/HouseholdContext';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLocale } from '@/contexts/LocaleContext';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
@@ -785,6 +786,8 @@ function GameLogPanel({ gameLog }: { gameLog: string[] }) {
 
 const GameMahjongJapanese = () => {
   const { t, locale } = useLocale();
+  const household = useOptionalHousehold();
+  const memberOnline = household?.mode === 'member-online';
   const navigate = useNavigate();
   const rankedState = useRankedState();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -795,6 +798,7 @@ const GameMahjongJapanese = () => {
   const didHandleEntryRef = useRef(false);
   const { theme, setTheme } = useRiichiTheme();
   const match = useRiichiStore((s) => s.match);
+  const onlinePending = useRiichiStore((s) => s.onlinePending);
   const isRanked = Boolean(match?.ranked);
   const view = useRiichiStore((s) => s.view);
   const setView = useRiichiStore((s) => s.setView);
@@ -845,9 +849,9 @@ const GameMahjongJapanese = () => {
     claimKey !== null && callConfirmation?.key === claimKey
       ? callConfirmation.response
       : null;
-  const act = (event: RiichiEvent) => {
+  const act = async (event: RiichiEvent) => {
     if (useRiichiStore.getState().cutIns.length > 0) return;
-    if (dispatch(withElapsed(event))) {
+    if (await dispatch(withElapsed(event))) {
       setRiichiSelection(null);
       setCallConfirmation(null);
     }
@@ -928,7 +932,8 @@ const GameMahjongJapanese = () => {
       match?.status === 'playing' &&
       !showGuide &&
       !replay &&
-      !presenting,
+      !presenting &&
+      !onlinePending,
     onDiscard: (tile) => discard(0, tile),
     onCancelRiichi: () => setRiichiSelection(null),
     onPassClaim: actionHandlers.passClaim,
@@ -968,7 +973,7 @@ const GameMahjongJapanese = () => {
   });
 
   const startDesktopGame = async () => {
-    if (!confirmRankedExit(t)) return;
+    if (!await confirmRankedExit(t)) return;
     if (isRanked) {
       navigate('/');
       return;
@@ -980,7 +985,7 @@ const GameMahjongJapanese = () => {
     try {
       await preloadRiichiRules();
       setLoadError(false);
-      startGame({
+      await startGame({
         rules: { aiLevel: riichiSettings.aiLevel },
         opponentSelection: opponents,
       });
@@ -991,7 +996,7 @@ const GameMahjongJapanese = () => {
   const resumeDesktopGame = async () => {
     try {
       await preloadRiichiRules();
-      setLoadError(!resumeSaved());
+      setLoadError(!await resumeSaved());
     } catch {
       setLoadError(true);
     }
@@ -1023,8 +1028,8 @@ const GameMahjongJapanese = () => {
       setLoadError(true);
     }
   };
-  const returnToLobby = () => {
-    if (!confirmRankedExit(t)) return;
+  const returnToLobby = async () => {
+    if (!await confirmRankedExit(t)) return;
     setActivePanel(null);
     setRiichiSelection(null);
     setView('rules');
@@ -1045,11 +1050,11 @@ const GameMahjongJapanese = () => {
 
     didHandleEntryRef.current = true;
     void preloadRiichiRules()
-      .then(() => {
-        if (shouldResume) setLoadError(!resumeSaved());
-        else if (confirmRankedExit(t))
-          startGame({ rules: { aiLevel: riichiSettings.aiLevel } });
-        else resumeSaved();
+      .then(async () => {
+        if (shouldResume) setLoadError(!await resumeSaved());
+        else if (await confirmRankedExit(t))
+          await startGame({ rules: { aiLevel: riichiSettings.aiLevel } });
+        else await resumeSaved();
       })
       .catch(() => setLoadError(true));
     if (shouldOpenGuide) setShowGuide(true);
@@ -1123,7 +1128,7 @@ const GameMahjongJapanese = () => {
           ranked={isRanked}
           game={game}
           historyLength={
-            match?.events
+            memberOnline ? 0 : match?.events
               .slice(match.roundStart.eventIndex)
               .filter((event) => 'seat' in event && event.seat === 0).length ??
             0

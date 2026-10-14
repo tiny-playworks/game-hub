@@ -55,6 +55,7 @@ const Home = () => {
       state.match !== null &&
       state.match.status !== 'matchEnd',
   );
+  const memberMatchStatus = useRiichiStore((state) => state.match?.status);
   const [daily, setDaily] = useState(getDailyTaskState);
   const [weekly, setWeekly] = useState(getWeeklyTaskState);
   const [checkin, setCheckin] = useState(getCheckinState);
@@ -66,7 +67,9 @@ const Home = () => {
   const [categoryId, setCategoryId] = useState('mini');
   const character = getCharacterById(characters.activeCharacterId);
   const signedToday = checkin.dateKey === getBeijingDateKey();
-  const canResume = isActive || hasResumableMatch();
+  const canResume = isActive || (memberMode
+    ? memberMatchStatus !== undefined && memberMatchStatus !== 'matchEnd'
+    : hasResumableMatch());
   const refresh = useCallback(() => {
     setDaily(getDailyTaskState());
     setWeekly(getWeeklyTaskState());

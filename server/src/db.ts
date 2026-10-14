@@ -72,7 +72,21 @@ function migrate(db: DatabaseSync): void {
       result_json TEXT,
       PRIMARY KEY(member_id, round_id)
     );
+    CREATE TABLE IF NOT EXISTS riichi_matches (
+      member_id TEXT NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+      match_id TEXT NOT NULL,
+      device_id TEXT NOT NULL,
+      source TEXT NOT NULL CHECK(source IN ('free', 'ai-ranked')),
+      state_json TEXT NOT NULL,
+      player_character_id TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      finished_at INTEGER,
+      PRIMARY KEY(member_id, match_id)
+    );
     CREATE INDEX IF NOT EXISTS sessions_expires_at ON sessions(expires_at);
+    CREATE INDEX IF NOT EXISTS riichi_matches_active
+      ON riichi_matches(member_id, device_id, finished_at, updated_at);
   `);
 }
 

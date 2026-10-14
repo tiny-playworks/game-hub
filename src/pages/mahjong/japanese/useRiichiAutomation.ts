@@ -85,6 +85,7 @@ export function useRiichiAutomation(settings: RiichiPlayerSettings): void {
   const guideOpen = useRiichiStore((s) => s.showGuide);
   const menuOpen = useRiichiStore((s) => s.showMenu);
   const presenting = useRiichiStore((s) => s.cutIns.length > 0);
+  const onlinePending = useRiichiStore((s) => s.onlinePending);
 
   useEffect(() => {
     const store = useRiichiStore.getState();
@@ -96,6 +97,7 @@ export function useRiichiAutomation(settings: RiichiPlayerSettings): void {
       guideOpen ||
       menuOpen ||
       presenting ||
+      onlinePending ||
       current.status !== 'playing'
     ) {
       return;
@@ -210,7 +212,7 @@ export function useRiichiAutomation(settings: RiichiPlayerSettings): void {
       for (const id of timers) window.clearTimeout(id);
     };
     // match 变化即代表局面推进；settings 变化时重新评估自动操作
-  }, [match, view, replayOpen, guideOpen, menuOpen, presenting, settings]);
+  }, [match, view, replayOpen, guideOpen, menuOpen, presenting, onlinePending, settings]);
 }
 
 /** 自家操作时附带本次决策用时（秒） */

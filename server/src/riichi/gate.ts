@@ -9,7 +9,7 @@ await prepareRiichiRuntime();
 let match = createMatch({ seed: 1, matchLength: 'east' }).match;
 let steps = 0;
 while (match.status === 'playing' && steps < 500) {
-  const event = nextServerAiEvent(match);
+  const event = nextServerAiEvent(match, true);
   if (!event) throw new Error(`No server AI event at step ${steps}`);
   const next = applyEvent(match, event);
   if (!next) throw new Error(`Illegal server AI event at step ${steps}`);

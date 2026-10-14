@@ -6,6 +6,7 @@ import {
   recordCharacterMatchFinish,
 } from '@/lib/playerCharacters';
 import { getPlayerProfile } from '@/lib/playerProfile';
+import { getRiichiOnlineBridge } from '@/lib/household/riichiBridge';
 import {
   getRankedState,
   type RankedTicket,
@@ -18,6 +19,7 @@ import {
   resetCurrentRiichiRoundProgressSummary,
 } from '@/lib/riichiProgress';
 import { randomSeed } from '@/lib/seededRandom';
+import { getStorageDriver } from '@/lib/storage';
 import { createUuid } from '@/lib/uuid';
 import {
   type CharacterMoment,
@@ -65,9 +67,12 @@ type RiichiStore = {
   replay: RiichiReplayFile | null;
   playerCharacterId: string;
   sessionId: string;
+  identityEpoch: number;
+  onlinePending: boolean;
   moments: CharacterMoment[];
   cutIns: CharacterMoment[];
   resetForIdentity: () => void;
+  refreshOnlineMatch: () => Promise<void>;
   expireMoment: (id: string) => void;
   finishCutIn: (id: string) => void;
   clearCutIns: () => void;
@@ -84,15 +89,22 @@ type RiichiStore = {
     seatCharacters?: RiichiSeatCharacters;
     seatAiLevels?: Partial<RiichiSeatAiLevels>;
     opponentSelection?: OpponentSelection;
-  }) => void;
-  dispatch: (event: RiichiEvent) => boolean;
+  }) => Promise<void>;
+  dispatch: (event: RiichiEvent) => Promise<boolean>;
   undo: () => boolean;
-  resumeSaved: () => boolean;
-  abandonRanked: () => boolean;
+  resumeSaved: () => Promise<boolean>;
+  abandonRanked: () => Promise<boolean>;
 };
 
 type EffectListener = (effects: RiichiEffect[]) => void;
 const effectListeners = new Set<EffectListener>();
+
+function memberBridge() {
+  if (!getStorageDriver()) return null;
+  const bridge = getRiichiOnlineBridge();
+  if (!bridge) throw new Error('Member match service is unavailable');
+  return bridge;
+}
 
 export function subscribeRiichiEffects(listener: EffectListener): () => void {
   effectListeners.add(listener);
@@ -230,6 +242,8 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
       replay: null,
       playerCharacterId: getPlayerCharacterState().activeCharacterId,
       sessionId: '',
+      identityEpoch: 0,
+      onlinePending: false,
       moments: [],
       cutIns: [],
       resetForIdentity: () => {
@@ -245,9 +259,40 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
           replay: null,
           playerCharacterId: getPlayerCharacterState().activeCharacterId,
           sessionId: '',
+          identityEpoch: get().identityEpoch + 1,
+          onlinePending: false,
           moments: [],
           cutIns: [],
         });
+      },
+      refreshOnlineMatch: async () => {
+        let bridge;
+        try {
+          bridge = memberBridge();
+        } catch {
+          return;
+        }
+        if (!bridge) return;
+        const currentSessionId = get().sessionId;
+        const identityEpoch = get().identityEpoch;
+        try {
+          const current = await bridge.current();
+          if (!getStorageDriver() || get().sessionId !== currentSessionId ||
+            get().identityEpoch !== identityEpoch) return;
+          if (current.match && current.matchId && current.playerCharacterId) {
+            changeVisibility({
+              match: current.match,
+              matchLength: current.match.matchLength,
+              sessionId: current.matchId,
+              playerCharacterId: current.playerCharacterId,
+              processedProgress: [],
+            });
+          } else if (get().view === 'rules') {
+            changeVisibility({ match: null, sessionId: '' });
+          }
+        } catch {
+          // The household error handler owns authentication and retry messaging.
+        }
       },
       expireMoment: (id) =>
         set({ moments: get().moments.filter((moment) => moment.id !== id) }),
@@ -270,11 +315,43 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
           return;
         changeVisibility({ replay, cutIns: [], moments: [] });
       },
-      startMatch: (options) => {
+      startMatch: async (options) => {
         // UI 必须先确认并结算旧段位战，不能直接覆盖正在进行的存档。
         const rankedState = getRankedState();
         if (rankedState.activeMatchId)
           throw new Error('Ranked match still active');
+        const bridge = memberBridge();
+        if (bridge) {
+          const identityEpoch = get().identityEpoch;
+          set({ onlinePending: true });
+          try {
+            const response = await bridge.start({
+              matchId: options?.ranked?.id ?? createUuid(),
+              source: options?.ranked ? 'ai-ranked' : 'free',
+              matchLength: options?.ranked?.matchLength ?? get().matchLength,
+              aiLevel: options?.rules?.aiLevel,
+              opponents: options?.seatCharacters?.slice(1) ?? options?.opponentSelection,
+            });
+            if (!getStorageDriver() || get().identityEpoch !== identityEpoch) return;
+            resetCurrentRiichiRoundProgressSummary();
+            changeVisibility({
+              match: response.match,
+              matchLength: response.match.matchLength,
+              processedProgress: [],
+              decisionClock: null,
+              view: 'game',
+              showMenu: false,
+              playerCharacterId: response.playerCharacterId,
+              sessionId: response.matchId,
+              ...presentation(response.match, response.effects,
+                response.playerCharacterId, true),
+            });
+            emit(response.effects);
+          } finally {
+            set({ onlinePending: false });
+          }
+          return;
+        }
         const seed = options?.seed ?? randomSeed();
         const ticket = options?.ranked;
         const playerCharacterId =
@@ -324,9 +401,36 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
         saveMatch(match, processedProgress, { sessionId, playerCharacterId });
         emit(effects);
       },
-      dispatch: (event) => {
+      dispatch: async (event) => {
         const current = get().match;
-        if (!current || get().cutIns.length > 0) return false;
+        if (!current || get().cutIns.length > 0 || get().onlinePending) return false;
+        const bridge = memberBridge();
+        if (bridge) {
+          const matchId = get().sessionId;
+          const identityEpoch = get().identityEpoch;
+          if (!matchId) return false;
+          set({ onlinePending: true });
+          try {
+            const response = await bridge.event({ matchId,
+              expectedTurn: current.turn, event });
+            if (get().sessionId !== matchId || !getStorageDriver() ||
+              get().identityEpoch !== identityEpoch) return false;
+            changeVisibility({
+              match: response.match,
+              processedProgress: [],
+              ...presentation(response.match, response.effects,
+                get().playerCharacterId),
+            });
+            emit(response.effects);
+            return true;
+          } catch {
+            if (get().sessionId === matchId && get().identityEpoch === identityEpoch)
+              await get().refreshOnlineMatch();
+            return false;
+          } finally {
+            set({ onlinePending: false });
+          }
+        }
         const step = applyEvent(current, event);
         if (!step) return false;
         if (
@@ -356,7 +460,7 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
       },
       undo: () => {
         const current = get().match;
-        if (!current || current.ranked) return false;
+        if (!current || current.ranked || getStorageDriver()) return false;
         const reverted = undoLastHumanAction(current);
         if (!reverted) return false;
         changeVisibility({
@@ -368,7 +472,30 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
         saveMatch(reverted, get().processedProgress, get());
         return true;
       },
-      resumeSaved: () => {
+      resumeSaved: async () => {
+        const bridge = memberBridge();
+        if (bridge) {
+          try {
+            const current = await bridge.current();
+            if (!current.match || !current.matchId ||
+              !current.playerCharacterId || !getStorageDriver()) return false;
+            changeVisibility({
+              match: current.match,
+              matchLength: current.match.matchLength,
+              processedProgress: [],
+              decisionClock: null,
+              view: 'game',
+              showMenu: false,
+              playerCharacterId: current.playerCharacterId,
+              sessionId: current.matchId,
+              cutIns: [],
+              moments: [],
+            });
+            return true;
+          } catch {
+            return false;
+          }
+        }
         const saved = loadSavedMatch();
         if (!saved) return false;
         if (saved.match.ranked) {
@@ -401,9 +528,24 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
         });
         return true;
       },
-      abandonRanked: () => {
+      abandonRanked: async () => {
         const ranked = getRankedState();
         if (!ranked.activeMatchId) return true;
+        const bridge = memberBridge();
+        if (bridge) {
+          const matchId = ranked.activeMatchId;
+          try {
+            await bridge.forfeit(matchId);
+            if (get().sessionId === matchId) {
+              changeVisibility({ match: null, view: 'rules', cutIns: [],
+                moments: [], decisionClock: null, replay: null,
+                showMenu: false, showGuide: false, sessionId: '' });
+            }
+            return true;
+          } catch {
+            return false;
+          }
+        }
         const current =
           get().match?.ranked?.id === ranked.activeMatchId
             ? get().match
@@ -436,6 +578,10 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
 );
 
 export function hasResumableMatch(): boolean {
+  if (getStorageDriver()) {
+    const match = useRiichiStore.getState().match;
+    return match !== null && match.status !== 'matchEnd';
+  }
   return hasSavedMatch();
 }
 

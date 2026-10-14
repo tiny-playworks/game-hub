@@ -24,8 +24,12 @@ export function RankedNavigationGuard() {
       !getRankedState().activeMatchId
     )
       return;
-    if (!confirmRankedExit(t))
-      navigate('/game/mahjong-japanese', { replace: true });
+    const destination = pathname;
+    const decision = confirmRankedExit(t);
+    navigate('/game/mahjong-japanese', { replace: true });
+    void decision.then((accepted) => {
+      if (accepted) navigate(destination, { replace: true });
+    });
   }, [pathname, navigate, t]);
   return null;
 }

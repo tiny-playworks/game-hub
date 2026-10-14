@@ -25,7 +25,7 @@ import { createUuid } from '@/lib/uuid';
 import { useRiichiStore } from '@/pages/mahjong/japanese/store/riichiMatchStore';
 import './ranked.css';
 
-export function confirmRankedExit(t: (key: string) => string): boolean {
+export async function confirmRankedExit(t: (key: string) => string): Promise<boolean> {
   if (!getRankedState().activeMatchId) return true;
   if (!window.confirm(t('ranked.forfeitConfirm'))) return false;
   return useRiichiStore.getState().abandonRanked();
@@ -53,24 +53,16 @@ export function RankedStartButton({
   useEffect(() => {
     if (!ticket) return;
     const timer = window.setTimeout(() => {
-      try {
-        useRiichiStore.getState().startMatch({ ranked: ticket });
-        setTicket(null);
-        pending.current = false;
-        setLoading(false);
-        navigate('/game/mahjong-japanese');
-      } catch {
-        setError(true);
-        setTicket(null);
-        pending.current = false;
-        setLoading(false);
-      }
+      setTicket(null);
+      pending.current = false;
+      setLoading(false);
+      navigate('/game/mahjong-japanese');
     }, 1500);
     return () => window.clearTimeout(timer);
   }, [ticket, navigate]);
   const start = async () => {
     if (pending.current) return;
-    if (!confirmRankedExit(t)) return;
+    if (!await confirmRankedExit(t)) return;
     pending.current = true;
     setLoading(true);
     setError(false);
@@ -80,7 +72,7 @@ export function RankedStartButton({
       const rank = getRankedState();
       const characters = getPlayerCharacterState();
       const seed = randomSeed();
-      setTicket({
+      const nextTicket: RankedTicket = {
         id: createUuid(),
         at: Date.now(),
         seed,
@@ -91,7 +83,10 @@ export function RankedStartButton({
         affinityStart:
           characters.affinityByCharacter[characters.activeCharacterId] ?? 0,
         ...selectRankedOpponents(rank, characters.activeCharacterId, seed),
-      });
+      };
+      await useRiichiStore.getState().startMatch({ ranked: nextTicket });
+      if (!mounted.current) return;
+      setTicket(useRiichiStore.getState().match?.ranked ?? nextTicket);
     } catch {
       setError(true);
       setLoading(false);

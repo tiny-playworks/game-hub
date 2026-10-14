@@ -21,6 +21,7 @@ import type {
 import {
   checkServerHealth,
   equipMemberCosmetic,
+  fetchCurrentRiichiMatch,
   fetchCurrentMe,
   HouseholdApiError,
   importLegacySave,
@@ -29,11 +30,15 @@ import {
   logoutSession,
   performMemberProgressAction,
   purchaseCosmeticItem,
+  forfeitMemberRiichiMatch,
+  startMemberRiichiMatch,
   submitMemberArcadeEvent,
+  submitMemberRiichiEvent,
   updatePreferences as apiUpdatePreferences,
   updateProfile as apiUpdateProfile,
   updateMemberCharacter,
 } from '@/lib/household/api';
+import { setRiichiOnlineBridge } from '@/lib/household/riichiBridge';
 import {
   createStorageFromSnapshot,
   notifyStorageStateChanged,
@@ -45,28 +50,28 @@ import {
 } from '@/lib/saveTransfer';
 import { setMemberProfileWriter, type PlayerProfilePatch } from '@/lib/playerProfile';
 import { setStorageDriver } from '@/lib/storage';
+import { createUuid } from '@/lib/uuid';
 import { useGameStore } from '@/store/gameStore';
 import { useRiichiStore } from '@/pages/mahjong/japanese/store/riichiMatchStore';
 
 const DEVICE_ID_KEY = 'game-hub-device-id';
+const DEVICE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function getOrCreateDeviceId(): string {
+  let existing: string | null = null;
   try {
-    const existing = globalThis.localStorage?.getItem(DEVICE_ID_KEY);
-    if (existing && /^[0-9a-f-]{36}$/i.test(existing)) return existing;
-    const generated =
-      typeof crypto.randomUUID === 'function'
-        ? crypto.randomUUID()
-        : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-            const r = (Math.random() * 16) | 0;
-            const v = c === 'x' ? r : (r & 0x3) | 0x8;
-            return v.toString(16);
-          });
-    globalThis.localStorage?.setItem(DEVICE_ID_KEY, generated);
-    return generated;
+    existing = globalThis.localStorage?.getItem(DEVICE_ID_KEY) ?? null;
   } catch {
-    return '00000000-0000-4000-8000-000000000000';
+    // Storage may be disabled while the browser still supports session cookies.
   }
+  if (existing && DEVICE_ID_PATTERN.test(existing)) return existing;
+  const generated = createUuid();
+  try {
+    globalThis.localStorage?.setItem(DEVICE_ID_KEY, generated);
+  } catch {
+    // Keep this device's generated ID for the current page session.
+  }
+  return generated;
 }
 
 export interface HouseholdContextValue {
@@ -158,6 +163,9 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
         member.id === next.memberId ? summary : member));
     }
     notifyStorageStateChanged();
+    if (next && identityChanged) {
+      queueMicrotask(() => void useRiichiStore.getState().refreshOnlineMatch());
+    }
   }, []);
 
   const enqueueMutation = useCallback(<T,>(work: () => Promise<T>): Promise<T> => {
@@ -377,6 +385,48 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
 
   profileWriterRef.current = (patch) => updateProfile({ ...patch });
   useEffect(() => () => setMemberProfileWriter(null), []);
+
+  useEffect(() => {
+    const mutate = <T extends { snapshot: MemberSnapshot }>(
+      operation: () => Promise<T>,
+    ): Promise<T> => {
+      const owner = snapshotRef.current?.memberId;
+      if (!owner) return Promise.reject(new Error('Not logged in'));
+      return enqueueMutation(async () => {
+        if (snapshotRef.current?.memberId !== owner)
+          throw new Error('Member changed before the update');
+        try {
+          const response = await operation();
+          if (snapshotRef.current?.memberId === owner)
+            applySnapshot(response.snapshot);
+          setError(null);
+          return response;
+        } catch (err) {
+          handleMutationFailure(err, owner);
+          throw err;
+        }
+      });
+    };
+    setRiichiOnlineBridge({
+      start: (input) => mutate(() => startMemberRiichiMatch(input)),
+      event: (input) => mutate(() => submitMemberRiichiEvent(input)),
+      forfeit: (matchId) => mutate(() => forfeitMemberRiichiMatch(matchId)),
+      current: async () => {
+        const owner = snapshotRef.current?.memberId;
+        if (!owner) throw new Error('Not logged in');
+        try {
+          const response = await fetchCurrentRiichiMatch();
+          if (snapshotRef.current?.memberId !== owner)
+            throw new Error('Member changed before the update');
+          return response;
+        } catch (err) {
+          handleMutationFailure(err, owner);
+          throw err;
+        }
+      },
+    });
+    return () => setRiichiOnlineBridge(null);
+  }, [applySnapshot, enqueueMutation, handleMutationFailure]);
 
   const importLocalSave = useCallback(async () => {
     if (!snapshot) throw new Error('Not logged in');

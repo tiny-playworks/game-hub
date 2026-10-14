@@ -6,6 +6,7 @@ import { registerArcadeRoutes } from './routes/arcade';
 import { registerCharacterRoutes } from './routes/characters';
 import { registerMemberRoutes } from './routes/members';
 import { registerProgressRoutes } from './routes/progress';
+import { registerRiichiRoutes } from './routes/riichi';
 import { registerShopRoutes } from './routes/shop';
 
 const app = Fastify({
@@ -40,6 +41,7 @@ registerMemberRoutes(app, db);
 registerArcadeRoutes(app, db);
 registerCharacterRoutes(app, db);
 registerProgressRoutes(app, db);
+registerRiichiRoutes(app, db);
 registerShopRoutes(app, db);
 
 app.addHook('onClose', async () => {
