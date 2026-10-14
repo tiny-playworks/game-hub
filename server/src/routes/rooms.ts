@@ -1,8 +1,31 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { FastifyInstance } from 'fastify';
-import type { RoomCommand } from '../../../shared/contracts/room';
+import type { RoomCommand, RoomSettings } from '../../../shared/contracts/room';
+import type { RiichiAiLevel } from '@/pages/mahjong/japanese/engine/rules';
 import { apiError, requireSession } from '../auth';
 import type { RoomManager } from '../rooms/RoomManager';
+
+interface CreateRoomBody {
+  nickname?: string;
+  avatarPresetId?: string;
+  settings?: Partial<RoomSettings>;
+}
+
+interface JoinSeatBody {
+  seatIndex?: number;
+  nickname?: string;
+  avatarPresetId?: string;
+}
+
+interface FillAiBody {
+  seatIndex?: number;
+  characterId?: string;
+  aiLevel?: RiichiAiLevel;
+}
+
+interface ReadyBody {
+  isReady?: boolean;
+}
 
 export function registerRoomRoutes(
   app: FastifyInstance,
@@ -18,13 +41,13 @@ export function registerRoomRoutes(
   // 创建房间
   app.post('/api/v1/rooms', async (request) => {
     const { member, session } = requireSession(db, request);
-    const body = request.body as any;
-    const settings = body?.settings ?? {};
+    const body = (request.body ?? {}) as CreateRoomBody;
+    const settings = body.settings ?? {};
 
     const summary = roomManager.createRoom(
       member.id,
-      body?.nickname ?? 'Host',
-      body?.avatarPresetId ?? 'default-1',
+      body.nickname ?? 'Host',
+      body.avatarPresetId ?? 'default-1',
       session.device_id,
       settings,
     );
@@ -44,9 +67,9 @@ export function registerRoomRoutes(
   app.post('/api/v1/rooms/:roomId/join', async (request) => {
     const { member, session } = requireSession(db, request);
     const { roomId } = request.params as { roomId: string };
-    const body = request.body as any;
+    const body = (request.body ?? {}) as JoinSeatBody;
 
-    if (typeof body?.seatIndex !== 'number') {
+    if (typeof body.seatIndex !== 'number') {
       throw apiError(400, 'BAD_REQUEST');
     }
 
@@ -55,8 +78,8 @@ export function registerRoomRoutes(
         roomId,
         body.seatIndex,
         member.id,
-        body?.nickname ?? 'Player',
-        body?.avatarPresetId ?? 'default-1',
+        body.nickname ?? 'Player',
+        body.avatarPresetId ?? 'default-1',
         session.device_id,
       );
     } catch (err: unknown) {
@@ -82,9 +105,9 @@ export function registerRoomRoutes(
   app.post('/api/v1/rooms/:roomId/ai', async (request) => {
     requireSession(db, request);
     const { roomId } = request.params as { roomId: string };
-    const body = request.body as any;
+    const body = (request.body ?? {}) as FillAiBody;
 
-    if (typeof body?.seatIndex !== 'number') {
+    if (typeof body.seatIndex !== 'number') {
       throw apiError(400, 'BAD_REQUEST');
     }
 
@@ -118,10 +141,10 @@ export function registerRoomRoutes(
   app.post('/api/v1/rooms/:roomId/ready', async (request) => {
     const { member } = requireSession(db, request);
     const { roomId } = request.params as { roomId: string };
-    const body = request.body as any;
+    const body = (request.body ?? {}) as ReadyBody;
 
     try {
-      return roomManager.setReady(roomId, member.id, Boolean(body?.isReady));
+      return roomManager.setReady(roomId, member.id, Boolean(body.isReady));
     } catch (err: unknown) {
       const code = err instanceof Error ? err.message : 'READY_FAILED';
       throw apiError(400, code);

@@ -1,7 +1,13 @@
 import type { Server } from 'node:http';
 import type { DatabaseSync } from 'node:sqlite';
 import { WebSocket, WebSocketServer } from 'ws';
-import type { RoomCommand, ServerMessage } from '../../../shared/contracts/room';
+import type {
+  HumanSeat,
+  PlayerSeatPrivateState,
+  PlayerViewSnapshot,
+  RoomCommand,
+  ServerMessage,
+} from '../../../shared/contracts/room';
 import { getMember, type MemberRow, type SessionRow } from '../db';
 import { createHash } from 'node:crypto';
 import type { RoomManager } from './RoomManager';
@@ -92,22 +98,22 @@ export function setupRoomWebSocket(
               const viewerSeat = seatIndex !== -1 && seatIndex !== undefined ? seatIndex : 0;
               if (msg.view.viewerSeat === viewerSeat) {
                 // 如果当前设备不是 Lease 拥有者，turnOptions 和 claimOptions 置空
+                const targetSeat = roomManager.getRoom(targetRoomId)?.seats[viewerSeat];
                 const isLeaseOwner =
-                  roomManager.getRoom(targetRoomId)?.seats[viewerSeat]?.type === 'human'
-                    ? (roomManager.getRoom(targetRoomId)?.seats[viewerSeat] as any).leaseDeviceId ===
-                      session.device_id
+                  targetSeat?.type === 'human'
+                    ? (targetSeat as HumanSeat).leaseDeviceId === session.device_id
                     : false;
 
                 if (!isLeaseOwner && msg.view.seats[viewerSeat]) {
                   const sanitized = {
                     ...msg.view,
-                    seats: msg.view.seats.map((s: any, idx: number) =>
+                    seats: msg.view.seats.map((s: PlayerSeatPrivateState, idx: number) =>
                       idx === viewerSeat
                         ? { ...s, turnOptions: null, claimOptions: null, hasControlLease: false }
                         : s,
-                    ),
+                    ) as PlayerViewSnapshot['seats'],
                   };
-                  sendJson({ type: 'match_update', view: sanitized as any });
+                  sendJson({ type: 'match_update', view: sanitized });
                 } else {
                   sendJson(msg);
                 }

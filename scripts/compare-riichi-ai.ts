@@ -64,16 +64,14 @@ export function simulateDetailedMatch(
     if (seat === undefined) break;
 
     const t0 = performance.now();
-    let event: RiichiEvent | null = null;
-    if (round.phase === 'discard') {
-      event = decideAiTurn(round, seat, levels[seat]);
-    } else {
-      event = {
-        type: 'claim',
-        seat,
-        response: decideAiClaim(round, seat, levels[seat]),
-      };
-    }
+    const event: RiichiEvent | null =
+      round.phase === 'discard'
+        ? decideAiTurn(round, seat, levels[seat])
+        : {
+            type: 'claim',
+            seat,
+            response: decideAiClaim(round, seat, levels[seat]),
+          };
     const dt = performance.now() - t0;
     if (seat === 0) {
       decisionCount++;

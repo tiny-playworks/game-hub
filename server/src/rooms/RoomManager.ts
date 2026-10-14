@@ -8,7 +8,9 @@ import type {
   RoomSeat,
   RoomSettings,
   RoomSummary,
+  ServerMessage,
 } from '../../../shared/contracts/room';
+import type { RiichiAiLevel } from '@/pages/mahjong/japanese/engine/rules';
 import {
   applyEvent,
   createMatch,
@@ -42,7 +44,7 @@ export interface RoomInstance {
   executedCommandIds: Set<string>;
   turnTimeoutTimer: ReturnType<typeof setTimeout> | null;
   serverDeadline: number | null;
-  subscribers: Set<(msg: any) => void>;
+  subscribers: Set<(msg: ServerMessage) => void>;
 }
 
 const DEFAULT_SETTINGS: RoomSettings = {
@@ -323,10 +325,10 @@ export class RoomManager {
     ];
 
     const seatAiLevels = room.summary.seats.map((s) => (s.type === 'ai' ? s.aiLevel : 'standard')) as [
-      any,
-      any,
-      any,
-      any,
+      RiichiAiLevel,
+      RiichiAiLevel,
+      RiichiAiLevel,
+      RiichiAiLevel,
     ];
 
     const matchId = createUuid();
@@ -376,7 +378,13 @@ export class RoomManager {
       return { accepted: false, code: 'UNAUTHORIZED_OR_NOT_IN_SEAT', revision: room.summary.revision };
     }
 
-    const payload = command.payload as any;
+    interface CommandPayload {
+      tile?: number;
+      claimType?: string;
+      tiles?: number[];
+      isAutoplay?: boolean;
+    }
+    const payload = (command.payload ?? {}) as CommandPayload;
 
     // 特殊指令 1: 接管控制权 (Takeover control)
     if (command.type === 'takeover_control') {
@@ -439,7 +447,7 @@ export class RoomManager {
     const seatIndex = seat.seatIndex;
 
     // 构造 RiichiEvent
-    let riichiEvent: RiichiEvent | null = null;
+    let riichiEvent: RiichiEvent | null;
 
     switch (command.type) {
       case 'discard':
@@ -606,7 +614,7 @@ export class RoomManager {
     );
   }
 
-  subscribe(roomId: string, listener: (msg: any) => void): () => void {
+  subscribe(roomId: string, listener: (msg: ServerMessage) => void): () => void {
     const room = this.rooms.get(roomId);
     if (!room) return () => {};
     room.subscribers.add(listener);
@@ -646,7 +654,7 @@ export class RoomManager {
     }
   }
 
-  private broadcastMessage(room: RoomInstance, msg: any): void {
+  private broadcastMessage(room: RoomInstance, msg: ServerMessage): void {
     for (const sub of room.subscribers) {
       try {
         sub(msg);

@@ -7,6 +7,7 @@ import { registerSyncRoutes } from '../server/src/routes/sync';
 import { createEmptySnapshot } from '../server/src/snapshot';
 import type {
   OfflineReceipt,
+  ResumeSaveRecord,
   SyncBatchRequest,
   SyncBatchResponse,
 } from '../shared/contracts/sync';
@@ -252,10 +253,10 @@ describe('P11 Offline Sync & Resume Saves Server Tests', () => {
       headers: { cookie: `gh_session=${tokenA}` },
     });
     expect(listRes.statusCode).toBe(200);
-    const list = listRes.json();
+    const list = listRes.json() as ResumeSaveRecord[];
     expect(list).toHaveLength(2);
-    expect(list.some((s: any) => s.saveId === 'save-device-a' && s.deviceId === deviceA)).toBe(true);
-    expect(list.some((s: any) => s.saveId === 'save-device-b' && s.deviceId === deviceB)).toBe(true);
+    expect(list.some((s) => s.saveId === 'save-device-a' && s.deviceId === deviceA)).toBe(true);
+    expect(list.some((s) => s.saveId === 'save-device-b' && s.deviceId === deviceB)).toBe(true);
 
     // 独立拉取详情
     const getRes = await app.inject({

@@ -3,10 +3,14 @@ import Fastify from '../server/node_modules/fastify/fastify.js';
 import { afterEach, describe, expect, it } from 'rstack/test';
 import { ApiError } from '../server/src/auth';
 import { openDatabase, readSnapshot, type MemberRow } from '../server/src/db';
-import { RoomManager } from '../server/src/rooms/RoomManager';
+import { RoomManager, type RoomInstance } from '../server/src/rooms/RoomManager';
 import { registerRoomRoutes } from '../server/src/routes/rooms';
 import { createEmptySnapshot } from '../server/src/snapshot';
 import type { RoomCommand } from '../shared/contracts/room';
+
+interface TestRoomManagerHooks {
+  settleMatchEnd: (room: RoomInstance) => void;
+}
 
 afterEach(() => {
   delete process.env.GAME_HUB_DB_PATH;
@@ -246,7 +250,7 @@ describe('P12 家庭真人牌桌服务端测试', () => {
     expect(viewA.seats[3].hand).toEqual([]);
     // 牌山内容禁止暴露，只允许展示剩余牌数
     expect(viewA.round.wallRemaining).toBeGreaterThan(0);
-    expect((viewA.round as any).wall).toBeUndefined();
+    expect('wall' in viewA.round).toBe(false);
 
     // 关键隐私验证：B 视角看对局
     const viewBRes = await app.inject({
@@ -352,18 +356,19 @@ describe('P12 家庭真人牌桌服务端测试', () => {
     roomManager.setReady(room.id, memberB, true);
     roomManager.startGame(room.id, memberA);
 
-    const instance = (roomManager as any).rooms.get(room.id);
+    const instance = roomManager.getRoomInstance(room.id)!;
     expect(instance).toBeTruthy();
 
     // 模拟终局状态
-    instance.match.status = 'matchEnd';
-    instance.match.matchEnd = {
+    instance.match!.status = 'matchEnd';
+    instance.match!.matchEnd = {
+      reason: 'east4_end',
       ranking: [0, 1, 2, 3], // A 第一，B 第二
       finalScores: [35000, 25000, 20000, 20000],
     };
 
     // 触发结算
-    (roomManager as any).settleMatchEnd(instance);
+    (roomManager as unknown as TestRoomManagerHooks).settleMatchEnd(instance);
 
     // 验证家庭成员档案：A 和 B 的钱包均得到结算发放
     const rowA = db.prepare('SELECT * FROM members WHERE id = ?').get(memberA) as unknown as MemberRow;

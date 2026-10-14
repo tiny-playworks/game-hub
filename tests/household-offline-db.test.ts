@@ -10,6 +10,7 @@ import {
   removeReceipts,
   saveLocalResume,
 } from '../src/lib/household/offlineDb';
+import { DEFAULT_RIICHI_RULES } from '../src/pages/mahjong/japanese/engine/rules';
 import type { OfflineReceipt, ResumeSaveRecord } from '../shared/contracts/sync';
 
 describe('P11 Client OfflineDb (IndexedDB / Memory fallback)', () => {
@@ -73,7 +74,7 @@ describe('P11 Client OfflineDb (IndexedDB / Memory fallback)', () => {
       replay: {
         version: 1,
         seed: 42,
-        rules: {} as any,
+        rules: DEFAULT_RIICHI_RULES,
         matchLength: 'east',
         seatCharacters: [null, 'mio', 'rin', 'sora'],
         seatAiLevels: ['standard', 'standard', 'standard', 'standard'],

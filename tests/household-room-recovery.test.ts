@@ -3,9 +3,25 @@ import Fastify from '../server/node_modules/fastify/fastify.js';
 import { afterEach, describe, expect, it } from 'rstack/test';
 import { ApiError } from '../server/src/auth';
 import { openDatabase } from '../server/src/db';
-import { RoomManager } from '../server/src/rooms/RoomManager';
+import { RoomManager, type RoomInstance } from '../server/src/rooms/RoomManager';
 import { registerRoomRoutes } from '../server/src/routes/rooms';
 import { createEmptySnapshot } from '../server/src/snapshot';
+
+interface TestRoomManagerHooks {
+  handleTurnTimeout: (roomId: string) => void;
+  scheduleNextTurn: (room: RoomInstance) => void;
+  settleMatchEnd: (room: RoomInstance) => void;
+  rooms: Map<string, RoomInstance>;
+}
+
+interface ActiveRoomRow {
+  room_id: string;
+  summary_json: string;
+  match_json: string | null;
+  server_deadline: number | null;
+  is_paused: number;
+  updated_at: number;
+}
 
 afterEach(() => {
   delete process.env.GAME_HUB_DB_PATH;
@@ -149,7 +165,7 @@ describe('P13 断线重连、托管、抢控与服务恢复测试', () => {
     // 3. 验证触发超时默认摸切（通过私有方法 handleTurnTimeout 测试保底逻辑）
     const prevRevision = roomInstance.summary.revision;
     // 强制调用超时处理
-    (roomManager as any).handleTurnTimeout(roomId);
+    (roomManager as unknown as TestRoomManagerHooks).handleTurnTimeout(roomId);
     expect(roomInstance.summary.revision).toBeGreaterThan(prevRevision);
   });
 
@@ -200,7 +216,7 @@ describe('P13 断线重连、托管、抢控与服务恢复测试', () => {
     }
 
     // 调度下一轮，此时应检测到断线超 60 秒，触发 shouldTriggerAutoplay
-    (roomManager as any).scheduleNextTurn(roomInstance);
+    (roomManager as unknown as TestRoomManagerHooks).scheduleNextTurn(roomInstance);
     if (seatA.type === 'human') {
       expect(seatA.isAutoplay).toBe(true);
     }
@@ -373,9 +389,9 @@ describe('P13 断线重连、托管、抢控与服务恢复测试', () => {
     });
 
     // 确认 active_rooms 表中有该房间记录
-    const activeRow = db.prepare('SELECT * FROM active_rooms WHERE room_id = ?').get(roomId) as any;
+    const activeRow = db.prepare('SELECT * FROM active_rooms WHERE room_id = ?').get(roomId) as ActiveRoomRow | undefined;
     expect(activeRow).toBeTruthy();
-    expect(JSON.parse(activeRow.summary_json).status).toBe('playing');
+    expect(JSON.parse(activeRow!.summary_json).status).toBe('playing');
 
     // 2. 模拟服务进程崩溃并重启：创建新的 RoomManager 实例共享同一 db
     const rebootedManager = new RoomManager(db);
@@ -422,7 +438,7 @@ describe('P13 断线重连、托管、抢控与服务恢复测试', () => {
       ranking: [0, 1, 2, 3],
       finalScores: [35000, 25000, 20000, 20000],
     };
-    (rebootedManager as any).settleMatchEnd(inst);
+    (rebootedManager as unknown as TestRoomManagerHooks).settleMatchEnd(inst);
 
     // 确认 active_rooms 已被清理
     const afterSettleRow = db.prepare('SELECT * FROM active_rooms WHERE room_id = ?').get(roomId);
