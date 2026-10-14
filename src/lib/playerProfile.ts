@@ -184,7 +184,10 @@ export function normalizeAudioVolumes(raw: unknown): AudioVolumes {
 }
 
 const profileListeners = new Set<() => void>();
-export type PlayerProfilePatch = Partial<Omit<PlayerProfile, 'updatedAt' | 'riichiSettings'>> & {
+export type PlayerProfilePatch = Partial<
+  Omit<PlayerProfile, 'updatedAt' | 'riichiSettings' | 'audioVolumes'>
+> & {
+  audioVolumes?: Partial<AudioVolumes>;
   riichiSettings?: Partial<RiichiPlayerSettings>;
 };
 let memberProfileWriter:

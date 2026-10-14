@@ -108,4 +108,47 @@ describe('P10 Household API Client', () => {
     expect(result.itemId).toBe('back-gold');
     expect(result.snapshot.revision).toBe(2);
   });
+
+  it('logoutSession sends DELETE /api/v1/session', async () => {
+    globalThis.fetch = async () =>
+      new Response(JSON.stringify({ ok: true }), { status: 200 });
+
+    const result = await logoutSession();
+    expect(result.ok).toBe(true);
+  });
+
+  it('fetchCurrentMe fetches /api/v1/me', async () => {
+    const mockMe = {
+      snapshot: { schema: 1, memberId: 'mem-1', revision: 3 },
+      deviceId: 'dev-1',
+    };
+    globalThis.fetch = async () =>
+      new Response(JSON.stringify(mockMe), { status: 200 });
+
+    const me = await fetchCurrentMe();
+    expect(me.deviceId).toBe('dev-1');
+    expect(me.snapshot.revision).toBe(3);
+  });
+
+  it('updatePreferences sends PATCH /api/v1/me/preferences', async () => {
+    const mockResult = {
+      snapshot: { schema: 1, memberId: 'mem-1', revision: 4 },
+    };
+    globalThis.fetch = async () =>
+      new Response(JSON.stringify(mockResult), { status: 200 });
+
+    const result = await updatePreferences(3, { locale: 'en' });
+    expect(result.snapshot.revision).toBe(4);
+  });
+
+  it('importLegacySave sends POST /api/v1/me/import', async () => {
+    const mockResult = {
+      snapshot: { schema: 1, memberId: 'mem-1', revision: 5 },
+    };
+    globalThis.fetch = async () =>
+      new Response(JSON.stringify(mockResult), { status: 200 });
+
+    const result = await importLegacySave({ someData: 'legacy' });
+    expect(result.snapshot.revision).toBe(5);
+  });
 });

@@ -87,7 +87,7 @@ test('stepShooter 敌机撞玩家触发 player_hit', () => {
 });
 
 test('stepShooter 用固定 rng 在冷却累计后刷敌', () => {
-  let state = { ...createInitialShooterState(), status: 'playing' as const };
+  let state: ShooterState = { ...createInitialShooterState(), status: 'playing' };
   const rng = () => 0.5;
   for (let i = 0; i < 90; i++) {
     const r = stepShooter(state, idleInput, 1, rng);

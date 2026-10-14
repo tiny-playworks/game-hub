@@ -15,7 +15,7 @@ test('坐标生成器创建 27 个互不重复的小方块位置', () => {
 });
 
 test('标准三阶魔方共有 54 张外露贴纸，内部面保持黑色塑料', () => {
-  const stickerColors = new Set(Object.values(STICKER_COLORS));
+  const stickerColors = new Set<string>(Object.values(STICKER_COLORS));
   let stickerCount = 0;
 
   for (const coordinate of createCubieCoordinates()) {

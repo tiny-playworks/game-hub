@@ -33,7 +33,9 @@
     "test": "rs test",
     "test:coverage": "rs test --coverage",
     "test:watch": "rs test --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tests/tsconfig.json && tsc --noEmit -p server/tsconfig.json",
+    "typecheck:tests": "tsc --noEmit -p tests/tsconfig.json",
+    "typecheck:server": "tsc --noEmit -p server/tsconfig.json"
   },
   "dependencies": {
     "@tweenjs/tween.js": "^25.0.0",

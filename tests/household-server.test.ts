@@ -1,10 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it } from 'rstack/test';
+import { describe, expect, it } from 'rstack/test';
 import { hashPin, validatePin } from '../server/src/auth';
 import {
   openDatabase,
   readSnapshot,
   saveSnapshot,
-  transaction,
   type MemberRow,
 } from '../server/src/db';
 import {

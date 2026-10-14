@@ -7,7 +7,7 @@ import {
 } from '../src/pages/mahjong/japanese/components/TableFeedback';
 import { useTileInteraction } from '../src/pages/mahjong/japanese/useTileInteraction';
 import { RiichiSettingsPanel } from '../src/pages/mahjong/japanese/components/RiichiSettingsPanel';
-import { getPlayerProfile, updatePlayerProfile } from '../src/lib/playerProfile';
+import { getPlayerProfile } from '../src/lib/playerProfile';
 
 function renderWithLocale(ui: React.ReactElement) {
   return render(<LocaleProvider>{ui}</LocaleProvider>);

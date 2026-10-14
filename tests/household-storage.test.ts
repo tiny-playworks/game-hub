@@ -6,62 +6,22 @@ import {
 } from '@/lib/household/snapshotStorage';
 import { gameStorage, setStorageDriver } from '@/lib/storage';
 
+import { createEmptySnapshot } from '../server/src/snapshot';
+
 function makeMockSnapshot(nickname: string, coins: number): MemberSnapshot {
-  return {
-    schema: 1,
-    memberId: 'mem-123',
-    revision: 1,
-    updatedAt: new Date().toISOString(),
-    profile: {
-      nickname,
-      avatarMode: 'preset',
-      avatarPresetId: 'default-1',
-      avatarUploadDataUrl: null,
-      activeTitle: null,
-      audioVolumes: { master: 0.8, sfx: 0.8, voice: 0.8, music: 0.8 },
-      riichiSettings: {
-        autoDraw: false,
-        autoDiscard: false,
-        autoRon: true,
-        bgmTrack: 'classic',
-        dangerHighlight: true,
-        performanceMode: 'full',
-      },
-      updatedAt: Date.now(),
-    },
-    growth: { exp: 0, level: 1, points: 0, spent: 0 },
-    characters: { selectedCharacterId: 'aoi', bondExp: {}, unlocked: ['aoi'] },
-    wallet: {
-      coins,
-      lifetimeEarned: coins,
-      ledger: [],
-      dailyArcadeEarned: { dateKey: '', amount: 0 },
-      rewardedMatchIds: [],
-    },
-    cosmetics: {
-      owned: ['felt-venue', 'back-vermilion'],
-      equipped: {
-        'table-felt': 'felt-venue',
-        'tile-back': 'back-vermilion',
-        'avatar-frame': 'frame-simple',
-        'riichi-stick': 'stick-classic',
-      },
-    },
-    achievements: ['ach-1'],
-    arcade: { stats: {}, receipts: [] },
-    stats: { matches: 0, wins: 0, totalScore: 0 },
-    dailyTasks: { dateKey: '2026-10-13', tasks: [] },
-    weeklyTasks: { weekKey: '2026-W42', tasks: [] },
-    checkin: { lastDate: '', streak: 0 },
-    ranked: { pt: 100, rankTier: 'novice', maxPt: 100 },
-    preferences: {
-      locale: 'zh',
-      riichiTheme: 'dark',
-      venueTheme: 'classic',
-      arcadePrefs: { sound: true },
-    },
-    legacyData: { 'game-hub-custom-data': 'hello' },
-  };
+  const snapshot = createEmptySnapshot('mem-123', nickname);
+  snapshot.revision = 1;
+  snapshot.wallet.coins = coins;
+  snapshot.wallet.lifetimeEarned = coins;
+  snapshot.cosmetics.owned = ['felt-venue', 'back-vermilion'];
+  snapshot.cosmetics.equipped['table-felt'] = 'felt-venue';
+  snapshot.cosmetics.equipped['tile-back'] = 'back-vermilion';
+  snapshot.achievements = ['ach-1'];
+  snapshot.preferences.riichiTheme = 'dark';
+  snapshot.preferences.venueTheme = 'classic';
+  snapshot.preferences.arcadePrefs = { sound: true };
+  snapshot.legacyData = { 'game-hub-custom-data': 'hello' };
+  return snapshot;
 }
 
 describe('P10 Household Storage & Snapshot Isolation', () => {

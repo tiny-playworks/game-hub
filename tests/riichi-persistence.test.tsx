@@ -74,7 +74,7 @@ test('旧快照存档从种子和事件重建，不信任快照中的手牌', ()
 });
 
 test('牌谱拒绝缺少规则、负用时和错误标记，不能污染重放结果', () => {
-  const file = toReplayFile(createMatch({ seed: 907 }).match);
+  const file = toReplayFile(createMatch({ seed: 907, matchLength: 'east' }).match);
   expect(isReplayFile({ ...file, rules: {} })).toBe(false);
   expect(
     isReplayFile({ ...file, rules: { ...file.rules, aiLevel: 'unknown' } }),
