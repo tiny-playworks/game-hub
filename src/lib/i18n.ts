@@ -6,6 +6,7 @@ export type Locale = 'zh' | 'en';
 const messages: Record<Locale, Record<string, string>> = {
   zh: {
     'venue.nav.home': '大厅',
+    'venue.nav.family': '家庭牌桌',
     'venue.profile.settings': '个人设置',
     'venue.nav.label': '主导航',
     'theme.dark': '切换深色模式',
@@ -1993,6 +1994,7 @@ const messages: Record<Locale, Record<string, string>> = {
   },
   en: {
     'venue.nav.home': 'Lobby',
+    'venue.nav.family': 'Family Table',
     'venue.profile.settings': 'Personal settings',
     'venue.nav.label': 'Main navigation',
     'theme.dark': 'Switch to dark mode',

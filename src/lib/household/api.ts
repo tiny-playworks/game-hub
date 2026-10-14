@@ -264,3 +264,119 @@ export async function deleteResumeSave(saveId: string): Promise<{ ok: boolean }>
   });
 }
 
+export async function listRooms(): Promise<import('../../../shared/contracts/room').RoomSummary[]> {
+  return request<import('../../../shared/contracts/room').RoomSummary[]>('/api/v1/rooms');
+}
+
+export async function getRoom(roomId: string): Promise<import('../../../shared/contracts/room').RoomSummary> {
+  return request<import('../../../shared/contracts/room').RoomSummary>(`/api/v1/rooms/${encodeURIComponent(roomId)}`);
+}
+
+export async function createRoom(
+  settings?: Partial<import('../../../shared/contracts/room').RoomSettings>,
+  nickname?: string,
+  avatarPresetId?: string,
+): Promise<import('../../../shared/contracts/room').RoomSummary> {
+  return request<import('../../../shared/contracts/room').RoomSummary>('/api/v1/rooms', {
+    method: 'POST',
+    body: JSON.stringify({ settings, nickname, avatarPresetId }),
+  });
+}
+
+export async function joinRoomSeat(
+  roomId: string,
+  seatIndex: number,
+  nickname?: string,
+  avatarPresetId?: string,
+): Promise<import('../../../shared/contracts/room').RoomSummary> {
+  return request<import('../../../shared/contracts/room').RoomSummary>(
+    `/api/v1/rooms/${encodeURIComponent(roomId)}/join`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ seatIndex, nickname, avatarPresetId }),
+    },
+  );
+}
+
+export async function leaveRoomSeat(roomId: string): Promise<import('../../../shared/contracts/room').RoomSummary> {
+  return request<import('../../../shared/contracts/room').RoomSummary>(
+    `/api/v1/rooms/${encodeURIComponent(roomId)}/leave`,
+    {
+      method: 'POST',
+    },
+  );
+}
+
+export async function fillRoomAi(
+  roomId: string,
+  seatIndex: number,
+  characterId: string,
+  aiLevel: string,
+): Promise<import('../../../shared/contracts/room').RoomSummary> {
+  return request<import('../../../shared/contracts/room').RoomSummary>(
+    `/api/v1/rooms/${encodeURIComponent(roomId)}/ai`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ seatIndex, characterId, aiLevel }),
+    },
+  );
+}
+
+export async function removeRoomAi(
+  roomId: string,
+  seatIndex: number,
+): Promise<import('../../../shared/contracts/room').RoomSummary> {
+  return request<import('../../../shared/contracts/room').RoomSummary>(
+    `/api/v1/rooms/${encodeURIComponent(roomId)}/ai/${seatIndex}`,
+    {
+      method: 'DELETE',
+    },
+  );
+}
+
+export async function setRoomReady(
+  roomId: string,
+  isReady: boolean,
+): Promise<import('../../../shared/contracts/room').RoomSummary> {
+  return request<import('../../../shared/contracts/room').RoomSummary>(
+    `/api/v1/rooms/${encodeURIComponent(roomId)}/ready`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ isReady }),
+    },
+  );
+}
+
+export async function startRoomGame(
+  roomId: string,
+): Promise<import('../../../shared/contracts/room').RoomSummary> {
+  return request<import('../../../shared/contracts/room').RoomSummary>(
+    `/api/v1/rooms/${encodeURIComponent(roomId)}/start`,
+    {
+      method: 'POST',
+    },
+  );
+}
+
+export async function getRoomPlayerView(
+  roomId: string,
+): Promise<import('../../../shared/contracts/room').PlayerViewSnapshot> {
+  return request<import('../../../shared/contracts/room').PlayerViewSnapshot>(
+    `/api/v1/rooms/${encodeURIComponent(roomId)}/view`,
+  );
+}
+
+export async function sendRoomCommand(
+  roomId: string,
+  command: import('../../../shared/contracts/room').RoomCommand,
+): Promise<{ accepted: boolean; code?: string; revision: number }> {
+  return request<{ accepted: boolean; code?: string; revision: number }>(
+    `/api/v1/rooms/${encodeURIComponent(roomId)}/command`,
+    {
+      method: 'POST',
+      body: JSON.stringify(command),
+    },
+  );
+}
+
+

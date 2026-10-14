@@ -16,11 +16,16 @@ export async function prepareRiichiRuntime(): Promise<void> {
 
 export function nextServerAiEvent(
   match: RiichiMatchState,
-  includeHuman = false,
+  isAiSeat: ((seat: number) => boolean) | boolean = false,
 ): RiichiEvent | null {
   if (match.status !== 'playing') return null;
   const round = match.round;
-  const seat = getPendingSeats(round).find((pending) => includeHuman || pending !== 0);
+  const predicate =
+    typeof isAiSeat === 'function'
+      ? isAiSeat
+      : (pending: number) => isAiSeat || pending !== 0;
+
+  const seat = getPendingSeats(round).find((pending) => predicate(pending));
   if (seat === undefined) return null;
   const level = match.seatAiLevels[seat];
   const characterId = match.seatCharacters[seat];

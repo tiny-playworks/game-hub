@@ -58,3 +58,34 @@ Original prompt: 可以 提交然后 p6吧
 - P9：静音时主动停止正在播放的语音、TTS 和合成音效；移动端首次手势解锁后复用 AudioContext。浏览器确认按钮状态切换，真实设备的可听效果仍待现场验证。
 - P10：成员身份变化会清空日麻内存对局；本机两成员从 A 开局切到 B，B 钱包为 0 且日麻显示新局设置。模拟 401 后，页面显示重新登录提示并退出成员状态；桌面和手机宽度截图已核对。服务端改用 vanilla store，独立依赖与 CI Node 24 已同步；仅安装生产依赖的临时目录中服务成功启动，`/healthz` 返回 `{"status":"ok"}`。前后端类型检查、构建、lint 通过。本轮未新增或运行自动化测试，也未构建 Docker 镜像、连接 NAS、提交或推送。
 
+## 2026-10-14 P11 跨设备续玩与离线同步（已交付分支 codex/p11-save-sync）
+
+- 代码与契约层：
+  1. `shared/contracts/sync.ts` 定义离线凭据、批量同步请求/响应与多设备续局契约。
+  2. `server/src/db.ts` 扩展 `offline_receipts`（防重审计表）与 `resume_saves`（跨设备续局表）。
+  3. `server/src/services/progression.ts` 实现离线凭据重放校验与防作弊发奖。
+  4. `server/src/routes/sync.ts` 实现 `POST /api/v1/sync` 批量归并与 `/api/v1/saves` 续局管理。
+  5. `src/lib/household/offlineDb.ts` 与 `src/lib/household/sync.ts` 实现客户端 IndexedDB 成员隔离队列与网络监听。
+  6. `src/components/household/SyncStatus.tsx` 与 `ResumeSavePicker.tsx` 完成全局同步状态机与选档弹窗。
+- 测试与验证：全仓 76 个测试套件，538 项测试全部通过，分支已提交推送到 `origin/codex/p11-save-sync`。
+
+## 2026-10-14 P12 家庭真人牌桌（当前分支 codex/p12-family-multiplayer）
+
+- 目标：局域网内家人在同一牌桌实时对局，空位 AI 自动补齐，严格进行暗手牌隐私隔离投影，2+ 真人完赛自动发放家庭雀币。
+- 代码与契约层：
+  1. `shared/contracts/room.ts`：定义房间生命周期、席位（human/ai/empty）、命令协议与私有视角快照 `PlayerViewSnapshot`。
+  2. `server/src/rooms/RoomManager.ts`：串行管理房间生命周期、入座/离座/AI配置、就绪开局、指令幂等防重与终局发放家庭雀币结算。
+  3. `server/src/rooms/projectView.ts`：私有视角安全投影过滤（暗手牌隐私隔离、他人手牌置空并保留手牌张数 `tileCount`、隐藏活牌山）。
+  4. `server/src/rooms/socket.ts`：基于 Fastify HTTP 实例的 Cookie 认证 WebSocket，向各真人席位分发各自对应的私有视角。
+  5. `src/lib/household/roomClient.ts`：客户端 WebSocket / HTTP 混合降级 hook 与动作调度器。
+  6. `src/pages/mahjong/japanese/usePlayerSeatView.ts`：绝对座次到本人相对视角（自家/下家/对家/上家）投影映射。
+  7. `src/pages/FamilyLobby.tsx` 与 `src/pages/FamilyRoom.tsx`：家庭大厅房间列表、规则设置、等待室准备、真人牌桌实战与局结算弹窗。
+  8. `rstack.config.ts` 与 `deploy/nas/nginx.household.conf`：配置 `/ws` 的 WebSocket 代理与 Upgrade 请求转发。
+- 测试与验证：
+  - 新增测试套件：`tests/household-room-server.test.ts`（5 项集成测试）与 `tests/household-seat-view.test.ts`（3 项算法测试）。
+  - 全仓类型检查：`pnpm typecheck`（`src/`、`tests/`、`server/`）通过（0 error）。
+  - 全仓测试执行：`pnpm test` 全仓 78 个测试套件，546 项测试 100% 全部通过。
+  - 生产打包构建：`pnpm build` 成功通过（0.41s）。
+- 遗留：真实 NAS 局域网真机现场联调（已明确保留为待现场验证）。
+
+

@@ -9,6 +9,9 @@ import { registerProgressRoutes } from './routes/progress';
 import { registerRiichiRoutes } from './routes/riichi';
 import { registerShopRoutes } from './routes/shop';
 import { registerSyncRoutes } from './routes/sync';
+import { RoomManager } from './rooms/RoomManager';
+import { registerRoomRoutes } from './routes/rooms';
+import { setupRoomWebSocket } from './rooms/socket';
 
 const app = Fastify({
   logger: true,
@@ -46,6 +49,9 @@ registerRiichiRoutes(app, db);
 registerShopRoutes(app, db);
 registerSyncRoutes(app, db);
 
+const roomManager = new RoomManager(db);
+registerRoomRoutes(app, db, roomManager);
+
 app.addHook('onClose', async () => {
   db.close();
 });
@@ -56,6 +62,7 @@ try {
     host: process.env.GAME_HUB_HOST ?? '0.0.0.0',
     port: Number(process.env.GAME_HUB_PORT ?? 8787),
   });
+  setupRoomWebSocket(app.server, db, roomManager);
 } catch (error) {
   app.log.error(error);
   process.exitCode = 1;

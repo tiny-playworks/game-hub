@@ -44,6 +44,8 @@ const GameTank = lazyPage(() => import('@/pages/GameTank'));
 const GameTetris = lazyPage(() => import('@/pages/GameTetris'));
 const GameTictactoe = lazyPage(() => import('@/pages/GameTictactoe'));
 const GameXiangqi = lazyPage(() => import('@/pages/GameXiangqi'));
+const FamilyLobby = lazyPage(() => import('@/pages/FamilyLobby'));
+const FamilyRoom = lazyPage(() => import('@/pages/FamilyRoom'));
 
 function PageFallback() {
   return (
@@ -95,6 +97,8 @@ const App = () => {
             <Suspense fallback={<PageFallback />}>
               <Routes>
                 <Route path="/" element={<Home />} />
+                <Route path="/family" element={<HouseholdReady><FamilyLobby /></HouseholdReady>} />
+                <Route path="/family/:roomId" element={<HouseholdReady><FamilyRoom /></HouseholdReady>} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/characters" element={<Characters />} />
