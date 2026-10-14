@@ -106,6 +106,7 @@ export interface HouseholdContextValue {
   ) => Promise<void>;
   updateProfile: (changes: Record<string, unknown>) => Promise<void>;
   importLocalSave: () => Promise<{ snapshot: MemberSnapshot }>;
+  applySnapshot: (snapshot: MemberSnapshot) => void;
 }
 
 const HouseholdContext = createContext<HouseholdContextValue | null>(null);
@@ -492,6 +493,7 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
       updatePreferences,
       updateProfile,
       importLocalSave,
+      applySnapshot,
     }),
     [
       mode,
@@ -518,6 +520,7 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
       updatePreferences,
       updateProfile,
       importLocalSave,
+      applySnapshot,
     ],
   );
 

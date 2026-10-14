@@ -13,6 +13,12 @@ import type {
   MemberRiichiSession,
   MemberRiichiStart,
 } from './riichiBridge';
+import type {
+  OfflineReceipt,
+  ResumeSaveRecord,
+  ResumeSaveSummary,
+  SyncBatchResponse,
+} from '../../../shared/contracts/sync';
 
 export class HouseholdApiError extends Error {
   readonly status: number;
@@ -220,3 +226,41 @@ export async function forfeitMemberRiichiMatch(
     method: 'POST', body: JSON.stringify({ matchId }),
   });
 }
+
+export async function syncBatchReceipts(
+  baseRevision: number,
+  receipts: OfflineReceipt[],
+): Promise<SyncBatchResponse> {
+  return request<SyncBatchResponse>('/api/v1/sync', {
+    method: 'POST',
+    body: JSON.stringify({ baseRevision, receipts }),
+  });
+}
+
+export async function listResumeSaves(): Promise<ResumeSaveSummary[]> {
+  return request<ResumeSaveSummary[]>('/api/v1/saves');
+}
+
+export async function getResumeSave(saveId: string): Promise<ResumeSaveRecord> {
+  return request<ResumeSaveRecord>(`/api/v1/saves/${encodeURIComponent(saveId)}`);
+}
+
+export async function putResumeSave(
+  saveId: string,
+  data: Partial<ResumeSaveRecord>,
+): Promise<{ ok: boolean; saveId: string; updatedAt: string }> {
+  return request<{ ok: boolean; saveId: string; updatedAt: string }>(
+    `/api/v1/saves/${encodeURIComponent(saveId)}`,
+    {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    },
+  );
+}
+
+export async function deleteResumeSave(saveId: string): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>(`/api/v1/saves/${encodeURIComponent(saveId)}`, {
+    method: 'DELETE',
+  });
+}
+

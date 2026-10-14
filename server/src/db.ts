@@ -84,9 +84,36 @@ function migrate(db: DatabaseSync): void {
       finished_at INTEGER,
       PRIMARY KEY(member_id, match_id)
     );
+    CREATE TABLE IF NOT EXISTS offline_receipts (
+      member_id TEXT NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+      event_id TEXT NOT NULL,
+      device_id TEXT NOT NULL,
+      match_id TEXT NOT NULL,
+      source TEXT NOT NULL CHECK(source IN ('free', 'arcade')),
+      occurred_at TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('accepted', 'duplicate', 'rejected')),
+      result_json TEXT,
+      created_at INTEGER NOT NULL,
+      PRIMARY KEY(member_id, event_id)
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS offline_receipts_match
+      ON offline_receipts(member_id, match_id, source)
+      WHERE status = 'accepted';
+    CREATE TABLE IF NOT EXISTS resume_saves (
+      member_id TEXT NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+      device_id TEXT NOT NULL,
+      save_id TEXT NOT NULL,
+      source TEXT NOT NULL CHECK(source = 'free'),
+      save_json TEXT NOT NULL,
+      updated_at INTEGER NOT NULL,
+      PRIMARY KEY(member_id, device_id, save_id)
+    );
     CREATE INDEX IF NOT EXISTS sessions_expires_at ON sessions(expires_at);
     CREATE INDEX IF NOT EXISTS riichi_matches_active
       ON riichi_matches(member_id, device_id, finished_at, updated_at);
+    CREATE INDEX IF NOT EXISTS resume_saves_member
+      ON resume_saves(member_id, updated_at DESC);
   `);
 }
 

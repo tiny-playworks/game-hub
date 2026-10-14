@@ -35,7 +35,7 @@ P1–P6 的“纯本地、禁止后端/账号/联机、移动端不专门改造�
 | P8   | 全站视觉重设计                         | 本机验收完成（含锁定牌背实战）；NAS/家庭设备待验   | [P8](./P8-visual-redesign.md)      |
 | P9   | 牌桌交互与视听品质                     | 本机验收完成（含整场动作链与移动端）；真机音频/NAS 待验 | [P9](./P9-table-experience.md)     |
 | P10  | 家庭成员与 NAS 服务                    | 本机验收完成（含日麻权威结算与街机校验）；真实 NAS 待验 | [P10](./P10-household-service.md) |
-| P11  | 跨设备续玩与离线同步                   | 待实施                                             | [P11](./P11-save-sync.md)          |
+| P11  | 跨设备续玩与离线同步                   | 本机验收完成（含离线凭据归并与多设备续局）；真实 NAS 待验 | [P11](./P11-save-sync.md)          |
 | P12  | 家庭真人牌桌                           | 待实施                                             | [P12](./P12-family-multiplayer.md) |
 | P13  | 重连、托管与恢复                       | 待实施                                             | [P13](./P13-reconnect-autoplay.md) |
 | P14  | AI 与竞技可信度                        | 待实施                                             | [P14](./P14-ai-ranked-quality.md)  |

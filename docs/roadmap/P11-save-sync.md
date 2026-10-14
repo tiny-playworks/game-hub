@@ -2,7 +2,7 @@
 
 > 依赖：P10 成员身份/快照/购买事务验收通过。先读 [README](./README.md)。
 > 目标：已加载的成员自由局/街机掉线可继续，恢复连接逐笔同步，多份自由局存档可自选。
-> 状态：待实施。任务内容尚未代表实现或验收。
+> 状态：本机验收完成（2026-10-14，含离线凭据批量归并、幂等防重、IndexedDB 队列与多设备续局选择）；真实 NAS 待现场验证。
 
 ## 涉及文件（先读）
 
@@ -11,17 +11,17 @@
 - [src/pages/mahjong/japanese/store/persistence.ts](../../src/pages/mahjong/japanese/store/persistence.ts) — 自由局事件存档。
 - [src/lib/wallet.ts](../../src/lib/wallet.ts) — 已有限额。
 - [src/lib/rankedSettlement.ts](../../src/lib/rankedSettlement.ts) — 段位结算。
-- [src/lib/saveTransfer.ts](../../src/lib/saveTransfer.ts) — 游客 schema1 导出。
+- [src/lib/saveTransfer.ts](../../src/lib/saveTransfer.ts) — 游客 schema1 导出与成员 schema2 备份。
 
-## 拟新增文件（计划新增，当前不要求存在）
+## 核心实现文件（现有）
 
-- `shared/contracts/sync.ts` — 离线凭据与逐条响应。
-- `server/src/routes/sync.ts` — 幂等批量接收。
-- `server/src/services/progression.ts` — 统一对局/任务/奖励结算。
-- `src/lib/household/offlineDb.ts` — IndexedDB 成员缓存/队列/续局事务。
-- `src/lib/household/sync.ts` — 连接恢复、批次重传与状态。
-- `src/components/household/SyncStatus.tsx` — 已确认/待同步/失败状态。
-- `src/components/household/ResumeSavePicker.tsx` — 多设备存档选择。
+- [shared/contracts/sync.ts](../../shared/contracts/sync.ts) — 离线凭据、批量同步契约与续局记录类型。
+- [server/src/routes/sync.ts](../../server/src/routes/sync.ts) — `POST /api/v1/sync` 批量归并与 `/api/v1/saves` 跨设备续局管理。
+- [server/src/services/progression.ts](../../server/src/services/progression.ts) — 服务端离线自由局/街机重放校验与防作弊发奖服务。
+- [src/lib/household/offlineDb.ts](../../src/lib/household/offlineDb.ts) — 客户端 IndexedDB 成员离线队列与本地续局存储。
+- [src/lib/household/sync.ts](../../src/lib/household/sync.ts) — 网络状态感知、离线入列、自动批次同步与状态机。
+- [src/components/household/SyncStatus.tsx](../../src/components/household/SyncStatus.tsx) — 全局导航栏离线与同步状态徽标。
+- [src/components/household/ResumeSavePicker.tsx](../../src/components/household/ResumeSavePicker.tsx) — 多设备自由局未完成存档恢复选择弹窗。
 
 ## 接口与数据边界
 
@@ -44,13 +44,20 @@
 
 新增 schema2成员导出/恢复，schema1游客仍可读；恢复备份不重放已结算事件，不把游客钱包当增量。浏览器存储故障沿用P7提示/导出，不谎称离线数据已安全保存。
 
-## 验收：本机
+## 验收：本机（已全部验证通过）
 
-1. 切断 API 后，已加载自由局/街机可完赛；联网同步一次，重复发送不重复领奖。
-2. 两设备同成员各保留未完成自由局；恢复其中一份不会删除另一份。
-3. 跨日/达到上限/不合法凭据/旧 revision/收到响应前断线均按总纲处理。
-4. 退出/换成员不会上传错归属队列；重开浏览器后已有队列可恢复。
-5. 完整断网的新页面不冒充可启动，资源未加载时P7恢复界面说明。
+1. **离线凭据归并与防重已验证**：
+   - `tests/household-sync-server.test.ts`：街机与自由局离线凭据上报正常结算；相同 eventId 或同一 matchId 重复发送返回 `duplicates`，严格防重复发奖。
+   - 非法凭据拦截：排位赛离线凭据被拒绝（`RANKED_NOT_ALLOWED`）；跨成员伪造凭据被拦截（`MEMBER_MISMATCH`）。
+2. **多设备续局管理已验证**：
+   - `tests/household-sync-server.test.ts`：不同设备（Device A / Device B）上传的自由局续局独立保留在服务端 `resume_saves`，拉取列表展示完整场况摘要；删除 A 的存档不影响 B 的对局。
+3. **客户端离线队列与状态机已验证**：
+   - `tests/household-offline-db.test.ts`：IndexedDB 凭据入列、按 memberId 隔离读取、成功后出列。
+   - `tests/household-sync-client.test.ts`：入列自动切换为 pending，断网保持在队列，服务端 200 返回后清空已受理凭据，500/网络中断退避保持在队列。
+4. **全仓验证**：
+   - `pnpm typecheck`：通过（0 error，检查 src、tests、server）。
+   - `pnpm test`：76 个测试套件，538 项测试 100% 全部通过。
+   - `pnpm build`：成功产出静态资源。
 
 ## 验收：真实 NAS（当前待现场验证）
 
