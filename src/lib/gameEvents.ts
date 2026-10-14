@@ -18,8 +18,7 @@ import {
   getWalletState,
 } from '@/lib/wallet';
 import { recordWeeklyTaskEvent } from '@/lib/weeklyTasks';
-import type { ArcadeRecord } from '@/store/gameStore';
-import { useGameStore } from '@/store/gameStore';
+import { gameStore, type ArcadeRecord } from '@/store/gameStoreCore';
 
 export type GameEventType = 'start' | 'finish' | 'win' | 'best';
 export interface GameEvent {
@@ -55,15 +54,15 @@ export function emitGameEvent(event: GameEvent): GameEventResult {
   if (
     arcade &&
     typeof roundId === 'string' &&
-    !useGameStore.getState().consumeEvent(`${roundId}:${event.type}`)
+    !gameStore.getState().consumeEvent(`${roundId}:${event.type}`)
   )
     return result;
   if (event.type === 'start') recordGameStart(event.gameId);
   if (arcade) {
     if (event.type === 'start')
-      useGameStore.getState().incrementPlayCount(event.gameId, difficulty);
+      gameStore.getState().incrementPlayCount(event.gameId, difficulty);
     if (event.type === 'finish')
-      result.record = useGameStore
+      result.record = gameStore
         .getState()
         .recordResult(
           event.gameId,

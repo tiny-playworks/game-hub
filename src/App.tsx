@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import AchievementUnlockToast from '@/components/AchievementUnlockToast';
 import CoinsToast from '@/components/CoinsToast';
 import { AffinityNotice } from '@/components/characters/AffinityNotice';
+import { HouseholdNotice } from '@/components/household/HouseholdNotice';
 import GrowthPointToast from '@/components/GrowthPointToast';
 import { VenueNavigation } from '@/components/layout/VenueNavigation';
 import { RankedNavigationGuard } from '@/components/ranked/RankedNavigationGuard';
@@ -82,6 +83,7 @@ const App = () => {
       <HouseholdProvider>
         <LocaleProvider>
           <StorageNotice />
+          <HouseholdNotice />
           <CosmeticsProvider>
           <VenueNavigation />
           <RankedNavigationGuard />

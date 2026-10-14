@@ -1,9 +1,11 @@
 import { useLocale } from '@/contexts/LocaleContext';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
+import { stopRiichiAudioPlayback, stopRiichiVoicePlayback } from '@/hooks/useRiichiSounds';
 import {
   type RiichiPlayerSettings,
   updatePlayerProfile,
 } from '@/lib/playerProfile';
+import { stopSoundEffects, unlockAudioContext } from '@/lib/speech';
 
 const switches = [
   'autoWin',
@@ -24,6 +26,8 @@ export function RiichiSettingsPanel({ ranked = false }: { ranked?: boolean }) {
 
   const isMuted = audioVolumes.sfx <= 0 && audioVolumes.voice <= 0;
   const toggleMute = (muted: boolean) => {
+    if (muted) stopRiichiAudioPlayback();
+    else unlockAudioContext();
     updatePlayerProfile({
       audioVolumes: {
         ...audioVolumes,
@@ -34,6 +38,12 @@ export function RiichiSettingsPanel({ ranked = false }: { ranked?: boolean }) {
   };
 
   const setAudioVolume = (type: 'sfx' | 'voice', value: number) => {
+    if (value <= 0) {
+      if (type === 'sfx') stopSoundEffects();
+      else stopRiichiVoicePlayback();
+    } else if (type === 'sfx') {
+      unlockAudioContext();
+    }
     updatePlayerProfile({
       audioVolumes: {
         ...audioVolumes,

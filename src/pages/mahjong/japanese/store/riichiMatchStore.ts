@@ -15,6 +15,7 @@ import { settleRankedMatch } from '@/lib/rankedSettlement';
 import {
   recordRiichiMatchFinish,
   recordRiichiProgressEvent,
+  resetCurrentRiichiRoundProgressSummary,
 } from '@/lib/riichiProgress';
 import { randomSeed } from '@/lib/seededRandom';
 import { createUuid } from '@/lib/uuid';
@@ -66,6 +67,7 @@ type RiichiStore = {
   sessionId: string;
   moments: CharacterMoment[];
   cutIns: CharacterMoment[];
+  resetForIdentity: () => void;
   expireMoment: (id: string) => void;
   finishCutIn: (id: string) => void;
   clearCutIns: () => void;
@@ -230,6 +232,23 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
       sessionId: '',
       moments: [],
       cutIns: [],
+      resetForIdentity: () => {
+        resetCurrentRiichiRoundProgressSummary();
+        set({
+          view: 'rules',
+          matchLength: 'east',
+          match: null,
+          showGuide: false,
+          showMenu: false,
+          decisionClock: null,
+          processedProgress: [],
+          replay: null,
+          playerCharacterId: getPlayerCharacterState().activeCharacterId,
+          sessionId: '',
+          moments: [],
+          cutIns: [],
+        });
+      },
       expireMoment: (id) =>
         set({ moments: get().moments.filter((moment) => moment.id !== id) }),
       finishCutIn: (id) => {

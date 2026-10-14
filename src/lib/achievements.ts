@@ -3,8 +3,8 @@ import { gameStorage } from '@/lib/storage';
 import {
   DEFAULT_GAME_STATS,
   type GameStats,
-  useGameStore,
-} from '@/store/gameStore';
+  gameStore,
+} from '@/store/gameStoreCore';
 import { ARCADE_ACHIEVEMENTS } from './arcadeAchievements';
 import type { GameEvent } from './gameEvents';
 import { getPlayerStats } from './playerStats';
@@ -390,7 +390,7 @@ function readArcadeStat(
   field: keyof GameStats,
   difficulty?: string,
 ): number {
-  const entries = Object.entries(useGameStore.getState().stats).filter(
+  const entries = Object.entries(gameStore.getState().stats).filter(
     ([key]) =>
       key.startsWith(gameId + ':') &&
       (!difficulty || key === gameId + ':' + difficulty),
@@ -454,7 +454,7 @@ export function checkArcadeAchievements(event: GameEvent): void {
   }
 }
 export function migrateLegacyArcadeStats(): void {
-  const store = useGameStore.getState();
+  const store = gameStore.getState();
   const stats = { ...store.stats };
   let changed = false;
   for (const [gameId, storageKey, field] of [
@@ -475,5 +475,5 @@ export function migrateLegacyArcadeStats(): void {
       changed = true;
     }
   }
-  if (changed) useGameStore.setState({ stats });
+  if (changed) gameStore.setState({ stats });
 }

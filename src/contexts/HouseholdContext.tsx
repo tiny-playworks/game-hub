@@ -46,6 +46,7 @@ import {
 import { setMemberProfileWriter, type PlayerProfilePatch } from '@/lib/playerProfile';
 import { setStorageDriver } from '@/lib/storage';
 import { useGameStore } from '@/store/gameStore';
+import { useRiichiStore } from '@/pages/mahjong/japanese/store/riichiMatchStore';
 
 const DEVICE_ID_KEY = 'game-hub-device-id';
 
@@ -77,6 +78,7 @@ export interface HouseholdContextValue {
   currentMember: MemberSummary | null;
   snapshot: MemberSnapshot | null;
   error: HouseholdApiError | Error | null;
+  clearError: () => void;
   login: (memberId: string, pin: string) => Promise<void>;
   logout: () => Promise<void>;
   switchToGuest: () => void;
@@ -117,6 +119,7 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
   const profileWriterRef = useRef<((patch: PlayerProfilePatch) => Promise<void>) | null>(null);
   const mutationQueue = useRef<Promise<void>>(Promise.resolve());
   const [error, setError] = useState<HouseholdApiError | Error | null>(null);
+  const clearError = useCallback(() => setError(null), []);
 
   const applySnapshot = useCallback((next: MemberSnapshot | null) => {
     if (
@@ -124,6 +127,7 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
       snapshotRef.current?.memberId === next.memberId &&
       snapshotRef.current.revision > next.revision
     ) return;
+    const identityChanged = snapshotRef.current?.memberId !== next?.memberId;
     if (next) {
       const storage = createStorageFromSnapshot(next);
       setStorageDriver(storage);
@@ -138,6 +142,7 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
       setMemberProfileWriter(null);
       void useGameStore.persist.rehydrate();
     }
+    if (identityChanged) useRiichiStore.getState().resetForIdentity();
     snapshotRef.current = next;
     setSnapshot(next);
     if (next) {
@@ -160,6 +165,16 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
     mutationQueue.current = result.then(() => {}, () => {});
     return result;
   }, []);
+
+  const handleMutationFailure = useCallback((err: unknown, owner: string) => {
+    if (snapshotRef.current?.memberId !== owner) return;
+    if (err instanceof HouseholdApiError && err.status === 401) {
+      applySnapshot(null);
+      setMode('guest-local');
+      setCurrentMember(null);
+    }
+    setError(err instanceof Error ? err : new Error(String(err)));
+  }, [applySnapshot]);
 
   const reviseSnapshot = useCallback(<T extends { snapshot: MemberSnapshot }>(
     operation: (revision: number) => Promise<T>,
@@ -186,11 +201,11 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
         setError(null);
         return result;
       } catch (err) {
-        setError(err instanceof Error ? err : new Error(String(err)));
+        handleMutationFailure(err, owner);
         throw err;
       }
     });
-  }, [applySnapshot, enqueueMutation]);
+  }, [applySnapshot, enqueueMutation, handleMutationFailure]);
 
   const refreshMembers = useCallback(async () => {
     try {
@@ -225,9 +240,11 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
       setError(null);
     } catch (err) {
       if (err instanceof HouseholdApiError && err.status === 401) {
+        const hadMember = snapshotRef.current !== null;
         applySnapshot(null);
         setMode('guest-local');
         setCurrentMember(null);
+        if (hadMember) setError(err);
       } else {
         setError(err instanceof Error ? err : new Error(String(err)));
       }
@@ -238,6 +255,13 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
     async (memberId: string, pin: string) => {
       setError(null);
       await loginSession(memberId, pin, deviceId);
+      // The cookie now belongs to the new login. Never keep the previous member's snapshot
+      // visible if fetching the new snapshot fails.
+      if (snapshotRef.current?.memberId !== memberId) {
+        applySnapshot(null);
+        setMode('guest-local');
+        setCurrentMember(null);
+      }
       const { snapshot: freshSnapshot } = await fetchCurrentMe();
       applySnapshot(freshSnapshot);
       setMode('member-online');
@@ -277,15 +301,20 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
       const owner = snapshotRef.current?.memberId;
       if (!owner) throw new Error('Not logged in');
       return enqueueMutation(async () => {
-        if (snapshotRef.current?.memberId !== owner)
-          throw new Error('Member changed before the purchase');
-        const result = await purchaseCosmeticItem(itemId);
-        if (snapshotRef.current?.memberId === owner) applySnapshot(result.snapshot);
-        setError(null);
-        return result;
+        try {
+          if (snapshotRef.current?.memberId !== owner)
+            throw new Error('Member changed before the purchase');
+          const result = await purchaseCosmeticItem(itemId);
+          if (snapshotRef.current?.memberId === owner) applySnapshot(result.snapshot);
+          setError(null);
+          return result;
+        } catch (err) {
+          handleMutationFailure(err, owner);
+          throw err;
+        }
       });
     },
-    [applySnapshot, enqueueMutation],
+    [applySnapshot, enqueueMutation, handleMutationFailure],
   );
 
   const equipCosmetic = useCallback(async (itemId: string) => {
@@ -356,10 +385,16 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
       throw new Error('No guest save is available to migrate');
     // Download exactly the guest data that will be imported. Abort on failure.
     downloadSaveFile(save);
-    const result = await importLegacySave(save);
-    applySnapshot(result.snapshot);
-    return result;
-  }, [snapshot, applySnapshot]);
+    try {
+      const result = await importLegacySave(save);
+      applySnapshot(result.snapshot);
+      setError(null);
+      return result;
+    } catch (err) {
+      handleMutationFailure(err, snapshot.memberId);
+      throw err;
+    }
+  }, [snapshot, applySnapshot, handleMutationFailure]);
 
   useEffect(() => {
     let cancelled = false;
@@ -391,6 +426,7 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
       currentMember,
       snapshot,
       error,
+      clearError,
       login,
       logout,
       switchToGuest,
@@ -416,6 +452,7 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
       currentMember,
       snapshot,
       error,
+      clearError,
       login,
       logout,
       switchToGuest,

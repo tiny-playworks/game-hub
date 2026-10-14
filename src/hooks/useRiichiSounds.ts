@@ -1,13 +1,41 @@
 /** 日麻音效仅在首次播放时加载；短促摸打声使用本地合成音。 */
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
-import { playBeep, speak } from '@/lib/speech';
+import {
+  getAudioContext,
+  playBeep,
+  speak,
+  stopSoundEffects,
+  stopSpeech,
+  trackAudioOscillator,
+  unlockAudioContext,
+} from '@/lib/speech';
+
+const activeVoiceElements = new Set<HTMLAudioElement>();
+
+export function stopRiichiVoicePlayback(): void {
+  for (const audio of activeVoiceElements) {
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+    } catch {
+      // Unloaded audio elements may reject seeking on some browsers.
+    }
+  }
+  stopSpeech();
+}
+
+export function stopRiichiAudioPlayback(): void {
+  stopRiichiVoicePlayback();
+  stopSoundEffects();
+}
 
 /** A short rising chord, synthesized locally; no voice assets are needed. */
 function yakumanChime(volume: number) {
-  if (volume <= 0 || typeof window.AudioContext === 'undefined') return;
+  if (volume <= 0) return;
   try {
-    const ctx = new AudioContext();
+    const ctx = getAudioContext();
+    if (!ctx) return;
     const gain = ctx.createGain();
     gain.connect(ctx.destination);
     gain.gain.setValueAtTime(0.0001, ctx.currentTime);
@@ -21,12 +49,10 @@ function yakumanChime(volume: number) {
       oscillator.type = 'sine';
       oscillator.frequency.value = frequency;
       oscillator.connect(gain);
+      trackAudioOscillator(oscillator, gain);
       oscillator.start(ctx.currentTime + index * 0.07);
       oscillator.stop(ctx.currentTime + 0.9);
     });
-    window.setTimeout(() => {
-      void ctx.close().catch(() => undefined);
-    }, 1000);
   } catch {
     /* Audio availability must not interrupt settlement. */
   }
@@ -42,32 +68,28 @@ export function useRiichiSounds() {
 
   // User gesture unlock for mobile audio environments
   useEffect(() => {
-    const unlock = () => {
-      try {
-        const Ctx =
-          window.AudioContext ||
-          (
-            window as typeof window & {
-              webkitAudioContext?: typeof AudioContext;
-            }
-          ).webkitAudioContext;
-        if (Ctx) {
-          const ctx = new Ctx();
-          if (ctx.state === 'suspended') {
-            void ctx.resume();
-          }
-          void ctx.close().catch(() => undefined);
-        }
-      } catch {
-        // ignore
-      }
-    };
+    const unlock = () => unlockAudioContext();
     window.addEventListener('pointerdown', unlock, {
       once: true,
       passive: true,
     });
     return () => window.removeEventListener('pointerdown', unlock);
   }, []);
+
+  useEffect(() => {
+    if (voice <= 0) stopRiichiVoicePlayback();
+    if (sfx <= 0) stopSoundEffects();
+  }, [sfx, voice]);
+
+  useEffect(
+    () => () => {
+      for (const audio of cache.current.values()) {
+        audio.pause();
+        activeVoiceElements.delete(audio);
+      }
+    },
+    [],
+  );
 
   const playVoice = useCallback(
     (name: Voice) => {
@@ -77,6 +99,7 @@ export function useRiichiSounds() {
         audio = new Audio(`${BASE}/${name}.m4a`);
         audio.preload = 'none';
         cache.current.set(name, audio);
+        activeVoiceElements.add(audio);
       }
       audio.volume = 0.8 * voice;
       audio.currentTime = 0;

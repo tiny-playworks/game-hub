@@ -2,7 +2,7 @@
 
 > 依赖：P8 设计与主要页面验收通过。先读 [README](./README.md)。
 > 目标：操作反馈明确，出牌/鸣牌/立直手感统一，手机能完成一整场。
-> 状态：本机验收完成；NAS 待现场验证。
+> 状态：基础交互与静音逻辑已在本机核对；完整对局操作链、真实手机音频及 NAS 待现场验证。
 
 ## 涉及文件（先读）
 
@@ -22,7 +22,7 @@
 - [src/pages/mahjong/japanese/components/TableFeedback.tsx](../../src/pages/mahjong/japanese/components/TableFeedback.tsx) — 选牌操作栏（`SelectedTileBar`）、动作反馈浮层（`TableActionToast`）、新手操作指引（`NoviceControlsGuide`）。
 - [src/pages/mahjong/japanese/table-feedback.css](../../src/pages/mahjong/japanese/table-feedback.css) — 牌桌选中光效、浮起动效、44px 触控区保底与 reduced-motion。
 - [tests/riichi-p9-interaction.test.tsx](../../tests/riichi-p9-interaction.test.tsx) — 选牌、快捷键、防误触与偏好单元测试套件。
-- [tests/riichi-p9-e2e.test.tsx](../../tests/riichi-p9-e2e.test.tsx) — 牌桌完整端到端交互、触控防滚、静音与新手引导测试套件。
+- [tests/riichi-p9-e2e.test.tsx](../../tests/riichi-p9-e2e.test.tsx) — 开局后的选牌、静音、新手引导及模拟触控滚动测试；不覆盖整场对局。
 
 ## 接口与数据边界
 
@@ -45,24 +45,24 @@
 
 首次进入给出可关闭的一次性操作说明，不新增长篇阻断教程；危险度继续标明是估计，训练提示不进入 AI 段位。
 
-## 验收：本机（已验证通过）
+## 验收：本机已核对的范围与待补范围
 
-1. **鼠标、键盘、手机触控各完成出牌/鸣牌/立直/和牌/下一局**：
-   - 验证证据：`tests/riichi-p9-interaction.test.tsx` & `tests/riichi-p9-e2e.test.tsx` 均通过。
+1. **基础选牌与操作提示已验证；整场动作链待验**：
+   - 2026-10-13 的现有用例覆盖选牌、取消、键盘选牌、静音与引导；没有完成出牌、鸣牌、立直、和牌、下一局的连续对局验收。历史测试通过不代表这条整场链已通过。
    - 鼠标：点击手牌选中（升起 8px 加金色投影），再次点击或点击出牌栏确认打出。
    - 键盘：ArrowLeft / ArrowRight 循环选择合法手牌，Enter 确认出牌，Esc 取消选择/退出立直/跳过副露。
    - 鸣牌快捷键：R 立直、T 自摸、C 吃、P 碰、K 杠。
-2. **选牌触控不被滚动误触，按钮点击区不少于 44px；手机完整一场**：
+2. **模拟触控防滚与 44px 触控区已有证据；手机完整一场待验**：
    - 验证证据：`tests/riichi-p9-interaction.test.tsx`（触控位移 > 10px 取消选牌）、`tests/riichi-p9-e2e.test.tsx`（触控模拟滚动不误选）。
    - 触控防抖：移动端轻触后拦截 650ms 内浏览器合成的重复 click 事件，避免单次点击直接将选中牌打出。
    - 触控区保底：选牌操作栏确认按钮 `min-height: 44px; min-width: 80px`，取消按钮 `min-height: 44px; min-width: 56px`；顶部静音按钮 `min-w-11 min-h-11` (44px)。
    - 暗杠呈现：`MeldTiles.tsx` 中暗杠两端扣翻展示牌背（`TileBack`），中间两张翻开。
-3. **静音、演出简化/关闭、reduced-motion 真实生效，刷新后保留**：
-   - 验证证据：顶部快捷静音按钮（Volume2 / VolumeX）与设置面板音量条双向响应，即时静音 Web Audio / TTS 播报，刷新页面后维持 `localStorage` 持久化状态。
+3. **静音按钮与偏好已在本机核对；真实音频待验**：
+   - 2026-10-14：音效复用首次手势解锁的 AudioContext；静音会停止正在播放的语音、TTS 与合成音效。浏览器核对按钮从“静音”切到“开启声音”，前端类型检查及构建通过；真实手机播放、即时截断和刷新后的音频行为待现场听测。
    - 演出模式：设置面板支持 `full` / `simple` / `off`，`table-feedback.css` 与 `presentation.css` 包含 `@media (prefers-reduced-motion: reduce)` 规则，动画耗时压缩至 0.01ms 并取消震荡位移。
 4. **重复渲染/恢复存档不重复播放奖励/音效；段位无训练辅助**：
    - 验证证据：`riichiMatchStore.ts` 中 `resumeSaved` 重置 `cutIns: []` 和 `moments: []`，且不重复发出 effects 触发音效；AI 段位战下 `dangerHint={!isRanked && riichiSettings.dangerHint}` 严格关闭，设置面板中自动隐藏放铳危险度选项。
-   - 回归质量：全仓 65 个测试套件（499 项测试）全部一次性通过；`pnpm typecheck` 0 错误；`pnpm build` 顺利产出构建产物。
+   - 历史回归：2026-10-13 全仓 65 个测试套件（499 项测试）通过。2026-10-14 未运行测试；前端类型检查与构建通过。
 
 ## 验收：真实 NAS（当前待现场验证）
 

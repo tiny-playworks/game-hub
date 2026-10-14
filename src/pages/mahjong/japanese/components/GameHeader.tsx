@@ -11,12 +11,14 @@ import {
   X,
 } from 'lucide-react';
 import { useRef } from 'react';
+import { stopRiichiAudioPlayback } from '@/hooks/useRiichiSounds';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { WalletBadge } from '@/components/WalletBadge';
 import { useLocale } from '@/contexts/LocaleContext';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
 import { formatMessage } from '@/lib/i18n';
 import { updatePlayerProfile } from '@/lib/playerProfile';
+import { unlockAudioContext } from '@/lib/speech';
 import { cn } from '@/lib/utils';
 import { RIICHI_THEMES, type RiichiThemeId } from '../constants';
 import { formatPoints, toTileKeyedItems } from '../helpers';
@@ -75,6 +77,8 @@ export function GameHeader({
   const { audioVolumes } = usePlayerProfile();
   const isMuted = audioVolumes.sfx <= 0 && audioVolumes.voice <= 0;
   const toggleMute = () => {
+    if (isMuted) unlockAudioContext();
+    else stopRiichiAudioPlayback();
     updatePlayerProfile({
       audioVolumes: {
         ...audioVolumes,

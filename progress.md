@@ -23,6 +23,7 @@ Original prompt: 可以 提交然后 p6吧
 ## 2026-10-13 P9 牌桌交互与视听品质收尾
 
 - 状态：P9 本机验收完成（`docs/roadmap/P9-table-experience.md` 与 `docs/roadmap/README.md` 已同步更新）；NAS 真实移动真机项目明确保留为待现场验证。
+- 2026-10-14 复核更正：`riichi-p9-e2e.test.tsx` 仅覆盖开局后的选牌、静音、引导与模拟触控防滚，未完成鸣牌、立直、和牌、下一局的整场验证。当前状态以任务卡为准；本机基础交互可用，完整操作链与真机音频待验。
 - 代码层与实现：
   1. 统一选牌交互：新建 `useTileInteraction.ts`，首点/首触手牌浮起选中（+8px 金色阴影、`aria-pressed="true"`、`.riichi-tile--selected`），再点或点击出牌栏确认打出。键盘 ArrowLeft/Right 循环合法选牌，Enter 确认出牌，Esc 退出选择/立直/鸣牌。
   2. 触控滚动保护与触控区保底：滑动位移 > 10px 判定为滚动自动放弃选牌/出牌；轻触后 650ms 内防抖拦截移动端合成 click 事件防误打。选牌操作栏确认/取消按钮具备 `min-height: 44px` 触控保底；顶部快速静音按钮具备 `min-w-11 min-h-11` (44px)。日式暗杠两端暗扣（`TileBack`）、中间两张翻开。
@@ -34,9 +35,9 @@ Original prompt: 可以 提交然后 p6吧
   - `pnpm build`：成功产出静态资源。
 - 遗留：实际手机音频首次手势解锁、低性能设备现场检查（须依赖真实 NAS 部署与现场真机，已明确保留为待现场验证）。
 
-## 2026-10-13 P10 家庭成员与 NAS 服务（本机实施）
+## 2026-10-13 P10 家庭成员与 NAS 服务（本机实施；见 2026-10-14 状态更正）
 
-- 状态：P10 本机服务、契约、API Client、Context 状态机、UI 入口及数据隔离已全部实施并通过验收；真实 NAS 部署与局域网反代明确保留为待现场验证。
+- 状态更正：上述模块已实现，但日麻奖励/段位仍可能只落在客户端临时快照，P10 本机权威结算尚未完成；真实 NAS 部署与局域网反代也待现场验证。
 - 代码层与实现：
   1. 共享契约与 API：`shared/contracts/member.ts` 与 `shared/contracts/api.ts` 规范化 `HouseholdMode`、`MemberSummary`、`MemberSnapshot` (schema 1, revision) 与 API 错误。
   2. 客户端封装与存储隔离：`src/lib/household/api.ts` 封装同域通信；`snapshotStorage.ts` 实现 `MemoryStorage` 与快照字段双向映射；`src/lib/storage.ts` 支持可插拔 `activeDriver`，实现成员登录与本地游客 localStorage 零冲突绝对隔离。
@@ -49,5 +50,11 @@ Original prompt: 可以 提交然后 p6吧
   - `pnpm typecheck`：通过（0 error）。
   - `pnpm test`：全仓 69 个测试套件，514 项测试 100% 全部通过。
   - `pnpm build`：Rsbuild 0.43s 生产打包成功。
-- 遗留：真实 NAS 环境（ARM/x86 Docker 容器运行、SQLite 卷持久化权限、局域网 HTTPS/反代现场联调，待现场验证）。
+- 遗留：日麻服务端权威结算与可信结果校验、真实 NAS 环境（Docker 容器运行、SQLite 卷持久化权限、局域网反代现场联调）。
+
+## 2026-10-14 P8–P10 本机补充
+
+- P8：没有改动视觉资产；原任务卡保留 NAS/家庭设备与已解锁牌背实战检查。
+- P9：静音时主动停止正在播放的语音、TTS 和合成音效；移动端首次手势解锁后复用 AudioContext。浏览器确认按钮状态切换，真实设备的可听效果仍待现场验证。
+- P10：成员身份变化会清空日麻内存对局；本机两成员从 A 开局切到 B，B 钱包为 0 且日麻显示新局设置。模拟 401 后，页面显示重新登录提示并退出成员状态；桌面和手机宽度截图已核对。服务端改用 vanilla store，独立依赖与 CI Node 24 已同步；仅安装生产依赖的临时目录中服务成功启动，`/healthz` 返回 `{"status":"ok"}`。前后端类型检查、构建、lint 通过。本轮未新增或运行自动化测试，也未构建 Docker 镜像、连接 NAS、提交或推送。
 

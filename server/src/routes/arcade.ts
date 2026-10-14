@@ -3,7 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { games } from '@/data/games';
 import { normalizeArcadeDifficulty } from '@/lib/arcade';
 import { emitGameEvent } from '@/lib/gameEvents';
-import { useGameStore } from '@/store/gameStore';
+import { gameStore } from '@/store/gameStoreCore';
 import type {
   ArcadeMemberEvent,
   ArcadeMemberResult,
@@ -54,7 +54,7 @@ function settle(snapshot: ReturnType<typeof readSnapshot>, event: ArcadeMemberEv
   result: ArcadeMemberResult;
 } {
   const updated = runSnapshotMutation(snapshot, () => {
-    useGameStore.setState({
+    gameStore.setState({
       stats: snapshot.arcade.stats,
       receipts: snapshot.arcade.receipts,
     });
