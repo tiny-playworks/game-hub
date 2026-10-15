@@ -2,19 +2,20 @@
 
 > 依赖：P15 牌谱档案、本人视角分析及关键决策训练；现有日麻引擎可确定性重放。与 P17 可并行。先读 [README](./README.md)。
 > 目标：玩家在自己曾经的关键决策处改打一手，继续完成这一局，并看到原走向与练习走向的差异。
-> 状态：2026-10-15 规划中，未实施；P15 目前只有答题、解释和回放定位，没有可继续对局的分支。
+> 状态：2026-10-15 本机实现已完成：P15 中本人自由局/AI 段位局的弃牌与立直节点可启动当前局分支；家庭牌谱保持关闭。桌面浏览器用一份完整单人牌谱验证了分支启动、玩家后续弃牌/鸣牌响应、整局结束、同选择重试、换选和回看原帧，中英文结果文案均已检查。仍待用户现有牌谱、手机结果页及 NAS 成员权限现场验收。
 
 ## 涉及文件（实施前先核对）
 
 - [src/lib/riichiTraining.ts](../../src/lib/riichiTraining.ts) — 从关键决策提取练习题，目前只评价选择。
 - [src/lib/riichiMatchReview.ts](../../src/lib/riichiMatchReview.ts) — 决策分析与本人视角。
 - [src/pages/RiichiTraining.tsx](../../src/pages/RiichiTraining.tsx) — 现有训练入口。
+- [src/lib/riichiReplayBranch.ts](../../src/lib/riichiReplayBranch.ts) 与 [src/components/riichi/ReplayBranchPractice.tsx](../../src/components/riichi/ReplayBranchPractice.tsx) — 分支状态校验、比较和隔离练习。
 - [src/pages/mahjong/japanese/components/ReplayViewer.tsx](../../src/pages/mahjong/japanese/components/ReplayViewer.tsx) — 逐步回放与定位。
 - [src/pages/mahjong/japanese/engine/match.ts](../../src/pages/mahjong/japanese/engine/match.ts) — `replayMatch`、`applyEvent` 与牌谱格式。
 - [src/lib/riichiReplayArchive.ts](../../src/lib/riichiReplayArchive.ts) — 游客/成员牌谱读取。
 - [server/src/routes/replays.ts](../../server/src/routes/replays.ts) — 成员牌谱访问权限。
 
-练习分支页面、运行器及可选的本地草稿存储均为计划新增，实施时再确定路径与最小接口。
+分支不落盘；退出或刷新后从原牌谱节点重新生成。练习页、状态隔离与结果对照已按上方涉及文件实现。
 
 ## 18.1 玩家流程
 

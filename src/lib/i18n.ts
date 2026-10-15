@@ -2,6 +2,9 @@ import { gameStorage } from '@/lib/storage';
 import { arcadeMessages } from './arcadeMessages';
 import { aoiMessages } from './aoiMessages';
 import { familyMessages } from './familyMessages';
+import { journeyMessages } from './journeyMessages';
+import { practiceMessages } from './practiceMessages';
+import { replayBranchMessages } from './replayBranchMessages';
 export type Locale = 'zh' | 'en';
 
 const messages: Record<Locale, Record<string, string>> = {
@@ -4536,6 +4539,9 @@ export function getMessage(locale: Locale, key: string): string {
   const translated =
     familyMessages[locale]?.[key] ??
     aoiMessages[locale]?.[key] ??
+    journeyMessages[locale]?.[key] ??
+    replayBranchMessages[locale]?.[key] ??
+    practiceMessages[locale]?.[key] ??
     arcadeMessages[locale]?.[key] ??
     messages[locale]?.[key];
   if (translated !== undefined) return translated;

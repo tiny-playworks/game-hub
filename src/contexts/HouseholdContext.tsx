@@ -18,6 +18,7 @@ import type {
   ProgressAction,
   ProgressActionResult,
 } from '../../shared/contracts/member';
+import type { JourneyAttemptInput, JourneyEvaluation } from '../../shared/contracts/journey';
 import {
   checkServerHealth,
   equipMemberCosmetic,
@@ -33,6 +34,7 @@ import {
   forfeitMemberRiichiMatch,
   startMemberRiichiMatch,
   submitMemberArcadeEvent,
+  submitMemberJourneyAttempt,
   submitMemberRiichiEvent,
   updatePreferences as apiUpdatePreferences,
   updateProfile as apiUpdateProfile,
@@ -95,6 +97,8 @@ export interface HouseholdContextValue {
   equipCosmetic: (itemId: string) => Promise<void>;
   performProgressAction: (action: ProgressAction) => Promise<ProgressActionResult>;
   performArcadeEvent: (event: ArcadeMemberEvent) => Promise<ArcadeMemberResult>;
+  submitJourneyAttempt: (input: JourneyAttemptInput) =>
+    Promise<{ snapshot: MemberSnapshot; evaluation: JourneyEvaluation }>;
   selectCharacter: (characterId: string) => Promise<void>;
   selectAoiOutfit: (outfit: string) => Promise<void>;
   updateArcadeDifficulty: (
@@ -342,6 +346,19 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
     return response.result;
   }, [reviseSnapshot]);
 
+  const submitJourneyAttempt = useCallback((input: JourneyAttemptInput) => {
+    const owner = snapshotRef.current?.memberId;
+    if (!owner) return Promise.reject(new Error('Not logged in'));
+    return reviseSnapshot(async (revision) => {
+      if (snapshotRef.current?.memberId !== owner)
+        throw new Error('Member changed before the update');
+      const response = await submitMemberJourneyAttempt(revision, input);
+      if (response.snapshot.memberId !== owner || snapshotRef.current?.memberId !== owner)
+        throw new Error('Member changed before the update');
+      return response;
+    });
+  }, [reviseSnapshot]);
+
   const selectCharacter = useCallback(async (characterId: string) => {
     await reviseSnapshot((revision) =>
       updateMemberCharacter(revision, { activeCharacterId: characterId }));
@@ -487,6 +504,7 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
       equipCosmetic,
       performProgressAction,
       performArcadeEvent,
+      submitJourneyAttempt,
       selectCharacter,
       selectAoiOutfit,
       updateArcadeDifficulty,
@@ -514,6 +532,7 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
       equipCosmetic,
       performProgressAction,
       performArcadeEvent,
+      submitJourneyAttempt,
       selectCharacter,
       selectAoiOutfit,
       updateArcadeDifficulty,

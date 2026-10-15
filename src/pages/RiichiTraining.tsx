@@ -1,16 +1,23 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, BookOpen, CheckCircle, ChevronRight, Eye, RefreshCw, XCircle } from 'lucide-react';
+import { ArrowLeft, BookOpen, CheckCircle, ChevronRight, Eye, GitBranch, RefreshCw, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useHousehold } from '@/contexts/HouseholdContext';
 import { formatMessage } from '@/lib/i18n';
 import { getTileLabel } from '@/lib/mahjongRiichi';
-import type { TrainingProblem } from '../../shared/contracts/replay';
+import type { ReplayArchiveSummary, TrainingProblem } from '../../shared/contracts/replay';
 import { fetchReplayDetail, fetchReplayList } from '@/lib/riichiReplayArchive';
 import { buildMatchReview, type MatchReview } from '@/lib/riichiMatchReview';
 import { evaluateTrainingChoice, extractTrainingProblems } from '@/lib/riichiTraining';
+import {
+  createReplayBranch,
+  getReplayBranchAvailability,
+  isReplayBranchChoiceLegal,
+  type ReplayBranchRun,
+} from '@/lib/riichiReplayBranch';
+import { ReplayBranchPractice } from '@/components/riichi/ReplayBranchPractice';
 import { ReplayViewer } from '@/pages/mahjong/japanese/components/ReplayViewer';
 import { RiichiTile } from '@/pages/mahjong/japanese/components/Tile';
 import type { RiichiReplayFile } from '@/pages/mahjong/japanese/engine/match';
@@ -27,6 +34,7 @@ export default function RiichiTraining() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [replayFile, setReplayFile] = useState<RiichiReplayFile | null>(null);
+  const [replaySummary, setReplaySummary] = useState<ReplayArchiveSummary | null>(null);
   const [review, setReview] = useState<MatchReview | null>(null);
   const [problems, setProblems] = useState<TrainingProblem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -36,14 +44,30 @@ export default function RiichiTraining() {
   const [declaredRiichi, setDeclaredRiichi] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [activeReplayFrame, setActiveReplayFrame] = useState<number | null>(null);
+  const [activeBranch, setActiveBranch] = useState<ReplayBranchRun | null>(null);
+  const [branchError, setBranchError] = useState(false);
+  const [reviewProgress, setReviewProgress] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
 
     async function init() {
       try {
         setLoading(true);
         setError(null);
+        setReplayFile(null);
+        setReplaySummary(null);
+        setReview(null);
+        setProblems([]);
+        setCurrentIndex(0);
+        setSelectedTile(null);
+        setDeclaredRiichi(false);
+        setSubmitted(false);
+        setActiveBranch(null);
+        setActiveReplayFrame(null);
+        setBranchError(false);
+        setReviewProgress(0);
 
         let matchId = matchIdParam;
         if (!matchId) {
@@ -69,10 +93,15 @@ export default function RiichiTraining() {
 
         const r = await buildMatchReview(detail.file, {
           viewerSeat: detail.summary.viewerSeat,
+          signal: controller.signal,
+          onProgress: (progress) => {
+            if (!cancelled) setReviewProgress(progress);
+          },
         });
 
         if (cancelled) return;
         setReplayFile(detail.file);
+        setReplaySummary(detail.summary);
         setReview(r);
 
         const extracted = extractTrainingProblems(r, detail.file);
@@ -89,6 +118,7 @@ export default function RiichiTraining() {
     void init();
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [matchIdParam, isMember]);
 
@@ -97,7 +127,29 @@ export default function RiichiTraining() {
       <div className="container max-w-4xl py-12 px-4 flex flex-col items-center justify-center min-h-[50vh] text-muted-foreground gap-3">
         <RefreshCw className="h-6 w-6 animate-spin text-primary" />
         <p className="text-sm">{t('riichi.review.computing')}</p>
+        <p className="text-xs tabular-nums" aria-live="polite">{Math.round(reviewProgress * 100)}%</p>
+        <Button variant="ghost" size="sm" onClick={() => navigate('/replays')}>
+          {t('riichi.branch.cancelLoading')}
+        </Button>
       </div>
+    );
+  }
+
+  if (activeBranch) {
+    return (
+      <ReplayBranchPractice
+        run={activeBranch}
+        onExit={() => {
+          setActiveBranch(null);
+          setSelectedTile(null);
+          setDeclaredRiichi(false);
+          setSubmitted(false);
+        }}
+        onViewOriginal={() => {
+          setActiveReplayFrame(activeBranch.node.sourceFrameIndex);
+          setActiveBranch(null);
+        }}
+      />
     );
   }
 
@@ -139,6 +191,12 @@ export default function RiichiTraining() {
   const evalResult = submitted && selectedTile !== null
     ? evaluateTrainingChoice(problem, selectedTile, declaredRiichi)
     : null;
+  const branchAvailability = replayFile && review && replaySummary
+    ? getReplayBranchAvailability(replayFile, review, replaySummary, problem)
+    : null;
+  const branchChoiceLegal = branchAvailability?.available && selectedTile !== null
+    ? isReplayBranchChoiceLegal(branchAvailability.node, { tile: selectedTile, riichi: declaredRiichi })
+    : false;
 
   const roundLabel = formatMessage(locale, 'riichi.review.roundTurn', {
     wind: t(`game.mahjong.winds.${problem.wind}`),
@@ -150,11 +208,30 @@ export default function RiichiTraining() {
   const handleTileSelect = (tile: number) => {
     if (submitted) return;
     setSelectedTile(tile);
+    setBranchError(false);
   };
 
   const handleSubmit = () => {
     if (selectedTile === null) return;
     setSubmitted(true);
+  };
+
+  const handleStartBranch = () => {
+    if (!branchAvailability?.available || selectedTile === null) return;
+    try {
+      const run = createReplayBranch(branchAvailability.node, {
+        tile: selectedTile,
+        riichi: declaredRiichi,
+      });
+      if (!run) {
+        setBranchError(true);
+        return;
+      }
+      setBranchError(false);
+      setActiveBranch(run);
+    } catch {
+      setBranchError(true);
+    }
   };
 
   const handleNext = () => {
@@ -163,6 +240,7 @@ export default function RiichiTraining() {
       setSelectedTile(null);
       setDeclaredRiichi(false);
       setSubmitted(false);
+      setBranchError(false);
     } else {
       navigate('/replays');
     }
@@ -255,7 +333,7 @@ export default function RiichiTraining() {
                 )}
                 <div className="space-y-1">
                   <p className="font-semibold">
-                    {evalResult.isRecommended ? '回答契合建议' : '有更优选择'}
+                    {t(evalResult.isRecommended ? 'riichi.branch.eval.recommended' : 'riichi.branch.eval.alternative')}
                   </p>
                   <p className="text-xs leading-relaxed">{t(evalResult.explanationKey)}</p>
                 </div>
@@ -271,26 +349,52 @@ export default function RiichiTraining() {
                       {getTileLabel(problem.recommendedTile)}
                     </span>
                     {problem.recommendedRiichi && (
-                      <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">立直</span>
+                      <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">{t('riichi.branch.riichi')}</span>
                     )}
                   </div>
                 </div>
 
                 <div className="rounded-lg border p-3 space-y-1.5 bg-muted/30">
-                  <span className="text-muted-foreground">实战打牌:</span>
+                  <span className="text-muted-foreground">{t('riichi.branch.actualAction')}:</span>
                   <div className="flex items-center gap-2 mt-1">
                     <RiichiTile tile={problem.playedTile} variant="river" />
                     <span className="font-semibold text-sm">
                       {getTileLabel(problem.playedTile)}
                     </span>
                     {problem.playerRiichi && (
-                      <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">立直</span>
+                      <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">{t('riichi.branch.riichi')}</span>
                     )}
                   </div>
                 </div>
               </div>
             </div>
           )}
+
+          <section className="space-y-3 rounded-xl border bg-muted/20 p-4">
+            <div className="flex items-center gap-2 font-semibold">
+              <GitBranch className="h-4 w-4 text-primary" />
+              <h3>{t('riichi.branch.title')}</h3>
+            </div>
+            <p className="text-sm leading-relaxed text-muted-foreground">{t('riichi.branch.intro')}</p>
+            <p className="text-xs font-medium text-primary">{t('riichi.branch.noReward')}</p>
+            {branchAvailability?.available ? (
+              <>
+                <Button onClick={handleStartBranch} disabled={!branchChoiceLegal}>
+                  <GitBranch className="mr-1.5 h-4 w-4" />{t('riichi.branch.start')}
+                </Button>
+                {!branchChoiceLegal && (
+                  <p className="text-xs text-muted-foreground">
+                    {t(selectedTile === null ? 'riichi.branch.chooseTile' : 'riichi.branch.legalChoice')}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {t(branchAvailability?.reasonKey ?? 'riichi.branch.unavailable.incomplete')}
+              </p>
+            )}
+            {branchError && <p role="alert" className="text-sm text-destructive">{t('riichi.branch.startError')}</p>}
+          </section>
         </CardContent>
 
         <CardFooter className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">

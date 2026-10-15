@@ -1,5 +1,7 @@
 import type { MemberSnapshot } from '../../../shared/contracts/member';
 import { normalizeThemeChallengeState } from '../../../shared/contracts/challenge';
+import { normalizeJourneyProgress } from '../../../shared/contracts/journey';
+import { JOURNEY_PROGRESS_CHANGED_EVENT, JOURNEY_PROGRESS_STORAGE_KEY } from '@/lib/journeyProgress';
 import { ACHIEVEMENT_UNLOCKED_EVENT } from '@/lib/achievements';
 import { COSMETICS_CHANGED_EVENT } from '@/lib/cosmetics';
 import { CHARACTERS_CHANGED_EVENT } from '@/lib/playerCharacters';
@@ -59,6 +61,7 @@ export function createStorageFromSnapshot(snapshot: MemberSnapshot): MemoryStora
     JSON.stringify(normalizeThemeChallengeState(snapshot.themeChallenges)),
   );
   storage.setItem('game-hub-checkin-state', JSON.stringify(snapshot.checkin));
+  storage.setItem(JOURNEY_PROGRESS_STORAGE_KEY, JSON.stringify(normalizeJourneyProgress(snapshot.journey)));
   storage.setItem('game-hub-ranked-v1', JSON.stringify(snapshot.ranked));
   storage.setItem('game-hub-locale', snapshot.preferences.locale);
   if (snapshot.preferences.riichiTheme) {
@@ -73,7 +76,8 @@ export function createStorageFromSnapshot(snapshot: MemberSnapshot): MemoryStora
     for (const [key, value] of Object.entries(snapshot.legacyData)) {
       if (
         typeof value === 'string' &&
-        key !== 'game-hub-theme-challenges-v1'
+        key !== 'game-hub-theme-challenges-v1' &&
+        key !== JOURNEY_PROGRESS_STORAGE_KEY
       ) {
         storage.setItem(key, value);
       }
@@ -91,6 +95,7 @@ export function notifyStorageStateChanged(): void {
   window.dispatchEvent(new Event(CHARACTERS_CHANGED_EVENT));
   window.dispatchEvent(new Event(RANKED_CHANGED_EVENT));
   window.dispatchEvent(new Event(THEME_CHALLENGES_CHANGED_EVENT));
+  window.dispatchEvent(new Event(JOURNEY_PROGRESS_CHANGED_EVENT));
   window.dispatchEvent(new Event(ACHIEVEMENT_UNLOCKED_EVENT));
   window.dispatchEvent(new StorageEvent('storage', { key: PLAYER_PROFILE_STORAGE_KEY }));
 }

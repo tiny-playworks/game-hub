@@ -60,6 +60,13 @@ export default function CharacterProfile() {
         </Link>
       </main>
     );
+  const journeyStageId = character.id === 'aoi'
+    ? 'aoi-balance'
+    : character.id === 'rin'
+      ? 'rin-tempo'
+      : character.id === 'mio'
+        ? 'mio-defense'
+        : null;
   const affinity = state.affinityByCharacter[character.id] ?? 0;
   const stage = state.rewardStageByCharacter[character.id] ?? 0;
   const encounters = state.encountersByCharacter[character.id] ?? {
@@ -169,6 +176,13 @@ export default function CharacterProfile() {
                 {error}
               </p>
             )}
+            {journeyStageId ? (
+              <Button asChild variant="outline" className="mt-3">
+                <Link to={`/journey?stage=${journeyStageId}`}>
+                  <Sparkles className="mr-1.5 size-4" />{t('journey.characterEntry')}
+                </Link>
+              </Button>
+            ) : null}
           </section>
           <section className="paper-texture rounded-3xl border bg-card p-6">
             <div className="flex items-center justify-between">

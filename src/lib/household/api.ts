@@ -1,4 +1,5 @@
 import type { ApiErrorBody } from '../../../shared/contracts/api';
+import type { JourneyAttemptInput, JourneyEvaluation } from '../../../shared/contracts/journey';
 import type {
   ArcadeMemberEvent,
   ArcadeMemberResult,
@@ -194,6 +195,16 @@ export async function submitMemberArcadeEvent(
   return request<{ snapshot: MemberSnapshot; result: ArcadeMemberResult }>(
     '/api/v1/me/arcade/events',
     { method: 'POST', body: JSON.stringify({ baseRevision, event }) },
+  );
+}
+
+export async function submitMemberJourneyAttempt(
+  baseRevision: number,
+  input: JourneyAttemptInput,
+): Promise<{ snapshot: MemberSnapshot; evaluation: JourneyEvaluation }> {
+  return request<{ snapshot: MemberSnapshot; evaluation: JourneyEvaluation }>(
+    '/api/v1/me/journey/attempts',
+    { method: 'POST', body: JSON.stringify({ baseRevision, ...input }) },
   );
 }
 

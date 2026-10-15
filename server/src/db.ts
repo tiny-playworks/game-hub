@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import type { MemberSnapshot } from '../../shared/contracts/member';
 import { normalizeThemeChallengeState } from '../../shared/contracts/challenge';
+import { normalizeJourneyProgress } from '../../shared/contracts/journey';
 
 export interface MemberRow {
   id: string;
@@ -131,6 +132,16 @@ function migrate(db: DatabaseSync): void {
       updated_at INTEGER NOT NULL,
       PRIMARY KEY(member_id, device_id, save_id)
     );
+    CREATE TABLE IF NOT EXISTS journey_attempts (
+      member_id TEXT NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+      attempt_id TEXT NOT NULL,
+      stage_id TEXT NOT NULL CHECK(stage_id IN ('aoi-balance', 'rin-tempo', 'mio-defense')),
+      content_version INTEGER NOT NULL CHECK(content_version = 1),
+      payload_hash TEXT NOT NULL,
+      evaluation_json TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      PRIMARY KEY(member_id, attempt_id)
+    );
     CREATE TABLE IF NOT EXISTS active_rooms (
       room_id TEXT PRIMARY KEY,
       summary_json TEXT NOT NULL,
@@ -237,6 +248,7 @@ export function readSnapshot(row: MemberRow): MemberSnapshot {
   return {
     ...snapshot,
     themeChallenges: normalizeThemeChallengeState(snapshot.themeChallenges),
+    journey: normalizeJourneyProgress(snapshot.journey),
   };
 }
 

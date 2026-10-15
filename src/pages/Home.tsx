@@ -212,6 +212,22 @@ const Home = () => {
                 ) : null}
               </div>
             </article>
+            <article className="venue-free felt-surface rounded-[24px] border border-gold/30 p-5 text-paper">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-gold/30 bg-paper/10">
+                    <ScrollText className="size-5 text-gold" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold">{t('journey.title')}</h2>
+                    <p className="mt-1 text-xs leading-5 text-paper/70">{t('journey.lobbyDescription')}</p>
+                  </div>
+                </div>
+                <Button asChild variant="outline" className="shrink-0 rounded-xl border-paper/25 bg-transparent text-paper hover:bg-paper/10 hover:text-paper">
+                  <Link to="/journey">{t('journey.enter')}<ArrowRight className="size-4" /></Link>
+                </Button>
+              </div>
+            </article>
           </div>
           <aside className="venue-task-stack">
             <ThemeChallengePanel />

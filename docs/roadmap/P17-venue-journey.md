@@ -2,7 +2,7 @@
 
 > 依赖：P16 现有角色、故事与挑战；P11 成员档案的幂等同步。先读 [README](./README.md)。
 > 目标：让单人日麻有明确的“再打一关”理由，先用三名现有角色验证角色挑战是否值得扩张。
-> 状态：2026-10-15 规划中，未实施；下文是任务与验收标准，不是现有能力。
+> 状态：2026-10-15 本机实现已完成：葵/凛/澪三关、独立练习牌桌、游客进度与成员幂等 API 已接入。桌面选关和首局牌桌、移动端凛关牌桌已截图检查；整局完成/重试、真实 NAS 跨设备和玩家反馈仍待验，P19 扩张继续等待反馈。
 
 ## 涉及文件（实施前先核对）
 
@@ -11,9 +11,13 @@
 - [src/pages/mahjong/japanese/engine/match.ts](../../src/pages/mahjong/japanese/engine/match.ts) — 现有日麻引擎和可重放事件。
 - [src/pages/mahjong/japanese/components/ReplayViewer.tsx](../../src/pages/mahjong/japanese/components/ReplayViewer.tsx) — 已有牌局回看。
 - [src/pages/CharacterProfile.tsx](../../src/pages/CharacterProfile.tsx) — 现有角色入口。
+- [src/pages/Journey.tsx](../../src/pages/Journey.tsx) — 巡礼选关、独立练习与结果。
+- [src/lib/riichiJourney.ts](../../src/lib/riichiJourney.ts) — 固定起始局面与服务器成绩校验。
+- [src/lib/journeyProgress.ts](../../src/lib/journeyProgress.ts) — 游客记录与成员进度入口。
+- [shared/contracts/journey.ts](../../shared/contracts/journey.ts)、[server/src/routes/journey.ts](../../server/src/routes/journey.ts) — 版本化进度和成员幂等提交。
 - [src/lib/i18n.ts](../../src/lib/i18n.ts) — 中英文文案。
 
-新关卡配置、进度结构和页面路径由实施时确定；目前不存在巡礼接口或关卡页面，不预先把路径写成已建文件。
+固定种子和合法 AI 前缀生成三种起始局面；每次挑战从该局面重开。巡礼结果使用独立记录，不进入自由局或段位局结算。
 
 ## 17.1 玩家流程与试点内容
 
@@ -25,7 +29,7 @@
 ## 17.2 进度、奖励与数据边界
 
 - 游客进度留在本机；成员进度由 NAS 确认后跨设备读取，离线游玩与回传范围须先符合 [总纲第 4 节](./README.md#4-跨阶段统一契约唯一来源) 的身份、幂等与来源规则。不得使用 `free` / `ai-ranked` 冒充巡礼并领取原模式结算。
-- 每关记录内容版本、完成状态、最佳成绩及足以复核的对局标识。进度单调合并；同一完成事件重复提交、刷新或恢复不能重领奖。首期以徽记、故事入口等一次性内容回报为主，重试不重复发雀币、成长、好感、段位分或 P16 挑战奖励。
+- 每关记录内容版本、完成状态、最佳成绩及足以复核的对局标识。进度单调合并；同一完成事件重复提交、刷新或恢复不能重领奖。当前试点只记录挑战结果，不发徽记、故事解锁、雀币、成长、好感、段位分或 P16 奖励。
 - 旧角色解锁、旧故事、旧存档与已有 P16 挑战保留；巡礼不可成为绕过原角色解锁条件的入口。新增持久化字段必须版本化、可 normalize，并处理旧成员和游客存档。
 
 ## 17.3 设计与扩张门槛
