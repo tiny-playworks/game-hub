@@ -13,6 +13,8 @@ import { apiError, requireSession } from '../auth';
 import { archiveReplay, getMember, readSnapshot, saveSnapshot, transaction } from '../db';
 import { runSnapshotMutation } from '../snapshotRuntime';
 import { applyEvent, createMatch, nextServerAiEvent } from '../riichi/runtime';
+import { replayFreeContinuation } from '../riichi/continuation';
+import type { ResumeSaveRecord } from '../../../shared/contracts/sync';
 
 type MatchRow = {
   match_id: string;
@@ -102,6 +104,43 @@ function timeoutAction(match: RiichiMatchState): RiichiEvent | null {
 }
 
 export function registerRiichiRoutes(app: FastifyInstance, db: DatabaseSync): void {
+  app.post('/api/v1/me/riichi/resume', async (request) => {
+    const { member, session } = requireSession(db, request);
+    const { saveId } = object(request.body);
+    if (typeof saveId !== 'string' || !saveId || saveId.length > 128) throw apiError(400, 'BAD_REQUEST');
+    return transaction(db, () => {
+      const current = getMember(db, member.id);
+      if (!current) throw apiError(401, 'UNAUTHORIZED');
+      const snapshot = readSnapshot(current);
+      if (snapshot.ranked.activeMatchId) throw apiError(409, 'RANKED_MATCH_ACTIVE');
+      const row = rowFor(db, member.id, saveId);
+      if (row && (row.source !== 'free' || row.finished_at !== null)) throw apiError(409, 'MATCH_FINISHED');
+      const saved = db.prepare('SELECT save_json FROM resume_saves WHERE member_id = ? AND save_id = ? ORDER BY updated_at DESC LIMIT 1')
+        .get(member.id, saveId) as { save_json: string } | undefined;
+      const record = saved ? JSON.parse(saved.save_json) as ResumeSaveRecord : null;
+      const confirmed = row ? JSON.parse(row.state_json) as RiichiMatchState : undefined;
+      const replay = record?.replay ?? (confirmed ? toReplayFile(confirmed) : null);
+      if (!replay) throw apiError(404, 'SAVE_NOT_FOUND');
+      let step;
+      try { step = replayFreeContinuation(replay, confirmed); }
+      catch { throw apiError(409, 'MATCH_CONFLICT'); }
+      if (step.match.status === 'matchEnd') throw apiError(409, 'MATCH_FINISHED');
+      const playerCharacterId = row?.player_character_id ?? record?.playerCharacterId ?? snapshot.characters.activeCharacterId;
+      if (!snapshot.characters.unlockedCharacterIds.includes(playerCharacterId)) throw apiError(400, 'BAD_REQUEST');
+      const updated = runSnapshotMutation(snapshot, () => applyProgress(step.effects));
+      const next = step.effects.length ? saveSnapshot(db, current, updated.snapshot) : snapshot;
+      const now = Date.now();
+      db.prepare(`INSERT INTO riichi_matches(member_id, match_id, device_id, source, state_json,
+        player_character_id, challenge_eligible, created_at, updated_at)
+        VALUES (?, ?, ?, 'free', ?, ?, ?, ?, ?)
+        ON CONFLICT(member_id, match_id) DO UPDATE SET device_id = excluded.device_id,
+          state_json = excluded.state_json, updated_at = excluded.updated_at`)
+        .run(member.id, saveId, session.device_id, JSON.stringify(step.match), playerCharacterId,
+          row?.challenge_eligible ?? (record?.themeChallengeEligible === true ? 1 : 0), now, now);
+      db.prepare('DELETE FROM resume_saves WHERE member_id = ? AND save_id = ?').run(member.id, saveId);
+      return { snapshot: next, match: step.match, matchId: saveId, playerCharacterId, effects: [] };
+    });
+  });
   app.get('/api/v1/me/riichi/current', async (request) => {
     const { member, session } = requireSession(db, request);
     const activeRanked = readSnapshot(member).ranked.activeMatchId;
@@ -130,6 +169,12 @@ export function registerRiichiRoutes(app: FastifyInstance, db: DatabaseSync): vo
       }
       if (snapshot.ranked.activeMatchId) throw apiError(409, 'RANKED_MATCH_ACTIVE');
       const seed = randomInt(0, 0x1_0000_0000);
+      if (input.source === 'ai-ranked') {
+        const rooms = db.prepare('SELECT summary_json FROM active_rooms').all() as Array<{ summary_json: string }>;
+        if (rooms.some((row) => { const room = JSON.parse(row.summary_json); return room.status === 'playing' &&
+          room.seats.some((seat: { type: string; memberId?: string }) => seat.type === 'human' && seat.memberId === member.id); }))
+          throw apiError(409, 'FAMILY_MATCH_ACTIVE');
+      }
       const playerCharacterId = snapshot.characters.activeCharacterId;
       const ticket = input.source === 'ai-ranked' ? {
         id: input.matchId, at: Date.now(), seed,
@@ -233,6 +278,7 @@ export function registerRiichiRoutes(app: FastifyInstance, db: DatabaseSync): vo
           member.id, row.match_id);
 
       if (step.match.status === 'matchEnd' && step.match.matchEnd) {
+        db.prepare('DELETE FROM resume_saves WHERE member_id = ? AND save_id = ?').run(member.id, row.match_id);
         try {
           const replayFile = toReplayFile(step.match);
           archiveReplay(db, member.id, {

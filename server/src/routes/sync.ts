@@ -10,7 +10,9 @@ import type {
   SyncRejectedItem,
 } from '../../../shared/contracts/sync';
 import { apiError, requireSession } from '../auth';
-import { getMember, readSnapshot, saveSnapshot, transaction } from '../db';
+import { archiveReplay, getMember, readSnapshot, saveSnapshot, transaction } from '../db';
+import { isReplayFile, restoreMatch, toReplayFile, type RiichiMatchState } from '@/pages/mahjong/japanese/engine';
+import { replayFreeContinuation } from '../riichi/continuation';
 import {
   processOfflineArcadeReceipt,
   processOfflineRiichiReceipt,
@@ -20,10 +22,10 @@ import {
 export function registerSyncRoutes(app: FastifyInstance, db: DatabaseSync): void {
   // 批量同步离线凭据
   app.post('/api/v1/sync', async (request) => {
-    const { member } = requireSession(db, request);
+    const { member, session } = requireSession(db, request);
     const body = request.body as Partial<SyncBatchRequest> | undefined;
 
-    if (!body || !Array.isArray(body.receipts)) {
+    if (!body || !Array.isArray(body.receipts) || body.receipts.length > 100) {
       throw apiError(400, 'BAD_REQUEST');
     }
 
@@ -37,7 +39,11 @@ export function registerSyncRoutes(app: FastifyInstance, db: DatabaseSync): void
       const rejected: SyncRejectedItem[] = [];
 
       for (const receipt of body.receipts as OfflineReceipt[]) {
-        if (!receipt || receipt.schema !== 1 || !receipt.eventId || !receipt.matchId) {
+        if (!receipt || receipt.schema !== 1 || typeof receipt.eventId !== 'string' || !receipt.eventId || receipt.eventId.length > 128 ||
+          typeof receipt.matchId !== 'string' || !receipt.matchId || receipt.matchId.length > 128 ||
+          typeof receipt.deviceId !== 'string' || typeof receipt.occurredAt !== 'string' ||
+          !Number.isFinite(Date.parse(receipt.occurredAt)) || !['free', 'arcade'].includes(receipt.matchSource) ||
+          !receipt.payload || receipt.payload.source !== receipt.matchSource) {
           rejected.push({
             eventId: receipt?.eventId ?? 'unknown',
             code: 'INVALID_RECEIPT_STRUCTURE',
@@ -66,7 +72,7 @@ export function registerSyncRoutes(app: FastifyInstance, db: DatabaseSync): void
           | undefined;
 
         if (existingEvent) {
-          if (existingEvent.status === 'accepted') {
+          if (existingEvent.status === 'accepted' || existingEvent.status === 'duplicate') {
             duplicates.push(receipt.eventId);
           } else {
             rejected.push({
@@ -113,8 +119,20 @@ export function registerSyncRoutes(app: FastifyInstance, db: DatabaseSync): void
           };
 
           if (receipt.matchSource === 'free') {
+            const online = db.prepare('SELECT state_json, device_id, source, finished_at, challenge_eligible FROM riichi_matches WHERE member_id = ? AND match_id = ?')
+              .get(member.id, receipt.matchId) as { state_json: string; device_id: string; source: string; finished_at: number | null; challenge_eligible: number } | undefined;
+            if (online && (online.source !== 'free' || online.device_id !== session.device_id || receipt.deviceId !== session.device_id))
+              throw new Error('DEVICE_NOT_OWNER');
+            if (online?.finished_at != null) {
+              db.exec('RELEASE SAVEPOINT offline_receipt_settlement');
+              duplicates.push(receipt.eventId);
+              continue;
+            }
+            const continuation = receipt.payload.source === 'free'
+              ? replayFreeContinuation(receipt.payload.riichi.replay,
+                online ? JSON.parse(online.state_json) as RiichiMatchState : undefined) : null;
             settleResult = processOfflineRiichiReceipt(snapshot, receipt, (match) =>
-              receipt.payload.source === 'free' && receipt.payload.riichi.themeChallengeEligible === true
+              (online ? online.challenge_eligible === 1 : receipt.payload.source === 'free' && receipt.payload.riichi.themeChallengeEligible === true)
                 ? recordMemberThemeChallengeMatch(
                     db,
                     member.id,
@@ -123,7 +141,17 @@ export function registerSyncRoutes(app: FastifyInstance, db: DatabaseSync): void
                     match,
                   )
                 : 0,
-            );
+              continuation?.effects);
+            if (continuation && continuation.match.status === 'matchEnd' && continuation.match.matchEnd) {
+              if (online) db.prepare('UPDATE riichi_matches SET state_json = ?, finished_at = ?, updated_at = ? WHERE member_id = ? AND match_id = ?')
+                .run(JSON.stringify(continuation.match), Date.now(), Date.now(), member.id, receipt.matchId);
+              const match = continuation.match;
+              archiveReplay(db, member.id, { matchId: receipt.matchId, source: 'free', viewerSeat: 0,
+                playerCharacterId: receipt.payload.source === 'free' ? receipt.payload.riichi.playerCharacterId : 'aoi',
+                ranking: match.matchEnd!.ranking.indexOf(0) + 1, finalScore: match.matchEnd!.finalScores[0],
+                matchLength: match.matchLength, replayJson: JSON.stringify(toReplayFile(match)) });
+              db.prepare('DELETE FROM resume_saves WHERE member_id = ? AND save_id = ?').run(member.id, receipt.matchId);
+            }
           } else if (receipt.matchSource === 'arcade') {
             settleResult = processOfflineArcadeReceipt(snapshot, receipt);
           } else {
@@ -223,6 +251,16 @@ export function registerSyncRoutes(app: FastifyInstance, db: DatabaseSync): void
       }
     }
 
+    const active = db.prepare("SELECT match_id, device_id, state_json, updated_at FROM riichi_matches WHERE member_id = ? AND source = 'free' AND finished_at IS NULL")
+      .all(member.id) as Array<{ match_id: string; device_id: string; state_json: string; updated_at: number }>;
+    for (const row of active) {
+      if (summaries.some((save) => save.saveId === row.match_id)) continue;
+      const match = JSON.parse(row.state_json) as RiichiMatchState;
+      summaries.push({ saveId: row.match_id, deviceId: row.device_id, source: 'free',
+        updatedAt: new Date(row.updated_at).toISOString(), matchLength: match.matchLength,
+        roundSummary: { round: match.round.roundNumber, roundName: `${match.round.roundWind === 0 ? 'East' : 'South'} ${match.round.roundNumber + 1}`, scores: match.round.scores } });
+    }
+
     return summaries;
   });
 
@@ -237,7 +275,14 @@ export function registerSyncRoutes(app: FastifyInstance, db: DatabaseSync): void
       )
       .get(member.id, saveId) as { save_json: string } | undefined;
 
-    if (!row) throw apiError(404, 'SAVE_NOT_FOUND');
+    if (!row) {
+      const active = db.prepare("SELECT * FROM riichi_matches WHERE member_id = ? AND match_id = ? AND source = 'free' AND finished_at IS NULL")
+        .get(member.id, saveId) as { device_id: string; state_json: string; player_character_id: string; updated_at: number; challenge_eligible: number } | undefined;
+      if (!active) throw apiError(404, 'SAVE_NOT_FOUND');
+      return { schema: 1, memberId: member.id, deviceId: active.device_id, saveId, source: 'free',
+        replay: toReplayFile(JSON.parse(active.state_json)), processedProgress: [], playerCharacterId: active.player_character_id,
+        themeChallengeEligible: active.challenge_eligible === 1, updatedAt: new Date(active.updated_at).toISOString() };
+    }
     return JSON.parse(row.save_json) as ResumeSaveRecord;
   });
 
@@ -247,7 +292,13 @@ export function registerSyncRoutes(app: FastifyInstance, db: DatabaseSync): void
     const { saveId } = request.params as { saveId: string };
     const body = request.body as Partial<ResumeSaveRecord> | undefined;
 
-    if (!body || !body.replay) throw apiError(400, 'BAD_REQUEST');
+    if (!body || !isReplayFile(body.replay) || body.replay.ranked || saveId.length > 128)
+      throw apiError(400, 'BAD_REQUEST');
+    const restored = restoreMatch(body.replay);
+    if (!restored || restored.status === 'matchEnd') throw apiError(400, 'BAD_REQUEST');
+    const active = db.prepare('SELECT device_id, finished_at FROM riichi_matches WHERE member_id = ? AND match_id = ?')
+      .get(member.id, saveId) as { device_id: string; finished_at: number | null } | undefined;
+    if (active && (active.device_id !== session.device_id || active.finished_at !== null)) throw apiError(409, 'MATCH_CONFLICT');
 
     const record: ResumeSaveRecord = {
       schema: 1,
@@ -261,6 +312,7 @@ export function registerSyncRoutes(app: FastifyInstance, db: DatabaseSync): void
         ? body.processedProgress
         : [],
       playerCharacterId: body.playerCharacterId,
+      themeChallengeEligible: body.themeChallengeEligible === true,
       roundSummary: body.roundSummary,
     };
 
@@ -290,6 +342,8 @@ export function registerSyncRoutes(app: FastifyInstance, db: DatabaseSync): void
       member.id,
       saveId,
     );
+    db.prepare("UPDATE riichi_matches SET finished_at = ? WHERE member_id = ? AND match_id = ? AND source = 'free' AND finished_at IS NULL")
+      .run(Date.now(), member.id, saveId);
 
     return { ok: true };
   });

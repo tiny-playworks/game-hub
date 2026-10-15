@@ -11,6 +11,9 @@ WORKDIR /app/server
 RUN corepack pnpm build
 
 FROM node:24.17.0-alpine
+ARG GAME_HUB_REVISION=unknown
+ENV GAME_HUB_REVISION=$GAME_HUB_REVISION
+LABEL org.opencontainers.image.revision=$GAME_HUB_REVISION
 WORKDIR /app/server
 RUN corepack enable
 COPY server/package.json server/pnpm-lock.yaml server/pnpm-workspace.yaml ./

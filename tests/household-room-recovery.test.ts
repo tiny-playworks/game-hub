@@ -315,7 +315,7 @@ describe('P13 断线重连、托管、抢控与服务恢复测试', () => {
         protocol: 1,
         commandId: 'cmd-takeover',
         roomId,
-        expectedRevision: 1,
+        expectedRevision: roomManager.getRoom(roomId)!.revision,
         type: 'takeover_control',
       },
     });

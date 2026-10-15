@@ -49,7 +49,7 @@ import {
 const Home = () => {
   const { t } = useLocale();
   const household = useOptionalHousehold();
-  const memberMode = household?.mode === 'member-online';
+  const memberMode = Boolean(household?.currentMember);
   const isActive = useRiichiStore(
     (state) =>
       state.view === 'game' &&

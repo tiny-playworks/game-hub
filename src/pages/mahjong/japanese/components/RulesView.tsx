@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLocale } from '@/contexts/LocaleContext';
+import { MemberResumeSaves } from '@/components/household/MemberResumeSaves';
 import { cn } from '@/lib/utils';
 import { RIICHI_THEMES, type RiichiThemeId } from '../constants';
 import type { OpponentSelection } from '../engine';
@@ -138,6 +139,7 @@ export function RulesView({
           />
           <RiichiSettingsPanel />
 
+          <MemberResumeSaves />
           {(hasSaved || hasReplay) && (
             <div className="riichi-lobby-secondary-actions">
               {hasSaved && (

@@ -150,6 +150,17 @@ function migrate(db: DatabaseSync): void {
       is_paused INTEGER NOT NULL DEFAULT 0,
       updated_at INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS family_results (
+      member_id TEXT NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+      match_id TEXT NOT NULL,
+      room_id TEXT NOT NULL,
+      placement INTEGER NOT NULL,
+      score INTEGER NOT NULL,
+      coins INTEGER NOT NULL,
+      date_key TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      PRIMARY KEY(member_id, match_id)
+    );
     CREATE TABLE IF NOT EXISTS room_commands (
       room_id TEXT NOT NULL,
       command_id TEXT NOT NULL,
@@ -220,14 +231,18 @@ function countReplayRounds(json: string): number | null {
   }
 }
 
+let transactionId = 0;
 export function transaction<T>(db: DatabaseSync, run: () => T): T {
-  db.exec('BEGIN IMMEDIATE');
+  const nested = db.isTransaction;
+  const point = `game_hub_${++transactionId}`;
+  db.exec(nested ? `SAVEPOINT ${point}` : 'BEGIN IMMEDIATE');
   try {
     const value = run();
-    db.exec('COMMIT');
+    db.exec(nested ? `RELEASE SAVEPOINT ${point}` : 'COMMIT');
     return value;
   } catch (error) {
-    db.exec('ROLLBACK');
+    db.exec(nested ? `ROLLBACK TO SAVEPOINT ${point}` : 'ROLLBACK');
+    if (nested) db.exec(`RELEASE SAVEPOINT ${point}`);
     throw error;
   }
 }

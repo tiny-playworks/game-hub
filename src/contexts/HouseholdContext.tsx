@@ -36,11 +36,14 @@ import {
   submitMemberArcadeEvent,
   submitMemberJourneyAttempt,
   submitMemberRiichiEvent,
+  resumeMemberRiichiMatch,
   updatePreferences as apiUpdatePreferences,
   updateProfile as apiUpdateProfile,
   updateMemberCharacter,
 } from '@/lib/household/api';
 import { setRiichiOnlineBridge } from '@/lib/household/riichiBridge';
+import { cacheConfirmedMember, createMemberRiichiBridge, readConfirmedMember, uploadLocalMemberResumes } from '@/lib/household/memberRiichi';
+import { performSync, queueOfflineArcade } from '@/lib/household/sync';
 import {
   createStorageFromSnapshot,
   notifyStorageStateChanged,
@@ -126,6 +129,8 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
   );
   const [snapshot, setSnapshot] = useState<MemberSnapshot | null>(null);
   const snapshotRef = useRef<MemberSnapshot | null>(null);
+  const identityEpochRef = useRef(0);
+  const serverAvailableRef = useRef(false);
   const profileWriterRef = useRef<((patch: PlayerProfilePatch) => Promise<void>) | null>(null);
   const mutationQueue = useRef<Promise<void>>(Promise.resolve());
   const [error, setError] = useState<HouseholdApiError | Error | null>(null);
@@ -138,6 +143,7 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
       snapshotRef.current.revision > next.revision
     ) return;
     const identityChanged = snapshotRef.current?.memberId !== next?.memberId;
+    if (identityChanged) identityEpochRef.current++;
     if (next) {
       const storage = createStorageFromSnapshot(next);
       setStorageDriver(storage);
@@ -154,6 +160,7 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
     }
     if (identityChanged) useRiichiStore.getState().resetForIdentity();
     snapshotRef.current = next;
+    cacheConfirmedMember(next);
     setSnapshot(next);
     if (next) {
       const summary: MemberSummary = {
@@ -173,6 +180,12 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const markOffline = useCallback(() => {
+    serverAvailableRef.current = false;
+    setIsServerAvailable(false);
+    if (snapshotRef.current) setMode('member-offline');
+  }, []);
+
   const enqueueMutation = useCallback(<T,>(work: () => Promise<T>): Promise<T> => {
     const result = mutationQueue.current.then(work, work);
     mutationQueue.current = result.then(() => {}, () => {});
@@ -185,9 +198,11 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
       applySnapshot(null);
       setMode('guest-local');
       setCurrentMember(null);
+    } else if (err instanceof TypeError) {
+      markOffline();
     }
     setError(err instanceof Error ? err : new Error(String(err)));
-  }, [applySnapshot]);
+  }, [applySnapshot, markOffline]);
 
   const reviseSnapshot = useCallback(<T extends { snapshot: MemberSnapshot }>(
     operation: (revision: number) => Promise<T>,
@@ -196,6 +211,7 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
     if (!owner) return Promise.reject(new Error('Not logged in'));
     return enqueueMutation(async () => {
       try {
+        if (!serverAvailableRef.current) throw new TypeError('Member changes require a connection');
         const current = snapshotRef.current;
         if (!current || current.memberId !== owner)
           throw new Error('Member changed before the update');
@@ -230,8 +246,12 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshMe = useCallback(async () => {
+    const identityEpoch = identityEpochRef.current;
     try {
       const { snapshot: freshSnapshot } = await fetchCurrentMe();
+      if (identityEpochRef.current !== identityEpoch) return;
+      serverAvailableRef.current = true;
+      setIsServerAvailable(true);
       applySnapshot(freshSnapshot);
       setMode('member-online');
       setCurrentMember((prev: MemberSummary | null) => {
@@ -252,6 +272,7 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
       });
       setError(null);
     } catch (err) {
+      if (identityEpochRef.current !== identityEpoch) return;
       if (err instanceof HouseholdApiError && err.status === 401) {
         const hadMember = snapshotRef.current !== null;
         applySnapshot(null);
@@ -259,10 +280,11 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
         setCurrentMember(null);
         if (hadMember) setError(err);
       } else {
+        if (err instanceof TypeError) markOffline();
         setError(err instanceof Error ? err : new Error(String(err)));
       }
     }
-  }, [applySnapshot]);
+  }, [applySnapshot, markOffline]);
 
   const login = useCallback(
     async (memberId: string, pin: string) => {
@@ -276,6 +298,8 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
         setCurrentMember(null);
       }
       const { snapshot: freshSnapshot } = await fetchCurrentMe();
+      serverAvailableRef.current = true;
+      setIsServerAvailable(true);
       applySnapshot(freshSnapshot);
       setMode('member-online');
       const found = members.find((m) => m.id === memberId);
@@ -341,10 +365,21 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
   }, [reviseSnapshot]);
 
   const performArcadeEvent = useCallback(async (event: ArcadeMemberEvent) => {
-    const response = await reviseSnapshot((revision) =>
-      submitMemberArcadeEvent(revision, event));
-    return response.result;
-  }, [reviseSnapshot]);
+    if (serverAvailableRef.current) {
+      try {
+        const response = await reviseSnapshot((revision) => submitMemberArcadeEvent(revision, event));
+        return response.result;
+      } catch (error) { if (!(error instanceof TypeError)) throw error; }
+    }
+    const current = snapshotRef.current;
+    if (!current) throw new Error('Not logged in');
+    markOffline();
+    if (event.type === 'finish') await queueOfflineArcade(current.memberId, deviceId, event.roundId, {
+      gameId: event.gameId, difficulty: event.difficulty, score: event.score ?? 0,
+      outcome: event.outcome ?? 'lose', meta: event.meta,
+    });
+    return { coinsEarned: 0, capReached: false, pending: true };
+  }, [reviseSnapshot, markOffline, deviceId]);
 
   const submitJourneyAttempt = useCallback((input: JourneyAttemptInput) => {
     const owner = snapshotRef.current?.memberId;
@@ -425,10 +460,15 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
         }
       });
     };
-    setRiichiOnlineBridge({
+    setRiichiOnlineBridge(createMemberRiichiBridge({
+      snapshot: () => snapshotRef.current, deviceId,
+      isOnline: () => serverAvailableRef.current && navigator.onLine !== false,
+      onOffline: markOffline,
+      online: {
       start: (input) => mutate(() => startMemberRiichiMatch(input)),
       event: (input) => mutate(() => submitMemberRiichiEvent(input)),
       forfeit: (matchId) => mutate(() => forfeitMemberRiichiMatch(matchId)),
+      resume: (saveId) => mutate(() => resumeMemberRiichiMatch(saveId)),
       current: async () => {
         const owner = snapshotRef.current?.memberId;
         if (!owner) throw new Error('Not logged in');
@@ -442,9 +482,10 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
           throw err;
         }
       },
-    });
+      },
+    }));
     return () => setRiichiOnlineBridge(null);
-  }, [applySnapshot, enqueueMutation, handleMutationFailure]);
+  }, [applySnapshot, enqueueMutation, handleMutationFailure, deviceId, markOffline]);
 
   const importLocalSave = useCallback(async () => {
     if (!snapshot) throw new Error('Not logged in');
@@ -471,10 +512,17 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
       const healthy = await checkServerHealth();
       if (cancelled) return;
       setIsServerAvailable(healthy);
+      serverAvailableRef.current = healthy;
       if (healthy) {
         await Promise.all([refreshMembers(), refreshMe()]);
       } else {
-        applySnapshot(null);
+        const cached = readConfirmedMember();
+        if (cached) {
+          applySnapshot(cached);
+          setCurrentMember({ id: cached.memberId, nickname: cached.profile.nickname,
+            avatarPresetId: cached.profile.avatarPresetId, avatarUploadDataUrl: cached.profile.avatarUploadDataUrl });
+          setMode('member-offline');
+        } else applySnapshot(null);
       }
       setIsLoading(false);
     }
@@ -483,6 +531,29 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, [refreshMembers, refreshMe, applySnapshot]);
+
+  useEffect(() => {
+    let busy = false;
+    const reconnect = async () => {
+      if (busy || navigator.onLine === false || !snapshotRef.current) return;
+      busy = true;
+      try {
+        if (!await checkServerHealth()) { markOffline(); return; }
+        const owner = snapshotRef.current.memberId;
+        await refreshMe();
+        if (snapshotRef.current?.memberId !== owner) return;
+        await performSync(owner, snapshotRef.current.revision, (next) => {
+          if (snapshotRef.current?.memberId === owner) applySnapshot(next);
+        });
+        if (snapshotRef.current?.memberId === owner) await uploadLocalMemberResumes(owner);
+      } catch { /* Keep pending data for the next connection attempt. */ }
+      finally { busy = false; }
+    };
+    window.addEventListener('online', reconnect);
+    window.addEventListener('offline', markOffline);
+    const interval = setInterval(() => void reconnect(), 10000);
+    return () => { clearInterval(interval); window.removeEventListener('online', reconnect); window.removeEventListener('offline', markOffline); };
+  }, [refreshMe, applySnapshot, markOffline]);
 
   const value = useMemo(
     () => ({
@@ -545,7 +616,7 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
 
   return (
     <HouseholdContext.Provider value={value}>
-      <Fragment key={`${mode}:${currentMember?.id ?? ''}`}>{children}</Fragment>
+      <Fragment key={currentMember?.id ?? 'guest'}>{children}</Fragment>
     </HouseholdContext.Provider>
   );
 }

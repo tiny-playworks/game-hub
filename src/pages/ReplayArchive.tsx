@@ -34,7 +34,7 @@ import { buildMatchReview, type MatchReview } from '@/lib/riichiMatchReview';
 export default function ReplayArchive() {
   const { t, locale } = useLocale();
   const { mode } = useHousehold();
-  const isMember = mode === 'member-online';
+  const isMember = mode !== 'guest-local';
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);

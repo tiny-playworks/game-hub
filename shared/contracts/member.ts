@@ -12,7 +12,7 @@ import type { ArcadeStoredState } from '../../src/lib/arcadeStats';
 import type { ThemeChallengeState } from './challenge';
 import type { JourneyProgressState } from './journey';
 
-export type HouseholdMode = 'guest-local' | 'member-online';
+export type HouseholdMode = 'guest-local' | 'member-online' | 'member-offline';
 
 export type ProgressAction =
   | { type: 'checkin' }
@@ -40,6 +40,7 @@ export type ArcadeMemberEvent = {
 export interface ArcadeMemberResult {
   coinsEarned: number;
   capReached: boolean;
+  pending?: boolean;
   record?: {
     isNewBest: boolean;
     previousBest: number | null;

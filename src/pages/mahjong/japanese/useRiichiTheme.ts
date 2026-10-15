@@ -21,7 +21,7 @@ export function useRiichiTheme() {
   }, [household?.mode, household?.snapshot?.preferences.riichiTheme]);
 
   const setTheme = useCallback((next: RiichiThemeId) => {
-    if (household?.mode === 'member-online') {
+    if (household?.currentMember) {
       void household.updatePreferences({ riichiTheme: next }).catch(() => {});
       return;
     }

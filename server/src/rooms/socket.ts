@@ -32,9 +32,16 @@ export function setupRoomWebSocket(
   db: DatabaseSync,
   roomManager: RoomManager,
 ): WebSocketServer {
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws', maxPayload: 16384 });
+  const connections = new Map<string, number>();
 
   wss.on('connection', (ws: WebSocket, req) => {
+    try {
+      if (!req.headers.origin || new URL(req.headers.origin).host !== req.headers.host) {
+        ws.close(4403, 'ORIGIN_NOT_ALLOWED');
+        return;
+      }
+    } catch { ws.close(4403, 'ORIGIN_NOT_ALLOWED'); return; }
     const token = parseCookieToken(req.headers.cookie);
     if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token)) {
       ws.close(4401, 'UNAUTHORIZED');
@@ -58,6 +65,19 @@ export function setupRoomWebSocket(
 
     let activeRoomId: string | null = null;
     let unsubscribe: (() => void) | null = null;
+    const releaseRoom = () => {
+      if (unsubscribe) unsubscribe();
+      unsubscribe = null;
+      if (!activeRoomId) return;
+      const key = `${activeRoomId}:${member.id}:${session.device_id}`;
+      const remaining = Math.max(0, (connections.get(key) ?? 1) - 1);
+      if (remaining) connections.set(key, remaining);
+      else {
+        connections.delete(key);
+        roomManager.handleDisconnect(activeRoomId, member.id, session.device_id);
+      }
+      activeRoomId = null;
+    };
 
     const sendJson = (msg: ServerMessage) => {
       if (ws.readyState === WebSocket.OPEN) {
@@ -67,12 +87,18 @@ export function setupRoomWebSocket(
 
     ws.on('message', (data) => {
       try {
+        if (!db.prepare('SELECT 1 FROM sessions WHERE token_hash = ? AND expires_at > ?').get(tokenHash(token), Date.now())) {
+          ws.close(4401, 'UNAUTHORIZED');
+          return;
+        }
         const message = JSON.parse(data.toString());
 
         if (message.type === 'subscribe_room' && typeof message.roomId === 'string') {
           const targetRoomId = message.roomId;
+          releaseRoom();
           activeRoomId = targetRoomId;
-          if (unsubscribe) unsubscribe();
+          const key = `${targetRoomId}:${member.id}:${session.device_id}`;
+          connections.set(key, (connections.get(key) ?? 0) + 1);
 
           roomManager.handleReconnect(targetRoomId, member.id, session.device_id);
 
@@ -157,10 +183,7 @@ export function setupRoomWebSocket(
     });
 
     ws.on('close', () => {
-      if (activeRoomId) {
-        roomManager.handleDisconnect(activeRoomId, member.id, session.device_id);
-      }
-      if (unsubscribe) unsubscribe();
+      releaseRoom();
     });
   });
 

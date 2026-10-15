@@ -94,7 +94,7 @@ type RiichiStore = {
   }) => Promise<void>;
   dispatch: (event: RiichiEvent) => Promise<boolean>;
   undo: () => boolean;
-  resumeSaved: () => Promise<boolean>;
+  resumeSaved: (saveId?: string) => Promise<boolean>;
   abandonRanked: () => Promise<boolean>;
 };
 
@@ -495,11 +495,11 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
         saveMatch(reverted, get().processedProgress, get());
         return true;
       },
-      resumeSaved: async () => {
+      resumeSaved: async (saveId) => {
         const bridge = memberBridge();
         if (bridge) {
           try {
-            const current = await bridge.current();
+            const current = saveId && bridge.resume ? await bridge.resume(saveId) : await bridge.current();
             if (!current.match || !current.matchId ||
               !current.playerCharacterId || !getStorageDriver()) return false;
             changeVisibility({

@@ -32,7 +32,7 @@ export function CharacterOutfitPicker({
             aria-pressed={current === outfit}
             onClick={async () => {
               try {
-                if (household?.mode === 'member-online')
+                if (household?.currentMember)
                   await household.selectAoiOutfit(outfit);
                 else
                   updatePlayerCharacterState((value) => ({

@@ -149,7 +149,7 @@ export default function CharacterProfile() {
               disabled={!unlocked || active}
               onClick={async () => {
                 try {
-                  if (household?.mode === 'member-online')
+                  if (household?.currentMember)
                     await household.selectCharacter(character.id);
                   else setActiveCharacter(character.id);
                   setError('');

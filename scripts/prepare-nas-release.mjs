@@ -64,6 +64,8 @@ await writeFile(
     {
       releaseId,
       preparedAt: new Date().toISOString(),
+      revision: spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).stdout?.trim() || 'unknown',
+      dirty: Boolean(spawnSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).stdout?.trim()),
     },
     null,
     2,

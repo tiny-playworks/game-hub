@@ -31,14 +31,14 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setLocaleState(
-      mode === 'member-online' && snapshot
+      mode !== 'guest-local' && snapshot
         ? snapshot.preferences.locale
         : getStoredLocale(),
     );
   }, [mode, snapshot?.memberId, snapshot?.preferences.locale]);
 
   const setLocale = useCallback((next: Locale) => {
-    if (mode === 'member-online') {
+    if (mode !== 'guest-local') {
       void updatePreferences?.({ locale: next }).catch(() => {});
       return;
     }

@@ -85,7 +85,7 @@ export default function Shop() {
   const price = selected.price;
   const equip = async (itemId: string) => {
     try {
-      if (mode === 'member-online') await onlineEquipCosmetic(itemId);
+      if (mode !== 'guest-local') await onlineEquipCosmetic(itemId);
       else equipCosmetic(itemId);
       setError('');
     } catch (err) {
@@ -287,7 +287,7 @@ export default function Shop() {
             <Button
               onClick={async () => {
                 setConfirm(false);
-                if (mode === 'member-online') {
+                if (mode !== 'guest-local') {
                   try {
                     await onlinePurchaseCosmetic(selected.id);
                     setAcquired(selected.id);

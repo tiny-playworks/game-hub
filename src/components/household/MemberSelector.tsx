@@ -53,7 +53,7 @@ export function MemberSelector() {
 
   const handleOpen = () => {
     resetPinState();
-    if (mode === 'member-online' && currentMember) {
+    if (mode !== 'guest-local' && currentMember) {
       setView('status');
     } else {
       setView('list');
@@ -132,7 +132,7 @@ export function MemberSelector() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [open, view, pin, selectedMemberId, isSubmitting]);
 
-  if (!isServerAvailable) {
+  if (!isServerAvailable && !currentMember) {
     return null;
   }
 
@@ -164,12 +164,12 @@ export function MemberSelector() {
         data-member-selector-trigger
         className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent"
         title={
-          mode === 'member-online' && currentMember
-            ? `${currentMember.nickname} (${t('household.status.online')})`
+          mode !== 'guest-local' && currentMember
+            ? `${currentMember.nickname} (${t(mode === 'member-offline' ? 'household.status.offline' : 'household.status.online')})`
             : t('household.status.guest')
         }
       >
-        {mode === 'member-online' && currentMember ? (
+        {mode !== 'guest-local' && currentMember ? (
           <>
             {renderAvatarCircle(
               currentMember.avatarPresetId,
@@ -178,7 +178,7 @@ export function MemberSelector() {
             <span className="max-w-[80px] truncate font-semibold sm:max-w-[120px]">
               {currentMember.nickname}
             </span>
-            <span className="size-2 rounded-full bg-emerald-500" />
+            <span className={`size-2 rounded-full ${mode === 'member-offline' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
           </>
         ) : (
           <>
@@ -258,7 +258,7 @@ export function MemberSelector() {
               <div className="mt-4 max-h-[300px] overflow-y-auto space-y-2 pr-1">
                 {members.map((member) => {
                   const isCurrent =
-                    mode === 'member-online' && currentMember?.id === member.id;
+                    mode !== 'guest-local' && currentMember?.id === member.id;
                   return (
                     <button
                       key={member.id}

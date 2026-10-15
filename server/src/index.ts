@@ -41,7 +41,7 @@ app.setErrorHandler((error, _request, reply) => {
 
 app.get('/healthz', async () => {
   db.prepare('SELECT 1').get();
-  return { status: 'ok' };
+  return { status: 'ok', revision: process.env.GAME_HUB_REVISION ?? 'unknown' };
 });
 registerMemberRoutes(app, db);
 registerArcadeRoutes(app, db);

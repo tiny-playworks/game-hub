@@ -230,6 +230,12 @@ export async function fetchCurrentRiichiMatch(): Promise<MemberRiichiCurrent> {
   return request<MemberRiichiCurrent>('/api/v1/me/riichi/current');
 }
 
+export async function resumeMemberRiichiMatch(saveId: string): Promise<MemberRiichiSession> {
+  return request<MemberRiichiSession>('/api/v1/me/riichi/resume', {
+    method: 'POST', body: JSON.stringify({ saveId }),
+  });
+}
+
 export async function forfeitMemberRiichiMatch(
   matchId: string,
 ): Promise<MemberRiichiSession> {

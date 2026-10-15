@@ -8,6 +8,8 @@ import {
   type RiichiMatchState,
 } from '@/pages/mahjong/japanese/engine/match';
 import { recordRiichiMatchFinish } from '@/lib/riichiProgress';
+import { recordRiichiStatEvent } from '@/lib/playerStats';
+import type { RiichiEffect } from '@/pages/mahjong/japanese/engine';
 import {
   THEME_CHALLENGE_SET_ID,
   type ThemeChallengeId,
@@ -80,6 +82,7 @@ export function processOfflineRiichiReceipt(
   snapshot: MemberSnapshot,
   receipt: OfflineReceipt,
   recordChallenges?: (match: RiichiMatchState) => number,
+  effects?: RiichiEffect[],
 ): { snapshot: MemberSnapshot; result: OfflineReceiptResult } {
   if (receipt.payload.source !== 'free' || !('riichi' in receipt.payload)) {
     throw new Error('INVALID_PAYLOAD');
@@ -111,6 +114,8 @@ export function processOfflineRiichiReceipt(
   const prevCoins = snapshot.wallet.coins;
 
   const updated = runSnapshotMutation(snapshot, () => {
+    // Replay offline statistics without claiming expired daily/weekly task rewards.
+    for (const effect of effects ?? []) if (effect.type === 'progress') recordRiichiStatEvent(effect.event);
     // 发放对局金币与记录胜负统计
     recordRiichiMatchFinish(placement, matchLength, receipt.matchId);
     // 发放角色好感与相遇统计

@@ -26,7 +26,7 @@ import '@/pages/mahjong/japanese/presentation.css';
 export default function RiichiTraining() {
   const { t, locale } = useLocale();
   const { mode } = useHousehold();
-  const isMember = mode === 'member-online';
+  const isMember = mode !== 'guest-local';
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const matchIdParam = searchParams.get('matchId');

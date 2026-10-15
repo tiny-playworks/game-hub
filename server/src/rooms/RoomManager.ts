@@ -21,8 +21,9 @@ import {
   type RiichiEvent,
   type RiichiMatchState,
 } from '@/pages/mahjong/japanese/engine/match';
-import { recordRiichiMatchFinish } from '@/lib/riichiProgress';
-import { archiveReplay, getMember, readSnapshot, saveSnapshot } from '../db';
+import { addCoins, getRiichiMatchCoins } from '@/lib/wallet';
+import { recordCharacterMatchFinish } from '@/lib/playerCharacters';
+import { archiveReplay, getMember, readSnapshot, saveSnapshot, transaction } from '../db';
 import { runSnapshotMutation } from '../snapshotRuntime';
 import { createPlayerView } from './projectView';
 import {
@@ -72,6 +73,10 @@ export class RoomManager {
   ): RoomSummary {
     const roomId = createUuid();
     const fullSettings: RoomSettings = { ...DEFAULT_SETTINGS, ...settings };
+    if (!['east', 'south'].includes(fullSettings.matchLength) ||
+      !['beginner', 'standard', 'strong', 'expert'].includes(fullSettings.defaultAiLevel) ||
+      !Number.isInteger(fullSettings.turnTimeLimitSeconds) || fullSettings.turnTimeLimitSeconds < 1 || fullSettings.turnTimeLimitSeconds > 120)
+      throw new Error('BAD_REQUEST');
 
     const initialSeats: [RoomSeat, RoomSeat, RoomSeat, RoomSeat] = [
       {
@@ -146,7 +151,7 @@ export class RoomManager {
     const room = this.rooms.get(roomId);
     if (!room) throw new Error('ROOM_NOT_FOUND');
     if (room.summary.status !== 'waiting') throw new Error('GAME_ALREADY_STARTED');
-    if (seatIndex < 0 || seatIndex > 3) throw new Error('INVALID_SEAT_INDEX');
+    if (!Number.isInteger(seatIndex) || seatIndex < 0 || seatIndex > 3) throw new Error('INVALID_SEAT_INDEX');
 
     // 检查该成员是否已在其他位置
     for (const seat of room.summary.seats) {
@@ -230,7 +235,7 @@ export class RoomManager {
     const room = this.rooms.get(roomId);
     if (!room) throw new Error('ROOM_NOT_FOUND');
     if (room.summary.status !== 'waiting') throw new Error('GAME_ALREADY_STARTED');
-    if (seatIndex < 0 || seatIndex > 3) throw new Error('INVALID_SEAT_INDEX');
+    if (!Number.isInteger(seatIndex) || seatIndex < 0 || seatIndex > 3) throw new Error('INVALID_SEAT_INDEX');
 
     const targetSeat = room.summary.seats[seatIndex];
     if (targetSeat.type === 'human') throw new Error('SEAT_OCCUPIED_BY_HUMAN');
@@ -259,7 +264,7 @@ export class RoomManager {
     const room = this.rooms.get(roomId);
     if (!room) throw new Error('ROOM_NOT_FOUND');
     if (room.summary.status !== 'waiting') throw new Error('GAME_ALREADY_STARTED');
-    if (seatIndex < 0 || seatIndex > 3) throw new Error('INVALID_SEAT_INDEX');
+    if (!Number.isInteger(seatIndex) || seatIndex < 0 || seatIndex > 3) throw new Error('INVALID_SEAT_INDEX');
 
     const targetSeat = room.summary.seats[seatIndex];
     if (targetSeat.type !== 'ai') throw new Error('NOT_AN_AI_SEAT');
@@ -295,6 +300,14 @@ export class RoomManager {
     if (!room) throw new Error('ROOM_NOT_FOUND');
     if (room.summary.hostMemberId !== memberId) throw new Error('ONLY_HOST_CAN_START');
     if (room.summary.status !== 'waiting') throw new Error('ALREADY_PLAYING');
+    for (const seat of room.summary.seats) {
+      if (seat.type !== 'human') continue;
+      const row = getMember(this.db, seat.memberId);
+      if (row && readSnapshot(row).ranked.activeMatchId) throw new Error('RANKED_MATCH_ACTIVE');
+      if ([...this.rooms.values()].some((other) => other !== room && other.summary.status === 'playing' &&
+        other.summary.seats.some((otherSeat) => otherSeat.type === 'human' && otherSeat.memberId === seat.memberId)))
+        throw new Error('FAMILY_MATCH_ACTIVE');
+    }
 
     // 检查所有空席位，用默认 AI 补齐
     for (let i = 0; i < 4; i++) {
@@ -366,10 +379,11 @@ export class RoomManager {
       return { accepted: false, code: 'ROOM_OR_MATCH_NOT_FOUND', revision: 0 };
     }
 
-    // 幂等防重检查
-    if (room.executedCommandIds.has(command.commandId)) {
-      return { accepted: true, revision: room.summary.revision };
-    }
+    if (!command || command.protocol !== 1 || command.roomId !== roomId ||
+      typeof command.commandId !== 'string' || !command.commandId || command.commandId.length > 128 ||
+      !Number.isSafeInteger(command.expectedRevision) ||
+      (command.matchId !== undefined && command.matchId !== room.summary.currentMatchId))
+      return { accepted: false, code: 'BAD_REQUEST', revision: room.summary.revision };
 
     // 校验执行者在哪个座位
     const seat = room.summary.seats.find(
@@ -378,6 +392,21 @@ export class RoomManager {
     if (!seat) {
       return { accepted: false, code: 'UNAUTHORIZED_OR_NOT_IN_SEAT', revision: room.summary.revision };
     }
+
+    // Read durable credentials too: retries after a process restart must not replay an action.
+    const previous = this.db.prepare('SELECT member_id, device_id, command_json FROM room_commands WHERE room_id = ? AND command_id = ?')
+      .get(roomId, command.commandId) as { member_id: string; device_id: string; command_json: string } | undefined;
+    if (previous) {
+      const accepted = previous.member_id === memberId && previous.device_id === deviceId &&
+        previous.command_json === JSON.stringify(command);
+      return { accepted, code: accepted ? undefined : 'COMMAND_CONFLICT', revision: room.summary.revision };
+    }
+    if (command.type !== 'takeover_control' && !hasControlLease(seat, deviceId))
+      return { accepted: false, code: 'CONTROL_LEASE_LOST', revision: room.summary.revision };
+    if (command.expectedRevision !== room.summary.revision)
+      return { accepted: false, code: 'ROOM_REVISION_CONFLICT', revision: room.summary.revision };
+    if (room.summary.status === 'finished')
+      return { accepted: false, code: 'MATCH_FINISHED', revision: room.summary.revision };
 
     interface CommandPayload {
       tile?: number;
@@ -398,9 +427,14 @@ export class RoomManager {
           newDeviceId: deviceId,
         });
       }
+      room.summary.revision++;
       room.executedCommandIds.add(command.commandId);
       recordRoomCommand(this.db, roomId, command, memberId, deviceId);
       saveRoomState(this.db, room.summary, room.match, room.serverDeadline, room.summary.isPaused);
+      if (room.summary.isPaused) {
+        room.summary.isPaused = false;
+        this.scheduleNextTurn(room);
+      }
       this.broadcastRoom(room);
       this.broadcastViews(room);
       return { accepted: true, revision: room.summary.revision };
@@ -412,6 +446,7 @@ export class RoomManager {
         return { accepted: false, code: 'CONTROL_LEASE_LOST', revision: room.summary.revision };
       }
       seat.isAutoplay = Boolean(payload?.isAutoplay);
+      room.summary.revision++;
       room.executedCommandIds.add(command.commandId);
       recordRoomCommand(this.db, roomId, command, memberId, deviceId);
       saveRoomState(this.db, room.summary, room.match, room.serverDeadline, room.summary.isPaused);
@@ -425,13 +460,17 @@ export class RoomManager {
 
     // 特殊指令 3: 恢复对局 (Resume game)
     if (command.type === 'resume_game') {
+      if (!hasControlLease(seat, deviceId))
+        return { accepted: false, code: 'CONTROL_LEASE_LOST', revision: room.summary.revision };
       if (room.summary.isPaused) {
         room.summary.isPaused = false;
+        room.summary.revision++;
         this.scheduleNextTurn(room);
         saveRoomState(this.db, room.summary, room.match, room.serverDeadline, room.summary.isPaused);
         this.broadcastRoom(room);
         this.broadcastViews(room);
       }
+      recordRoomCommand(this.db, roomId, command, memberId, deviceId);
       return { accepted: true, revision: room.summary.revision };
     }
 
@@ -507,10 +546,12 @@ export class RoomManager {
 
     room.match = step.match;
     room.executedCommandIds.add(command.commandId);
-    recordRoomCommand(this.db, roomId, command, memberId, deviceId);
-
     room.summary.revision++;
     room.summary.updatedAt = Date.now();
+    transaction(this.db, () => {
+      recordRoomCommand(this.db, roomId, command, memberId, deviceId);
+      saveRoomState(this.db, room.summary, room.match, room.serverDeadline, room.summary.isPaused);
+    });
 
     // 检查是否终局结算
     if (room.match.status === 'matchEnd') {
@@ -524,14 +565,14 @@ export class RoomManager {
     return { accepted: true, revision: room.summary.revision };
   }
 
-  handleDisconnect(roomId: string, memberId: string, _deviceId?: string): void {
+  handleDisconnect(roomId: string, memberId: string, deviceId?: string): void {
     const room = this.rooms.get(roomId);
     if (!room) return;
 
     const seat = room.summary.seats.find(
       (s): s is HumanSeat => s.type === 'human' && s.memberId === memberId,
     );
-    if (!seat) return;
+    if (!seat || (deviceId && !hasControlLease(seat, deviceId))) return;
 
     markSeatDisconnected(seat);
 
@@ -560,9 +601,10 @@ export class RoomManager {
     const seat = room.summary.seats.find(
       (s): s is HumanSeat => s.type === 'human' && s.memberId === memberId,
     );
-    if (!seat) return;
+    if (!seat || !hasControlLease(seat, deviceId)) return;
 
     markSeatConnected(seat, deviceId);
+    seat.isAutoplay = false;
 
     // 如果房间处于全员离线暂停状态，任意真人重连后恢复对局
     if (room.summary.isPaused && room.summary.status === 'playing') {
@@ -782,57 +824,63 @@ export class RoomManager {
 
   private settleMatchEnd(room: RoomInstance): void {
     if (!room.match || !room.match.matchEnd) return;
+    const match = room.match;
+    const matchEnd = room.match.matchEnd;
     const ranking = room.match.matchEnd.ranking;
     const matchId = room.summary.currentMatchId ?? createUuid();
     const matchLength = room.summary.settings.matchLength;
 
-    // 仅在至少 2 名真人参与对局时，按规则发放家庭基础雀币（4.5 契约）
-    if (room.summary.humanCount >= 2) {
+    const dateKey = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai' }).format(Date.now());
+    transaction(this.db, () => {
       for (const seat of room.summary.seats) {
-        if (seat.type === 'human') {
-          const placement = ranking.indexOf(seat.seatIndex) + 1;
-
-          try {
-            const memberRow = getMember(this.db, seat.memberId);
-            if (memberRow) {
-              const currentSnapshot = readSnapshot(memberRow);
-              const updated = runSnapshotMutation(currentSnapshot, () => {
-                recordRiichiMatchFinish(placement, matchLength, matchId);
-              });
-              saveSnapshot(this.db, memberRow, updated.snapshot);
-            }
-          } catch {
-            // ignore per member settlement issue
-          }
+        if (seat.type !== 'human') continue;
+        if (this.db.prepare('SELECT 1 FROM family_results WHERE member_id = ? AND match_id = ?').get(seat.memberId, matchId)) continue;
+        const placement = ranking.indexOf(seat.seatIndex) + 1;
+        const commands = this.db.prepare('SELECT command_json FROM room_commands WHERE room_id = ? AND member_id = ?')
+          .all(room.summary.id, seat.memberId) as Array<{ command_json: string }>;
+        const played = commands.some((row) => ['discard', 'riichi', 'tsumo', 'ron', 'pass', 'claim'].includes(JSON.parse(row.command_json).type));
+        const previous = this.db.prepare('SELECT COALESCE(SUM(coins), 0) AS coins FROM family_results WHERE member_id = ? AND date_key = ?')
+          .get(seat.memberId, dateKey) as { coins: number };
+        const coins = room.summary.humanCount >= 2 && played
+          ? Math.min(getRiichiMatchCoins(placement, matchLength), Math.max(0, 200 - previous.coins)) : 0;
+        const memberRow = getMember(this.db, seat.memberId);
+        if (memberRow && room.summary.humanCount >= 2 && played) {
+          const snapshot = readSnapshot(memberRow);
+          const updated = runSnapshotMutation(snapshot, () => {
+            if (coins) addCoins(coins, 'wallet.reason.familyMatch', Date.now(), `family:${matchId}`);
+            recordCharacterMatchFinish({ matchId: `family:${matchId}`, characterId: snapshot.characters.activeCharacterId,
+              opponents: room.summary.seats.flatMap((other) => other.type === 'ai' ? [other.characterId] : []),
+              ranking: ranking.map((index) => (index - seat.seatIndex + 4) % 4) });
+          });
+          saveSnapshot(this.db, memberRow, updated.snapshot);
         }
+        this.db.prepare('INSERT INTO family_results(member_id, match_id, room_id, placement, score, coins, date_key, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+          .run(seat.memberId, matchId, room.summary.id, placement, room.match!.matchEnd!.finalScores[seat.seatIndex], coins, dateKey, Date.now());
       }
-    }
 
     // 归档整场终局牌谱供参赛成员回放（总纲 4.5 & P15）
-    const replayFile = toReplayFile(room.match);
+    const replayFile = toReplayFile(match);
     const replayJson = JSON.stringify(replayFile);
     for (const seat of room.summary.seats) {
       if (seat.type === 'human') {
         const placement = ranking.indexOf(seat.seatIndex) + 1;
-        const finalScore = room.match.matchEnd.finalScores[seat.seatIndex] ?? 25000;
-        try {
+        const finalScore = matchEnd.finalScores[seat.seatIndex] ?? 25000;
           archiveReplay(this.db, seat.memberId, {
             matchId,
             source: 'family',
             roomId: room.summary.id,
             viewerSeat: seat.seatIndex,
-            playerCharacterId: (room.match.seatCharacters[seat.seatIndex] as string) ?? 'koharu',
+            playerCharacterId: (match.seatCharacters[seat.seatIndex] as string) ?? 'koharu',
             ranking: placement,
             finalScore,
             matchLength,
             replayJson,
           });
-        } catch {
-          // ignore per member archive error
-        }
       }
     }
 
+      deleteRoomState(this.db, room.summary.id);
+    });
     room.summary.status = 'finished';
     room.summary.revision++;
     room.summary.updatedAt = Date.now();
@@ -865,6 +913,7 @@ export class RoomManager {
       };
 
       this.rooms.set(data.summary.id, instance);
+      if (instance.match?.status === 'matchEnd') this.settleMatchEnd(instance);
     }
   }
 }

@@ -75,7 +75,7 @@ export function QuickAccessPanel({
 }: Props) {
   const { t, locale } = useLocale();
   const household = useOptionalHousehold();
-  const memberMode = household?.mode === 'member-online';
+  const memberMode = Boolean(household?.currentMember);
   const [profile, setProfile] = useState<PlayerProfile>(() =>
     getPlayerProfile(),
   );

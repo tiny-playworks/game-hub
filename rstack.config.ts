@@ -134,6 +134,10 @@ define.lint(
       },
     },
     {
+      files: ['scripts/*.cjs'],
+      rules: { '@typescript-eslint/no-require-imports': 'off' },
+    },
+    {
       ...rstestPlugin.configs.recommended,
       files: ['**/*.{test,spec}.{ts,tsx}'],
       rules: {

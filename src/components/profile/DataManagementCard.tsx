@@ -40,10 +40,10 @@ export function DataManagementCard() {
     <section className="paper-texture rounded-3xl border bg-card p-5 text-foreground">
       <h2 className="text-lg font-semibold">{t('save.title')}</h2>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        {t(mode === 'member-online' ? 'household.save.memberDescription' : 'save.description')}
+        {t(mode !== 'guest-local' ? 'household.save.memberDescription' : 'save.description')}
       </p>
 
-      {mode === 'member-online' && currentMember && (
+      {mode !== 'guest-local' && currentMember && (
         <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -60,7 +60,7 @@ export function DataManagementCard() {
               <Button
                 size="sm"
                 className="gap-1.5"
-                disabled={isMigrating || migrateSuccess}
+                disabled={mode === 'member-offline' || isMigrating || migrateSuccess}
                 onClick={() => {
                   setError('');
                   setShowMigrateConfirm(true);
@@ -77,7 +77,7 @@ export function DataManagementCard() {
       )}
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {mode === 'member-online' && snapshot ? (
+        {mode !== 'guest-local' && snapshot ? (
           <Button
             variant="outline"
             onClick={() => {

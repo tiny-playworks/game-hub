@@ -5,6 +5,7 @@ import { ApiError } from '../server/src/auth';
 import { openDatabase, readSnapshot, type MemberRow } from '../server/src/db';
 import { RoomManager, type RoomInstance } from '../server/src/rooms/RoomManager';
 import { registerRoomRoutes } from '../server/src/routes/rooms';
+import { recordRoomCommand } from '../server/src/rooms/recovery';
 import { createEmptySnapshot } from '../server/src/snapshot';
 import { preloadRiichiRules } from '../src/lib/riichiRules';
 import type { RoomCommand } from '../shared/contracts/room';
@@ -411,6 +412,10 @@ describe('P12 家庭真人牌桌服务端测试', () => {
     };
 
     // 触发结算
+    for (const [memberId, deviceId] of [[memberA, deviceA], [memberB, deviceB]]) {
+      recordRoomCommand(db, room.id, { protocol: 1, roomId: room.id, commandId: `played-${memberId}`,
+        expectedRevision: 1, type: 'discard', payload: { tile: 0 } }, memberId, deviceId);
+    }
     (roomManager as unknown as TestRoomManagerHooks).settleMatchEnd(instance);
 
     // 验证家庭成员档案：A 和 B 的钱包均得到结算发放
@@ -421,5 +426,10 @@ describe('P12 家庭真人牌桌服务端测试', () => {
     const rowB = db.prepare('SELECT * FROM members WHERE id = ?').get(memberB) as unknown as MemberRow;
     const snapB = readSnapshot(rowB);
     expect(snapB.wallet.coins).toBeGreaterThan(0);
+    expect(db.prepare('SELECT COUNT(*) AS count FROM active_rooms WHERE room_id = ?').get(room.id)).toEqual({ count: 0 });
+    (roomManager as unknown as TestRoomManagerHooks).settleMatchEnd(instance);
+    const retry = readSnapshot(db.prepare('SELECT * FROM members WHERE id = ?').get(memberA) as unknown as MemberRow);
+    expect(retry.wallet.coins).toBe(snapA.wallet.coins);
+    expect(retry.ranked).toEqual(snapA.ranked);
   });
 });

@@ -16,6 +16,10 @@ export function saveRoomState(
   serverDeadline: number | null,
   isPaused: boolean = false,
 ): void {
+  if (summary.status === 'finished') {
+    deleteRoomState(db, summary.id);
+    return;
+  }
   const summaryJson = JSON.stringify(summary);
   const matchJson = match ? JSON.stringify(match) : null;
   const now = Date.now();

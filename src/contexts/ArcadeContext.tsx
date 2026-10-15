@@ -27,6 +27,7 @@ type ArcadeResult = ArcadeRecord & {
   outcome: ArcadeOutcome;
   score: number;
   settlementFailed?: boolean;
+  settlementPending?: boolean;
 };
 function settledResult(
   outcome: ArcadeOutcome,
@@ -43,6 +44,7 @@ function settledResult(
     score,
     coinsEarned: settled.coinsEarned,
     capReached: settled.capReached,
+    settlementPending: settled.pending,
   };
 }
 type Session = {
@@ -74,7 +76,7 @@ export function ArcadeSession({
   children: ReactNode;
 }) {
   const household = useOptionalHousehold();
-  const memberMode = household?.mode === 'member-online';
+  const memberMode = Boolean(household?.currentMember);
   const [difficulty, setDifficulty] = useState(() =>
     getArcadeDifficulty(gameId),
   );

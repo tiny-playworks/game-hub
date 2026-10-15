@@ -37,6 +37,7 @@ export interface RiichiOnlineBridge {
   }) => Promise<MemberRiichiSession>;
   current: () => Promise<MemberRiichiCurrent>;
   forfeit: (matchId: string) => Promise<MemberRiichiSession>;
+  resume?: (saveId: string) => Promise<MemberRiichiSession>;
 }
 
 let currentBridge: RiichiOnlineBridge | null = null;

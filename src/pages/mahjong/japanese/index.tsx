@@ -787,7 +787,7 @@ function GameLogPanel({ gameLog }: { gameLog: string[] }) {
 const GameMahjongJapanese = () => {
   const { t, locale } = useLocale();
   const household = useOptionalHousehold();
-  const memberOnline = household?.mode === 'member-online';
+  const memberOnline = Boolean(household?.currentMember);
   const navigate = useNavigate();
   const rankedState = useRankedState();
   const [searchParams, setSearchParams] = useSearchParams();

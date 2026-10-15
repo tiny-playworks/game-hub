@@ -44,14 +44,16 @@ export function registerRoomRoutes(
     const body = (request.body ?? {}) as CreateRoomBody;
     const settings = body.settings ?? {};
 
-    const summary = roomManager.createRoom(
+    try {
+      const summary = roomManager.createRoom(
       member.id,
       body.nickname ?? 'Host',
       body.avatarPresetId ?? 'default-1',
       session.device_id,
       settings,
     );
-    return summary;
+      return summary;
+    } catch { throw apiError(400, 'BAD_REQUEST'); }
   });
 
   // 获取房间详情
@@ -103,8 +105,10 @@ export function registerRoomRoutes(
 
   // 填充 AI 席位
   app.post('/api/v1/rooms/:roomId/ai', async (request) => {
-    requireSession(db, request);
+    const { member } = requireSession(db, request);
     const { roomId } = request.params as { roomId: string };
+    if (roomManager.getRoom(roomId)?.hostMemberId !== member.id)
+      throw apiError(403, 'ONLY_HOST_CAN_START');
     const body = (request.body ?? {}) as FillAiBody;
 
     if (typeof body.seatIndex !== 'number') {
@@ -126,8 +130,10 @@ export function registerRoomRoutes(
 
   // 移除 AI 席位
   app.delete('/api/v1/rooms/:roomId/ai/:seatIndex', async (request) => {
-    requireSession(db, request);
+    const { member } = requireSession(db, request);
     const { roomId, seatIndex } = request.params as { roomId: string; seatIndex: string };
+    if (roomManager.getRoom(roomId)?.hostMemberId !== member.id)
+      throw apiError(403, 'ONLY_HOST_CAN_START');
 
     try {
       return roomManager.removeAiSeat(roomId, Number(seatIndex));
@@ -189,7 +195,7 @@ export function registerRoomRoutes(
 
     const result = roomManager.dispatchAction(roomId, member.id, session.device_id, command);
     if (!result.accepted) {
-      throw apiError(result.code === 'CONTROL_LEASE_LOST' ? 409 : 400, result.code ?? 'ACTION_REJECTED');
+      throw apiError(['CONTROL_LEASE_LOST', 'ROOM_REVISION_CONFLICT', 'COMMAND_CONFLICT'].includes(result.code ?? '') ? 409 : 400, result.code ?? 'ACTION_REJECTED');
     }
     return result;
   });

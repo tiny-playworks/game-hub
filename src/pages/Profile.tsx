@@ -137,7 +137,7 @@ function getCosmeticGoalText(
 const Profile = () => {
   const { t, locale } = useLocale();
   const household = useOptionalHousehold();
-  const memberMode = household?.mode === 'member-online';
+  const memberMode = Boolean(household?.currentMember);
   const profile = usePlayerProfile();
   const cosmetics = useCosmetics();
   const [nicknameDraft, setNicknameDraft] = useState(

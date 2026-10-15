@@ -76,6 +76,7 @@ export interface ResumeSaveRecord {
   replay: RiichiReplayFile;
   processedProgress: string[];
   playerCharacterId?: string;
+  themeChallengeEligible?: boolean;
   roundSummary?: {
     round: number;
     roundName: string;

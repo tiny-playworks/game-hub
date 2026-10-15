@@ -25,7 +25,7 @@ export const SyncStatus: React.FC<{ className?: string }> = ({ className = '' })
   }, [currentMember]);
 
   // 仅在成员模式下显示同步状态
-  if (mode !== 'member-online' || !currentMember) {
+  if (mode === 'guest-local' || !currentMember) {
     return null;
   }
 

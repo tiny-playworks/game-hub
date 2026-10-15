@@ -44,7 +44,7 @@ export function TrainingSummary({
 }) {
   const { t, locale } = useLocale();
   const { mode, currentMember } = useHousehold();
-  const isMember = mode === 'member-online';
+  const isMember = mode !== 'guest-local';
   const owner = isMember ? currentMember?.id ?? 'loading' : 'guest';
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<TrainingWeaknessSummary | null>(null);

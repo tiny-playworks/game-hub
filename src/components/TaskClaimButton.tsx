@@ -31,7 +31,7 @@ export function TaskClaimButton({
         onClick={async () => {
           setBusy(true);
           try {
-            if (household?.mode === 'member-online') {
+            if (household?.currentMember) {
               await household.performProgressAction({
                 type: scope === 'daily' ? 'claim-daily-task' : 'claim-weekly-task',
                 taskId: task.id,

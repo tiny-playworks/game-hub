@@ -23,7 +23,7 @@ export function ThemeSwitcher() {
       className="flex size-9 shrink-0 items-center justify-center rounded-full border bg-card text-foreground transition hover:bg-accent"
       onClick={() => {
         const next = theme === 'light' ? 'dark' : 'light';
-        if (household?.mode === 'member-online') {
+        if (household?.currentMember) {
           void household.updatePreferences({ venueTheme: next }).catch(() => {});
           return;
         }

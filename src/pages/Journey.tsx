@@ -53,10 +53,10 @@ export default function Journey() {
   const [submitError, setSubmitError] = useState(false);
 
   const memberProgress = household.snapshot?.journey;
-  const progress = household.mode === 'member-online'
+  const progress = household.mode !== 'guest-local'
     ? memberProgress
     : guestProgress;
-  const isMember = household.mode === 'member-online';
+  const isMember = household.mode !== 'guest-local';
 
   useEffect(() => {
     let active = true;

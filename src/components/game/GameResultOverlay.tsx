@@ -109,7 +109,8 @@ export const GameResultOverlay = ({
             {t('arcade.settlementFailed')}
           </p>
         )}
-        {arcade?.result && !arcade.result.settlementFailed && (
+        {arcade?.result?.settlementPending && <p role="status" className="text-sm text-muted-foreground">{t('arcade.settlementPending')}</p>}
+        {arcade?.result && !arcade.result.settlementFailed && !arcade.result.settlementPending && (
           <p className="mt-3 text-sm text-primary">
             +{arcade.result.coinsEarned} {t('wallet.coins')}
             {arcade.result.capReached && (
