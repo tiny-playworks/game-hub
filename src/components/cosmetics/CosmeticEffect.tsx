@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { RiichiStickArt } from './RiichiStickArt';
 
 const themes: Record<
   string,
@@ -51,8 +52,8 @@ export function CosmeticEffect({
         </span>
       )}
       {kind === 'riichi' && (
-        <span className="cosmetic-riichi-stick">
-          <b />
+        <span className="cosmetic-riichi-stick" data-riichi-design={id}>
+          <RiichiStickArt design={id} />
         </span>
       )}
       {!still && theme.motion === 'dragon' && (

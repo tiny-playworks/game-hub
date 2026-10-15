@@ -6,6 +6,7 @@
     #295576 2px 5px
   );
   --cosmetic-back-color: #295576;
+  --back-rim: #d3c297;
 }
 [data-tile-back='back-vermilion'] {
   --cosmetic-back: repeating-linear-gradient(
@@ -14,12 +15,14 @@
     #b44a3e 4px 5px
   );
   --cosmetic-back-color: #942f34;
+  --back-rim: #e5b47c;
 }
 [data-tile-back='back-sakura'] {
   --cosmetic-back:
     radial-gradient(circle at 25% 25%, #ffdce5 0 13%, transparent 15%),
     radial-gradient(circle at 75% 75%, #ffe6ed 0 13%, transparent 15%), #ac5b79;
   --cosmetic-back-color: #ac5b79;
+  --back-rim: #f5cad6;
 }
 [data-tile-back='back-waves'] {
   --cosmetic-back: repeating-radial-gradient(
@@ -29,6 +32,7 @@
     #234a62 4px 7px
   );
   --cosmetic-back-color: #234a62;
+  --back-rim: #b8d2d1;
 }
 [data-tile-back='back-gold'] {
   --cosmetic-back: linear-gradient(
@@ -40,12 +44,14 @@
     #ffebac
   );
   --cosmetic-back-color: #bb8e41;
+  --back-rim: #e5c77b;
 }
 [data-tile-back='back-koharu'] {
   --cosmetic-back:
     radial-gradient(circle, #f9d288 0 20%, transparent 22%) 0 0 / 11px 11px,
     #b86038;
   --cosmetic-back-color: #b86038;
+  --back-rim: #e8bc7b;
 }
 [data-tile-back='back-rin'] {
   --cosmetic-back: repeating-linear-gradient(
@@ -54,6 +60,7 @@
     #92d9ed 6px 8px
   );
   --cosmetic-back-color: #215c78;
+  --back-rim: #9bd2e4;
 }
 [data-tile-back='back-sora'] {
   --cosmetic-back: repeating-radial-gradient(
@@ -62,12 +69,17 @@
     #e2c3db 4px 5px
   );
   --cosmetic-back-color: #80628c;
+  --back-rim: #d8b9d2;
 }
 [data-tile-back='back-mahiru'] {
   --cosmetic-back:
     linear-gradient(35deg, transparent 40%, #ead279 41% 47%, transparent 48%),
     #1c716a;
   --cosmetic-back-color: #1c716a;
+  --back-rim: #a9d5bc;
+}
+[data-tile-back='back-aoi'] {
+  --back-rim: #c2c5bd;
 }
 .cosmetic-tile-pattern {
   position: absolute;
@@ -78,8 +90,56 @@
   background: var(--cosmetic-back);
   box-shadow: inset 0 0 0 1px #0003;
 }
-[data-tile-back] .riichi-tile-back-rotator {
+[data-tile-back] .riichi-tile-back .riichi-tile-back-rotator {
+  box-sizing: border-box;
+  border: 2px solid var(--back-rim, #d1c6b4);
   background: var(--cosmetic-back-color);
+  box-shadow:
+    inset 1px 1px 3px #fff4,
+    inset -1px -1px 3px #0005,
+    0 0 0 1px color-mix(in srgb, var(--back-rim, #d1c6b4) 56%, #28231e),
+    0 3px 5px #0005;
+}
+.cosmetic-preview[data-preview-category='tile-back'][data-tile-back]
+  .cosmetic-sample-back {
+  border-color: var(--back-rim, #f5f2e9);
+  outline: 1px solid color-mix(in srgb, var(--back-rim, #f5f2e9) 78%, white);
+  outline-offset: 1px;
+  box-shadow:
+    0 2px 0 color-mix(in srgb, var(--back-rim, #f5f2e9) 58%, #594e3f),
+    0 5px 10px #172a3a44;
+}
+[data-tile-back] .riichi-tile-back-rotator::after,
+.cosmetic-preview[data-tile-back] .cosmetic-sample-back::after {
+  position: absolute;
+  z-index: 2;
+  inset: -1px;
+  background: url('./assets/cosmetics/tile-rim-jade.png') center / 100% 100%
+    no-repeat;
+  content: '';
+  pointer-events: none;
+}
+[data-tile-back='back-blue'] .riichi-tile-back-rotator::after,
+[data-tile-back='back-waves'] .riichi-tile-back-rotator::after,
+[data-tile-back='back-rin'] .riichi-tile-back-rotator::after,
+.cosmetic-preview[data-tile-back='back-blue'] .cosmetic-sample-back::after,
+.cosmetic-preview[data-tile-back='back-waves'] .cosmetic-sample-back::after,
+.cosmetic-preview[data-tile-back='back-rin'] .cosmetic-sample-back::after {
+  background-image: url('./assets/cosmetics/tile-rim-blue.png');
+}
+[data-tile-back='back-vermilion'] .riichi-tile-back-rotator::after,
+[data-tile-back='back-gold'] .riichi-tile-back-rotator::after,
+[data-tile-back='back-koharu'] .riichi-tile-back-rotator::after,
+.cosmetic-preview[data-tile-back='back-vermilion'] .cosmetic-sample-back::after,
+.cosmetic-preview[data-tile-back='back-gold'] .cosmetic-sample-back::after,
+.cosmetic-preview[data-tile-back='back-koharu'] .cosmetic-sample-back::after {
+  background-image: url('./assets/cosmetics/tile-rim-vermilion.png');
+}
+[data-tile-back='back-sakura'] .riichi-tile-back-rotator::after,
+[data-tile-back='back-sora'] .riichi-tile-back-rotator::after,
+.cosmetic-preview[data-tile-back='back-sakura'] .cosmetic-sample-back::after,
+.cosmetic-preview[data-tile-back='back-sora'] .cosmetic-sample-back::after {
+  background-image: url('./assets/cosmetics/tile-rim-sakura.png');
 }
 :root,
 [data-table-felt='felt-green'] {
@@ -133,89 +193,25 @@
     auto;
 }
 .cosmetic-avatar-frame {
-  --frame-color: #937354;
   position: relative;
+  isolation: isolate;
   display: inline-flex;
   flex: 0 0 auto;
-  border: 3px solid var(--frame-color);
-  padding: 2px;
-  border-radius: 24%;
-  box-shadow:
-    0 0 0 1px #f3dcad6b,
-    inset 0 0 0 1px #fff5;
   vertical-align: middle;
 }
 .cosmetic-avatar-frame > img,
 .cosmetic-avatar-frame > div {
   border-radius: 19%;
 }
-[data-avatar-frame='frame-gold'] {
-  --frame-color: #d7aa49;
-  background: linear-gradient(135deg, #f3df95, #a17629);
-  box-shadow: 0 0 10px #c89b4533;
-}
-[data-avatar-frame='frame-sakura'] {
-  --frame-color: #cc91a5;
-  border-style: dotted;
-  background: #f4c7d226;
-}
-[data-avatar-frame^='frame-rank'] {
-  --frame-color: #729c88;
-  border-style: double;
-  border-width: 5px;
-  padding: 0;
-}
-[data-avatar-frame='frame-rank-adept'] {
-  --frame-color: #87b9cc;
-}
-[data-avatar-frame='frame-rank-expert'] {
-  --frame-color: #b999cf;
-}
-[data-avatar-frame='frame-rank-master'] {
-  --frame-color: #d6b867;
-}
-[data-avatar-frame='frame-rank-saint'] {
-  --frame-color: #d9dff4;
-  box-shadow: 0 0 14px #bfbdff77;
-}
-[data-avatar-frame='frame-koharu'] {
-  --frame-color: #df9c5a;
-}
-[data-avatar-frame='frame-mio'] {
-  --frame-color: #75bdac;
-}
-[data-avatar-frame='frame-rin'] {
-  --frame-color: #70b8d4;
-}
-[data-avatar-frame='frame-chitose'] {
-  --frame-color: #a7b276;
-}
-[data-avatar-frame='frame-sora'] {
-  --frame-color: #bc8fab;
-}
-[data-avatar-frame='frame-aya'] {
-  --frame-color: #d57b82;
-}
-[data-avatar-frame='frame-mahiru'] {
-  --frame-color: #9bc5b0;
-}
-[data-avatar-frame='frame-yoru'] {
-  --frame-color: #9b9fda;
-}
-[data-avatar-frame='frame-koharu'],
-[data-avatar-frame='frame-mio'],
-[data-avatar-frame='frame-rin'],
-[data-avatar-frame='frame-chitose'],
-[data-avatar-frame='frame-sora'],
-[data-avatar-frame='frame-aya'],
-[data-avatar-frame='frame-mahiru'],
-[data-avatar-frame='frame-yoru'] {
-  border-style: double;
-  border-width: 5px;
-  padding: 0;
-  box-shadow:
-    0 0 0 1px #e9c57e,
-    0 0 12px color-mix(in srgb, var(--frame-color) 40%, transparent);
+.cosmetic-avatar-frame > img.cosmetic-avatar-frame-art {
+  position: absolute;
+  z-index: 3;
+  inset: -7px;
+  width: calc(100% + 14px);
+  height: calc(100% + 14px);
+  border-radius: 0;
+  object-fit: fill;
+  pointer-events: none;
 }
 .shop-layout {
   display: grid;
@@ -455,22 +451,24 @@
   display: block;
   width: 92px;
   height: 10px;
-  border: 1px solid #ded8c3;
-  border-radius: 3px;
   top: 53%;
   left: calc(50% - 46px);
-  background: #fff5d8;
-  box-shadow: 0 4px 8px #0005;
   animation: cosmetic-stick 650ms ease-out both;
 }
-.cosmetic-riichi-stick b {
-  position: absolute;
-  width: 5px;
-  height: 5px;
-  top: 1px;
-  left: 43px;
-  border-radius: 50%;
-  background: #bf3937;
+.riichi-riichi-stick[data-riichi-design],
+.cosmetic-riichi-stick[data-riichi-design] {
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.cosmetic-riichi-stick-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
 }
 .riichi-character-cutin-band .cosmetic-riichi-stick {
   top: 82%;
@@ -481,11 +479,6 @@
   width: 64px;
   height: 8px;
   left: calc(50% - 32px);
-}
-.cosmetic-effect.is-still .cosmetic-riichi-stick b {
-  left: 29px;
-  width: 4px;
-  height: 4px;
 }
 .cosmetic-dragon-seal {
   position: absolute;

@@ -1,4 +1,6 @@
+import { RiichiStickArt } from '@/components/cosmetics/RiichiStickArt';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useCosmetics } from '@/hooks/useCosmetics';
 import { formatMessage } from '@/lib/i18n';
 import { getBaseTile } from '@/lib/mahjongRiichi';
 import { toTileKeyedItems } from '../helpers';
@@ -12,6 +14,7 @@ type Props = {
 
 export function CenterArea({ game, highlightedBase = null }: Props) {
   const { locale, t } = useLocale();
+  const { equipped } = useCosmetics();
 
   return (
     <div className="riichi-center-board">
@@ -24,7 +27,12 @@ export function CenterArea({ game, highlightedBase = null }: Props) {
               role="img"
               aria-label={`${t(`game.mahjong.seats.${seat}`)} ${t('game.mahjong.riichiStick')}`}
             >
-              <i className="riichi-riichi-stick" />
+              <i
+                className="riichi-riichi-stick"
+                data-riichi-design={equipped['riichi-effect']}
+              >
+                <RiichiStickArt design={equipped['riichi-effect']} />
+              </i>
             </span>
           ),
       )}
