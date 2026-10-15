@@ -173,7 +173,7 @@ const Home = () => {
             <RankedLobbyCard />
             <article className="venue-free felt-surface rounded-[24px] border border-gold/30 p-5 text-paper">
               <div className="flex items-center gap-3">
-                <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-gold/30 bg-paper/10">
+                <div className="venue-free-icon flex size-11 shrink-0 items-center justify-center rounded-xl border border-gold/30 bg-paper/10">
                   <Play className="size-5 text-gold" />
                 </div>
                 <div>
@@ -212,10 +212,10 @@ const Home = () => {
                 ) : null}
               </div>
             </article>
-            <article className="venue-free felt-surface rounded-[24px] border border-gold/30 p-5 text-paper">
+            <article className="venue-free venue-journey felt-surface rounded-[24px] border border-gold/30 p-5 text-paper">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-gold/30 bg-paper/10">
+                  <div className="venue-free-icon flex size-11 shrink-0 items-center justify-center rounded-xl border border-gold/30 bg-paper/10">
                     <ScrollText className="size-5 text-gold" />
                   </div>
                   <div>

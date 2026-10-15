@@ -1369,17 +1369,17 @@ a {
 .venue-free h2 {
   font-size: 28px;
 }
-.venue-free > div:first-child > div:first-child {
+.venue-free .venue-free-icon {
   width: 42px;
   height: 54px;
   border: 2px solid var(--foreground);
   border-radius: 5px;
   background: transparent;
 }
-.venue-free > div:first-child > div:first-child svg {
+.venue-free .venue-free-icon svg {
   display: none;
 }
-.venue-free > div:first-child > div:first-child::after {
+.venue-free .venue-free-icon::after {
   content: '南';
   color: var(--primary);
   font:
