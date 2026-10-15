@@ -15,6 +15,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useHousehold } from '@/contexts/HouseholdContext';
+import { formatMessage } from '@/lib/i18n';
 import { getCharacterById } from '@/lib/playerCharacters';
 import type { ReplayArchiveSummary, ReplaySource } from '../../shared/contracts/replay';
 import {
@@ -171,10 +172,10 @@ export default function ReplayArchive() {
 
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">
-            {replays.length} / {total} 场
+            {formatMessage(locale, 'riichi.archive.matchCount', { shown: replays.length, total })}
           </span>
           <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
-            已收藏 {favoritesCount}/100
+            {formatMessage(locale, 'riichi.archive.favoriteCount', { count: favoritesCount })}
           </span>
         </div>
       </div>
@@ -274,7 +275,7 @@ export default function ReplayArchive() {
                     {/* 角色头像 */}
                     <img
                       src={char.avatar}
-                      alt={char.name}
+                      alt={t(char.nameKey)}
                       className="h-12 w-12 rounded-xl object-cover border bg-muted shrink-0"
                     />
 
@@ -292,7 +293,7 @@ export default function ReplayArchive() {
                           {t(`riichi.archive.source.${item.source}`)}
                         </span>
                         <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                          {item.matchLength === 'south' ? '半庄' : '东风'}
+                          {t(item.matchLength === 'south' ? 'family.match.south' : 'family.match.east')}
                         </span>
                       </div>
 
@@ -302,11 +303,11 @@ export default function ReplayArchive() {
                           {formatDate(item.createdAt)}
                         </span>
                         <span>·</span>
-                        <span>座位: {t(`game.mahjong.seats.${item.viewerSeat}`)}</span>
+                        <span>{formatMessage(locale, 'riichi.archive.seat', { seat: t(`game.mahjong.seats.${item.viewerSeat}`) })}</span>
                         {item.roundsCount && (
                           <>
                             <span>·</span>
-                            <span>{item.roundsCount} 局</span>
+                            <span>{formatMessage(locale, 'riichi.archive.rounds', { count: item.roundsCount })}</span>
                           </>
                         )}
                       </div>
@@ -320,6 +321,7 @@ export default function ReplayArchive() {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-amber-500"
+                      aria-label={t(item.isFavorite ? 'riichi.archive.unfavorite' : 'riichi.archive.favorite')}
                       onClick={() => handleToggleFavorite(item.matchId, item.isFavorite)}
                     >
                       <Star
@@ -367,6 +369,7 @@ export default function ReplayArchive() {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-muted-foreground hover:text-rose-500"
+                      aria-label={t('riichi.archive.delete')}
                       onClick={() => setDeleteConfirmId(item.matchId)}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -410,7 +413,7 @@ export default function ReplayArchive() {
             </p>
             <DialogFooter>
               <Button variant="outline" size="sm" onClick={() => setDeleteConfirmId(null)}>
-                取消
+                {t('common.cancel')}
               </Button>
               <Button
                 variant="destructive"

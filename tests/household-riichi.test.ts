@@ -83,6 +83,7 @@ describe('P10 online member Riichi match & settlement', () => {
       expect(startRes.statusCode).toBe(200);
       const started = startRes.json();
       expect(started.matchId).toBe(matchId);
+      expect((db.prepare('SELECT challenge_eligible FROM riichi_matches WHERE match_id = ?').get(matchId) as { challenge_eligible: number }).challenge_eligible).toBe(1);
       expect(started.snapshot.revision).toBe(1);
       expect(started.snapshot.characters.encounteredCharacterIds).toEqual(
         expect.arrayContaining(['koharu', 'rin', 'chitose']),

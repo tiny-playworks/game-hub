@@ -7,6 +7,8 @@ export interface RiichiOfflinePayload {
   replay: RiichiReplayFile;
   playerCharacterId: string;
   processedProgress?: string[];
+  /** Missing on receipts queued before P16; only newly started matches count. */
+  themeChallengeEligible?: boolean;
 }
 
 export interface ArcadeOfflinePayload {

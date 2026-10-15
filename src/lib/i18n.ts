@@ -1,6 +1,7 @@
 import { gameStorage } from '@/lib/storage';
 import { arcadeMessages } from './arcadeMessages';
 import { aoiMessages } from './aoiMessages';
+import { familyMessages } from './familyMessages';
 export type Locale = 'zh' | 'en';
 
 const messages: Record<Locale, Record<string, string>> = {
@@ -638,6 +639,12 @@ const messages: Record<Locale, Record<string, string>> = {
       'Expert 倾向默听：保留换牌和防守空间，避免过早锁定手牌。',
     'riichi.archive.title': '牌谱档案',
     'riichi.archive.eyebrow': '对局记录与回放',
+    'riichi.archive.matchCount': '{shown} / {total} 场',
+    'riichi.archive.favoriteCount': '已收藏 {count}/100',
+    'riichi.archive.seat': '座位：{seat}',
+    'riichi.archive.rounds': '{count} 局',
+    'riichi.archive.favorite': '收藏牌谱',
+    'riichi.archive.unfavorite': '取消收藏',
     'riichi.archive.filter.source': '来源',
     'riichi.archive.filter.ranking': '顺位',
     'riichi.archive.filter.favoriteOnly': '仅看收藏',
@@ -652,7 +659,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'riichi.archive.ranking.4': '四位',
     'riichi.archive.empty': '暂无牌谱记录',
     'riichi.archive.emptyDesc': '完成对局后，完整牌谱将自动归档于此。',
-    'riichi.archive.loadError': '牌谱暂时无法加载，请检查 NAS 连接后重试。',
+    'riichi.archive.loadError': '牌谱暂时无法加载，请检查家庭服务连接后重试。',
     'riichi.archive.actionError': '操作未完成，请稍后重试。',
     'riichi.archive.detailError': '无法打开这场牌谱，请重新加载后再试。',
     'riichi.archive.retry': '重新加载',
@@ -679,6 +686,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'riichi.training.eval.dama': '此时建议默听保留换牌和防守空间，避免过早锁定手牌。',
     'riichi.training.noRewardNotice': '训练模式旨在提升牌理判断，不发放雀币或段位积分。',
     'riichi.training.weakness.title': '决策薄弱点分析',
+    'riichi.training.weakness.analyzed': '已分析 {count} 场对局',
     'riichi.training.weakness.sampleWarning': '最近样本不足（少于 5 场），继续对局以获得准确的薄弱点趋势。',
     'riichi.training.weakness.noMatches': '完成一场日麻对局后，这里会显示你的决策分析。',
     'riichi.training.weakness.progress': '正在分析牌谱 {done}/{total}…',
@@ -2066,7 +2074,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'household.button.switchMember': '切换家庭成员',
     'household.button.logout': '退出当前成员',
     'household.modal.currentAccount': '家庭成员账号',
-    'household.modal.currentAccountDesc': '当前正在使用家庭成员存档；游戏结算同步仍在完善。',
+    'household.modal.currentAccountDesc': '当前正在使用家庭成员存档；在线对局结算由家庭服务保存。',
     'household.modal.selectMember': '选择家庭成员',
     'household.modal.selectMemberDesc': '选择你的成员档案并输入 4 位 PIN 码登录。',
     'household.modal.enterPin': '输入 4 位 PIN 码',
@@ -2076,9 +2084,9 @@ const messages: Record<Locale, Record<string, string>> = {
     'household.empty.noMembers': '暂无家庭成员，请联系管理员通过命令行添加。',
     'household.save.cloudTitle': '家庭成员云端存档 ({nickname})',
     'household.save.exportMember': '导出成员备份',
-    'household.save.memberDescription': '成员资料、签到和商店数据保存在家庭服务；游戏结算同步仍在完善。可导出当前成员快照备份。',
+    'household.save.memberDescription': '成员资料、签到、商店和在线对局结算保存在家庭服务。可导出当前成员快照备份。',
     'household.save.canMigrateDesc': '当前成员账号尚无存档，可将本机游客数据一次性迁移至云端。',
-    'household.save.migratedDesc': '成员存档版本 r{rev}；游戏结算同步仍在完善。',
+    'household.save.migratedDesc': '成员存档版本 r{rev}。',
     'household.save.migrateBtn': '一键迁移游客存档',
     'household.save.migratedSuccess': '迁移成功',
     'household.save.migrateConfirmTitle': '确认迁移本地存档到家庭成员？',
@@ -2947,6 +2955,12 @@ const messages: Record<Locale, Record<string, string>> = {
       'Expert favors dama here to retain flexibility and defensive options.',
     'riichi.archive.title': 'Replay Archive',
     'riichi.archive.eyebrow': 'MATCH ARCHIVE & REPLAY',
+    'riichi.archive.matchCount': '{shown} / {total} matches',
+    'riichi.archive.favoriteCount': 'Favorites {count}/100',
+    'riichi.archive.seat': 'Seat: {seat}',
+    'riichi.archive.rounds': '{count} rounds',
+    'riichi.archive.favorite': 'Favorite replay',
+    'riichi.archive.unfavorite': 'Remove favorite',
     'riichi.archive.filter.source': 'Source',
     'riichi.archive.filter.ranking': 'Placement',
     'riichi.archive.filter.favoriteOnly': 'Favorites only',
@@ -2961,7 +2975,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'riichi.archive.ranking.4': '4th place',
     'riichi.archive.empty': 'No archived replays',
     'riichi.archive.emptyDesc': 'Finished matches will be automatically archived here.',
-    'riichi.archive.loadError': 'Replays are unavailable. Check the NAS connection and try again.',
+    'riichi.archive.loadError': 'Replays are unavailable. Check the family service connection and try again.',
     'riichi.archive.actionError': 'The action did not complete. Please try again.',
     'riichi.archive.detailError': 'This replay could not be opened. Reload and try again.',
     'riichi.archive.retry': 'Reload',
@@ -2988,6 +3002,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'riichi.training.eval.dama': 'Dama was favored here to retain defense flexibility and hand transition.',
     'riichi.training.noRewardNotice': 'Training mode is for practice; no coins or rank points are awarded.',
     'riichi.training.weakness.title': 'Decision Weakness Analysis',
+    'riichi.training.weakness.analyzed': '{count} matches analyzed',
     'riichi.training.weakness.sampleWarning': 'Sample size is small (fewer than 5 matches). Play more for accurate trend analysis.',
     'riichi.training.weakness.noMatches': 'Finish a riichi match to see your decision analysis here.',
     'riichi.training.weakness.progress': 'Analyzing replays {done}/{total}…',
@@ -4473,7 +4488,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'household.button.switchMember': 'Switch Member',
     'household.button.logout': 'Sign Out',
     'household.modal.currentAccount': 'Family Member Account',
-    'household.modal.currentAccountDesc': 'Using a household member save. Game settlement sync is still in progress.',
+    'household.modal.currentAccountDesc': 'Using a household member save. Online match results are saved by the family service.',
     'household.modal.selectMember': 'Select Family Member',
     'household.modal.selectMemberDesc': 'Choose your profile and enter your 4-digit PIN to sign in.',
     'household.modal.enterPin': 'Enter 4-digit PIN',
@@ -4483,9 +4498,9 @@ const messages: Record<Locale, Record<string, string>> = {
     'household.empty.noMembers': 'No family members found. Contact admin to create one.',
     'household.save.cloudTitle': 'Family Member Cloud Save ({nickname})',
     'household.save.exportMember': 'Export Member Backup',
-    'household.save.memberDescription': 'Profile, check-in, and shop data are saved by the household service. Game settlement sync is still in progress. You can export this member snapshot.',
+    'household.save.memberDescription': 'Profile, check-in, shop, and online match results are saved by the family service. You can export this member snapshot.',
     'household.save.canMigrateDesc': 'No cloud save yet. You can migrate your local guest progress to cloud.',
-    'household.save.migratedDesc': 'Member save revision {rev}. Game settlement sync is still in progress.',
+    'household.save.migratedDesc': 'Member save revision {rev}.',
     'household.save.migrateBtn': 'Migrate Guest Save',
     'household.save.migratedSuccess': 'Migration Complete',
     'household.save.migrateConfirmTitle': 'Migrate Local Save to Family Member?',
@@ -4519,6 +4534,7 @@ const warnedMissingKeys = new Set<string>();
 
 export function getMessage(locale: Locale, key: string): string {
   const translated =
+    familyMessages[locale]?.[key] ??
     aoiMessages[locale]?.[key] ??
     arcadeMessages[locale]?.[key] ??
     messages[locale]?.[key];

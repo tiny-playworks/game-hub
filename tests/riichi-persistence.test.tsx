@@ -34,6 +34,22 @@ test('存档只记录种子、规则和事件，重新进入时可恢复同一�
   const loaded = loadSavedMatch();
   expect(loaded?.match.round).toEqual(match.round);
   expect(loaded?.processedProgress).toEqual(['903:enter-game']);
+  expect(loaded?.themeChallengeEligible).toBe(false);
+  localStorage.removeItem(RIICHI_SAVE_STORAGE_KEY);
+});
+
+test('只有明确标为新开局的存档可继续推进 P16 挑战', () => {
+  const match = createMatch({ seed: 909, matchLength: 'east' }).match;
+  saveMatch(match, [], {
+    sessionId: 'new-909',
+    playerCharacterId: 'aoi',
+    themeChallengeEligible: true,
+  });
+  expect(loadSavedMatch()?.themeChallengeEligible).toBe(true);
+  const oldSave = JSON.parse(localStorage.getItem(RIICHI_SAVE_STORAGE_KEY)!);
+  delete oldSave.themeChallengeEligible;
+  localStorage.setItem(RIICHI_SAVE_STORAGE_KEY, JSON.stringify(oldSave));
+  expect(loadSavedMatch()?.themeChallengeEligible).toBe(false);
   localStorage.removeItem(RIICHI_SAVE_STORAGE_KEY);
 });
 

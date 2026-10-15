@@ -20,6 +20,7 @@ type MatchRow = {
   source: 'free' | 'ai-ranked';
   state_json: string;
   player_character_id: string;
+  challenge_eligible: number;
   updated_at: number;
   finished_at: number | null;
 };
@@ -150,8 +151,8 @@ export function registerRiichiRoutes(app: FastifyInstance, db: DatabaseSync): vo
       const next = saveSnapshot(db, current, updated.snapshot);
       const now = Date.now();
       db.prepare(`INSERT INTO riichi_matches(member_id, match_id, device_id, source,
-        state_json, player_character_id, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+        state_json, player_character_id, challenge_eligible, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)`)
         .run(member.id, input.matchId, session.device_id, input.source,
           JSON.stringify(started.match), playerCharacterId, now, now);
       return { snapshot: next, match: started.match, matchId: input.matchId,
@@ -214,13 +215,15 @@ export function registerRiichiRoutes(app: FastifyInstance, db: DatabaseSync): vo
               opponents: step.match.seatCharacters.slice(1) as string[],
               ranking: step.match.matchEnd.ranking });
           }
-          recordMemberThemeChallengeMatch(
-            db,
-            member.id,
-            row.match_id,
-            row.source,
-            step.match,
-          );
+          if (row.challenge_eligible === 1) {
+            recordMemberThemeChallengeMatch(
+              db,
+              member.id,
+              row.match_id,
+              row.source,
+              step.match,
+            );
+          }
         }
       });
       const next = saveSnapshot(db, current, updated.snapshot);

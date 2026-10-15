@@ -80,6 +80,7 @@ function migrate(db: DatabaseSync): void {
       source TEXT NOT NULL CHECK(source IN ('free', 'ai-ranked')),
       state_json TEXT NOT NULL,
       player_character_id TEXT NOT NULL,
+      challenge_eligible INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       finished_at INTEGER,
@@ -176,6 +177,10 @@ function migrate(db: DatabaseSync): void {
     CREATE INDEX IF NOT EXISTS riichi_replays_member_fav
       ON riichi_replays(member_id, is_favorite, created_at DESC);
   `);
+  const matchColumns = db.prepare('PRAGMA table_info(riichi_matches)').all() as Array<{ name: string }>;
+  if (!matchColumns.some((column) => column.name === 'challenge_eligible')) {
+    db.exec('ALTER TABLE riichi_matches ADD COLUMN challenge_eligible INTEGER NOT NULL DEFAULT 0');
+  }
   const replayColumns = db.prepare('PRAGMA table_info(riichi_replays)').all() as Array<{ name: string }>;
   if (!replayColumns.some((column) => column.name === 'rounds_count')) {
     transaction(db, () => {

@@ -138,7 +138,7 @@ export function TrainingSummary({
             {t('riichi.training.weakness.title')}
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            {t('riichi.archive.eyebrow')} · 已分析 {summary.totalMatchesAnalyzed} 场对局
+            {t('riichi.archive.eyebrow')} · {formatMessage(locale, 'riichi.training.weakness.analyzed', { count: summary.totalMatchesAnalyzed })}
           </p>
         </div>
         {onNavigateToReplays ? (

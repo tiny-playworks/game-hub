@@ -12,6 +12,7 @@ import type {
   SyncBatchResponse,
 } from '../shared/contracts/sync';
 import { createMatch, toReplayFile } from '../src/pages/mahjong/japanese/engine/match';
+import { simulateMatch } from './helpers/riichiSim';
 
 afterEach(() => {
   delete process.env.GAME_HUB_DB_PATH;
@@ -69,6 +70,55 @@ function createTestServer() {
 }
 
 describe('P11 Offline Sync & Resume Saves Server Tests', () => {
+  it('credits P16 only for a newly marked offline match and ignores old queued receipts', async () => {
+    const { app, db, memberId, deviceA, tokenA } = createTestServer();
+    const replay = toReplayFile(simulateMatch({ seed: 605, matchLength: 'east' }));
+    const receipt = (eventId: string, matchId: string, eligible?: boolean): OfflineReceipt => ({
+      schema: 1,
+      eventId,
+      memberId,
+      deviceId: deviceA,
+      matchId,
+      matchSource: 'free',
+      occurredAt: new Date().toISOString(),
+      payload: {
+        source: 'free',
+        riichi: { replay, playerCharacterId: 'aoi', ...(eligible === undefined ? {} : { themeChallengeEligible: eligible }) },
+      },
+    });
+
+    const old = await app.inject({
+      method: 'POST',
+      url: '/api/v1/sync',
+      headers: { cookie: `gh_session=${tokenA}` },
+      payload: { baseRevision: 0, receipts: [receipt('old-event', 'old-match')] },
+    });
+    expect(old.statusCode).toBe(200);
+    expect((old.json() as SyncBatchResponse).accepted).toHaveLength(1);
+    expect((old.json() as SyncBatchResponse).snapshot.themeChallenges.progress['three-matches']).toBe(0);
+    expect((db.prepare('SELECT COUNT(*) AS count FROM theme_challenge_matches').get() as { count: number }).count).toBe(0);
+
+    const current = await app.inject({
+      method: 'POST',
+      url: '/api/v1/sync',
+      headers: { cookie: `gh_session=${tokenA}` },
+      payload: { baseRevision: 1, receipts: [receipt('new-event', 'new-match', true)] },
+    });
+    expect(current.statusCode).toBe(200);
+    expect((current.json() as SyncBatchResponse).accepted).toHaveLength(1);
+    expect((current.json() as SyncBatchResponse).snapshot.themeChallenges.progress['three-matches']).toBe(1);
+    expect((db.prepare('SELECT COUNT(*) AS count FROM theme_challenge_matches').get() as { count: number }).count).toBe(1);
+
+    const retry = await app.inject({
+      method: 'POST',
+      url: '/api/v1/sync',
+      headers: { cookie: `gh_session=${tokenA}` },
+      payload: { baseRevision: 2, receipts: [receipt('new-event', 'new-match', true)] },
+    });
+    expect((retry.json() as SyncBatchResponse).duplicates).toEqual(['new-event']);
+    expect((retry.json() as SyncBatchResponse).snapshot.themeChallenges.progress['three-matches']).toBe(1);
+  });
+
   it('accepts offline arcade receipt and awards coins correctly', async () => {
     const { app, db, memberId, deviceA, tokenA } = createTestServer();
 

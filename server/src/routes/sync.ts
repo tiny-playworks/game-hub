@@ -114,13 +114,15 @@ export function registerSyncRoutes(app: FastifyInstance, db: DatabaseSync): void
 
           if (receipt.matchSource === 'free') {
             settleResult = processOfflineRiichiReceipt(snapshot, receipt, (match) =>
-              recordMemberThemeChallengeMatch(
-                db,
-                member.id,
-                receipt.matchId,
-                'free',
-                match,
-              ),
+              receipt.payload.source === 'free' && receipt.payload.riichi.themeChallengeEligible === true
+                ? recordMemberThemeChallengeMatch(
+                    db,
+                    member.id,
+                    receipt.matchId,
+                    'free',
+                    match,
+                  )
+                : 0,
             );
           } else if (receipt.matchSource === 'arcade') {
             settleResult = processOfflineArcadeReceipt(snapshot, receipt);

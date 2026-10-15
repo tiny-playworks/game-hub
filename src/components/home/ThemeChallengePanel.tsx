@@ -1,6 +1,7 @@
 import { Check, LockKeyhole, ScrollText, Sparkles } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import themeBanner from '@/assets/challenges/theme-banner.webp';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useOptionalHousehold } from '@/contexts/HouseholdContext';
 import { formatMessage } from '@/lib/i18n';
@@ -33,15 +34,18 @@ export function ThemeChallengePanel() {
   const storySetUnlocked = completedCount === CHALLENGE_IDS.length;
 
   return (
-    <section className="venue-task-panel" aria-labelledby="theme-challenge-title">
-      <div className="flex items-center justify-between gap-3">
-        <h2 id="theme-challenge-title" className="flex items-center gap-2 text-base font-semibold">
-          <Sparkles className="size-4 text-primary" />
-          {t('challenge.title')}
-        </h2>
-        <span className="text-xs tabular-nums text-muted-foreground">
-          {completedCount}/{CHALLENGE_IDS.length}
-        </span>
+    <section className="venue-task-panel venue-theme-challenge" aria-labelledby="theme-challenge-title">
+      <div className="venue-theme-challenge-hero">
+        <img src={themeBanner} alt="" loading="lazy" decoding="async" />
+        <div className="venue-theme-challenge-hero-content">
+          <h2 id="theme-challenge-title" className="flex items-center gap-2 text-base font-semibold">
+            <Sparkles className="size-4" />
+            {t('challenge.title')}
+          </h2>
+          <span className="text-xs tabular-nums">
+            {completedCount}/{CHALLENGE_IDS.length}
+          </span>
+        </div>
       </div>
       <p className="mt-1 text-xs leading-5 text-muted-foreground">
         {t('challenge.scope')}

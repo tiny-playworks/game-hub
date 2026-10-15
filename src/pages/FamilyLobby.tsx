@@ -9,13 +9,16 @@ import {
   Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useLocale } from '@/contexts/LocaleContext';
 import { useOptionalHousehold } from '@/contexts/HouseholdContext';
 import { createRoom, listRooms } from '@/lib/household/api';
+import { formatMessage } from '@/lib/i18n';
 import { getCharacterById } from '@/lib/playerCharacters';
 import type { RoomSeat, RoomSettings, RoomSummary } from '../../shared/contracts/room';
 
 export default function FamilyLobby() {
   const navigate = useNavigate();
+  const { t, locale } = useLocale();
   const household = useOptionalHousehold();
   const member = household?.currentMember;
   const isMember = household?.mode === 'member-online';
@@ -32,10 +35,10 @@ export default function FamilyLobby() {
   const [defaultAiLevel, setDefaultAiLevel] = useState<RoomSettings['defaultAiLevel']>('standard');
   const [turnLimit, setTurnLimit] = useState(15);
   const aiLevelLabel: Record<RoomSettings['defaultAiLevel'], string> = {
-    beginner: '新手',
-    standard: '标准',
-    expert: '进阶',
-    strong: '强力',
+    beginner: 'family.ai.beginner',
+    standard: 'family.ai.standard',
+    expert: 'family.ai.expert',
+    strong: 'family.ai.strong',
   };
 
   const fetchRooms = useCallback(async () => {
@@ -50,7 +53,7 @@ export default function FamilyLobby() {
       setRooms(data);
       setListError(null);
     } catch {
-      setListError('暂时无法获取牌桌，请检查 NAS 连接后重试。');
+      setListError('family.lobby.listError');
     } finally {
       setLoading(false);
     }
@@ -80,7 +83,7 @@ export default function FamilyLobby() {
       setShowCreateModal(false);
       navigate(`/family/${created.id}`);
     } catch {
-      setCreateError('创建失败，请检查网络连接并重试。');
+      setCreateError('family.lobby.createError');
     } finally {
       setCreating(false);
     }
@@ -92,15 +95,15 @@ export default function FamilyLobby() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-border">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight">家庭真人牌桌</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{t('family.lobby.title')}</h1>
             {household?.isServerAvailable && (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                <ShieldCheck className="h-3.5 w-3.5" /> 家庭服务已连接
+                <ShieldCheck className="h-3.5 w-3.5" /> {t('family.lobby.connected')}
               </span>
             )}
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            支持 2~4 名家庭成员同桌竞技，空位自动由家庭 AI 补齐。暗手牌隐私隔离，两真人完赛发放家庭雀币。
+            {t('family.lobby.intro')}
           </p>
         </div>
 
@@ -113,7 +116,7 @@ export default function FamilyLobby() {
             className="flex items-center gap-1.5"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            刷新牌桌
+            {t('family.lobby.refresh')}
           </Button>
 
           <Button
@@ -122,7 +125,7 @@ export default function FamilyLobby() {
             className="flex items-center gap-1.5 bg-primary text-primary-foreground font-semibold shadow"
           >
             <Plus className="h-4 w-4" />
-            创建对局桌
+            {t('family.lobby.createRoom')}
           </Button>
         </div>
       </div>
@@ -131,9 +134,9 @@ export default function FamilyLobby() {
       {!member && (
         <div className="my-6 p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-center justify-between text-sm">
           <div>
-            <span className="font-semibold text-amber-700 dark:text-amber-400">当前处于访客模式：</span>
+            <span className="font-semibold text-amber-700 dark:text-amber-400">{t('family.lobby.guestTitle')}</span>
             <span className="text-muted-foreground ml-1">
-              真人对局与家庭结算需登录家庭成员账号，请先在右上角选择或创建成员。
+              {t('family.lobby.guestHint')}
             </span>
           </div>
         </div>
@@ -143,14 +146,14 @@ export default function FamilyLobby() {
       <div className="mt-6">
         <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
           <Users className="h-4 w-4 text-primary" />
-          活跃房间列表 ({rooms.length})
+          {formatMessage(locale, 'family.lobby.rooms', { count: rooms.length })}
         </h2>
 
         {listError && isMember && (
           <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm">
-            <p>{listError}</p>
+            <p>{t(listError)}</p>
             <Button variant="outline" size="sm" onClick={() => void fetchRooms()}>
-              重新连接
+              {t('family.lobby.retry')}
             </Button>
           </div>
         )}
@@ -158,9 +161,9 @@ export default function FamilyLobby() {
         {!listError && rooms.length === 0 ? (
           <div className="text-center py-16 border border-dashed border-border rounded-2xl bg-card/50">
             <Users className="h-10 w-10 mx-auto text-muted-foreground mb-3 opacity-40" />
-            <p className="text-base font-medium text-foreground">{isMember ? '当前暂无活跃牌桌' : '登录家庭成员后查看牌桌'}</p>
+            <p className="text-base font-medium text-foreground">{t(isMember ? 'family.lobby.noRooms' : 'family.lobby.signInToSee')}</p>
             <p className="text-sm text-muted-foreground mt-1">
-              {isMember ? '点击上方“创建对局桌”即可成为房主，邀请家庭设备加入！' : '请先在页面顶部选择家庭成员。'}
+              {t(isMember ? 'family.lobby.createHint' : 'family.lobby.chooseMember')}
             </p>
             {member && (
               <Button
@@ -168,7 +171,7 @@ export default function FamilyLobby() {
                 className="mt-4"
                 onClick={() => setShowCreateModal(true)}
               >
-                创建第一个房间
+                {t('family.lobby.firstRoom')}
               </Button>
             )}
           </div>
@@ -187,7 +190,7 @@ export default function FamilyLobby() {
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-base">
-                          {room.hostNickname} 的牌桌
+                          {formatMessage(locale, 'family.lobby.roomBy', { name: room.hostNickname })}
                         </span>
                         <Crown className="h-4 w-4 text-amber-500" />
                       </div>
@@ -201,26 +204,26 @@ export default function FamilyLobby() {
                               : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                         }`}
                       >
-                        {isPlaying ? '对局中' : isFinished ? '已结算' : '等待就绪'}
+                        {t(isPlaying ? 'family.lobby.playing' : isFinished ? 'family.lobby.finished' : 'family.lobby.waiting')}
                       </span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mb-4">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-medium text-foreground">赛制:</span>
-                        <span>{room.settings.matchLength === 'east' ? '东风战' : '半庄战'}</span>
+                        <span className="font-medium text-foreground">{t('family.lobby.format')}</span>
+                        <span>{t(room.settings.matchLength === 'east' ? 'family.match.east' : 'family.match.south')}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <span className="font-medium text-foreground">限时:</span>
-                        <span>{room.settings.turnTimeLimitSeconds} 秒/手</span>
+                        <span className="font-medium text-foreground">{t('family.lobby.timeLimit')}</span>
+                        <span>{formatMessage(locale, 'family.lobby.secondsPerTurn', { seconds: room.settings.turnTimeLimitSeconds })}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <span className="font-medium text-foreground">真人:</span>
-                        <span className="text-foreground font-semibold">{room.humanCount} 人</span>
+                        <span className="font-medium text-foreground">{t('family.lobby.players')}</span>
+                        <span className="text-foreground font-semibold">{formatMessage(locale, 'family.lobby.people', { count: room.humanCount })}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <span className="font-medium text-foreground">AI 补位:</span>
-                        <span>{aiLevelLabel[room.settings.defaultAiLevel]}</span>
+                        <span className="font-medium text-foreground">{t('family.lobby.aiFill')}</span>
+                        <span>{t(aiLevelLabel[room.settings.defaultAiLevel])}</span>
                       </div>
                     </div>
 
@@ -240,8 +243,8 @@ export default function FamilyLobby() {
                           {seat.type === 'human'
                             ? seat.nickname
                             : seat.type === 'ai'
-                              ? `AI·${getCharacterById(seat.characterId).name}`
-                              : '空席'}
+                              ? `AI·${t(getCharacterById(seat.characterId).nameKey)}`
+                              : t('family.lobby.emptySeat')}
                         </div>
                       ))}
                     </div>
@@ -253,7 +256,7 @@ export default function FamilyLobby() {
                     variant={isPlaying ? 'secondary' : 'default'}
                   >
                     <Play className="h-4 w-4" />
-                    {isPlaying ? '观战 / 续玩' : '加入房间'}
+                    {t(isPlaying ? 'family.lobby.spectateContinue' : 'family.lobby.joinRoom')}
                   </Button>
                 </div>
               );
@@ -266,12 +269,12 @@ export default function FamilyLobby() {
       {showCreateModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6 shadow-xl space-y-5">
-            <h3 className="text-lg font-bold">创建家庭对局房间</h3>
+            <h3 className="text-lg font-bold">{t('family.lobby.dialogTitle')}</h3>
 
             <div className="space-y-4">
               <div>
                 <label className="text-xs font-semibold text-muted-foreground block mb-1.5">
-                  赛制局长
+                  {t('family.lobby.length')}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -283,7 +286,7 @@ export default function FamilyLobby() {
                         : 'border-border hover:bg-muted text-foreground'
                     }`}
                   >
-                    东风战（快速局）
+                    {t('family.lobby.eastQuick')}
                   </button>
                   <button
                     type="button"
@@ -294,14 +297,14 @@ export default function FamilyLobby() {
                         : 'border-border hover:bg-muted text-foreground'
                     }`}
                   >
-                    半庄战（标准局）
+                    {t('family.lobby.southStandard')}
                   </button>
                 </div>
               </div>
 
               <div>
                 <label className="text-xs font-semibold text-muted-foreground block mb-1.5">
-                  空位 AI 难度
+                  {t('family.lobby.aiLevel')}
                 </label>
                 <div className="grid grid-cols-4 gap-1.5">
                   {(['beginner', 'standard', 'expert', 'strong'] as const).map((lvl) => (
@@ -315,13 +318,7 @@ export default function FamilyLobby() {
                           : 'border-border hover:bg-muted text-foreground'
                       }`}
                     >
-                      {lvl === 'beginner'
-                        ? '新手'
-                        : lvl === 'standard'
-                          ? '标准'
-                          : lvl === 'expert'
-                            ? '进阶'
-                            : '强力'}
+                      {t(aiLevelLabel[lvl])}
                     </button>
                   ))}
                 </div>
@@ -329,7 +326,7 @@ export default function FamilyLobby() {
 
               <div>
                 <label className="text-xs font-semibold text-muted-foreground block mb-1.5">
-                  每手思考限时
+                  {t('family.lobby.turnLimit')}
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {[10, 15, 30].map((sec) => (
@@ -343,7 +340,7 @@ export default function FamilyLobby() {
                           : 'border-border hover:bg-muted text-foreground'
                       }`}
                     >
-                      {sec} 秒
+                      {formatMessage(locale, 'family.lobby.seconds', { seconds: sec })}
                     </button>
                   ))}
                 </div>
@@ -352,7 +349,7 @@ export default function FamilyLobby() {
 
             {createError && (
               <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                {createError}
+                {t(createError)}
               </p>
             )}
 
@@ -362,14 +359,14 @@ export default function FamilyLobby() {
                 onClick={() => setShowCreateModal(false)}
                 disabled={creating}
               >
-                取消
+                {t('family.lobby.cancel')}
               </Button>
               <Button
                 onClick={handleCreateRoom}
                 disabled={creating}
                 className="bg-primary text-primary-foreground font-semibold"
               >
-                {creating ? '创建中…' : '立即创建'}
+                {t(creating ? 'family.lobby.creating' : 'family.lobby.createNow')}
               </Button>
             </div>
           </div>

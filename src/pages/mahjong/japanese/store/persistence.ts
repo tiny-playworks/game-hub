@@ -17,6 +17,7 @@ export interface RiichiSaveData {
   savedAt: number;
   sessionId?: string;
   playerCharacterId?: string;
+  themeChallengeEligible?: boolean;
 }
 
 export interface LoadedRiichiSave {
@@ -25,6 +26,7 @@ export interface LoadedRiichiSave {
   savedAt: number;
   sessionId: string;
   playerCharacterId?: string;
+  themeChallengeEligible: boolean;
 }
 
 function storage(): Storage | null {
@@ -83,6 +85,7 @@ export function loadSavedMatch(): LoadedRiichiSave | null {
         typeof data.playerCharacterId === 'string'
           ? data.playerCharacterId
           : undefined,
+      themeChallengeEligible: data.themeChallengeEligible === true,
     };
   } catch {
     return null;
@@ -102,7 +105,7 @@ export function hasSavedMatch(): boolean {
 export function saveMatch(
   match: RiichiMatchState,
   processedProgress: string[],
-  session?: { sessionId: string; playerCharacterId: string },
+  session?: { sessionId: string; playerCharacterId: string; themeChallengeEligible?: boolean },
 ): void {
   const s = storage();
   if (!s) return;
@@ -119,6 +122,7 @@ export function saveMatch(
       savedAt: Date.now(),
       sessionId: session?.sessionId,
       playerCharacterId: session?.playerCharacterId,
+      themeChallengeEligible: session?.themeChallengeEligible === true,
     };
     s.setItem(RIICHI_SAVE_STORAGE_KEY, JSON.stringify(data));
   } catch {

@@ -68,6 +68,7 @@ type RiichiStore = {
   replay: RiichiReplayFile | null;
   playerCharacterId: string;
   sessionId: string;
+  themeChallengeEligible: boolean;
   identityEpoch: number;
   onlinePending: boolean;
   moments: CharacterMoment[];
@@ -117,7 +118,7 @@ function processProgress(
   match: RiichiMatchState,
   effects: RiichiEffect[],
   processed: string[],
-  session: { sessionId: string; playerCharacterId: string },
+  session: { sessionId: string; playerCharacterId: string; themeChallengeEligible: boolean },
 ): string[] {
   let next = processed;
   for (const effect of effects) {
@@ -152,7 +153,7 @@ function processProgress(
       }
     }
   }
-  if (match.status === 'matchEnd' && match.matchEnd) {
+  if (session.themeChallengeEligible && match.status === 'matchEnd' && match.matchEnd) {
     const key = `${match.seed}:theme-challenges`;
     if (!next.includes(key)) {
       try {
@@ -193,6 +194,7 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
           | 'matchLength'
           | 'playerCharacterId'
           | 'sessionId'
+          | 'themeChallengeEligible'
         >
       >,
     ) => {
@@ -258,6 +260,7 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
       replay: null,
       playerCharacterId: getPlayerCharacterState().activeCharacterId,
       sessionId: '',
+      themeChallengeEligible: false,
       identityEpoch: 0,
       onlinePending: false,
       moments: [],
@@ -275,6 +278,7 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
           replay: null,
           playerCharacterId: getPlayerCharacterState().activeCharacterId,
           sessionId: '',
+          themeChallengeEligible: false,
           identityEpoch: get().identityEpoch + 1,
           onlinePending: false,
           moments: [],
@@ -359,6 +363,7 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
               showMenu: false,
               playerCharacterId: response.playerCharacterId,
               sessionId: response.matchId,
+              themeChallengeEligible: true,
               ...presentation(response.match, response.effects,
                 response.playerCharacterId, true),
             });
@@ -402,6 +407,7 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
         const processedProgress = processProgress(match, effects, [], {
           sessionId,
           playerCharacterId,
+          themeChallengeEligible: true,
         });
         changeVisibility({
           match,
@@ -412,9 +418,10 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
           showMenu: false,
           playerCharacterId,
           sessionId,
+          themeChallengeEligible: true,
           ...presentation(match, effects, playerCharacterId, true),
         });
-        saveMatch(match, processedProgress, { sessionId, playerCharacterId });
+        saveMatch(match, processedProgress, { sessionId, playerCharacterId, themeChallengeEligible: true });
         emit(effects);
       },
       dispatch: async (event) => {
@@ -504,6 +511,7 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
               showMenu: false,
               playerCharacterId: current.playerCharacterId,
               sessionId: current.matchId,
+              themeChallengeEligible: false,
               cutIns: [],
               moments: [],
             });
@@ -526,11 +534,12 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
               saved.match,
               [],
               processedProgress,
-              { sessionId: saved.sessionId, playerCharacterId },
+              { sessionId: saved.sessionId, playerCharacterId, themeChallengeEligible: saved.themeChallengeEligible },
             );
             saveMatch(saved.match, processedProgress, {
               sessionId: saved.sessionId,
               playerCharacterId,
+              themeChallengeEligible: saved.themeChallengeEligible,
             });
             if (
               !settleRankedMatch(
@@ -545,12 +554,13 @@ export const useRiichiStore = createWithEqualityFn<RiichiStore>()(
         changeVisibility({
           match: { ...saved.match, turn: saved.match.turn + 1 },
           matchLength: saved.match.matchLength,
-          processedProgress: saved.processedProgress,
+          processedProgress,
           decisionClock: null,
           view: 'game',
           showMenu: false,
           playerCharacterId,
           sessionId: saved.sessionId,
+          themeChallengeEligible: saved.themeChallengeEligible,
           cutIns: [],
           moments: [],
         });

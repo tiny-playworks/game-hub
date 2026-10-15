@@ -103,6 +103,13 @@ const stories: Record<Locale, string[][]> = {
       '原来这里还有另一种选择。',
       '和你同桌，总能学到一点新东西。',
     ],
+    [
+      '晨光里的下一巡',
+      '晨光都照进牌馆了，我还在想刚才那张牌。',
+      '你不是已经有答案了吗？',
+      '有了。今天不急着抢先，先把牌河看清。',
+      '下一局也坐我旁边吧，我们一起慢慢打。',
+    ],
   ],
   en: [
     [
@@ -125,6 +132,13 @@ const stories: Record<Locale, string[][]> = {
       'Let us review it together.',
       'There was another choice here after all.',
       'I always learn something at your table.',
+    ],
+    [
+      'The Next Turn at Dawn',
+      'Morning light is filling the parlor, and I am still thinking about that tile.',
+      'Have you not found your answer already?',
+      'I have. Today I will read the table before rushing ahead.',
+      'Sit beside me next round too. We can take our time together.',
     ],
   ],
 };

@@ -1,5 +1,14 @@
 import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
+import aoiStory from '@/assets/stories/aoi.webp';
+import ayaStory from '@/assets/stories/aya.webp';
+import chitoseStory from '@/assets/stories/chitose.webp';
+import koharuStory from '@/assets/stories/koharu.webp';
+import mahiruStory from '@/assets/stories/mahiru.webp';
+import mioStory from '@/assets/stories/mio.webp';
+import rinStory from '@/assets/stories/rin.webp';
+import soraStory from '@/assets/stories/sora.webp';
+import yoruStory from '@/assets/stories/yoru.webp';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -11,6 +20,18 @@ import { useLocale } from '@/contexts/LocaleContext';
 import type { CharacterStory } from '@/lib/characterStories';
 import { getCharacterById } from '@/lib/playerCharacters';
 import { CharacterPortraitSlot } from './CharacterPortraitSlot';
+
+const challengeStoryArt: Record<string, string> = {
+  aoi: aoiStory,
+  koharu: koharuStory,
+  mio: mioStory,
+  rin: rinStory,
+  chitose: chitoseStory,
+  sora: soraStory,
+  aya: ayaStory,
+  mahiru: mahiruStory,
+  yoru: yoruStory,
+};
 
 export function CharacterStoryPlayer({
   story,
@@ -66,12 +87,21 @@ export function CharacterStoryPlayer({
           {t('story.instructions')}
         </DialogDescription>
         <div className="character-story-stage">
-          <CharacterPortraitSlot
-            character={character}
-            expression={expression}
-            size="xl"
-            label={t(character.nameKey)}
-          />
+          {story.stage === 4 ? (
+            <img
+              className="character-story-illustration"
+              src={challengeStoryArt[story.characterId]}
+              alt={`${t(character.nameKey)} · ${t(story.titleKey)}`}
+              decoding="async"
+            />
+          ) : (
+            <CharacterPortraitSlot
+              character={character}
+              expression={expression}
+              size="xl"
+              label={t(character.nameKey)}
+            />
+          )}
         </div>
         <button
           type="button"

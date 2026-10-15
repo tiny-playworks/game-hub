@@ -1428,6 +1428,45 @@ a {
   background: var(--card);
   min-width: 0;
 }
+.venue-theme-challenge {
+  overflow: hidden;
+}
+.venue-theme-challenge-hero {
+  position: relative;
+  height: 92px;
+  margin: -14px -18px 12px;
+  overflow: hidden;
+  background: #203a32;
+}
+.venue-theme-challenge-hero::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background: linear-gradient(90deg, rgb(11 29 25 / 88%), rgb(11 29 25 / 60%) 58%, rgb(11 29 25 / 25%));
+}
+.venue-theme-challenge-hero > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+.venue-theme-challenge-hero-content {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 18px;
+  color: #fff;
+}
+.venue-theme-challenge-hero h2,
+.venue-theme-challenge-hero h2 svg {
+  color: #fff;
+  background: transparent;
+  border: 0;
+}
 .venue-task-panel h2,
 .venue-task-panel h3 {
   font:
@@ -1978,5 +2017,34 @@ a {
   }
   .venue-weekly > div > div > button {
     grid-column: 1 / -1;
+  }
+}
+
+/* Give long English navigation and member controls their own rows. */
+@media (min-width: 851px) {
+  .venue-navigation-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0 20px;
+    padding-top: 10px;
+  }
+  .venue-brand {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .venue-nav-tools {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .venue-nav-links {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: space-between;
+    gap: 18px;
+    overflow-x: auto;
+  }
+  .venue-nav-links a {
+    min-height: 44px;
+    font-size: 16px;
   }
 }
