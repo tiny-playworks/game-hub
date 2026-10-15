@@ -29,6 +29,7 @@
     "dev": "rs dev --open",
     "format": "rs fmt",
     "lint": "rs lint",
+    "package:solo-win": "bash scripts/package-singleplayer-win.sh",
     "preview": "rs preview",
     "prepare:nas": "node scripts/prepare-nas-release.mjs",
     "test": "rs test",

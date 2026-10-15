@@ -359,12 +359,12 @@ test('export/import restores equipment, purchases, affinity rewards and encounte
   expect(getWalletState()).toEqual(wallet);
 });
 
-test('24 stories, all cosmetics and 72 bonus lines have Chinese and English text', () => {
+test('all character stories, cosmetics and bonus lines have Chinese and English text', () => {
   const p5Characters = CHARACTER_DEFS.slice(0, 8);
   const stories = CHARACTER_STORIES.filter((story) =>
     p5Characters.some((char) => char.id === story.characterId),
   );
-  expect(stories).toHaveLength(24);
+  expect(stories).toHaveLength(32);
   const keys = [
     ...stories.flatMap((story) => {
       expect(story.lines.length).toBeGreaterThanOrEqual(3);
