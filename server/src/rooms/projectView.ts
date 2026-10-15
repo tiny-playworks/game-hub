@@ -4,7 +4,7 @@ import type {
   RoomSummary,
 } from '../../../shared/contracts/room';
 import type { RiichiMatchState } from '@/pages/mahjong/japanese/engine/match';
-import { getSeatClaimOptions } from '@/pages/mahjong/japanese/engine';
+import { getSeatClaimOptions, getSeatTurnOptions } from '@/pages/mahjong/japanese/engine';
 
 export function createPlayerView(
   roomId: string,
@@ -67,7 +67,7 @@ export function createPlayerView(
       isAutoplay,
       hasControlLease,
       // 只有自家且持有控制权且轮到自家行牌时才下发 turnOptions
-      turnOptions: isSelf && hasControlLease && !isAutoplay ? round.turnOptions : null,
+      turnOptions: isSelf && hasControlLease && !isAutoplay ? getSeatTurnOptions(round, seatIndex) : null,
       // 只有自家且持有控制权且鸣牌窗口未响应时才下发 claimOptions
       claimOptions: isSelf && hasControlLease && !isAutoplay ? getSeatClaimOptions(round, seatIndex) : null,
     };

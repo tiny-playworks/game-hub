@@ -310,6 +310,9 @@ describe('P12 家庭真人牌桌服务端测试', () => {
     expect(viewB.seats[0].tileCount).toBeGreaterThanOrEqual(13);
     // B 视角下，1 号座位 (自家) 手牌完整可见
     expect(viewB.seats[1].hand.length).toBeGreaterThanOrEqual(13);
+    // Dealer seat 0 is deciding: seat 1 must not receive seat 0's legal tile ids.
+    expect(viewA.seats[0].turnOptions?.seat).toBe(0);
+    expect(viewB.seats[1].turnOptions).toBeNull();
   });
 
   it('支持指令幂等防重与合法出牌流转', async () => {
