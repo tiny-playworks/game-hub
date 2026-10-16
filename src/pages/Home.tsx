@@ -13,6 +13,7 @@ import { Link } from 'react-router-dom';
 import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
 import { PersonalBest } from '@/components/game/PersonalBest';
 import { VenueGameGlyph } from '@/components/home/VenueGameGlyph';
+import { CuratedRotationPanel } from '@/components/home/CuratedRotationPanel';
 import { ThemeChallengePanel } from '@/components/home/ThemeChallengePanel';
 import { RankedLobbyCard } from '@/components/ranked/RankedLobbyCard';
 import { TaskClaimButton } from '@/components/TaskClaimButton';
@@ -373,6 +374,7 @@ const Home = () => {
             </section>
           </aside>
         </section>
+        <CuratedRotationPanel />
         <section className="venue-arcade mt-8" aria-labelledby="arcade-heading">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">

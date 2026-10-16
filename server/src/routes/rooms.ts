@@ -56,6 +56,23 @@ export function registerRoomRoutes(
     } catch { throw apiError(400, 'BAD_REQUEST'); }
   });
 
+  // 列出最近家庭杯赛记录
+  app.get('/api/v1/rooms/cups', async (request) => {
+    requireSession(db, request);
+    const query = (request.query ?? {}) as { limit?: string };
+    const limit = query.limit ? Number(query.limit) : 10;
+    return roomManager.listCups(Number.isFinite(limit) && limit > 0 ? limit : 10);
+  });
+
+  // 获取单个杯赛记录
+  app.get('/api/v1/rooms/cups/:cupId', async (request) => {
+    requireSession(db, request);
+    const { cupId } = request.params as { cupId: string };
+    const cup = roomManager.getCup(cupId);
+    if (!cup) throw apiError(404, 'CUP_NOT_FOUND');
+    return cup;
+  });
+
   // 获取房间详情
   app.get('/api/v1/rooms/:roomId', async (request) => {
     requireSession(db, request);

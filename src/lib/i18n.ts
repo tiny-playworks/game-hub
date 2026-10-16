@@ -1,6 +1,7 @@
 import { gameStorage } from '@/lib/storage';
 import { arcadeMessages } from './arcadeMessages';
 import { aoiMessages } from './aoiMessages';
+import { curatedMessages } from './curatedMessages';
 import { familyMessages } from './familyMessages';
 import { journeyMessages } from './journeyMessages';
 import { practiceMessages } from './practiceMessages';
@@ -4585,6 +4586,7 @@ const warnedMissingKeys = new Set<string>();
 
 export function getMessage(locale: Locale, key: string): string {
   const translated =
+    curatedMessages[locale]?.[key] ??
     familyMessages[locale]?.[key] ??
     aoiMessages[locale]?.[key] ??
     journeyMessages[locale]?.[key] ??

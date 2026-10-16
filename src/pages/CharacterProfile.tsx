@@ -28,6 +28,7 @@ import {
   type CharacterExpression,
   setActiveCharacter,
 } from '@/lib/playerCharacters';
+import { getJourneyStageForCharacter } from '@/lib/riichiJourney';
 import { cn } from '@/lib/utils';
 
 export default function CharacterProfile() {
@@ -60,13 +61,7 @@ export default function CharacterProfile() {
         </Link>
       </main>
     );
-  const journeyStageId = character.id === 'aoi'
-    ? 'aoi-balance'
-    : character.id === 'rin'
-      ? 'rin-tempo'
-      : character.id === 'mio'
-        ? 'mio-defense'
-        : null;
+  const journeyStageId = getJourneyStageForCharacter(character.id)?.id ?? null;
   const affinity = state.affinityByCharacter[character.id] ?? 0;
   const stage = state.rewardStageByCharacter[character.id] ?? 0;
   const encounters = state.encountersByCharacter[character.id] ?? {

@@ -70,12 +70,15 @@ export function registerReplayRoutes(app: FastifyInstance, db: DatabaseSync): vo
       throw apiError(404, 'REPLAY_NOT_FOUND');
     }
 
-    // 进行中家庭局禁止查询全知牌谱（总纲 4.5 & P15）
+    // 进行中家庭局禁止查询全知牌谱（总纲 4.5 & P15），但已完成入账的杯赛场次允许查看
     if (row.room_id) {
       const activeRoom = db
         .prepare('SELECT room_id FROM active_rooms WHERE room_id = ?')
         .get(row.room_id) as { room_id: string } | undefined;
-      if (activeRoom) {
+      const completedCupMatch = db
+        .prepare('SELECT 1 FROM family_cup_matches WHERE match_id = ?')
+        .get(matchId);
+      if (activeRoom && !completedCupMatch) {
         throw apiError(403, 'FORBIDDEN_ONGOING_ROOM');
       }
     }

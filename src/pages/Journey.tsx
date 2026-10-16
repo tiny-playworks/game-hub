@@ -47,6 +47,9 @@ export default function Journey() {
     openMelds: number;
     reachedTenpai: boolean;
     survivedThreat: boolean;
+    declaredRiichi?: boolean;
+    suitFocusCount?: number;
+    failureReasonKey?: string | null;
   } | null>(null);
   const [pendingInput, setPendingInput] = useState<JourneyAttemptInput | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -141,6 +144,7 @@ export default function Journey() {
   }, []);
 
   const selectedStageProgress = selectedStage ? progress?.stages[selectedStage.id] : null;
+  const nextStage = selectedStage?.nextStageId ? getJourneyStage(selectedStage.nextStageId) : null;
   const gameReady = !!selectedStage && game?.stageId === selectedStage.id &&
     game.attemptKey === attemptKey;
   if (household.isLoading) {
@@ -179,7 +183,15 @@ export default function Journey() {
               return (
                 <Card className="flex min-h-64 flex-col overflow-hidden border-gold/25" key={stage.id}>
                   <CardHeader className="bg-[linear-gradient(130deg,hsl(var(--primary)/.12),transparent_70%)]">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">{t(stage.venueKey)}</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">{t(stage.venueKey)}</p>
+                      {item?.completed ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-medium text-emerald-600">
+                          <CheckCircle2 className="size-3" />
+                          {t('journey.completed')}
+                        </span>
+                      ) : null}
+                    </div>
                     <CardTitle className="mt-1 flex items-center gap-2 text-xl">
                       <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm tabular-nums text-primary">0{index + 1}</span>
                       {t(stage.titleKey)}
@@ -189,6 +201,9 @@ export default function Journey() {
                   <CardContent className="flex flex-1 flex-col justify-between gap-5 pt-4">
                     <div className="space-y-3">
                       <p className="text-sm leading-6 text-muted-foreground">{t(stage.goalKey)}</p>
+                      <p className="border-l-2 border-primary/30 pl-2.5 text-xs italic leading-5 text-muted-foreground">
+                        {t(stage.introKey)}
+                      </p>
                       <p className="text-xs leading-5 text-muted-foreground">
                         {t('journey.opponents')} · {stage.opponents.map((id) => t(getCharacterById(id).nameKey)).join(locale === 'zh' ? '、' : ', ')}
                       </p>
@@ -215,8 +230,14 @@ export default function Journey() {
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">{t(selectedStage.venueKey)}</p>
                 <h2 className="mt-1 text-xl font-semibold">{t(selectedStage.titleKey)}</h2>
                 <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">{t(selectedStage.goalKey)}</p>
+                <p className="mt-1.5 text-xs italic text-muted-foreground">{t(selectedStage.introKey)}</p>
               </div>
-              <Button variant="outline" size="sm" onClick={() => openStage(null)}>{t('journey.chooseAnother')}</Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button asChild variant="ghost" size="sm">
+                  <Link to={`/characters/${selectedStage.characterId}`}>{t('journey.viewCharacterProfile')}</Link>
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => openStage(null)}>{t('journey.chooseAnother')}</Button>
+              </div>
             </section>
 
             {gameReady && !evaluation ? (
@@ -259,17 +280,42 @@ export default function Journey() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-5 p-5 sm:p-6">
+                  {!evaluation.completed && evaluation.failureReasonKey ? (
+                    <p
+                      role="status"
+                      className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-foreground"
+                    >
+                      {t(evaluation.failureReasonKey)}
+                    </p>
+                  ) : null}
                   <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <Metric label={t('journey.best')} value={`${(selectedStageProgress?.bestPointsDelta ?? evaluation.pointsDelta) > 0 ? '+' : ''}${selectedStageProgress?.bestPointsDelta ?? evaluation.pointsDelta}`} />
                     <Metric label={t('journey.roundDelta')} value={`${evaluation.pointsDelta > 0 ? '+' : ''}${evaluation.pointsDelta}`} />
                     <Metric label={t('journey.playerDiscards')} value={evaluation.playerDiscards} />
                     <Metric label={t('journey.openMelds')} value={evaluation.openMelds} />
                     <Metric label={t('journey.tenpai')} value={t(evaluation.reachedTenpai ? 'journey.tenpai.yes' : 'journey.tenpai.no')} />
-                    {selectedStage.id === 'mio-defense' ? <Metric label={t('journey.survivedThreat')} value={t(evaluation.survivedThreat ? 'journey.survivedThreat.yes' : 'journey.survivedThreat.no')} /> : null}
+                    {selectedStage.id === 'mio-defense' || selectedStage.id === 'yoru-reading' ? (
+                      <Metric label={t('journey.survivedThreat')} value={t(evaluation.survivedThreat ? 'journey.survivedThreat.yes' : 'journey.survivedThreat.no')} />
+                    ) : null}
+                    {selectedStage.id === 'aya-riichi' ? (
+                      <Metric label={t('journey.declaredRiichi')} value={t(evaluation.declaredRiichi ? 'journey.declaredRiichi.yes' : 'journey.declaredRiichi.no')} />
+                    ) : null}
+                    {selectedStage.id === 'mahiru-flush' && evaluation.suitFocusCount !== undefined ? (
+                      <Metric label={t('journey.suitFocus')} value={evaluation.suitFocusCount} />
+                    ) : null}
                   </dl>
                   <div className="flex flex-wrap gap-2">
                     <Button onClick={retryRound}><RotateCcw className="mr-1.5 size-4" />{t('journey.retry')}</Button>
+                    {evaluation.completed && nextStage ? (
+                      <Button variant="secondary" onClick={() => openStage(nextStage.id)}>
+                        {formatMessage(locale, 'journey.nextStage', { title: t(nextStage.titleKey) })}
+                        <ArrowRight className="ml-1.5 size-4" />
+                      </Button>
+                    ) : null}
                     <Button variant="outline" onClick={() => openStage(null)}>{t('journey.chooseAnother')}</Button>
+                    <Button asChild variant="ghost">
+                      <Link to={`/characters/${selectedStage.characterId}`}>{t('journey.viewCharacterProfile')}</Link>
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

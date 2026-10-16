@@ -7,6 +7,7 @@ import {
   Clock,
   Crown,
   Play,
+  Trophy,
   Wifi,
   WifiOff,
 } from 'lucide-react';
@@ -137,6 +138,15 @@ export default function FamilyRoom() {
                 <h1 className="text-xl font-bold">
                   {formatMessage(locale, 'family.room.roomBy', { name: room.hostNickname })}
                 </h1>
+                {room.cup && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                    <Trophy className="h-3.5 w-3.5" />
+                    {formatMessage(locale, 'family.cup.cupBadge', {
+                      current: room.cup.completedMatches + (isFinished ? 0 : 1),
+                      total: room.cup.totalMatches,
+                    })}
+                  </span>
+                )}
                 {connected ? (
                   <span className="flex items-center gap-1 text-xs text-emerald-500 font-medium">
                     <Wifi className="h-3.5 w-3.5" /> {t('family.room.online')}
@@ -169,15 +179,71 @@ export default function FamilyRoom() {
             {isHost && (
               <Button
                 onClick={startGame}
-                disabled={!allHumansReady || room.humanCount === 0}
+                disabled={!allHumansReady || (room.cup ? room.humanCount < 2 : room.humanCount === 0)}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-1.5"
               >
                 <Play className="h-4 w-4" />
-                {t('family.room.start')}
+                {room.cup && room.cup.completedMatches > 0
+                  ? formatMessage(locale, 'family.cup.nextMatch', { next: room.cup.completedMatches + 1 })
+                  : t('family.room.start')}
               </Button>
             )}
           </div>
         </div>
+
+        {/* 杯赛席位锁定与积分榜 */}
+        {room.cup && (
+          <div className="space-y-3">
+            {room.cup.completedMatches > 0 && (
+              <div className="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/5 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-amber-500" />
+                    <span className="font-bold text-sm text-foreground">
+                      {t('family.cup.standingsTitle')}
+                    </span>
+                    <span className="text-xs text-amber-600 dark:text-amber-400">
+                      ({t('family.cup.rosterLocked')})
+                    </span>
+                  </div>
+                  {room.cup.matches.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate('/replays?source=family')}
+                      className="text-xs h-7 px-2"
+                    >
+                      {t('family.cup.matchesHistory')}
+                    </Button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  {room.cup.standings.map((st) => (
+                    <div
+                      key={st.memberId}
+                      className="flex items-center justify-between p-2 rounded-xl bg-card/60 border border-border"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-amber-500">#{st.rank}</span>
+                        <span className="font-semibold">{st.nickname}</span>
+                      </span>
+                      <span className="font-mono">
+                        <strong className="text-primary">{st.totalCupPoints}</strong> {t('family.cup.points')}
+                        <span className="text-muted-foreground ml-2">({st.totalMatchScore} pts)</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {room.humanCount < 2 && (
+              <div className="p-3 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-500 text-xs">
+                {t('family.cup.requiresTwoHumans')}
+              </div>
+            )}
+          </div>
+        )}
 
         <ConnectionNotice
           connected={connected}
@@ -367,6 +433,15 @@ export default function FamilyRoom() {
               number: round?.roundNumber ?? 1,
             })}
           </span>
+          {room.cup && (
+            <span className="flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-semibold text-amber-300 border border-amber-500/30">
+              <Trophy className="h-3 w-3" />
+              {formatMessage(locale, 'family.cup.cupBadge', {
+                current: room.cup.completedMatches + (isFinished ? 0 : 1),
+                total: room.cup.totalMatches,
+              })}
+            </span>
+          )}
           {isSpectator && (
             <span className="rounded-full border border-white/20 px-2 py-0.5 text-white/75">
               {t('family.room.spectating')}
@@ -681,7 +756,7 @@ export default function FamilyRoom() {
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#142319] border border-white/20 rounded-2xl w-full max-w-md p-6 text-white shadow-2xl space-y-4">
             <h3 className="text-xl font-bold text-center text-emerald-400">
-              {t(isFinished ? 'family.room.finalResult' : 'family.room.roundResult')}
+              {t(isFinished && room.cup ? 'family.cup.finalTitle' : isFinished ? 'family.room.finalResult' : 'family.room.roundResult')}
             </h3>
 
             {view.result.type === 'win' ? (
@@ -733,6 +808,30 @@ export default function FamilyRoom() {
             {isFinished && room.humanCount >= 2 && (
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs text-center">
                 {t('family.room.coinAward')}
+              </div>
+            )}
+
+            {/* 杯赛完成总冠军揭晓与最终总榜 */}
+            {isFinished && room.cup && (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs space-y-2">
+                <div className="flex items-center justify-center gap-1.5 font-bold text-sm">
+                  <Trophy className="h-4 w-4 text-amber-400" />
+                  <span>
+                    {formatMessage(locale, 'family.cup.champion', {
+                      name: room.cup.standings[0]?.nickname ?? '',
+                    })}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  {room.cup.standings.map((st) => (
+                    <div key={st.memberId} className="flex justify-between items-center py-0.5 border-b border-amber-500/20 last:border-none">
+                      <span>#{st.rank} {st.nickname}</span>
+                      <span className="font-mono">
+                        {st.totalCupPoints} {t('family.cup.points')} ({st.totalMatchScore} pts)
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

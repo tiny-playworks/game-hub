@@ -1,7 +1,17 @@
 import type { RiichiReplayFile } from '../../src/pages/mahjong/japanese/engine/match';
 
 export const JOURNEY_CONTENT_VERSION = 1 as const;
-export const JOURNEY_STAGE_IDS = ['aoi-balance', 'rin-tempo', 'mio-defense'] as const;
+export const JOURNEY_STAGE_IDS = [
+  'aoi-balance',
+  'rin-tempo',
+  'mio-defense',
+  'koharu-call',
+  'chitose-closed',
+  'sora-value',
+  'aya-riichi',
+  'mahiru-flush',
+  'yoru-reading',
+] as const;
 export const JOURNEY_RECENT_ATTEMPT_LIMIT = 500;
 
 export type JourneyStageId = typeof JOURNEY_STAGE_IDS[number];
@@ -13,6 +23,9 @@ export interface JourneyEvaluation {
   openMelds: number;
   reachedTenpai: boolean;
   survivedThreat: boolean;
+  declaredRiichi?: boolean;
+  suitFocusCount?: number;
+  failureReasonKey?: string | null;
 }
 
 export interface JourneyAttemptInput {

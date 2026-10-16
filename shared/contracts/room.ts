@@ -41,6 +41,138 @@ export interface RoomSettings {
   matchLength: 'east' | 'south';
   defaultAiLevel: 'beginner' | 'standard' | 'expert' | 'strong';
   turnTimeLimitSeconds: number; // 每步操作默认限时秒数
+  cupTotalMatches?: 2 | 3 | null; // P20 家庭雀庄杯总场次（2 或 3 场，null/undefined 为单场）
+}
+
+export interface FamilyCupParticipant {
+  seatIndex: number;
+  memberId: string;
+  nickname: string;
+  avatarPresetId: string;
+}
+
+export interface FamilyCupMatchRecord {
+  matchIndex: number; // 1..totalMatches
+  matchId: string;
+  finalScores: [number, number, number, number];
+  /** Human memberId -> cup points earned in this match */
+  awardedPoints: Record<string, number>;
+  completedAt: number;
+}
+
+export interface FamilyCupStanding {
+  memberId: string;
+  nickname: string;
+  avatarPresetId: string;
+  seatIndex: number;
+  rank: number; // 1-based rank (tied when both cupPoints and totalMatchScore match)
+  totalCupPoints: number;
+  totalMatchScore: number;
+  matchesPlayed: number;
+}
+
+export interface FamilyCupSummary {
+  cupId: string;
+  roomId: string;
+  version: 1;
+  matchLength: 'east' | 'south';
+  totalMatches: 2 | 3;
+  completedMatches: number;
+  status: 'waiting' | 'playing' | 'between_matches' | 'completed';
+  participants: FamilyCupParticipant[];
+  matches: FamilyCupMatchRecord[];
+  standings: FamilyCupStanding[];
+  createdAt: number;
+  updatedAt: number;
+  completedAt: number | null;
+}
+
+/**
+ * P20 20.1: Rank only human participants by final match score.
+ * For N humans, placement points from 1st to Nth are N-1 down to 0.
+ * Tied human scores share the average points of their tied positions.
+ * AI seats never participate in cup points.
+ */
+export function computeCupMatchPoints(
+  participants: readonly FamilyCupParticipant[],
+  finalScores: readonly number[],
+): Record<string, number> {
+  const n = participants.length;
+  if (n < 2) return {};
+  const entries = participants
+    .map((p) => ({
+      memberId: p.memberId,
+      seatIndex: p.seatIndex,
+      score: finalScores[p.seatIndex] ?? 25000,
+    }))
+    .sort((a, b) => b.score - a.score || a.seatIndex - b.seatIndex);
+
+  const awarded: Record<string, number> = {};
+  let i = 0;
+  while (i < n) {
+    let j = i + 1;
+    while (j < n && entries[j].score === entries[i].score) {
+      j++;
+    }
+    let sumPoints = 0;
+    for (let k = i; k < j; k++) {
+      sumPoints += n - 1 - k;
+    }
+    const shared = Math.round((sumPoints / (j - i)) * 100) / 100;
+    for (let k = i; k < j; k++) {
+      awarded[entries[k].memberId] = shared;
+    }
+    i = j;
+  }
+  return awarded;
+}
+
+/**
+ * P20 20.1: Sort by totalCupPoints desc, then totalMatchScore desc.
+ * If both are equal, assign the same shared rank (never break ties by seat or random).
+ */
+export function computeCupStandings(
+  participants: readonly FamilyCupParticipant[],
+  matches: readonly FamilyCupMatchRecord[],
+): FamilyCupStanding[] {
+  const raw = participants.map((p) => {
+    let totalCupPoints = 0;
+    let totalMatchScore = 0;
+    for (const m of matches) {
+      totalCupPoints += m.awardedPoints[p.memberId] ?? 0;
+      totalMatchScore += m.finalScores[p.seatIndex] ?? 0;
+    }
+    return {
+      memberId: p.memberId,
+      nickname: p.nickname,
+      avatarPresetId: p.avatarPresetId,
+      seatIndex: p.seatIndex,
+      rank: 1,
+      totalCupPoints: Math.round(totalCupPoints * 100) / 100,
+      totalMatchScore,
+      matchesPlayed: matches.length,
+    };
+  });
+
+  raw.sort(
+    (a, b) =>
+      b.totalCupPoints - a.totalCupPoints ||
+      b.totalMatchScore - a.totalMatchScore ||
+      a.seatIndex - b.seatIndex,
+  );
+
+  for (let idx = 0; idx < raw.length; idx++) {
+    if (
+      idx > 0 &&
+      raw[idx].totalCupPoints === raw[idx - 1].totalCupPoints &&
+      raw[idx].totalMatchScore === raw[idx - 1].totalMatchScore
+    ) {
+      raw[idx].rank = raw[idx - 1].rank;
+    } else {
+      raw[idx].rank = idx + 1;
+    }
+  }
+  return raw;
 }
 
 export interface RoomSummary {
@@ -57,6 +189,7 @@ export interface RoomSummary {
   revision: number;
   currentMatchId?: string;
   isPaused?: boolean; // 全真人离线时自动暂停
+  cup?: FamilyCupSummary | null;
 }
 
 export interface RoomCommand {

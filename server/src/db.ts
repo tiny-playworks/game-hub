@@ -5,6 +5,13 @@ import { DatabaseSync } from 'node:sqlite';
 import type { MemberSnapshot } from '../../shared/contracts/member';
 import { normalizeThemeChallengeState } from '../../shared/contracts/challenge';
 import { normalizeJourneyProgress } from '../../shared/contracts/journey';
+import {
+  computeCupMatchPoints,
+  computeCupStandings,
+  type FamilyCupMatchRecord,
+  type FamilyCupParticipant,
+  type FamilyCupSummary,
+} from '../../shared/contracts/room';
 
 export interface MemberRow {
   id: string;
@@ -135,7 +142,17 @@ function migrate(db: DatabaseSync): void {
     CREATE TABLE IF NOT EXISTS journey_attempts (
       member_id TEXT NOT NULL REFERENCES members(id) ON DELETE CASCADE,
       attempt_id TEXT NOT NULL,
-      stage_id TEXT NOT NULL CHECK(stage_id IN ('aoi-balance', 'rin-tempo', 'mio-defense')),
+      stage_id TEXT NOT NULL CHECK(stage_id IN (
+        'aoi-balance',
+        'rin-tempo',
+        'mio-defense',
+        'koharu-call',
+        'chitose-closed',
+        'sora-value',
+        'aya-riichi',
+        'mahiru-flush',
+        'yoru-reading'
+      )),
       content_version INTEGER NOT NULL CHECK(content_version = 1),
       payload_hash TEXT NOT NULL,
       evaluation_json TEXT NOT NULL,
@@ -160,6 +177,28 @@ function migrate(db: DatabaseSync): void {
       date_key TEXT NOT NULL,
       created_at INTEGER NOT NULL,
       PRIMARY KEY(member_id, match_id)
+    );
+    CREATE TABLE IF NOT EXISTS family_cups (
+      cup_id TEXT PRIMARY KEY,
+      room_id TEXT NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1 CHECK(version = 1),
+      match_length TEXT NOT NULL CHECK(match_length IN ('east', 'south')),
+      total_matches INTEGER NOT NULL CHECK(total_matches IN (2, 3)),
+      status TEXT NOT NULL CHECK(status IN ('waiting', 'playing', 'between_matches', 'completed')),
+      participants_json TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      completed_at INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS family_cup_matches (
+      cup_id TEXT NOT NULL REFERENCES family_cups(cup_id) ON DELETE CASCADE,
+      match_index INTEGER NOT NULL,
+      match_id TEXT NOT NULL,
+      final_scores_json TEXT NOT NULL,
+      awarded_points_json TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      PRIMARY KEY(cup_id, match_index),
+      UNIQUE(cup_id, match_id)
     );
     CREATE TABLE IF NOT EXISTS room_commands (
       room_id TEXT NOT NULL,
@@ -198,7 +237,43 @@ function migrate(db: DatabaseSync): void {
       ON riichi_replays(member_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS riichi_replays_member_fav
       ON riichi_replays(member_id, is_favorite, created_at DESC);
+    CREATE INDEX IF NOT EXISTS family_cups_updated
+      ON family_cups(updated_at DESC);
   `);
+  const journeySql = db
+    .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'journey_attempts'")
+    .get() as { sql?: string } | undefined;
+  if (journeySql?.sql && !journeySql.sql.includes('koharu-call')) {
+    transaction(db, () => {
+      db.exec(`
+        CREATE TABLE journey_attempts_v2 (
+          member_id TEXT NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+          attempt_id TEXT NOT NULL,
+          stage_id TEXT NOT NULL CHECK(stage_id IN (
+            'aoi-balance',
+            'rin-tempo',
+            'mio-defense',
+            'koharu-call',
+            'chitose-closed',
+            'sora-value',
+            'aya-riichi',
+            'mahiru-flush',
+            'yoru-reading'
+          )),
+          content_version INTEGER NOT NULL CHECK(content_version = 1),
+          payload_hash TEXT NOT NULL,
+          evaluation_json TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          PRIMARY KEY(member_id, attempt_id)
+        );
+        INSERT INTO journey_attempts_v2
+          SELECT member_id, attempt_id, stage_id, content_version, payload_hash, evaluation_json, created_at
+          FROM journey_attempts;
+        DROP TABLE journey_attempts;
+        ALTER TABLE journey_attempts_v2 RENAME TO journey_attempts;
+      `);
+    });
+  }
   const matchColumns = db.prepare('PRAGMA table_info(riichi_matches)').all() as Array<{ name: string }>;
   if (!matchColumns.some((column) => column.name === 'challenge_eligible')) {
     db.exec('ALTER TABLE riichi_matches ADD COLUMN challenge_eligible INTEGER NOT NULL DEFAULT 0');
@@ -480,4 +555,193 @@ export function deleteReplay(
     .run(memberId, matchId);
   return result.changes > 0;
 }
+
+interface FamilyCupRow {
+  cup_id: string;
+  room_id: string;
+  version: 1;
+  match_length: 'east' | 'south';
+  total_matches: 2 | 3;
+  status: 'waiting' | 'playing' | 'between_matches' | 'completed';
+  participants_json: string;
+  created_at: number;
+  updated_at: number;
+  completed_at: number | null;
+}
+
+interface FamilyCupMatchRow {
+  cup_id: string;
+  match_index: number;
+  match_id: string;
+  final_scores_json: string;
+  awarded_points_json: string;
+  created_at: number;
+}
+
+function hydrateFamilyCup(
+  db: DatabaseSync,
+  row: FamilyCupRow,
+): FamilyCupSummary {
+  const participants = JSON.parse(row.participants_json) as FamilyCupParticipant[];
+  const matchRows = db
+    .prepare(
+      'SELECT * FROM family_cup_matches WHERE cup_id = ? ORDER BY match_index ASC',
+    )
+    .all(row.cup_id) as unknown as FamilyCupMatchRow[];
+  const matches: FamilyCupMatchRecord[] = matchRows.map((m) => ({
+    matchIndex: m.match_index,
+    matchId: m.match_id,
+    finalScores: JSON.parse(m.final_scores_json) as [
+      number,
+      number,
+      number,
+      number,
+    ],
+    awardedPoints: JSON.parse(m.awarded_points_json) as Record<string, number>,
+    completedAt: m.created_at,
+  }));
+  const standings = computeCupStandings(participants, matches);
+  return {
+    cupId: row.cup_id,
+    roomId: row.room_id,
+    version: 1,
+    matchLength: row.match_length,
+    totalMatches: row.total_matches,
+    completedMatches: matches.length,
+    status: row.status,
+    participants,
+    matches,
+    standings,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    completedAt: row.completed_at,
+  };
+}
+
+export function upsertFamilyCup(
+  db: DatabaseSync,
+  cup: {
+    cupId: string;
+    roomId: string;
+    matchLength: 'east' | 'south';
+    totalMatches: 2 | 3;
+    status: 'waiting' | 'playing' | 'between_matches' | 'completed';
+    participants: FamilyCupParticipant[];
+    createdAt?: number;
+    updatedAt?: number;
+    completedAt?: number | null;
+  },
+): FamilyCupSummary {
+  const now = Date.now();
+  const createdAt = cup.createdAt ?? now;
+  const updatedAt = cup.updatedAt ?? now;
+  db.prepare(
+    `INSERT INTO family_cups (
+       cup_id, room_id, version, match_length, total_matches, status,
+       participants_json, created_at, updated_at, completed_at
+     ) VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(cup_id) DO UPDATE SET
+       status = excluded.status,
+       participants_json = excluded.participants_json,
+       updated_at = excluded.updated_at,
+       completed_at = COALESCE(excluded.completed_at, family_cups.completed_at)`,
+  ).run(
+    cup.cupId,
+    cup.roomId,
+    cup.matchLength,
+    cup.totalMatches,
+    cup.status,
+    JSON.stringify(cup.participants),
+    createdAt,
+    updatedAt,
+    cup.completedAt ?? null,
+  );
+  return getFamilyCup(db, cup.cupId)!;
+}
+
+export function recordFamilyCupMatch(
+  db: DatabaseSync,
+  cupId: string,
+  matchId: string,
+  finalScores: readonly number[],
+  now = Date.now(),
+): { cup: FamilyCupSummary; duplicate: boolean } {
+  return transaction(db, () => {
+    const row = db
+      .prepare('SELECT * FROM family_cups WHERE cup_id = ?')
+      .get(cupId) as unknown as FamilyCupRow | undefined;
+    if (!row) throw new Error('CUP_NOT_FOUND');
+
+    const existingByMatch = db
+      .prepare('SELECT 1 FROM family_cup_matches WHERE cup_id = ? AND match_id = ?')
+      .get(cupId, matchId);
+    if (existingByMatch) {
+      return { cup: hydrateFamilyCup(db, row), duplicate: true };
+    }
+
+    const countRow = db
+      .prepare('SELECT count(*) as count FROM family_cup_matches WHERE cup_id = ?')
+      .get(cupId) as { count: number };
+    const nextIndex = countRow.count + 1;
+    if (nextIndex > row.total_matches) {
+      return { cup: hydrateFamilyCup(db, row), duplicate: true };
+    }
+
+    const participants = JSON.parse(row.participants_json) as FamilyCupParticipant[];
+    const scoresTuple: [number, number, number, number] = [
+      finalScores[0] ?? 25000,
+      finalScores[1] ?? 25000,
+      finalScores[2] ?? 25000,
+      finalScores[3] ?? 25000,
+    ];
+    const awardedPoints = computeCupMatchPoints(participants, scoresTuple);
+
+    db.prepare(
+      `INSERT INTO family_cup_matches (
+         cup_id, match_index, match_id, final_scores_json, awarded_points_json, created_at
+       ) VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run(
+      cupId,
+      nextIndex,
+      matchId,
+      JSON.stringify(scoresTuple),
+      JSON.stringify(awardedPoints),
+      now,
+    );
+
+    const isCompleted = nextIndex >= row.total_matches;
+    const nextStatus = isCompleted ? 'completed' : 'between_matches';
+    db.prepare(
+      `UPDATE family_cups
+       SET status = ?, updated_at = ?, completed_at = ?
+       WHERE cup_id = ?`,
+    ).run(nextStatus, now, isCompleted ? now : null, cupId);
+
+    const updatedRow = db
+      .prepare('SELECT * FROM family_cups WHERE cup_id = ?')
+      .get(cupId) as unknown as FamilyCupRow;
+    return { cup: hydrateFamilyCup(db, updatedRow), duplicate: false };
+  });
+}
+
+export function getFamilyCup(
+  db: DatabaseSync,
+  cupId: string,
+): FamilyCupSummary | null {
+  const row = db
+    .prepare('SELECT * FROM family_cups WHERE cup_id = ?')
+    .get(cupId) as unknown as FamilyCupRow | undefined;
+  return row ? hydrateFamilyCup(db, row) : null;
+}
+
+export function listFamilyCups(
+  db: DatabaseSync,
+  limit = 10,
+): FamilyCupSummary[] {
+  const rows = db
+    .prepare('SELECT * FROM family_cups ORDER BY updated_at DESC LIMIT ?')
+    .all(Math.min(Math.max(1, limit), 50)) as unknown as FamilyCupRow[];
+  return rows.map((row) => hydrateFamilyCup(db, row));
+}
+
 

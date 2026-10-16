@@ -1,14 +1,17 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { createUuid } from '@/lib/uuid';
-import type {
-  AiSeat,
-  HumanSeat,
-  PlayerViewSnapshot,
-  RoomCommand,
-  RoomSeat,
-  RoomSettings,
-  RoomSummary,
-  ServerMessage,
+import {
+  computeCupStandings,
+  type AiSeat,
+  type FamilyCupParticipant,
+  type FamilyCupSummary,
+  type HumanSeat,
+  type PlayerViewSnapshot,
+  type RoomCommand,
+  type RoomSeat,
+  type RoomSettings,
+  type RoomSummary,
+  type ServerMessage,
 } from '../../../shared/contracts/room';
 import type { RiichiAiLevel } from '@/pages/mahjong/japanese/engine/rules';
 import {
@@ -23,7 +26,17 @@ import {
 } from '@/pages/mahjong/japanese/engine/match';
 import { addCoins, getRiichiMatchCoins } from '@/lib/wallet';
 import { recordCharacterMatchFinish } from '@/lib/playerCharacters';
-import { archiveReplay, getMember, readSnapshot, saveSnapshot, transaction } from '../db';
+import {
+  archiveReplay,
+  getFamilyCup,
+  getMember,
+  listFamilyCups,
+  readSnapshot,
+  recordFamilyCupMatch,
+  saveSnapshot,
+  transaction,
+  upsertFamilyCup,
+} from '../db';
 import { runSnapshotMutation } from '../snapshotRuntime';
 import { createPlayerView } from './projectView';
 import {
@@ -53,9 +66,25 @@ const DEFAULT_SETTINGS: RoomSettings = {
   matchLength: 'east',
   defaultAiLevel: 'standard',
   turnTimeLimitSeconds: 15,
+  cupTotalMatches: null,
 };
 
 const AI_POOL = ['aoi', 'mio', 'rin', 'sora', 'koharu', 'chitose', 'kuro', 'shiro'];
+
+function extractHumanParticipants(seats: readonly RoomSeat[]): FamilyCupParticipant[] {
+  const participants: FamilyCupParticipant[] = [];
+  for (const seat of seats) {
+    if (seat.type === 'human') {
+      participants.push({
+        seatIndex: seat.seatIndex,
+        memberId: seat.memberId,
+        nickname: seat.nickname,
+        avatarPresetId: seat.avatarPresetId,
+      });
+    }
+  }
+  return participants;
+}
 
 export class RoomManager {
   private rooms = new Map<string, RoomInstance>();
@@ -73,9 +102,17 @@ export class RoomManager {
   ): RoomSummary {
     const roomId = createUuid();
     const fullSettings: RoomSettings = { ...DEFAULT_SETTINGS, ...settings };
-    if (!['east', 'south'].includes(fullSettings.matchLength) ||
+    if (
+      !['east', 'south'].includes(fullSettings.matchLength) ||
       !['beginner', 'standard', 'strong', 'expert'].includes(fullSettings.defaultAiLevel) ||
-      !Number.isInteger(fullSettings.turnTimeLimitSeconds) || fullSettings.turnTimeLimitSeconds < 1 || fullSettings.turnTimeLimitSeconds > 120)
+      !Number.isInteger(fullSettings.turnTimeLimitSeconds) ||
+      fullSettings.turnTimeLimitSeconds < 1 ||
+      fullSettings.turnTimeLimitSeconds > 120 ||
+      (fullSettings.cupTotalMatches !== undefined &&
+        fullSettings.cupTotalMatches !== null &&
+        fullSettings.cupTotalMatches !== 2 &&
+        fullSettings.cupTotalMatches !== 3)
+    )
       throw new Error('BAD_REQUEST');
 
     const initialSeats: [RoomSeat, RoomSeat, RoomSeat, RoomSeat] = [
@@ -97,6 +134,28 @@ export class RoomManager {
       { type: 'empty', seatIndex: 3 },
     ];
 
+    const now = Date.now();
+    const cupTotalMatches = fullSettings.cupTotalMatches ?? null;
+    const initialParticipants = extractHumanParticipants(initialSeats);
+    const cup: FamilyCupSummary | null =
+      cupTotalMatches === 2 || cupTotalMatches === 3
+        ? {
+            cupId: createUuid(),
+            roomId,
+            version: 1,
+            matchLength: fullSettings.matchLength,
+            totalMatches: cupTotalMatches,
+            completedMatches: 0,
+            status: 'waiting',
+            participants: initialParticipants,
+            matches: [],
+            standings: computeCupStandings(initialParticipants, []),
+            createdAt: now,
+            updatedAt: now,
+            completedAt: null,
+          }
+        : null;
+
     const summary: RoomSummary = {
       id: roomId,
       hostMemberId,
@@ -106,10 +165,11 @@ export class RoomManager {
       playerCount: 1,
       humanCount: 1,
       seats: initialSeats,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      createdAt: now,
+      updatedAt: now,
       revision: 1,
       isPaused: false,
+      cup,
     };
 
     const instance: RoomInstance = {
@@ -132,6 +192,14 @@ export class RoomManager {
       .sort((a, b) => b.createdAt - a.createdAt);
   }
 
+  listCups(limit = 10): FamilyCupSummary[] {
+    return listFamilyCups(this.db, limit);
+  }
+
+  getCup(cupId: string): FamilyCupSummary | null {
+    return getFamilyCup(this.db, cupId);
+  }
+
   getRoom(roomId: string): RoomSummary | null {
     return this.rooms.get(roomId)?.summary ?? null;
   }
@@ -151,6 +219,8 @@ export class RoomManager {
     const room = this.rooms.get(roomId);
     if (!room) throw new Error('ROOM_NOT_FOUND');
     if (room.summary.status !== 'waiting') throw new Error('GAME_ALREADY_STARTED');
+    if (room.summary.cup && room.summary.cup.completedMatches > 0)
+      throw new Error('CUP_ROSTER_LOCKED');
     if (!Number.isInteger(seatIndex) || seatIndex < 0 || seatIndex > 3) throw new Error('INVALID_SEAT_INDEX');
 
     // 检查该成员是否已在其他位置
@@ -191,6 +261,8 @@ export class RoomManager {
     const room = this.rooms.get(roomId);
     if (!room) throw new Error('ROOM_NOT_FOUND');
     if (room.summary.status !== 'waiting') throw new Error('GAME_IN_PROGRESS');
+    if (room.summary.cup && room.summary.cup.completedMatches > 0)
+      throw new Error('CUP_ROSTER_LOCKED');
 
     let seatFound = false;
     for (let i = 0; i < 4; i++) {
@@ -235,6 +307,8 @@ export class RoomManager {
     const room = this.rooms.get(roomId);
     if (!room) throw new Error('ROOM_NOT_FOUND');
     if (room.summary.status !== 'waiting') throw new Error('GAME_ALREADY_STARTED');
+    if (room.summary.cup && room.summary.cup.completedMatches > 0)
+      throw new Error('CUP_ROSTER_LOCKED');
     if (!Number.isInteger(seatIndex) || seatIndex < 0 || seatIndex > 3) throw new Error('INVALID_SEAT_INDEX');
 
     const targetSeat = room.summary.seats[seatIndex];
@@ -264,6 +338,8 @@ export class RoomManager {
     const room = this.rooms.get(roomId);
     if (!room) throw new Error('ROOM_NOT_FOUND');
     if (room.summary.status !== 'waiting') throw new Error('GAME_ALREADY_STARTED');
+    if (room.summary.cup && room.summary.cup.completedMatches > 0)
+      throw new Error('CUP_ROSTER_LOCKED');
     if (!Number.isInteger(seatIndex) || seatIndex < 0 || seatIndex > 3) throw new Error('INVALID_SEAT_INDEX');
 
     const targetSeat = room.summary.seats[seatIndex];
@@ -300,6 +376,9 @@ export class RoomManager {
     if (!room) throw new Error('ROOM_NOT_FOUND');
     if (room.summary.hostMemberId !== memberId) throw new Error('ONLY_HOST_CAN_START');
     if (room.summary.status !== 'waiting') throw new Error('ALREADY_PLAYING');
+    if (room.summary.cup && room.summary.humanCount < 2) {
+      throw new Error('CUP_REQUIRES_TWO_HUMANS');
+    }
     for (const seat of room.summary.seats) {
       if (seat.type !== 'human') continue;
       const row = getMember(this.db, seat.memberId);
@@ -321,10 +400,28 @@ export class RoomManager {
         };
       }
     }
+    this.refreshCounts(room.summary);
 
     // 检查真人是否全部就绪
     const unready = room.summary.seats.find((s) => s.type === 'human' && !s.isReady);
     if (unready) throw new Error('PLAYERS_NOT_READY');
+
+    if (room.summary.cup) {
+      const lockedParticipants =
+        room.summary.cup.completedMatches > 0
+          ? room.summary.cup.participants
+          : extractHumanParticipants(room.summary.seats);
+      room.summary.cup = upsertFamilyCup(this.db, {
+        cupId: room.summary.cup.cupId,
+        roomId: room.summary.id,
+        matchLength: room.summary.settings.matchLength,
+        totalMatches: room.summary.cup.totalMatches,
+        status: 'playing',
+        participants: lockedParticipants,
+        createdAt: room.summary.cup.createdAt,
+        updatedAt: Date.now(),
+      });
+    }
 
     const getAiChar = (index: number, fallback: string) => {
       const s = room.summary.seats[index];
@@ -685,6 +782,15 @@ export class RoomManager {
   private refreshCounts(summary: RoomSummary): void {
     summary.playerCount = summary.seats.filter((s) => s.type !== 'empty').length;
     summary.humanCount = summary.seats.filter((s) => s.type === 'human').length;
+    if (summary.cup && summary.cup.completedMatches === 0 && summary.status === 'waiting') {
+      const participants = extractHumanParticipants(summary.seats);
+      summary.cup = {
+        ...summary.cup,
+        participants,
+        standings: computeCupStandings(participants, []),
+        updatedAt: Date.now(),
+      };
+    }
   }
 
   private broadcastRoom(room: RoomInstance): void {
@@ -831,6 +937,7 @@ export class RoomManager {
     const matchLength = room.summary.settings.matchLength;
 
     const dateKey = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai' }).format(Date.now());
+    let hasMoreCupMatches = false;
     transaction(this.db, () => {
       for (const seat of room.summary.seats) {
         if (seat.type !== 'human') continue;
@@ -858,13 +965,13 @@ export class RoomManager {
           .run(seat.memberId, matchId, room.summary.id, placement, room.match!.matchEnd!.finalScores[seat.seatIndex], coins, dateKey, Date.now());
       }
 
-    // 归档整场终局牌谱供参赛成员回放（总纲 4.5 & P15）
-    const replayFile = toReplayFile(match);
-    const replayJson = JSON.stringify(replayFile);
-    for (const seat of room.summary.seats) {
-      if (seat.type === 'human') {
-        const placement = ranking.indexOf(seat.seatIndex) + 1;
-        const finalScore = matchEnd.finalScores[seat.seatIndex] ?? 25000;
+      // 归档整场终局牌谱供参赛成员回放（总纲 4.5 & P15）
+      const replayFile = toReplayFile(match);
+      const replayJson = JSON.stringify(replayFile);
+      for (const seat of room.summary.seats) {
+        if (seat.type === 'human') {
+          const placement = ranking.indexOf(seat.seatIndex) + 1;
+          const finalScore = matchEnd.finalScores[seat.seatIndex] ?? 25000;
           archiveReplay(this.db, seat.memberId, {
             matchId,
             source: 'family',
@@ -876,15 +983,44 @@ export class RoomManager {
             matchLength,
             replayJson,
           });
+        }
       }
-    }
 
-      deleteRoomState(this.db, room.summary.id);
+      if (room.summary.cup) {
+        const cupRecorded = recordFamilyCupMatch(
+          this.db,
+          room.summary.cup.cupId,
+          matchId,
+          matchEnd.finalScores,
+        );
+        room.summary.cup = cupRecorded.cup;
+        hasMoreCupMatches = room.summary.cup.status === 'between_matches';
+      }
+
+      if (!hasMoreCupMatches) {
+        deleteRoomState(this.db, room.summary.id);
+      }
     });
-    room.summary.status = 'finished';
-    room.summary.revision++;
-    room.summary.updatedAt = Date.now();
-    deleteRoomState(this.db, room.summary.id);
+
+    if (hasMoreCupMatches) {
+      room.summary.status = 'waiting';
+      room.summary.isPaused = false;
+      room.serverDeadline = null;
+      for (const seat of room.summary.seats) {
+        if (seat.type === 'human') {
+          seat.isReady = true;
+          seat.isAutoplay = false;
+        }
+      }
+      room.summary.revision++;
+      room.summary.updatedAt = Date.now();
+      saveRoomState(this.db, room.summary, null, null, false);
+    } else {
+      room.summary.status = 'finished';
+      room.summary.revision++;
+      room.summary.updatedAt = Date.now();
+      deleteRoomState(this.db, room.summary.id);
+    }
     this.broadcastRoom(room);
   }
 
@@ -897,6 +1033,11 @@ export class RoomManager {
           s.connected = false;
           s.disconnectedAt = Date.now();
         }
+      }
+
+      if (data.summary.cup?.cupId) {
+        const persistedCup = getFamilyCup(this.db, data.summary.cup.cupId);
+        if (persistedCup) data.summary.cup = persistedCup;
       }
 
       // 重启恢复的未完房间默认暂停，等待真人上线

@@ -396,4 +396,21 @@ export async function sendRoomCommand(
   );
 }
 
+export async function listFamilyCups(
+  limit = 10,
+): Promise<import('../../../shared/contracts/room').FamilyCupSummary[]> {
+  return request<import('../../../shared/contracts/room').FamilyCupSummary[]>(
+    `/api/v1/rooms/cups?limit=${encodeURIComponent(limit)}`,
+  );
+}
+
+export async function getFamilyCup(
+  cupId: string,
+): Promise<import('../../../shared/contracts/room').FamilyCupSummary> {
+  return request<import('../../../shared/contracts/room').FamilyCupSummary>(
+    `/api/v1/rooms/cups/${encodeURIComponent(cupId)}`,
+  );
+}
+
+
 

@@ -6,15 +6,16 @@ import {
   Plus,
   RefreshCw,
   ShieldCheck,
+  Trophy,
   Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useOptionalHousehold } from '@/contexts/HouseholdContext';
-import { createRoom, listRooms } from '@/lib/household/api';
+import { createRoom, listFamilyCups, listRooms } from '@/lib/household/api';
 import { formatMessage } from '@/lib/i18n';
 import { getCharacterById } from '@/lib/playerCharacters';
-import type { RoomSeat, RoomSettings, RoomSummary } from '../../shared/contracts/room';
+import type { FamilyCupSummary, RoomSeat, RoomSettings, RoomSummary } from '../../shared/contracts/room';
 
 export default function FamilyLobby() {
   const navigate = useNavigate();
@@ -24,6 +25,7 @@ export default function FamilyLobby() {
   const isMember = household?.mode === 'member-online';
 
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
+  const [recentCups, setRecentCups] = useState<FamilyCupSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
@@ -31,6 +33,7 @@ export default function FamilyLobby() {
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   // 创建房间表单状态
+  const [cupTotalMatches, setCupTotalMatches] = useState<null | 2 | 3>(null);
   const [matchLength, setMatchLength] = useState<'east' | 'south'>('east');
   const [defaultAiLevel, setDefaultAiLevel] = useState<RoomSettings['defaultAiLevel']>('standard');
   const [turnLimit, setTurnLimit] = useState(15);
@@ -44,13 +47,18 @@ export default function FamilyLobby() {
   const fetchRooms = useCallback(async () => {
     if (!isMember) {
       setRooms([]);
+      setRecentCups([]);
       setListError(null);
       return;
     }
     setLoading(true);
     try {
-      const data = await listRooms();
-      setRooms(data);
+      const [roomData, cupsData] = await Promise.all([
+        listRooms(),
+        listFamilyCups(5).catch(() => []),
+      ]);
+      setRooms(roomData);
+      setRecentCups(cupsData);
       setListError(null);
     } catch {
       setListError('family.lobby.listError');
@@ -76,6 +84,7 @@ export default function FamilyLobby() {
           matchLength,
           defaultAiLevel,
           turnTimeLimitSeconds: turnLimit,
+          cupTotalMatches,
         },
         member.nickname,
         member.avatarPresetId,
@@ -193,6 +202,15 @@ export default function FamilyLobby() {
                           {formatMessage(locale, 'family.lobby.roomBy', { name: room.hostNickname })}
                         </span>
                         <Crown className="h-4 w-4 text-amber-500" />
+                        {room.cup && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                            <Trophy className="h-3 w-3" />
+                            {formatMessage(locale, 'family.cup.cupBadge', {
+                              current: room.cup.completedMatches + (isFinished ? 0 : 1),
+                              total: room.cup.totalMatches,
+                            })}
+                          </span>
+                        )}
                       </div>
 
                       <span
@@ -265,6 +283,76 @@ export default function FamilyLobby() {
         ) : null}
       </div>
 
+      {/* 近期杯赛记录 */}
+      {isMember && recentCups.length > 0 && (
+        <div className="mt-10">
+          <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
+            <Trophy className="h-4 w-4 text-amber-500" />
+            {formatMessage(locale, 'family.cup.recentCups', { count: recentCups.length })}
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {recentCups.map((cup) => {
+              const champion = cup.standings[0];
+              return (
+                <div
+                  key={cup.cupId}
+                  className="rounded-2xl border border-border bg-card p-4 shadow-sm space-y-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm">
+                        {t(cup.totalMatches === 2 ? 'family.cup.modeCup2' : 'family.cup.modeCup3')}
+                      </span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                        {t(cup.matchLength === 'east' ? 'family.match.east' : 'family.match.south')}
+                      </span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(cup.createdAt).toLocaleDateString(locale === 'zh' ? 'zh-CN' : 'en-US')}
+                    </span>
+                  </div>
+
+                  {champion && (
+                    <div className="flex items-center gap-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-300">
+                      <Trophy className="h-4 w-4 shrink-0 text-amber-500" />
+                      <span>{formatMessage(locale, 'family.cup.champion', { name: champion.nickname })}</span>
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5 text-xs">
+                    {cup.standings.map((st) => (
+                      <div key={st.memberId} className="flex items-center justify-between py-0.5 border-b border-border/40 last:border-none">
+                        <span className="flex items-center gap-1.5">
+                          <span className="font-mono font-bold text-muted-foreground">#{st.rank}</span>
+                          <span className="font-medium">{st.nickname}</span>
+                        </span>
+                        <span className="font-mono">
+                          <strong className="text-primary">{st.totalCupPoints}</strong> {t('family.cup.points')}
+                          <span className="text-muted-foreground ml-2">({st.totalMatchScore} pts)</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {cup.matches.length > 0 && (
+                    <div className="flex items-center gap-2 pt-2 border-t border-border/60">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate('/replays?source=family')}
+                        className="text-xs h-7 px-2"
+                      >
+                        {t('family.cup.matchesHistory')}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* 创建房间弹窗 */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
@@ -272,6 +360,52 @@ export default function FamilyLobby() {
             <h3 className="text-lg font-bold">{t('family.lobby.dialogTitle')}</h3>
 
             <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1.5">
+                  {t('family.cup.modeLabel')}
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCupTotalMatches(null)}
+                    className={`py-2 px-2 rounded-xl border text-xs font-medium transition-all ${
+                      cupTotalMatches === null
+                        ? 'border-primary bg-primary/10 text-primary font-semibold'
+                        : 'border-border hover:bg-muted text-foreground'
+                    }`}
+                  >
+                    {t('family.cup.modeSingle')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCupTotalMatches(2)}
+                    className={`py-2 px-2 rounded-xl border text-xs font-medium transition-all ${
+                      cupTotalMatches === 2
+                        ? 'border-primary bg-primary/10 text-primary font-semibold'
+                        : 'border-border hover:bg-muted text-foreground'
+                    }`}
+                  >
+                    {t('family.cup.modeCup2')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCupTotalMatches(3)}
+                    className={`py-2 px-2 rounded-xl border text-xs font-medium transition-all ${
+                      cupTotalMatches === 3
+                        ? 'border-primary bg-primary/10 text-primary font-semibold'
+                        : 'border-border hover:bg-muted text-foreground'
+                    }`}
+                  >
+                    {t('family.cup.modeCup3')}
+                  </button>
+                </div>
+                {cupTotalMatches !== null && (
+                  <p className="mt-1.5 text-[11px] text-amber-600 dark:text-amber-400 leading-normal">
+                    {t('family.cup.modeHint')}
+                  </p>
+                )}
+              </div>
+
               <div>
                 <label className="text-xs font-semibold text-muted-foreground block mb-1.5">
                   {t('family.lobby.length')}
