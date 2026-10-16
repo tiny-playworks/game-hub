@@ -23,6 +23,14 @@ export const DEFAULT_AUDIO_VOLUMES: AudioVolumes = {
   voice: 1,
 };
 
+export type RiichiTurnTimeLimit =
+  | 'standard'
+  | 'relaxed'
+  | 'long'
+  | 'unlimited';
+export type RiichiAiSpeed = 'slow' | 'normal' | 'fast';
+export type RiichiButtonSize = 'standard' | 'large';
+
 /** 日麻对局偏好 */
 export interface RiichiPlayerSettings {
   /** 可和了时自动荣和 / 自摸 */
@@ -38,6 +46,18 @@ export interface RiichiPlayerSettings {
   aiLevel: RiichiAiLevel;
   presentation: 'full' | 'simple' | 'off';
   chatter: boolean;
+  /** 思考/鸣牌读秒时长档位 */
+  turnTimeLimit: RiichiTurnTimeLimit;
+  /** AI 出牌速度 */
+  aiSpeed: RiichiAiSpeed;
+  /** 牌桌操作按钮尺寸 */
+  buttonSize: RiichiButtonSize;
+  /** 单击直接出牌（关闭时需双击或点击确认） */
+  singleClickDiscard: boolean;
+  /** 醒目高亮可吃碰杠荣的河底舍牌 */
+  highlightClaimTile: boolean;
+  /** 显示牌桌操作提示条 */
+  showTableHints: boolean;
 }
 
 export const DEFAULT_RIICHI_SETTINGS: RiichiPlayerSettings = {
@@ -49,6 +69,12 @@ export const DEFAULT_RIICHI_SETTINGS: RiichiPlayerSettings = {
   aiLevel: 'standard',
   presentation: 'full',
   chatter: true,
+  turnTimeLimit: 'standard',
+  aiSpeed: 'normal',
+  buttonSize: 'large',
+  singleClickDiscard: false,
+  highlightClaimTile: true,
+  showTableHints: true,
 };
 
 export interface PlayerProfile {
@@ -164,6 +190,24 @@ export function normalizeRiichiSettings(raw: unknown): RiichiPlayerSettings {
       o.presentation === 'simple' || o.presentation === 'off'
         ? o.presentation
         : d.presentation,
+    turnTimeLimit:
+      o.turnTimeLimit === 'standard' ||
+      o.turnTimeLimit === 'relaxed' ||
+      o.turnTimeLimit === 'long' ||
+      o.turnTimeLimit === 'unlimited'
+        ? o.turnTimeLimit
+        : d.turnTimeLimit,
+    aiSpeed:
+      o.aiSpeed === 'slow' || o.aiSpeed === 'normal' || o.aiSpeed === 'fast'
+        ? o.aiSpeed
+        : d.aiSpeed,
+    buttonSize:
+      o.buttonSize === 'standard' || o.buttonSize === 'large'
+        ? o.buttonSize
+        : d.buttonSize,
+    singleClickDiscard: bool(o.singleClickDiscard, d.singleClickDiscard),
+    highlightClaimTile: bool(o.highlightClaimTile, d.highlightClaimTile),
+    showTableHints: bool(o.showTableHints, d.showTableHints),
   };
 }
 

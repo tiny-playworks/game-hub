@@ -18,7 +18,14 @@ import {
   getPlayerCharacterState,
 } from '@/lib/playerCharacters';
 import { markRecentMahjongPlayed } from '@/lib/recentMahjong';
-import { getTurnTotalSeconds } from '@/lib/riichiClock';
+import type {
+  RiichiButtonSize,
+  RiichiTurnTimeLimit,
+} from '@/lib/playerProfile';
+import {
+  getDecisionTotalSeconds,
+  getTurnTotalSeconds,
+} from '@/lib/riichiClock';
 import { getCurrentRiichiRoundProgressSummary } from '@/lib/riichiProgress';
 import { preloadRiichiRules } from '@/lib/riichiRules';
 import { cn } from '@/lib/utils';
@@ -140,6 +147,7 @@ type RiichiActionPanelProps = {
   locale: Locale;
   state: RiichiActionState;
   handlers: RiichiActionHandlers;
+  buttonSize?: RiichiButtonSize;
 };
 
 function RiichiActionPanel({
@@ -147,6 +155,7 @@ function RiichiActionPanel({
   locale,
   state,
   handlers,
+  buttonSize = 'large',
 }: RiichiActionPanelProps) {
   const { t } = useLocale();
   const claimActionsAvailable =
@@ -165,21 +174,28 @@ function RiichiActionPanel({
 
   return (
     <div
-      className="riichi-action-dock"
+      className={cn(
+        'riichi-action-dock',
+        claimActionsAvailable && 'riichi-action-dock--claim',
+      )}
+      data-button-size={buttonSize}
       role="toolbar"
       aria-label={t('riichi.action.available')}
     >
       {claimActionsAvailable && game.claim != null && (
         <div className="riichi-action-target">
-          <RiichiTile tile={game.claim.tile} variant="river" />
-          <span>
-            {t(`game.mahjong.seats.${game.claim.from}`)} ·{' '}
-            {t(
-              game.claim.kind === 'discard'
-                ? 'riichi.action.discard'
-                : 'riichi.action.chankan',
-            )}
-          </span>
+          <RiichiTile tile={game.claim.tile} variant="river" claimable />
+          <div className="riichi-action-target-info">
+            <strong>{getTileLabel(game.claim.tile, locale)}</strong>
+            <span>
+              {t(`game.mahjong.seats.${game.claim.from}`)} ·{' '}
+              {t(
+                game.claim.kind === 'discard'
+                  ? 'riichi.action.discard'
+                  : 'riichi.action.chankan',
+              )}
+            </span>
+          </div>
         </div>
       )}
       <div className="riichi-action-buttons">
@@ -331,10 +347,21 @@ function GuideDialog({ onClose }: { onClose: () => void }) {
   );
 }
 
-function HumanTurnTimer({ timeBank }: { timeBank: number }) {
+function HumanTurnTimer({
+  timeBank,
+  phase,
+  turnTimeLimit,
+}: {
+  timeBank: number;
+  phase: RiichiGameState['phase'];
+  turnTimeLimit: RiichiTurnTimeLimit;
+}) {
   const { t } = useLocale();
-  const seconds = useHumanRemainingSeconds();
+  const seconds = useHumanRemainingSeconds(turnTimeLimit);
   if (seconds === null) return null;
+  const maxSeconds =
+    getDecisionTotalSeconds(timeBank, phase, turnTimeLimit) ??
+    getTurnTotalSeconds(timeBank);
   return (
     <div className="riichi-self-clock">
       <div
@@ -342,19 +369,19 @@ function HumanTurnTimer({ timeBank }: { timeBank: number }) {
         role="progressbar"
         aria-label={t('riichi.action.remainingTime')}
         aria-valuemin={0}
-        aria-valuemax={getTurnTotalSeconds(timeBank)}
+        aria-valuemax={maxSeconds}
         aria-valuenow={seconds}
       >
         <span
           className={
-            seconds <= 3
+            seconds <= 5
               ? 'is-critical'
-              : seconds <= 8
+              : seconds <= 12
                 ? 'is-warning'
                 : 'is-safe'
           }
           style={{
-            width: `${Math.min(100, (seconds / getTurnTotalSeconds(timeBank)) * 100)}%`,
+            width: `${Math.min(100, (seconds / maxSeconds) * 100)}%`,
           }}
         />
       </div>
@@ -377,6 +404,9 @@ type SelfSeatProps = {
   highlightedBase: number | null;
   onHighlight: (base: number | null) => void;
   dangerHint: boolean;
+  turnTimeLimit: RiichiTurnTimeLimit;
+  buttonSize: RiichiButtonSize;
+  showTableHints: boolean;
   selectedKey: string | null;
   selectedTile: number | null;
   onSelectTile: (key: string, tile: number) => void;
@@ -399,6 +429,9 @@ function SelfSeat({
   highlightedBase,
   onHighlight,
   dangerHint,
+  turnTimeLimit,
+  buttonSize,
+  showTableHints,
   selectedKey,
   selectedTile,
   onSelectTile,
@@ -491,6 +524,7 @@ function SelfSeat({
         locale={locale}
         state={actionState}
         handlers={actionHandlers}
+        buttonSize={buttonSize}
       />
 
       <div className="riichi-self-meta">
@@ -542,7 +576,11 @@ function SelfSeat({
       </div>
       <SpeechBubble moment={moment} />
 
-      <HumanTurnTimer timeBank={game.timeBanks[0]} />
+      <HumanTurnTimer
+        timeBank={game.timeBanks[0]}
+        phase={game.phase}
+        turnTimeLimit={turnTimeLimit}
+      />
 
       <SelectedTileBar
         selectedTile={selectedTile}
@@ -580,7 +618,7 @@ function SelfSeat({
           )}
         </div>
       </div>
-      {canDiscard && (
+      {canDiscard && showTableHints && (
         <p className="riichi-self-instruction">
           {t(
             actionState.riichiSelecting
@@ -603,6 +641,10 @@ type RiichiTableProps = {
   actionState: RiichiActionState;
   actionHandlers: RiichiActionHandlers;
   dangerHint: boolean;
+  turnTimeLimit: RiichiTurnTimeLimit;
+  buttonSize: RiichiButtonSize;
+  highlightClaimTile: boolean;
+  showTableHints: boolean;
   previewBase: number | null;
   selectedKey: string | null;
   selectedTile: number | null;
@@ -624,6 +666,10 @@ function RiichiTable({
   actionState,
   actionHandlers,
   dangerHint,
+  turnTimeLimit,
+  buttonSize,
+  highlightClaimTile,
+  showTableHints,
   previewBase,
   selectedKey,
   selectedTile,
@@ -636,6 +682,16 @@ function RiichiTable({
 }: RiichiTableProps) {
   const [hoveredBase, setHighlightedBase] = useState<number | null>(null);
   const highlightedBase = hoveredBase ?? previewBase;
+  const isClaimableDiscard =
+    highlightClaimTile &&
+    game.phase === 'claim' &&
+    Boolean(
+      actionState.canRon ||
+        (actionState.isMyClaim &&
+          (actionState.chiOptions.length > 0 ||
+            actionState.canPeng ||
+            actionState.canMingang)),
+    );
   const opponent = (seat: 1 | 2 | 3) => (
     <OpponentSeat
       seat={seat}
@@ -654,6 +710,7 @@ function RiichiTable({
   return (
     <div className="riichi-table-surface">
       <TableActionToast />
+      {showTableHints && <NoviceControlsGuide />}
       <StatusPanel
         roundEnded={game.phase === 'end'}
         isClaimPhase={bag.isClaimPhase}
@@ -674,7 +731,11 @@ function RiichiTable({
         <div className="riichi-table-seat-top">{opponent(2)}</div>
         <div className="riichi-table-seat-left">{opponent(3)}</div>
         <div className="riichi-table-center">
-          <CenterArea game={game} highlightedBase={highlightedBase} />
+          <CenterArea
+            game={game}
+            highlightedBase={highlightedBase}
+            isClaimableDiscard={isClaimableDiscard}
+          />
         </div>
         <div className="riichi-table-seat-right">{opponent(1)}</div>
         <div className="riichi-table-seat-self">
@@ -690,6 +751,9 @@ function RiichiTable({
             highlightedBase={highlightedBase}
             onHighlight={setHighlightedBase}
             dangerHint={dangerHint}
+            turnTimeLimit={turnTimeLimit}
+            buttonSize={buttonSize}
+            showTableHints={showTableHints}
             selectedKey={selectedKey}
             selectedTile={selectedTile}
             onSelectTile={onSelectTile}
@@ -927,6 +991,7 @@ const GameMahjongJapanese = () => {
     canDiscard: actionState.isMyTurn,
     riichiSelecting,
     isMyClaim: actionState.isMyClaim,
+    singleClickDiscard: riichiSettings.singleClickDiscard,
     enabled:
       view === 'game' &&
       match?.status === 'playing' &&
@@ -1152,7 +1217,6 @@ const GameMahjongJapanese = () => {
         <main className="riichi-desktop-workspace">
           <TableContextPanel game={game} />
           <div className="riichi-table-zone">
-            <NoviceControlsGuide />
             <RiichiTable
               seatCharacters={match.seatCharacters}
               playerCharacterId={playerCharacterId}
@@ -1163,6 +1227,10 @@ const GameMahjongJapanese = () => {
               actionState={actionState}
               actionHandlers={actionHandlers}
               dangerHint={!isRanked && riichiSettings.dangerHint}
+              turnTimeLimit={riichiSettings.turnTimeLimit}
+              buttonSize={riichiSettings.buttonSize}
+              highlightClaimTile={riichiSettings.highlightClaimTile}
+              showTableHints={riichiSettings.showTableHints}
               previewBase={
                 !isRanked &&
                 activePanel === 'hint' &&

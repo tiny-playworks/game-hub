@@ -10,11 +10,17 @@ import { RiichiTile } from './Tile';
 type Props = {
   game: RiichiGameState;
   highlightedBase?: number | null;
+  isClaimableDiscard?: boolean;
 };
 
-export function CenterArea({ game, highlightedBase = null }: Props) {
+export function CenterArea({
+  game,
+  highlightedBase = null,
+  isClaimableDiscard = false,
+}: Props) {
   const { locale, t } = useLocale();
   const { equipped } = useCosmetics();
+  const targetFrom = game.claim?.from ?? game.lastDiscardFrom;
 
   return (
     <div className="riichi-center-board">
@@ -54,7 +60,7 @@ export function CenterArea({ game, highlightedBase = null }: Props) {
             >
               {tiles.map(({ tile, key }, index) => {
                 const isLastDiscard =
-                  game.lastDiscardFrom === seat && index === tiles.length - 1;
+                  targetFrom === seat && index === tiles.length - 1;
                 return (
                   <RiichiTile
                     key={key}
@@ -67,6 +73,8 @@ export function CenterArea({ game, highlightedBase = null }: Props) {
                           ? 'last-discard'
                           : 'normal'
                     }
+                    lastDiscard={isLastDiscard}
+                    claimable={isLastDiscard && isClaimableDiscard}
                     highlighted={getBaseTile(tile) === highlightedBase}
                   />
                 );

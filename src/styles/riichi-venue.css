@@ -296,49 +296,109 @@
 .riichi-self-instruction {
   position: static;
   order: 3;
-  font-size: 12px;
+  align-self: center;
+  width: fit-content;
+  max-width: min(600px, 94%);
+  font-size: 13px;
   text-align: center;
   color: var(--riichi-text);
-  margin: 4px 0;
+  margin: 4px auto;
 }
 .riichi-action-dock {
   position: static;
   order: 4;
   transform: none;
-  max-width: none;
-  width: 100%;
-  padding: 8px 12px;
-  border-radius: 5px;
-  margin-top: auto;
+  align-self: center;
+  width: fit-content;
+  max-width: min(940px, 96%);
+  justify-content: center;
+  gap: 14px;
+  padding: 10px 18px;
+  border-radius: 14px;
+  margin: 6px auto 0;
   white-space: normal;
   color: #172a3a;
   background: #f5f2e9;
-  box-shadow: none;
+  border: 1.5px solid #d2c9b5;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
   backdrop-filter: none;
 }
+.riichi-action-dock--claim {
+  border: 2px solid #f59e0b;
+  background: linear-gradient(180deg, #fffdf7, #f5efe0);
+  box-shadow:
+    0 0 0 3px rgba(245, 158, 11, 0.32),
+    0 14px 36px rgba(0, 0, 0, 0.48);
+}
 .riichi-action-target {
-  color: #52626d;
+  color: #334155;
+  gap: 10px;
+  padding-right: 14px;
+}
+.riichi-action-target .riichi-tile--river {
+  --riichi-tile-width: 32px;
+  --riichi-tile-height: 45px;
+}
+.riichi-action-target-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.25;
+}
+.riichi-action-target-info strong {
+  font-size: 15px;
+  font-weight: 800;
+  color: #b45309;
+}
+.riichi-action-target-info span {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
 }
 .riichi-action-buttons {
-  flex: 1;
+  flex: 0 1 auto;
   flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
 }
 .riichi-action-button {
-  min-height: 44px;
-  min-width: 70px;
-  font-size: 14px;
+  min-height: 48px;
+  min-width: 92px;
+  padding: 8px 18px;
+  font-size: 16px;
+  font-weight: 800;
+  border-radius: 10px;
 }
-.riichi-action-button.is-primary,
+.riichi-action-dock[data-button-size='large'] .riichi-action-button {
+  min-height: 54px;
+  min-width: 112px;
+  padding: 10px 22px;
+  font-size: 18px;
+  border-radius: 12px;
+}
+.riichi-action-button small {
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0.94;
+}
+.riichi-action-button.is-primary {
+  color: #fffaf2;
+  background: linear-gradient(180deg, #e11d48, #be123c);
+  border: 1.5px solid #fde047;
+  box-shadow: 0 4px 14px rgba(225, 29, 72, 0.42);
+}
 .riichi-action-button.is-secondary {
   color: #fffaf2;
-  background: #c54838;
-  border-color: #c54838;
-  box-shadow: none;
+  background: linear-gradient(180deg, #d65545, #b83b2b);
+  border: 1px solid #a33224;
+  box-shadow: 0 4px 12px rgba(197, 72, 56, 0.32);
 }
 .riichi-action-button.is-pass {
-  color: #172a3a;
-  border: 1px solid #788d9b;
-  background: transparent;
+  min-width: 84px;
+  color: #1e293b;
+  border: 1.5px solid #64748b;
+  background: rgba(255, 255, 255, 0.72);
+  font-weight: 700;
 }
 .riichi-desktop-rail {
   position: static;
@@ -1183,23 +1243,26 @@
     min-height: 70px;
   }
   .riichi-self-instruction {
+    align-self: center;
+    width: fit-content;
+    max-width: min(620px, 92%);
     border: 1px solid #d2c9b5;
     background: #f5f2e9;
     color: #172a3a;
-    border-radius: 5px;
+    border-radius: 999px;
     font:
-      600 17px / 1.4 'Noto Serif SC',
+      600 16px / 1.4 'Noto Serif SC',
       'Songti SC',
       serif;
-    padding: 10px 20px;
-    text-align: left;
-    margin-top: auto;
+    padding: 8px 24px;
+    text-align: center;
+    margin: 4px auto 0;
   }
   .riichi-seat--self:has(.riichi-action-dock) .riichi-self-instruction {
     display: none;
   }
   .riichi-action-dock {
-    min-height: 54px;
+    min-height: 62px;
   }
   .riichi-self-clock {
     width: min(540px, 80%);

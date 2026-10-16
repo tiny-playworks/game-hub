@@ -238,4 +238,25 @@ test('对局偏好与静音设置：修改静音、音量与演出强度，刷�
   });
 
   expect(getPlayerProfile().riichiSettings.presentation).toBe('simple');
+
+  // Change thinking & claim timer to relaxed
+  const timerSelect = screen.getByLabelText(/思考与吃碰读秒|Thinking & claim timer/i);
+  act(() => {
+    fireEvent.change(timerSelect, { target: { value: 'relaxed' } });
+  });
+  expect(getPlayerProfile().riichiSettings.turnTimeLimit).toBe('relaxed');
+
+  // Change AI speed to slow
+  const aiSpeedSelect = screen.getByLabelText(/对手出牌速度|Opponent discard speed/i);
+  act(() => {
+    fireEvent.change(aiSpeedSelect, { target: { value: 'slow' } });
+  });
+  expect(getPlayerProfile().riichiSettings.aiSpeed).toBe('slow');
+
+  // Toggle single-click discard
+  const singleClickCheckbox = screen.getByLabelText(/单击直接出牌|Single-click discard/i);
+  act(() => {
+    fireEvent.click(singleClickCheckbox);
+  });
+  expect(getPlayerProfile().riichiSettings.singleClickDiscard).toBe(true);
 });

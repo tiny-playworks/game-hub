@@ -13,6 +13,8 @@ export type RiichiTileProps = {
   variant: RiichiTileVariant;
   rotation?: 0 | 90 | 180 | -90;
   state?: RiichiTileState;
+  lastDiscard?: boolean;
+  claimable?: boolean;
   selected?: boolean;
   tileKey?: string;
   onClick?: () => void;
@@ -122,6 +124,8 @@ export function RiichiTile({
   variant,
   rotation = 0,
   state = 'normal',
+  lastDiscard = false,
+  claimable = false,
   selected = false,
   tileKey,
   onClick,
@@ -140,6 +144,8 @@ export function RiichiTile({
     'riichi-tile',
     `riichi-tile--${variant}`,
     `riichi-tile--${state}`,
+    lastDiscard && 'riichi-tile--last-discard',
+    claimable && 'riichi-tile--claimable',
     selected && 'riichi-tile--selected',
     (onClick || onTouchStart) && 'riichi-tile--interactive',
     highlighted && 'riichi-tile--matching',
@@ -163,6 +169,7 @@ export function RiichiTile({
         className={className}
         data-rotation={rotation}
         data-tile-key={tileKey}
+        data-claimable={claimable || undefined}
         onClick={onClick}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
@@ -186,6 +193,7 @@ export function RiichiTile({
       role="img"
       className={className}
       data-rotation={rotation}
+      data-claimable={claimable || undefined}
       aria-label={tileLabel}
       title={title}
     >

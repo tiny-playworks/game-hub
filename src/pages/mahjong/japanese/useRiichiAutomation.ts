@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { getCharacterById } from '@/lib/playerCharacters';
 import type { RiichiPlayerSettings } from '@/lib/playerProfile';
-import { getTurnTotalSeconds } from '@/lib/riichiClock';
+import { getAiDelayMs, getDecisionTotalSeconds } from '@/lib/riichiClock';
 import {
   decideAiClaim,
   decideAiTurn,
@@ -13,8 +13,8 @@ import {
 import { useRiichiStore } from './store/riichiMatchStore';
 import type { RiichiGameState } from './types';
 
-export const AI_TURN_DELAY_MS = 550;
-export const AI_CLAIM_DELAY_MS = 420;
+export const AI_TURN_DELAY_MS = 900;
+export const AI_CLAIM_DELAY_MS = 560;
 const AUTO_ACTION_DELAY_MS = 350;
 
 /** 自家决策点标识：同一决策点内他家响应不会重置计时 */
@@ -116,10 +116,12 @@ export function useRiichiAutomation(settings: RiichiPlayerSettings): void {
     };
     const pending = getPendingSeats(round);
     const aiSeats = pending.filter((seat) => seat !== 0);
+    const aiTurnDelayMs = getAiDelayMs(settings.aiSpeed, 'discard');
+    const aiClaimDelayMs = getAiDelayMs(settings.aiSpeed, 'claim');
 
     if (round.phase === 'discard' && aiSeats.length > 0) {
       const seat = aiSeats[0];
-      later(AI_TURN_DELAY_MS, () => {
+      later(aiTurnDelayMs, () => {
         const latest = useRiichiStore.getState().match;
         if (!latest) return;
         const id = latest.seatCharacters[seat];
@@ -133,13 +135,13 @@ export function useRiichiAutomation(settings: RiichiPlayerSettings): void {
         if (event) {
           useRiichiStore
             .getState()
-            .dispatch({ ...event, elapsed: AI_TURN_DELAY_MS / 1000 });
+            .dispatch({ ...event, elapsed: aiTurnDelayMs / 1000 });
         }
       });
     }
 
     if (round.phase === 'claim' && aiSeats.length > 0) {
-      later(AI_CLAIM_DELAY_MS, () => {
+      later(aiClaimDelayMs, () => {
         for (const seat of aiSeats) {
           const latest = useRiichiStore.getState().match;
           if (
@@ -158,7 +160,7 @@ export function useRiichiAutomation(settings: RiichiPlayerSettings): void {
               getCharacterById(latest.seatCharacters[seat] ?? 'mio').style,
               latest.rules,
             ),
-            elapsed: AI_CLAIM_DELAY_MS / 1000,
+            elapsed: aiClaimDelayMs / 1000,
           });
         }
       });
@@ -177,33 +179,40 @@ export function useRiichiAutomation(settings: RiichiPlayerSettings): void {
           useRiichiStore.getState().dispatch(auto);
         });
       }
-      const totalMs = getTurnTotalSeconds(round.timeBanks[0]) * 1000;
-      const remainMs = Math.max(0, clock.startedAt + totalMs - Date.now());
-      later(remainMs, () => {
-        const latest = useRiichiStore.getState().match;
-        if (!latest) return;
-        const elapsed = totalMs / 1000;
-        if (latest.round.phase === 'claim') {
-          useRiichiStore.getState().dispatch({
-            type: 'claim',
-            seat: 0,
-            response: { type: 'pass' },
-            elapsed,
-            timeout: true,
-          });
-          return;
-        }
-        const tile = defaultDiscardTile(latest.round);
-        if (tile !== null) {
-          useRiichiStore.getState().dispatch({
-            type: 'discard',
-            seat: 0,
-            tile,
-            elapsed,
-            timeout: true,
-          });
-        }
-      });
+      const totalSeconds = getDecisionTotalSeconds(
+        round.timeBanks[0],
+        round.phase,
+        settings.turnTimeLimit,
+      );
+      if (totalSeconds !== null) {
+        const totalMs = totalSeconds * 1000;
+        const remainMs = Math.max(0, clock.startedAt + totalMs - Date.now());
+        later(remainMs, () => {
+          const latest = useRiichiStore.getState().match;
+          if (!latest) return;
+          const elapsed = totalMs / 1000;
+          if (latest.round.phase === 'claim') {
+            useRiichiStore.getState().dispatch({
+              type: 'claim',
+              seat: 0,
+              response: { type: 'pass' },
+              elapsed,
+              timeout: true,
+            });
+            return;
+          }
+          const tile = defaultDiscardTile(latest.round);
+          if (tile !== null) {
+            useRiichiStore.getState().dispatch({
+              type: 'discard',
+              seat: 0,
+              tile,
+              elapsed,
+              timeout: true,
+            });
+          }
+        });
+      }
     } else if (store.decisionClock) {
       store.setDecisionClock(null);
     }

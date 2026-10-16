@@ -193,24 +193,48 @@
     auto;
 }
 .cosmetic-avatar-frame {
+  --frame-scale: 1.28;
+  --avatar-radius: 22%;
   position: relative;
   isolation: isolate;
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: 0 0 auto;
   vertical-align: middle;
 }
-.cosmetic-avatar-frame > img,
-.cosmetic-avatar-frame > div {
-  border-radius: 19%;
+.cosmetic-avatar-frame[data-avatar-frame='frame-wood'],
+.cosmetic-avatar-frame[data-avatar-frame^='frame-character-'] {
+  --frame-scale: 1.26;
+  --avatar-radius: 22%;
+}
+.cosmetic-avatar-frame[data-avatar-frame='frame-gold'],
+.cosmetic-avatar-frame[data-avatar-frame='frame-rank-quehao'] {
+  --frame-scale: 1.36;
+  --avatar-radius: 24%;
+}
+.cosmetic-avatar-frame[data-avatar-frame='frame-sakura'] {
+  --frame-scale: 1.35;
+  --avatar-radius: 50%;
+}
+.cosmetic-avatar-frame:not([data-avatar-frame='frame-aoi']) > img:not(.cosmetic-avatar-frame-art),
+.cosmetic-avatar-frame:not([data-avatar-frame='frame-aoi']) > div {
+  border-radius: var(--avatar-radius, 22%) !important;
+  border: 0 !important;
+  box-shadow: none !important;
 }
 .cosmetic-avatar-frame > img.cosmetic-avatar-frame-art {
   position: absolute;
   z-index: 3;
-  inset: -7px;
-  width: calc(100% + 14px);
-  height: calc(100% + 14px);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(100% * var(--frame-scale, 1.28));
+  height: calc(100% * var(--frame-scale, 1.28));
+  max-width: none;
+  max-height: none;
   border-radius: 0;
-  object-fit: fill;
+  object-fit: contain;
   pointer-events: none;
 }
 .shop-layout {

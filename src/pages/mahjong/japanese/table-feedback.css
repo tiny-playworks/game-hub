@@ -20,14 +20,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 6px 14px;
-  background: rgba(15, 23, 42, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(8px);
+  gap: 12px;
+  padding: 8px 18px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1.5px solid rgba(251, 191, 36, 0.45);
+  backdrop-filter: blur(10px);
   border-radius: 9999px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  margin: 0 auto 6px auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  margin: 0 auto 8px auto;
   max-width: fit-content;
   z-index: 30;
   animation: riichi-fade-in 0.15s ease-out;
@@ -37,37 +37,39 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #f1f5f9;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fef08a;
 }
 
 .riichi-selected-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .riichi-confirm-discard-btn {
-  min-height: 44px;
-  min-width: 80px;
-  padding: 0 16px;
-  background: #c54838;
+  min-height: 48px;
+  min-width: 108px;
+  padding: 0 22px;
+  background: linear-gradient(180deg, #d95343, #b83b2b);
   color: #fffaf2;
-  font-size: 14px;
-  font-weight: 600;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 16px;
+  font-weight: 700;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 4px 12px rgba(197, 72, 56, 0.4);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition: background 0.15s, transform 0.1s;
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
 }
 
 .riichi-confirm-discard-btn:hover {
-  background: #d65545;
+  background: linear-gradient(180deg, #e46050, #c54838);
+  box-shadow: 0 6px 16px rgba(197, 72, 56, 0.55);
 }
 
 .riichi-confirm-discard-btn:active {
@@ -75,37 +77,39 @@
 }
 
 .riichi-cancel-select-btn {
-  min-height: 44px;
-  min-width: 56px;
-  padding: 0 12px;
-  background: transparent;
-  color: #94a3b8;
-  font-size: 13px;
-  border-radius: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
+  min-height: 48px;
+  min-width: 78px;
+  padding: 0 16px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
 
 .riichi-cancel-select-btn:hover {
-  color: #f1f5f9;
-  border-color: rgba(255, 255, 255, 0.6);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.7);
 }
 
 .riichi-confirm-shortcut-hint {
-  font-size: 11px;
-  color: #94a3b8;
-  opacity: 0.85;
+  font-size: 12px;
+  color: #cbd5e1;
+  opacity: 0.9;
   margin-left: 4px;
 }
 
 /* 3. Action feedback toast / transient badge */
 .riichi-action-toast-overlay {
   position: absolute;
-  top: 50%;
+  top: 44%;
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 45;
@@ -117,80 +121,88 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 24px;
+  padding: 10px 28px;
   border-radius: 9999px;
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 800;
   letter-spacing: 0.05em;
   color: #fffaf2;
-  background: rgba(197, 72, 56, 0.94);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.2);
+  background: rgba(197, 72, 56, 0.95);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 0 1.5px rgba(255, 255, 255, 0.25);
   backdrop-filter: blur(8px);
 }
 
 .riichi-action-toast-badge.is-riichi {
-  background: rgba(217, 119, 6, 0.94);
+  background: rgba(217, 119, 6, 0.95);
 }
 
 .riichi-action-toast-badge.is-tsumo,
 .riichi-action-toast-badge.is-ron {
   background: rgba(225, 29, 72, 0.96);
-  font-size: 22px;
-  padding: 10px 32px;
+  font-size: 24px;
+  padding: 12px 34px;
 }
 
-/* 4. Novice Controls Hint */
+/* 4. Novice Controls Hint — Centered Floating Overlay in Table Center */
 .riichi-novice-guide-card {
-  position: relative;
-  background: var(--card, #1e293b);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
-  padding: 12px 16px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-  margin-bottom: 8px;
-  color: var(--card-foreground, #f8fafc);
-  animation: riichi-fade-in 0.2s ease-out;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 46;
+  width: min(420px, calc(100% - 32px));
+  max-height: calc(100% - 48px);
+  overflow-y: auto;
+  background: rgba(15, 23, 42, 0.94);
+  border: 1.5px solid rgba(251, 191, 36, 0.45);
+  border-radius: 16px;
+  padding: 16px 20px;
+  box-shadow:
+    0 20px 48px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  color: #f8fafc;
 }
 
 .riichi-novice-guide-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .riichi-novice-guide-title {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--riichi-accent, #c54838);
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fbbf24;
 }
 
 .riichi-novice-guide-body {
-  font-size: 12px;
-  line-height: 1.5;
-  color: #94a3b8;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #e2e8f0;
 }
 
 .riichi-novice-guide-footer {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  margin-top: 8px;
+  margin-top: 12px;
 }
 
 .riichi-novice-guide-dismiss {
   min-height: 44px;
-  min-width: 72px;
-  padding: 0 14px;
-  font-size: 12px;
-  font-weight: 500;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #f1f5f9;
+  min-width: 96px;
+  padding: 0 18px;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #d95343, #b83b2b);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fffaf2;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -198,10 +210,63 @@
 }
 
 .riichi-novice-guide-dismiss:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: linear-gradient(180deg, #e46050, #c54838);
 }
 
-/* 5. Keyframe Animations */
+/* 5. Claimable Discard Tile Beacon Halo */
+.riichi-tile--claimable {
+  z-index: 26 !important;
+  transform: scale(1.22) translateY(-3px);
+  filter: drop-shadow(0 6px 14px rgba(245, 158, 11, 0.65));
+  animation: riichi-claim-tile-bounce 1s ease-in-out infinite alternate;
+}
+
+.riichi-tile--claimable .riichi-tile-rotator {
+  border-color: #fef08a !important;
+  box-shadow:
+    0 0 0 3px #f59e0b,
+    0 0 0 6px rgba(225, 29, 72, 0.85),
+    0 0 24px 8px rgba(251, 191, 36, 0.95) !important;
+}
+
+.riichi-tile--claimable::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 10px;
+  border: 2.5px solid #fde047;
+  box-shadow:
+    0 0 18px rgba(250, 204, 21, 0.95),
+    inset 0 0 12px rgba(245, 158, 11, 0.75);
+  pointer-events: none;
+  animation: riichi-claim-halo-pulse 1.15s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+/* 6. Keyframe Animations */
+@keyframes riichi-claim-tile-bounce {
+  from {
+    transform: scale(1.18) translateY(-2px);
+  }
+  to {
+    transform: scale(1.26) translateY(-5px);
+  }
+}
+
+@keyframes riichi-claim-halo-pulse {
+  0% {
+    opacity: 1;
+    transform: scale(0.92);
+  }
+  70% {
+    opacity: 0.85;
+    transform: scale(1.22);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.36);
+  }
+}
+
 @keyframes riichi-fade-in {
   from {
     opacity: 0;
@@ -235,11 +300,16 @@
   }
 }
 
-/* 6. Reduced Motion & Mobile Responsiveness */
+/* 7. Reduced Motion & Mobile Responsiveness */
 @media (prefers-reduced-motion: reduce) {
-  .riichi-tile--selected {
+  .riichi-tile--selected,
+  .riichi-tile--claimable {
     transform: none;
     transition: none !important;
+    animation: none !important;
+  }
+  .riichi-tile--claimable::after {
+    animation: none !important;
   }
   .riichi-selected-action-bar,
   .riichi-action-toast-overlay,
@@ -261,6 +331,6 @@
   }
   .riichi-confirm-discard-btn {
     flex: 1;
-    min-width: 64px;
+    min-width: 84px;
   }
 }

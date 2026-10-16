@@ -7,6 +7,7 @@ export type TileInteractionOptions = {
   riichiSelecting: boolean;
   isMyClaim: boolean;
   enabled: boolean;
+  singleClickDiscard?: boolean;
   onDiscard: (tile: number) => void;
   onCancelRiichi: () => void;
   onPassClaim: () => void;
@@ -26,6 +27,7 @@ export function useTileInteraction({
   riichiSelecting,
   isMyClaim,
   enabled,
+  singleClickDiscard = false,
   onDiscard,
   onCancelRiichi,
   onPassClaim,
@@ -58,6 +60,12 @@ export function useTileInteraction({
         return;
       }
       if (!canDiscard || !discardable.includes(tile)) return;
+      if (singleClickDiscard && source === 'click') {
+        onDiscard(tile);
+        setSelectedKey(null);
+        setSelectedTile(null);
+        return;
+      }
       if (selectedKey === key) {
         // Second tap/click on already selected tile -> confirm discard!
         onDiscard(tile);
@@ -69,7 +77,7 @@ export function useTileInteraction({
         setSelectedTile(tile);
       }
     },
-    [canDiscard, discardable, selectedKey, onDiscard],
+    [canDiscard, discardable, selectedKey, singleClickDiscard, onDiscard],
   );
 
   const confirmDiscard = useCallback(() => {

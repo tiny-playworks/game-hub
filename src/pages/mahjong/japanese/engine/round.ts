@@ -243,10 +243,12 @@ function consumeTime(
   elapsed: number | undefined,
 ): number[] {
   if (!elapsed || elapsed <= 0) return state.timeBanks;
+  const effectiveElapsed = Math.max(0, elapsed - 10);
+  if (effectiveElapsed <= 0) return state.timeBanks;
   return replaceAt(
     state.timeBanks,
     seat,
-    consumeTimeBankSeconds(state.timeBanks[seat], elapsed),
+    consumeTimeBankSeconds(state.timeBanks[seat], effectiveElapsed),
   );
 }
 

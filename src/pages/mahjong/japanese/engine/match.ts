@@ -289,7 +289,9 @@ function advanceRound(
       roundNumber: next.roundNumber,
       honba: next.honba,
       scores: settlement.newScores,
-      timeBanks: round.timeBanks,
+      timeBanks: round.timeBanks.map((t) =>
+        Math.max(t, RIICHI_TIME_BANK_INITIAL_SECONDS),
+      ),
       riichiPot: settlement.nextRiichiPot,
       matchLength: match.matchLength,
       lastSettlement: {
