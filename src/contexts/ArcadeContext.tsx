@@ -19,6 +19,7 @@ import { emitGameEvent } from '@/lib/gameEvents';
 import { createUuid } from '@/lib/uuid';
 import type { ArcadeRecord } from '@/store/gameStore';
 import type { ArcadeMemberEvent, ArcadeMemberResult } from '../../shared/contracts/member';
+import type { LeaderboardStanding } from '../../shared/contracts/leaderboard';
 
 export type ArcadeOutcome = 'win' | 'lose' | 'draw';
 type ArcadeResult = ArcadeRecord & {
@@ -28,6 +29,7 @@ type ArcadeResult = ArcadeRecord & {
   score: number;
   settlementFailed?: boolean;
   settlementPending?: boolean;
+  leaderboard?: LeaderboardStanding;
 };
 function settledResult(
   outcome: ArcadeOutcome,
@@ -45,6 +47,7 @@ function settledResult(
     coinsEarned: settled.coinsEarned,
     capReached: settled.capReached,
     settlementPending: settled.pending,
+    leaderboard: settled.leaderboard,
   };
 }
 type Session = {

@@ -49,6 +49,7 @@ const FamilyRoom = lazyPage(() => import('@/pages/FamilyRoom'));
 const ReplayArchive = lazyPage(() => import('@/pages/ReplayArchive'));
 const RiichiTraining = lazyPage(() => import('@/pages/RiichiTraining'));
 const Journey = lazyPage(() => import('@/pages/Journey'));
+const Leaderboard = lazyPage(() => import('@/pages/Leaderboard'));
 
 function PageFallback() {
   return (
@@ -102,6 +103,7 @@ const App = () => {
                 <Route path="/" element={<Home />} />
                 <Route path="/family" element={<HouseholdReady><FamilyLobby /></HouseholdReady>} />
                 <Route path="/family/:roomId" element={<HouseholdReady><FamilyRoom /></HouseholdReady>} />
+                <Route path="/leaderboard" element={<HouseholdReady><Leaderboard /></HouseholdReady>} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/replays" element={<ReplayArchive />} />
                 <Route path="/replays/training" element={<RiichiTraining />} />

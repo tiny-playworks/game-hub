@@ -13,6 +13,7 @@ import { PlayerAvatar } from '@/components/home/PlayerAvatar';
 import { DataManagementCard } from '@/components/profile/DataManagementCard';
 import { TrainingSummary } from '@/components/profile/TrainingSummary';
 import { WalletCard } from '@/components/profile/WalletCard';
+import { WeeklyChampionsCard } from '@/components/profile/WeeklyChampionsCard';
 import { RankedProfilePanel } from '@/components/ranked/RankedProfilePanel';
 import { TaskClaimButton } from '@/components/TaskClaimButton';
 import { Button } from '@/components/ui/button';
@@ -1090,6 +1091,7 @@ const Profile = () => {
         <div className="venue-profile-summary">
           <WalletCard />
           <RankedProfilePanel />
+          <WeeklyChampionsCard />
           <DataManagementCard />
         </div>
       </main>

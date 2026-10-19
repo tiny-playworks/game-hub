@@ -74,7 +74,7 @@ P1–P6 的“纯本地、禁止后端/账号/联机、移动端不专门改造�
 | P20  | 家庭雀庄杯                             | 本地非 NAS 端已交付；待 NAS 部署与实体多机体验 | [P20](./P20-family-cup.md)          |
 | P21  | 精选轮换与回访                         | 本地非 NAS 端已交付；待 NAS 部署与轮换体验     | [P21](./P21-curated-rotation.md)    |
 | P22  | 第三轮收尾：P19–P21 NAS 上线与第 10 人 | 本地非 NAS 项已全部完成（迁移演练 + 22.3 第 10 人椿）；仅待 NAS 部署/现场验收 | [P22](./P22-round3-closeout.md)     |
-| P23  | 家庭排行榜与动态                       | 服务端已交付（榜单/周冠军/动态/校验/CLI）；界面与 NAS 待办 | [P23](./P23-family-leaderboard.md)  |
+| P23  | 家庭排行榜与动态                       | 本地非 NAS 端已全部交付（服务端 + 前端界面 + CLI）；待 NAS 部署验收 | [P23](./P23-family-leaderboard.md)  |
 | P24  | 通用房间内核 + 五子棋对战              | 未开始                                             | [P24](./P24-room-kernel-gomoku.md)  |
 | P25  | 中国象棋对战（提和/悔棋/局时/观战）    | 未开始                                             | [P25](./P25-xiangqi-battle.md)      |
 | P26  | 斗地主对战（暗牌/叫分/托管）           | 未开始                                             | [P26](./P26-doudizhu-battle.md)     |

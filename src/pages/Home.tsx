@@ -14,6 +14,7 @@ import { CharacterPortraitSlot } from '@/components/characters/CharacterPortrait
 import { PersonalBest } from '@/components/game/PersonalBest';
 import { VenueGameGlyph } from '@/components/home/VenueGameGlyph';
 import { CuratedRotationPanel } from '@/components/home/CuratedRotationPanel';
+import { FamilyFeedLobbyPanel } from '@/components/home/FamilyFeedLobbyPanel';
 import { ThemeChallengePanel } from '@/components/home/ThemeChallengePanel';
 import { RankedLobbyCard } from '@/components/ranked/RankedLobbyCard';
 import { TaskClaimButton } from '@/components/TaskClaimButton';
@@ -372,6 +373,7 @@ const Home = () => {
                 </p>
               )}
             </section>
+            <FamilyFeedLobbyPanel />
           </aside>
         </section>
         <CuratedRotationPanel />
@@ -385,6 +387,13 @@ const Home = () => {
               <span className="text-xs text-muted-foreground">
                 16 {t('lobby.games')}
               </span>
+              <Link
+                to="/leaderboard"
+                className="inline-flex items-center gap-1 rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-medium text-foreground hover:bg-gold/20"
+              >
+                {t('venue.nav.leaderboard')}
+                <ArrowRight className="size-3" />
+              </Link>
             </div>
             <div
               role="tablist"

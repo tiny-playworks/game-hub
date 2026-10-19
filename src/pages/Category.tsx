@@ -1,5 +1,6 @@
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
+import { FamilyStandingPill } from '@/components/game/FamilyStandingPill';
 import { PersonalBest } from '@/components/game/PersonalBest';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -153,8 +154,9 @@ const Category = () => {
                     {t(`game.${game.id}.description`) || game.description}
                   </p>
 
-                  <div className="mt-3">
+                  <div className="mt-3 flex flex-wrap gap-1.5">
                     <PersonalBest gameId={game.id} />
+                    <FamilyStandingPill gameId={game.id} />
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">
                     {game.tags.map((tag) => (

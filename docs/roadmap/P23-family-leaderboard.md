@@ -2,20 +2,15 @@
 
 > 依赖：P22 完成 NAS 基线；P10/P11 成员权威数据与离线同步；P6 街机统一结算。可与 P24 并行。先读 [README](./README.md)。
 > 目标：让 16 个街机游戏的成绩在家人之间可见、可比，给“再来一把”一个理由。
-> 状态：2026-10-16 第四轮规划确认，未开始。
+> 状态：2026-10-19 本地非 NAS 端（23.1–23.4 服务端 + 前端界面 + 自动化测试）已全部交付并通过验证；待 NAS 现场验收。
 
-## 涉及文件（实施前先核对）
+## 涉及文件（已实现）
 
-- [server/src/routes/arcade.ts](../../server/src/routes/arcade.ts) — 现有 `/api/v1/me/arcade/events` 开局/结束结算与合理性校验 `validatePlausibleFinish`。
-- [server/src/db.ts](../../server/src/db.ts) — `arcade_rounds`（逐局成员、游戏、难度、开始/结束时间、结果）、`offline_receipts`。
-- [server/src/services/progression.ts](../../server/src/services/progression.ts) 与 [server/src/routes/sync.ts](../../server/src/routes/sync.ts) — 离线街机凭据接受链。
-- [src/data/games.ts](../../src/data/games.ts) — 16 个游戏的 `bestMetric`（max / min / wins）与单位。
-- [src/lib/arcadeStats.ts](../../src/lib/arcadeStats.ts) — 个人最佳口径 `getBestValue`，榜单必须与之一致。
-- [src/components/game/PersonalBest.tsx](../../src/components/game/PersonalBest.tsx)、[src/components/game/GameShell.tsx](../../src/components/game/GameShell.tsx) — 游戏内展示位。
-- [src/pages/Home.tsx](../../src/pages/Home.tsx)、[src/pages/Category.tsx](../../src/pages/Category.tsx) — 大厅/分类入口。
-- [server/src/cli/member.ts](../../server/src/cli/member.ts) — NAS 本地管理 CLI。
-
-计划新增：`shared/contracts/leaderboard.ts`、`server/src/routes/leaderboard.ts`、`server/src/services/familyFeed.ts`、榜单页面与组件。
+- [server/src/routes/arcade.ts](../../server/src/routes/arcade.ts) — `/api/v1/me/arcade/events` 开局/结束结算、合理性校验 `validatePlausibleFinish` 与榜单写入 `recordRankedResult`。
+- [server/src/db.ts](../../server/src/db.ts) — `arcade_rounds`、`offline_receipts`、`leaderboard_entries`、`leaderboard_week_settlements`、`weekly_champions`、`family_feed`。
+- [server/src/services/progression.ts](../../server/src/services/progression.ts) 与 [server/src/routes/sync.ts](../../server/src/routes/sync.ts) — 离线街机凭据接受链（带 `meta.durationMs` 下限校验）。
+- [shared/contracts/leaderboard.ts](../../shared/contracts/leaderboard.ts)、[server/src/services/leaderboard.ts](../../server/src/services/leaderboard.ts)、[server/src/services/arcadeLimits.ts](../../server/src/services/arcadeLimits.ts)、[server/src/routes/leaderboard.ts](../../server/src/routes/leaderboard.ts)、[server/src/cli/leaderboard.ts](../../server/src/cli/leaderboard.ts) — 榜单服务、周冠惰性结算、家庭动态、16 游戏合理性门禁与管理 CLI。
+- [src/pages/Leaderboard.tsx](../../src/pages/Leaderboard.tsx)、[src/components/game/FamilyStandingPill.tsx](../../src/components/game/FamilyStandingPill.tsx)、[src/components/game/GameResultOverlay.tsx](../../src/components/game/GameResultOverlay.tsx)、[src/components/home/FamilyFeedLobbyPanel.tsx](../../src/components/home/FamilyFeedLobbyPanel.tsx)、[src/components/profile/WeeklyChampionsCard.tsx](../../src/components/profile/WeeklyChampionsCard.tsx) — 家庭榜单页、GameShell 与结算弹层实时名次/分差/新纪录提示、大厅动态与个人资料页周冠荣誉展示。
 
 ## 23.1 榜单口径
 

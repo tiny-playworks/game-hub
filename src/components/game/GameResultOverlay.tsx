@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useOptionalArcade } from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import { games } from '@/data/games';
+import { formatMessage } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 export type ResultTone = 'win' | 'lose' | 'draw';
@@ -52,11 +53,18 @@ export const GameResultOverlay = ({
   isNewBest,
   previousBest,
 }: GameResultOverlayProps) => {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const arcade = useOptionalArcade();
   if (!open) return null;
 
   const style = TONE_STYLE[tone];
+  const game = games.find((item) => item.id === arcade?.gameId);
+  const unitLabel = t(
+    game?.bestMetric === 'wins'
+      ? 'arcade.unit.streak'
+      : (game?.bestUnitKey ?? 'arcade.unit.points'),
+  );
+  const standing = arcade?.result?.leaderboard;
 
   return (
     <div
@@ -85,15 +93,59 @@ export const GameResultOverlay = ({
             <strong className="text-gold">{t('arcade.newBest')}</strong>
             <p className="mt-1 text-muted-foreground">
               {previousBest ?? arcade?.result?.previousBest ?? '—'} →{' '}
-              {arcade?.result?.currentBest ?? '—'}{' '}
-              {t(
-                games.find((game) => game.id === arcade?.gameId)?.bestMetric ===
-                  'wins'
-                  ? 'arcade.unit.streak'
-                  : (games.find((game) => game.id === arcade?.gameId)
-                      ?.bestUnitKey ?? 'arcade.unit.points'),
-              )}
+              {arcade?.result?.currentBest ?? '—'} {unitLabel}
             </p>
+          </div>
+        )}
+        {standing && (standing.allTimeRank !== null || standing.weekRank !== null) && (
+          <div
+            data-testid="overlay-family-standing"
+            className="mt-3 rounded-xl border border-primary/30 bg-primary/10 p-3 text-xs"
+          >
+            {standing.isFamilyRecord && (
+              <p className="mb-1 font-semibold text-gold">
+                ★ {t('leaderboard.overlay.familyRecord')}
+              </p>
+            )}
+            <div className="flex flex-wrap items-center justify-center gap-2 font-medium text-foreground">
+              {standing.allTimeRank !== null && (
+                <span>
+                  {formatMessage(locale, 'leaderboard.overlay.allTimeRank', {
+                    rank: standing.allTimeRank,
+                  })}
+                </span>
+              )}
+              {standing.allTimeRank !== null && standing.weekRank !== null && (
+                <span className="text-muted-foreground">·</span>
+              )}
+              {standing.weekRank !== null && (
+                <span>
+                  {formatMessage(locale, 'leaderboard.overlay.weekRank', {
+                    rank: standing.weekRank,
+                  })}
+                </span>
+              )}
+            </div>
+            {(standing.allTimeGapToPrevious !== null ||
+              standing.weekGapToPrevious !== null) && (
+              <p className="mt-1 text-muted-foreground">
+                {formatMessage(locale, 'leaderboard.overlay.gapToPrev', {
+                  gap:
+                    standing.weekGapToPrevious ??
+                    standing.allTimeGapToPrevious ??
+                    0,
+                  unit: unitLabel,
+                })}
+              </p>
+            )}
+            {arcade?.gameId && (
+              <Link
+                to={`/leaderboard?game=${encodeURIComponent(arcade.gameId)}&difficulty=${encodeURIComponent(arcade.difficulty)}`}
+                className="mt-1.5 inline-block text-primary underline-offset-4 hover:underline"
+              >
+                {t('leaderboard.overlay.viewBoard')}
+              </Link>
+            )}
           </div>
         )}
         {description && (

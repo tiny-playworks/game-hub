@@ -138,7 +138,7 @@ Original prompt: 可以 提交然后 p6吧
 - 真实 NAS 上的多设备证据来自独立客户端/deviceId；实体手机音频/触控/后台及 Wi-Fi 体验仍可补充，P17 等玩家反馈后再决定 P19。没有构建 EXE，没有开始 P19–P21。
 - 完整证据与回退见 docs/roadmap/NAS-ACCEPTANCE-2026-10-15.md；两份交接和 P7–P18 状态已同步。
 
-## 2026-10-19 P22 非 NAS 项与第 10 名角色（椿 / Tsubaki）完成 + P23 服务端交付
+## 2026-10-19 P22 非 NAS 项与第 10 名角色（椿 / Tsubaki）完成 + P23 家庭排行榜与动态全栈交付
 
 - **P22 本地迁移演练工具**：
   1. `server/src/cli/migrate-check.ts`：只读复制指定 SQLite 数据库并在临时目录演练迁移，核对成员快照散列、revision、全部 10 关 `journey_attempts` CHECK 约束、`family_cups*` 与 P23 榜单/动态表。
@@ -149,7 +149,8 @@ Original prompt: 可以 提交然后 p6吧
   3. 巡礼第 10 关：`shared/contracts/journey.ts`、`src/lib/riichiJourney.ts`、`server/src/db.ts`、`src/pages/Journey.tsx` 与 `src/lib/journeyMessages.ts` 扩展 `tsubaki-finale`（山茶雀庄 · 终局茶席，目标：不放铳且净得 ≥ +2000 点，或听牌不失分收官）。
   4. 逆风翻盘 AI：`src/pages/mahjong/japanese/engine/aiStrategy.ts` 与 `ai.ts` 支持 `comebackBias`（仅依据公开点差：落后时降低弃和压力并提高立直/打点进攻性，大幅领先时优先稳健收手保位）。
   5. 双语文案：`src/lib/tsubakiMessages.ts` 提供完整中英双语角色档案、标签、外观名、9 类牌桌语音、闲聊与 4 阶段好感故事。
-- **P23 家庭排行榜与动态（服务端已完成）**：
-  1. `shared/contracts/leaderboard.ts`、`server/src/services/leaderboard.ts`、`server/src/services/arcadeLimits.ts`、`server/src/routes/leaderboard.ts`、`server/src/cli/leaderboard.ts` 及 `tests/p23-leaderboard.test.ts`（12 项测试全部通过）。
-- **验证**：`pnpm typecheck`、`pnpm lint`、`pnpm test`（86 个测试文件、609 项测试全部通过）、`pnpm build` 与 `cd server && pnpm build` 全部通过。
+- **P23 家庭排行榜与动态（服务端 + 前端界面全量交付）**：
+  1. 服务端：`shared/contracts/leaderboard.ts`、`server/src/services/leaderboard.ts`、`server/src/services/arcadeLimits.ts`、`server/src/routes/leaderboard.ts`、`server/src/cli/leaderboard.ts` 及 `tests/p23-leaderboard.test.ts`（12 项测试全部通过）。
+  2. 前端界面：`src/pages/Leaderboard.tsx`（按分类/游戏/难度切换、历史/本周标签、成员成绩榜与 100 条家庭动态流、游客/离线模式安全提示）、`src/components/game/FamilyStandingPill.tsx`（GameShell 与分类页实时显示家庭 #N / 本周 #N 与距上一名分差）、`src/components/game/GameResultOverlay.tsx`（结算遮罩显示家庭名次、周名次、距上一名分差与刷新家庭纪录金标提示）、`src/components/home/FamilyFeedLobbyPanel.tsx`（大厅家庭动态卡片）、`src/components/profile/WeeklyChampionsCard.tsx`（个人资料页周冠军徽记与荣誉头衔展示）及 `tests/p23-leaderboard-ui.test.tsx`（5 项 UI 测试全部通过）。
+- **验证**：`pnpm typecheck`、`pnpm lint`、`pnpm test`（87 个测试文件、614 项测试全部通过）、`pnpm build` 与 `cd server && pnpm build` 全部通过。
 

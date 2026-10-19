@@ -7,6 +7,7 @@ import { familyMessages } from './familyMessages';
 import { journeyMessages } from './journeyMessages';
 import { practiceMessages } from './practiceMessages';
 import { replayBranchMessages } from './replayBranchMessages';
+import { leaderboardMessages } from './leaderboardMessages';
 export type Locale = 'zh' | 'en';
 
 const messages: Record<Locale, Record<string, string>> = {
@@ -4587,6 +4588,7 @@ const warnedMissingKeys = new Set<string>();
 
 export function getMessage(locale: Locale, key: string): string {
   const translated =
+    (leaderboardMessages[locale] as Record<string, string> | undefined)?.[key] ??
     curatedMessages[locale]?.[key] ??
     familyMessages[locale]?.[key] ??
     aoiMessages[locale]?.[key] ??

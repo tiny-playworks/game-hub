@@ -412,5 +412,33 @@ export async function getFamilyCup(
   );
 }
 
+export async function fetchLeaderboard(
+  gameId: string,
+  difficulty: string,
+  scope: import('../../../shared/contracts/leaderboard').LeaderboardScope,
+): Promise<import('../../../shared/contracts/leaderboard').LeaderboardResponse> {
+  const params = new URLSearchParams({ gameId, difficulty, scope });
+  return request<import('../../../shared/contracts/leaderboard').LeaderboardResponse>(
+    `/api/v1/leaderboard?${params.toString()}`,
+  );
+}
+
+export async function fetchFamilyFeed(
+  limit = 20,
+): Promise<{ items: import('../../../shared/contracts/leaderboard').FamilyFeedItem[] }> {
+  return request<{ items: import('../../../shared/contracts/leaderboard').FamilyFeedItem[] }>(
+    `/api/v1/feed?limit=${encodeURIComponent(limit)}`,
+  );
+}
+
+export async function fetchMyChampions(): Promise<{
+  badges: import('../../../shared/contracts/leaderboard').WeeklyChampionBadge[];
+}> {
+  return request<{
+    badges: import('../../../shared/contracts/leaderboard').WeeklyChampionBadge[];
+  }>('/api/v1/me/champions');
+}
+
+
 
 

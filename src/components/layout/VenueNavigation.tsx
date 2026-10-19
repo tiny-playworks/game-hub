@@ -9,6 +9,7 @@ import { useLocale } from '@/contexts/LocaleContext';
 const links = [
   ['/', 'venue.nav.home'],
   ['/family', 'venue.nav.family'],
+  ['/leaderboard', 'venue.nav.leaderboard'],
   ['/characters', 'characters.title'],
   ['/achievements', 'home.quick.achievements'],
   ['/shop', 'shop.title'],

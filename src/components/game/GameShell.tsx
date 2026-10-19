@@ -26,6 +26,7 @@ import {
 import { updatePlayerProfile } from '@/lib/playerProfile';
 import { cn } from '@/lib/utils';
 import { PersonalBest } from './PersonalBest';
+import { FamilyStandingPill } from './FamilyStandingPill';
 import { SegmentedControl } from './SegmentedControl';
 
 interface GameShellProps {
@@ -169,6 +170,13 @@ export const GameShell = ({
             <WalletBadge />
             {status}
             {id && <PersonalBest gameId={id} difficulty={arcade?.difficulty} />}
+            {id && (
+              <FamilyStandingPill
+                gameId={id}
+                difficulty={arcade?.difficulty}
+                standing={arcade?.result?.leaderboard}
+              />
+            )}
             {(arcade || onPause) && (
               <Button
                 variant="outline"
