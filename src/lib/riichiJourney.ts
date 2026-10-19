@@ -31,7 +31,8 @@ export type JourneyCharacterId =
   | 'sora'
   | 'aya'
   | 'mahiru'
-  | 'yoru';
+  | 'yoru'
+  | 'tsubaki';
 
 export interface JourneyStageDefinition {
   id: JourneyStageId;
@@ -154,6 +155,18 @@ export const JOURNEY_STAGES: readonly JourneyStageDefinition[] = [
     goalKey: 'journey.stage.yoru.goal',
     venueKey: 'journey.stage.yoru.venue',
     introKey: 'journey.stage.yoru.intro',
+    nextStageId: 'tsubaki-finale',
+  },
+  {
+    id: 'tsubaki-finale',
+    characterId: 'tsubaki',
+    opponents: ['tsubaki', 'yoru', 'mahiru'],
+    seed: 108,
+    prefixEventCount: 12,
+    titleKey: 'journey.stage.tsubaki.title',
+    goalKey: 'journey.stage.tsubaki.goal',
+    venueKey: 'journey.stage.tsubaki.venue',
+    introKey: 'journey.stage.tsubaki.intro',
     nextStageId: null,
   },
 ];
@@ -295,6 +308,10 @@ export function resolveFailureReasonKey(
       return metrics.openedMeld
         ? 'journey.failure.openedUnderThreat'
         : 'journey.failure.dealtIn';
+    case 'tsubaki-finale':
+      return metrics.pointsDelta < 2000
+        ? 'journey.failure.comebackShort'
+        : 'journey.failure.notTenpai';
   }
 }
 
@@ -412,6 +429,9 @@ export function validateJourneyAttempt(input: JourneyAttemptInput): JourneyEvalu
       break;
     case 'yoru-reading':
       completed = survivedThreat && !openedMeld;
+      break;
+    case 'tsubaki-finale':
+      completed = reachedTenpai && pointsDelta > 0 && safeFinish;
       break;
   }
 

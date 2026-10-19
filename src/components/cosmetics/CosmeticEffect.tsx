@@ -19,6 +19,7 @@ const themes: Record<
   'win-chitose': { color: '#b8db91', symbol: '葉', motion: 'fall' },
   'win-aya': { color: '#ff747b', symbol: 'ϟ', motion: 'bolt' },
   'win-yoru': { color: '#b6bfff', symbol: '☾', motion: 'orbit' },
+  'win-tsubaki': { color: '#e2a856', symbol: '✿', motion: 'fall' },
 };
 
 /** The shop and the live game share the same effect layer. CSS honors reduced motion. */

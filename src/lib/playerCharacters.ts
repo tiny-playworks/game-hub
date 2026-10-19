@@ -23,6 +23,7 @@ export interface CharacterStyle {
   defenseBias: number;
   valueBias: number;
   flushBias: number;
+  comebackBias?: number;
 }
 
 export const CHARACTER_LINE_TRIGGERS = [
@@ -47,7 +48,8 @@ export type CharacterUnlockRule =
       /** 老解锁条件与段位条件取或；段位由 P3 传入。 */
       rankBand: RankBand;
     }
-  | { type: 'rank-band'; target: RankBand };
+  | { type: 'rank-band'; target: RankBand }
+  | { type: 'journey-stage'; target: string };
 
 export interface CharacterDef {
   id: string;
@@ -306,6 +308,23 @@ CHARACTER_DEFS.push(
     styleTagKeys: ['character.tag.balanced'],
     unlockRule: { type: 'default', target: 0 },
   }),
+  defineCharacter({
+    id: 'tsubaki',
+    name: '椿',
+    tagline: '点差会说话，我只负责听。',
+    accent: 'from-rose-300 via-amber-100 to-emerald-100',
+    rankBand: 'master',
+    style: {
+      callAggression: 0.4,
+      riichiAggression: 0.75,
+      defenseBias: 0.6,
+      valueBias: 0.7,
+      flushBias: 0.3,
+      comebackBias: 0.9,
+    },
+    styleTagKeys: ['character.tag.comeback', 'character.tag.balanced'],
+    unlockRule: { type: 'journey-stage', target: 'tsubaki-finale' },
+  }),
 );
 
 function getDefaultCharacter(): CharacterDef {
@@ -478,6 +497,21 @@ export function getCharacterAffinityStage(affinity: number): number {
   return 0;
 }
 
+function isJourneyStageCompletedInStorage(stageId: string): boolean {
+  try {
+    const raw = JSON.parse(gameStorage.getItem('game-hub-journey-v1') ?? 'null');
+    return Boolean(
+      raw &&
+        typeof raw === 'object' &&
+        raw.stages &&
+        typeof raw.stages === 'object' &&
+        raw.stages[stageId]?.completed === true,
+    );
+  } catch {
+    return false;
+  }
+}
+
 function isCharacterUnlocked(
   character: CharacterDef,
   reachedRankBand?: RankBand,
@@ -486,7 +520,8 @@ function isCharacterUnlocked(
   const rankTarget =
     character.unlockRule.type === 'rank-band'
       ? character.unlockRule.target
-      : character.unlockRule.type === 'default'
+      : character.unlockRule.type === 'default' ||
+          character.unlockRule.type === 'journey-stage'
         ? undefined
         : character.unlockRule.rankBand;
   if (
@@ -506,6 +541,8 @@ function isCharacterUnlocked(
       return true;
     case 'rank-band':
       return false;
+    case 'journey-stage':
+      return isJourneyStageCompletedInStorage(character.unlockRule.target);
   }
 }
 

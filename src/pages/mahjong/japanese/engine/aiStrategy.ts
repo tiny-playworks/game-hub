@@ -220,12 +220,17 @@ export function advancedStance(
 ): 'attack' | 'balanced' | 'fold' {
   if (threat <= 0) return 'attack';
   const position = positionOutlook(state, seat, attack.points, rules);
-  if (expert && position.leading) {
+  const comeback = style?.comebackBias ?? 0;
+  const score = state.scores[seat];
+  const otherScores = state.scores.filter((_, index) => index !== seat);
+  const lead = score - Math.max(...otherScores);
+  if ((expert || comeback >= 0.7) && (position.leading || (comeback >= 0.7 && lead >= 6000))) {
     if (shanten > 0 || attack.waitTypes < 2 || attack.points < 3900)
       return 'fold';
     return 'balanced';
   }
-  const pressure = threat * (0.85 + (style?.defenseBias ?? 0.5) * 0.3);
+  const comebackRelief = comeback > 0 && lead <= -4000 ? comeback * 0.25 : 0;
+  const pressure = threat * Math.max(0.55, 0.85 + (style?.defenseBias ?? 0.5) * 0.3 - comebackRelief);
   const mangan = seat === state.dealer ? 12000 : 8000;
   if (shanten >= 1) {
     if (attack.points < mangan || shanten >= 2 || state.wall.length < 16)

@@ -48,9 +48,9 @@ afterEach(() => {
 // P19: 雀庄巡礼第一季 (9-Character Journey Season 1)
 // ==========================================
 
-test('P19: all 9 journey stages are defined with unique deterministic seeds and valid targets', () => {
-  expect(JOURNEY_STAGES).toHaveLength(9);
-  expect(JOURNEY_STAGE_IDS).toHaveLength(9);
+test('P19: all 10 journey stages are defined with unique deterministic seeds and valid targets', () => {
+  expect(JOURNEY_STAGES).toHaveLength(10);
+  expect(JOURNEY_STAGE_IDS).toHaveLength(10);
 
   const seeds = new Set<number>();
   for (const stage of JOURNEY_STAGES) {
@@ -72,7 +72,7 @@ test('P19: every playable character in CHARACTER_DEFS maps to an active Journey 
   }
 });
 
-test('P19: createJourneyMatch generates deterministic started matches for all 9 stages', () => {
+test('P19: createJourneyMatch generates deterministic started matches for all 10 stages', () => {
   for (const stage of JOURNEY_STAGES) {
     const match = createJourneyMatch(stage.id);
     expect(match.status).toBe('playing');
@@ -127,6 +127,17 @@ test('P19: resolveFailureReasonKey evaluates distinct stage failure reasons', ()
   });
   expect(mahiruFail).toBe('journey.failure.suitScattered');
 
+  // tsubaki-finale fails if pointsDelta < 2000 without tenpai
+  const tsubakiFail = resolveFailureReasonKey('tsubaki-finale', {
+    safeFinish: true,
+    reachedTenpai: false,
+    openedMeld: false,
+    pointsDelta: 1000,
+    declaredRiichi: false,
+    suitFocusCount: 5,
+  });
+  expect(tsubakiFail).toBe('journey.failure.comebackShort');
+
   // dealing in fails with dealtIn
   const dealtInFail = resolveFailureReasonKey('mio-defense', {
     safeFinish: false,
@@ -139,7 +150,7 @@ test('P19: resolveFailureReasonKey evaluates distinct stage failure reasons', ()
   expect(dealtInFail).toBe('journey.failure.dealtIn');
 });
 
-test('P19: journeyMessages copy exists and matches in both zh and en for all 9 stages', () => {
+test('P19: journeyMessages copy exists and matches in both zh and en for all 10 stages', () => {
   expect(Object.keys(journeyMessages.zh).sort()).toEqual(Object.keys(journeyMessages.en).sort());
   for (const stage of JOURNEY_STAGES) {
     for (const locale of ['zh', 'en'] as const) {
@@ -151,7 +162,7 @@ test('P19: journeyMessages copy exists and matches in both zh and en for all 9 s
   }
 });
 
-test('P19: normalizeJourneyProgress preserves P17 progress while allowing 9 stages', () => {
+test('P19: normalizeJourneyProgress preserves P17 progress while allowing 10 stages', () => {
   const legacyProgress = {
     schema: 1,
     contentVersion: 1,
@@ -167,11 +178,12 @@ test('P19: normalizeJourneyProgress preserves P17 progress while allowing 9 stag
   expect(normalized.stages['aoi-balance'].completed).toBe(true);
   expect(normalized.stages['rin-tempo'].completed).toBe(true);
   expect(normalized.stages['koharu-call'].completed).toBe(false);
+  expect(normalized.stages['tsubaki-finale'].completed).toBe(false);
   expect(normalized.stages['aoi-balance'].bestPointsDelta).toBe(32000);
-  expect(Object.keys(normalized.stages)).toHaveLength(9);
+  expect(Object.keys(normalized.stages)).toHaveLength(10);
 });
 
-test('P19: SQLite table migration updates journey_attempts CHECK constraint for all 9 stages', () => {
+test('P19: SQLite table migration updates journey_attempts CHECK constraint for all 10 stages', () => {
   const dir = mkdtempSync(join(tmpdir(), 'game-hub-p19-'));
   const dbPath = join(dir, 'test-p19-journey.sqlite');
   try {
@@ -207,14 +219,15 @@ test('P19: SQLite table migration updates journey_attempts CHECK constraint for 
     process.env.GAME_HUB_DB_PATH = dbPath;
     const db = openDatabase();
     try {
-      // 验证自动迁移后，能够正常写入后 6 关（例如 yoru-reading）的挑战记录
+      // 验证自动迁移后，能够正常写入第 9 关（yoru-reading）与第 10 关（tsubaki-finale）的挑战记录
       db.prepare(`
         INSERT INTO journey_attempts (member_id, attempt_id, stage_id, content_version, payload_hash, evaluation_json, created_at)
-        VALUES ('m1', 'att-2', 'yoru-reading', 1, 'hash2', '{"completed":true}', 200)
+        VALUES ('m1', 'att-2', 'yoru-reading', 1, 'hash2', '{"completed":true}', 200),
+               ('m1', 'att-3', 'tsubaki-finale', 1, 'hash3', '{"completed":true}', 300)
       `).run();
 
-      const row = db.prepare('SELECT * FROM journey_attempts WHERE attempt_id = ?').get('att-2') as { stage_id: string };
-      expect(row.stage_id).toBe('yoru-reading');
+      const row = db.prepare('SELECT * FROM journey_attempts WHERE attempt_id = ?').get('att-3') as { stage_id: string };
+      expect(row.stage_id).toBe('tsubaki-finale');
     } finally {
       db.close();
     }

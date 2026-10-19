@@ -1,6 +1,7 @@
 import { gameStorage } from '@/lib/storage';
 import { arcadeMessages } from './arcadeMessages';
 import { aoiMessages } from './aoiMessages';
+import { tsubakiMessages } from './tsubakiMessages';
 import { curatedMessages } from './curatedMessages';
 import { familyMessages } from './familyMessages';
 import { journeyMessages } from './journeyMessages';
@@ -4589,6 +4590,7 @@ export function getMessage(locale: Locale, key: string): string {
     curatedMessages[locale]?.[key] ??
     familyMessages[locale]?.[key] ??
     aoiMessages[locale]?.[key] ??
+    tsubakiMessages[locale]?.[key] ??
     journeyMessages[locale]?.[key] ??
     replayBranchMessages[locale]?.[key] ??
     practiceMessages[locale]?.[key] ??

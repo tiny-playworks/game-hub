@@ -32,6 +32,7 @@ const AI_CANDIDATES = [
   { id: 'sora', name: '空' },
   { id: 'koharu', name: '小春' },
   { id: 'chitose', name: '千岁' },
+  { id: 'tsubaki', name: '椿' },
   { id: 'kuro', name: '黑' },
   { id: 'shiro', name: '白' },
 ];

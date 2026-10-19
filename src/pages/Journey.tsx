@@ -7,7 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useHousehold } from '@/contexts/HouseholdContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import { formatMessage } from '@/lib/i18n';
-import { getCharacterById } from '@/lib/playerCharacters';
+import {
+  getCharacterById,
+  markCharactersEncountered,
+} from '@/lib/playerCharacters';
 import { JOURNEY_CONTENT_VERSION } from '../../shared/contracts/journey';
 import { createUuid } from '@/lib/uuid';
 import {
@@ -86,6 +89,7 @@ export default function Journey() {
         attemptKey,
         match: createJourneyMatch(selectedStage.id),
       });
+      if (!isMember) markCharactersEncountered(selectedStage.opponents);
       setEvaluation(null);
       setPendingInput(null);
       setSubmitError(false);
@@ -193,7 +197,7 @@ export default function Journey() {
                       ) : null}
                     </div>
                     <CardTitle className="mt-1 flex items-center gap-2 text-xl">
-                      <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm tabular-nums text-primary">0{index + 1}</span>
+                      <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm tabular-nums text-primary">{String(index + 1).padStart(2, '0')}</span>
                       {t(stage.titleKey)}
                     </CardTitle>
                     <p className="text-sm font-medium">{t(character.nameKey)}</p>

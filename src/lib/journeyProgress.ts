@@ -5,7 +5,11 @@ import {
   type JourneyEvaluation,
   type JourneyProgressState,
 } from '../../shared/contracts/journey';
-import { validateJourneyAttempt } from '@/lib/riichiJourney';
+import { validateJourneyAttempt, getJourneyStage } from '@/lib/riichiJourney';
+import {
+  markCharactersEncountered,
+  syncPlayerCharacterUnlocks,
+} from '@/lib/playerCharacters';
 import { commitStorageChanges, gameStorage, getStorageDriver } from '@/lib/storage';
 
 export { normalizeJourneyProgress, recordJourneyEvaluation };
@@ -36,6 +40,9 @@ export function recordLocalJourneyAttempt(input: JourneyAttemptInput): {
   const state = recordJourneyEvaluation(previous, input.attemptId, input.stageId, evaluation, Date.now());
   if (!duplicate) {
     commitStorageChanges({ [JOURNEY_PROGRESS_STORAGE_KEY]: JSON.stringify(state) });
+    const stage = getJourneyStage(input.stageId);
+    if (stage) markCharactersEncountered(stage.opponents);
+    if (evaluation.completed) syncPlayerCharacterUnlocks();
     if (typeof window !== 'undefined')
       window.dispatchEvent(new Event(JOURNEY_PROGRESS_CHANGED_EVENT));
   }

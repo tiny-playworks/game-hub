@@ -172,6 +172,15 @@ export function parseLegacyImport(
     optionalObject(data, 'game-hub-theme-challenges-v1'),
   );
   snapshot.journey = normalizeJourneyProgress(optionalObject(data, 'game-hub-journey-v1'));
+  if (
+    snapshot.journey.stages['tsubaki-finale']?.completed &&
+    !snapshot.characters.unlockedCharacterIds.includes('tsubaki')
+  ) {
+    snapshot.characters = normalizePlayerCharacterState({
+      ...snapshot.characters,
+      unlockedCharacterIds: [...snapshot.characters.unlockedCharacterIds, 'tsubaki'],
+    });
+  }
   snapshot.checkin = normalizeCheckinState(optionalObject(data, 'game-hub-checkin-state'));
   snapshot.ranked = normalizeRankedState(rankedRaw);
   snapshot.preferences.locale = data['game-hub-locale'] === 'en' ? 'en' : 'zh';

@@ -11,6 +11,7 @@ export const JOURNEY_STAGE_IDS = [
   'aya-riichi',
   'mahiru-flush',
   'yoru-reading',
+  'tsubaki-finale',
 ] as const;
 export const JOURNEY_RECENT_ATTEMPT_LIMIT = 500;
 

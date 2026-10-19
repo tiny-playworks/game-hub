@@ -152,7 +152,8 @@ function migrate(db: DatabaseSync): void {
         'sora-value',
         'aya-riichi',
         'mahiru-flush',
-        'yoru-reading'
+        'yoru-reading',
+        'tsubaki-finale'
       )),
       content_version INTEGER NOT NULL CHECK(content_version = 1),
       payload_hash TEXT NOT NULL,
@@ -287,7 +288,7 @@ function migrate(db: DatabaseSync): void {
   const journeySql = db
     .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'journey_attempts'")
     .get() as { sql?: string } | undefined;
-  if (journeySql?.sql && !journeySql.sql.includes('koharu-call')) {
+  if (journeySql?.sql && !journeySql.sql.includes('tsubaki-finale')) {
     transaction(db, () => {
       db.exec(`
         CREATE TABLE journey_attempts_v2 (
@@ -302,7 +303,8 @@ function migrate(db: DatabaseSync): void {
             'sora-value',
             'aya-riichi',
             'mahiru-flush',
-            'yoru-reading'
+            'yoru-reading',
+            'tsubaki-finale'
           )),
           content_version INTEGER NOT NULL CHECK(content_version = 1),
           payload_hash TEXT NOT NULL,
@@ -379,10 +381,32 @@ export function readSnapshot(row: MemberRow): MemberSnapshot {
   ) {
     throw new Error('Member snapshot is inconsistent');
   }
+  const journey = normalizeJourneyProgress(snapshot.journey);
+  const unlockedByJourney = (['tsubaki'] as const).filter(
+    (id) =>
+      id === 'tsubaki' &&
+      journey.stages['tsubaki-finale']?.completed &&
+      !snapshot.characters.unlockedCharacterIds.includes(id),
+  );
   return {
     ...snapshot,
     themeChallenges: normalizeThemeChallengeState(snapshot.themeChallenges),
-    journey: normalizeJourneyProgress(snapshot.journey),
+    journey,
+    ...(unlockedByJourney.length > 0
+      ? {
+          characters: {
+            ...snapshot.characters,
+            unlockedCharacterIds: [
+              ...snapshot.characters.unlockedCharacterIds,
+              ...unlockedByJourney,
+            ],
+            affinityByCharacter: {
+              ...Object.fromEntries(unlockedByJourney.map((id) => [id, 0])),
+              ...snapshot.characters.affinityByCharacter,
+            },
+          },
+        }
+      : {}),
   };
 }
 

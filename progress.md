@@ -137,3 +137,19 @@ Original prompt: 可以 提交然后 p6吧
 - 正式两名成员的原 PIN 登录通过，快照散列与 revision 发布前后相同；一致性备份、旧静态/API 保留。NAS QA 手动回滚及健康失败回退通过，邻接媒体服务未改动。
 - 真实 NAS 上的多设备证据来自独立客户端/deviceId；实体手机音频/触控/后台及 Wi-Fi 体验仍可补充，P17 等玩家反馈后再决定 P19。没有构建 EXE，没有开始 P19–P21。
 - 完整证据与回退见 docs/roadmap/NAS-ACCEPTANCE-2026-10-15.md；两份交接和 P7–P18 状态已同步。
+
+## 2026-10-19 P22 非 NAS 项与第 10 名角色（椿 / Tsubaki）完成 + P23 服务端交付
+
+- **P22 本地迁移演练工具**：
+  1. `server/src/cli/migrate-check.ts`：只读复制指定 SQLite 数据库并在临时目录演练迁移，核对成员快照散列、revision、全部 10 关 `journey_attempts` CHECK 约束、`family_cups*` 与 P23 榜单/动态表。
+  2. `tests/p22-migration-rehearsal.test.ts`：覆盖从旧版 3 关 schema 平滑升级至最新 schema 且成员快照零改动。
+- **P22.3 第 10 名角色（椿 / `tsubaki`）与巡礼第 10 关收束关（`tsubaki-finale`）全量接入**：
+  1. 资产：`src/assets/characters/tsubaki/` 下 `avatar.webp` (256×256) 与 `normal.webp` / `happy.webp` / `frustrated.webp` (1024×1536) 已挂载至 `src/assets/characters/index.ts` 与 `CharacterStoryPlayer.tsx`。
+  2. 名册与解锁：`CHARACTER_DEFS` 末尾追加 `tsubaki`（保持前 9 名角色顺序与外观 ID 不变，自动派生好感 3 阶和牌特效 `win-tsubaki` 与 4 阶头像框 `frame-tsubaki`）；解锁规则新增 `{ type: 'journey-stage', target: 'tsubaki-finale' }`，通关第 10 关收束关后自动解锁并可选为主角色。
+  3. 巡礼第 10 关：`shared/contracts/journey.ts`、`src/lib/riichiJourney.ts`、`server/src/db.ts`、`src/pages/Journey.tsx` 与 `src/lib/journeyMessages.ts` 扩展 `tsubaki-finale`（山茶雀庄 · 终局茶席，目标：不放铳且净得 ≥ +2000 点，或听牌不失分收官）。
+  4. 逆风翻盘 AI：`src/pages/mahjong/japanese/engine/aiStrategy.ts` 与 `ai.ts` 支持 `comebackBias`（仅依据公开点差：落后时降低弃和压力并提高立直/打点进攻性，大幅领先时优先稳健收手保位）。
+  5. 双语文案：`src/lib/tsubakiMessages.ts` 提供完整中英双语角色档案、标签、外观名、9 类牌桌语音、闲聊与 4 阶段好感故事。
+- **P23 家庭排行榜与动态（服务端已完成）**：
+  1. `shared/contracts/leaderboard.ts`、`server/src/services/leaderboard.ts`、`server/src/services/arcadeLimits.ts`、`server/src/routes/leaderboard.ts`、`server/src/cli/leaderboard.ts` 及 `tests/p23-leaderboard.test.ts`（12 项测试全部通过）。
+- **验证**：`pnpm typecheck`、`pnpm lint`、`pnpm test`（86 个测试文件、609 项测试全部通过）、`pnpm build` 与 `cd server && pnpm build` 全部通过。
+

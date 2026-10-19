@@ -2,14 +2,15 @@
 
 > 依赖：P19–P21 本地非 NAS 端已交付（2026-10-16，`b3e64c5`）。先读 [README](./README.md)。
 > 目标：把第三轮成果部署到真实 NAS 并完成现场验收，留下一个干净、可回滚的基线，再开第四轮街机工作。
-> 状态：2026-10-19 本地非 NAS 准备已完成；22.1 部署、22.2 现场验收、22.3 第 10 人（待设定访谈）未开始。
+> 状态：2026-10-19 本地非 NAS 准备与 **22.3 第 10 名角色（椿 / `tsubaki`）及收束关（`tsubaki-finale`）** 均已完成；仅剩需 NAS 现场环境的 22.1 部署与 22.2 真机验收。
 
 ## 本地准备记录（非 NAS）
 
-- [tests/p22-migration-rehearsal.test.ts](../../tests/p22-migration-rehearsal.test.ts)：把数据库回退到 P19 前（3 关 CHECK）、无 `family_cups*`、无 P23 榜单表的形态，用真实 `openDatabase` 迁移：成员快照散列与 revision 不变、旧挑战记录保留且后 6 关可写、新表齐全、`integrity_check`/`foreign_key_check` 通过、重复打开幂等。
+- [tests/p22-migration-rehearsal.test.ts](../../tests/p22-migration-rehearsal.test.ts)：把数据库回退到 P19 前（3 关 CHECK）、无 `family_cups*`、无 P23 榜单表的形态，用真实 `openDatabase` 迁移：成员快照散列与 revision 不变、旧挑战记录保留且全部 10 关可写、新表齐全、`integrity_check`/`foreign_key_check` 通过、重复打开幂等。
 - 新增 `pnpm --filter game-hub-household-server migrate-check <household.sqlite>`（先 `build`）：在临时副本上演练迁移并比对每名成员快照散列/revision，原库只读不动。NAS 22.1 第 2 步可直接对正式库副本使用。
-- 全仓类型检查、规范检查、测试与前后端构建通过。
-- 仍需现场：22.1 备份/QA 环境/切换/回滚演练、22.2 真机多设备验收、第 10 人定稿。
+- **22.3 第 10 名角色（椿 / `tsubaki`）已完成接入**：详见 [P22-character-10-tsubaki.md](./P22-character-10-tsubaki.md)。4 张 WebP 资产（头像 256×256、三表情 1024×1536）已挂载；`CHARACTER_DEFS` 末尾追加 `tsubaki`（保持前 9 名角色索引与外观 ID 不变，自动派生 `win-tsubaki` 与 `frame-tsubaki`）；新增第 10 关收束关 `tsubaki-finale` 与 `{ type: 'journey-stage', target: 'tsubaki-finale' }` 解锁规则；AI `comebackBias` 基于公开点差动态调节攻防；中英双语台词、闲聊、四阶段故事齐全。
+- 全仓类型检查、规范检查、86 套件 609 项测试与前后端构建通过。
+- 仍需现场：22.1 备份/QA 环境/切换/回滚演练、22.2 真机多设备验收。
 
 ## 涉及文件（实施前先核对）
 

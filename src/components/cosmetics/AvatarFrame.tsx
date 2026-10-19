@@ -24,6 +24,7 @@ const frameArt: Record<string, string> = {
   'frame-aya': characterFrame,
   'frame-mahiru': characterFrame,
   'frame-yoru': characterFrame,
+  'frame-tsubaki': characterFrame,
 };
 
 export function AvatarFrame({

@@ -188,6 +188,24 @@ function chooseStance(
   if (level === 'beginner' && !style) return 'attack';
   const threat = totalThreat(state, seat);
   if (threat <= 0) return 'attack';
+  const comeback = style?.comebackBias ?? 0;
+  const score = state.scores[seat];
+  const maxOther = Math.max(...state.scores.filter((_, index) => index !== seat));
+  const lead = score - maxOther;
+  const effectiveDefense = Math.min(
+    1,
+    Math.max(
+      0,
+      (style?.defenseBias ?? 0) +
+        (comeback > 0
+          ? lead >= 6000
+            ? comeback * 0.25
+            : lead <= -4000
+              ? -comeback * 0.3
+              : 0
+          : 0),
+    ),
+  );
   // 只看自己的牌与公开信息；打点高时稍晚弃和，防守型角色更早收手。
   const value = style
     ? state.hands[seat].reduce(
@@ -205,19 +223,19 @@ function chooseStance(
     ? Math.min(value / 6, 1) * style.valueBias * 0.4
     : 0;
   if (bestShanten <= 0) {
-    if (style && style.defenseBias >= 0.8 && threat >= 1.2 && value < 2)
+    if (style && effectiveDefense >= 0.8 && threat >= 1.2 && value < 2)
       return 'fold';
-    return threat >= 2.2 - (style?.defenseBias ?? 0) * 1.4 + valueSupport
+    return threat >= 2.2 - effectiveDefense * 1.4 + valueSupport
       ? 'balanced'
       : 'attack';
   }
   if (bestShanten === 1) {
     const threshold = style
-      ? 1.7 - style.defenseBias * 1.2 + valueSupport
+      ? 1.7 - effectiveDefense * 1.2 + valueSupport
       : 1.2;
     return state.wall.length >= 24 && threat < threshold ? 'balanced' : 'fold';
   }
-  if (style && style.defenseBias < 0.35 && threat < 1.25)
+  if (style && effectiveDefense < 0.35 && threat < 1.25)
     return level === 'beginner' ? 'attack' : 'balanced';
   return 'fold';
 }
@@ -427,7 +445,21 @@ function shouldDeclareRiichi(
   const stickRisk = 1000 * (1 - winChance);
   const flexibilityCost = threat * (state.wall.length < 20 ? 600 : 300);
   if (style) {
-    const aggression = style.riichiAggression;
+    const comeback = style.comebackBias ?? 0;
+    const aggression = Math.min(
+      1,
+      Math.max(
+        0,
+        style.riichiAggression +
+          (comeback > 0
+            ? lead <= -4000
+              ? comeback * 0.25
+              : lead >= 6000
+                ? -comeback * 0.3
+                : 0
+            : 0),
+      ),
+    );
     const poorWaitCost =
       Math.max(0, 4 - waitRemaining) * 250 * (1 - aggression);
     return (

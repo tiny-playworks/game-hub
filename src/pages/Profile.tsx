@@ -93,6 +93,9 @@ function getCharacterUnlockText(
   if (character.unlockRule.type === 'default') {
     return t('profile.companion.unlock.default');
   }
+  if (character.unlockRule.type === 'journey-stage') {
+    return t('profile.companion.unlock.journeyFinale');
+  }
   const rankBand =
     character.unlockRule.type === 'rank-band'
       ? character.unlockRule.target

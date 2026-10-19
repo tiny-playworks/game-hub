@@ -70,10 +70,10 @@ P1–P6 的“纯本地、禁止后端/账号/联机、移动端不专门改造�
 | P16  | 挑战、故事与收藏目标                   | 最新版已发布；NAS 三挑战/故事解锁与防重通过 | [P16](./P16-challenges-stories.md) |
 | P17  | 雀庄巡礼试点                           | NAS 三关/跨设备与整局重试通过；待玩家反馈 | [P17](./P17-venue-journey.md)       |
 | P18  | 牌谱重打                               | NAS 本人牌谱分支终局/隔离与手机结果页通过 | [P18](./P18-replay-branch.md)        |
-| P19  | 雀庄巡礼第一季                         | 本地非 NAS 端已交付；待 NAS 部署与第 10 人定稿 | [P19](./P19-character-season.md)    |
+| P19  | 雀庄巡礼第一季                         | 本地非 NAS 端已交付（含全部 10 关与第 10 人椿）；待 NAS 部署 | [P19](./P19-character-season.md)    |
 | P20  | 家庭雀庄杯                             | 本地非 NAS 端已交付；待 NAS 部署与实体多机体验 | [P20](./P20-family-cup.md)          |
 | P21  | 精选轮换与回访                         | 本地非 NAS 端已交付；待 NAS 部署与轮换体验     | [P21](./P21-curated-rotation.md)    |
-| P22  | 第三轮收尾：P19–P21 NAS 上线与第 10 人 | 本地准备已完成（迁移演练）；NAS 部署/现场验收与第 10 人待办 | [P22](./P22-round3-closeout.md)     |
+| P22  | 第三轮收尾：P19–P21 NAS 上线与第 10 人 | 本地非 NAS 项已全部完成（迁移演练 + 22.3 第 10 人椿）；仅待 NAS 部署/现场验收 | [P22](./P22-round3-closeout.md)     |
 | P23  | 家庭排行榜与动态                       | 服务端已交付（榜单/周冠军/动态/校验/CLI）；界面与 NAS 待办 | [P23](./P23-family-leaderboard.md)  |
 | P24  | 通用房间内核 + 五子棋对战              | 未开始                                             | [P24](./P24-room-kernel-gomoku.md)  |
 | P25  | 中国象棋对战（提和/悔棋/局时/观战）    | 未开始                                             | [P25](./P25-xiangqi-battle.md)      |

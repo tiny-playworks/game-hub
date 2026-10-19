@@ -30,6 +30,10 @@ import yoruAvatar from './yoru/avatar.webp';
 import yoruFrustrated from './yoru/frustrated.webp';
 import yoruHappy from './yoru/happy.webp';
 import yoruNormal from './yoru/normal.webp';
+import tsubakiAvatar from './tsubaki/avatar.webp';
+import tsubakiFrustrated from './tsubaki/frustrated.webp';
+import tsubakiHappy from './tsubaki/happy.webp';
+import tsubakiNormal from './tsubaki/normal.webp';
 
 const assets: Record<string, string> = {
   'characters/koharu/avatar.webp': koharuAvatar,
@@ -40,6 +44,7 @@ const assets: Record<string, string> = {
   'characters/aya/avatar.webp': ayaAvatar,
   'characters/mahiru/avatar.webp': mahiruAvatar,
   'characters/yoru/avatar.webp': yoruAvatar,
+  'characters/tsubaki/avatar.webp': tsubakiAvatar,
   'characters/koharu/happy.webp': koharuHappy,
   'characters/koharu/frustrated.webp': koharuFrustrated,
   'characters/mio/happy.webp': mioHappy,
@@ -56,6 +61,8 @@ const assets: Record<string, string> = {
   'characters/mahiru/frustrated.webp': mahiruFrustrated,
   'characters/yoru/happy.webp': yoruHappy,
   'characters/yoru/frustrated.webp': yoruFrustrated,
+  'characters/tsubaki/happy.webp': tsubakiHappy,
+  'characters/tsubaki/frustrated.webp': tsubakiFrustrated,
   'characters/koharu/normal.webp': koharuNormal,
   'characters/mio/normal.webp': mioNormal,
   'characters/rin/normal.webp': rinNormal,
@@ -64,6 +71,7 @@ const assets: Record<string, string> = {
   'characters/aya/normal.webp': ayaNormal,
   'characters/mahiru/normal.webp': mahiruNormal,
   'characters/yoru/normal.webp': yoruNormal,
+  'characters/tsubaki/normal.webp': tsubakiNormal,
 };
 
 /** 数据层保存稳定资源路径，表现层只解析已到位的资源。 */

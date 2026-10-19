@@ -9,7 +9,8 @@ import {
   type JourneyAttemptInput,
   type JourneyEvaluation,
 } from '../../../shared/contracts/journey';
-import { validateJourneyAttempt } from '@/lib/riichiJourney';
+import { validateJourneyAttempt, getJourneyStage } from '@/lib/riichiJourney';
+import { CHARACTER_DEFS, normalizePlayerCharacterState } from '@/lib/playerCharacters';
 import { apiError, requireSession } from '../auth';
 import { getMember, readSnapshot, saveSnapshot, transaction } from '../db';
 
@@ -85,7 +86,25 @@ export function registerJourneyRoutes(app: FastifyInstance, db: DatabaseSync): v
       const now = Date.now();
       const journey = recordJourneyEvaluation(snapshot.journey,
         input.attemptId, input.stageId, evaluation, now);
-      const updated = saveSnapshot(db, current, { ...snapshot, journey });
+      const stage = getJourneyStage(input.stageId);
+      const unlockedByJourney = CHARACTER_DEFS.filter(
+        (character) =>
+          character.unlockRule.type === 'journey-stage' &&
+          journey.stages[character.unlockRule.target as keyof typeof journey.stages]?.completed,
+      ).map((character) => character.id);
+      const characters = normalizePlayerCharacterState({
+        ...snapshot.characters,
+        unlockedCharacterIds: [
+          ...snapshot.characters.unlockedCharacterIds,
+          ...unlockedByJourney,
+        ],
+        encounteredCharacterIds: [
+          ...snapshot.characters.encounteredCharacterIds,
+          ...(stage ? stage.opponents : []),
+        ],
+        updatedAt: now,
+      });
+      const updated = saveSnapshot(db, current, { ...snapshot, journey, characters });
       db.prepare(`
         INSERT INTO journey_attempts(
           member_id, attempt_id, stage_id, content_version,
