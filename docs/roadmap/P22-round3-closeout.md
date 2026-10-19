@@ -2,7 +2,14 @@
 
 > 依赖：P19–P21 本地非 NAS 端已交付（2026-10-16，`b3e64c5`）。先读 [README](./README.md)。
 > 目标：把第三轮成果部署到真实 NAS 并完成现场验收，留下一个干净、可回滚的基线，再开第四轮街机工作。
-> 状态：2026-10-16 第四轮规划确认，未开始。
+> 状态：2026-10-19 本地非 NAS 准备已完成；22.1 部署、22.2 现场验收、22.3 第 10 人（待设定访谈）未开始。
+
+## 本地准备记录（非 NAS）
+
+- [tests/p22-migration-rehearsal.test.ts](../../tests/p22-migration-rehearsal.test.ts)：把数据库回退到 P19 前（3 关 CHECK）、无 `family_cups*`、无 P23 榜单表的形态，用真实 `openDatabase` 迁移：成员快照散列与 revision 不变、旧挑战记录保留且后 6 关可写、新表齐全、`integrity_check`/`foreign_key_check` 通过、重复打开幂等。
+- 新增 `pnpm --filter game-hub-household-server migrate-check <household.sqlite>`（先 `build`）：在临时副本上演练迁移并比对每名成员快照散列/revision，原库只读不动。NAS 22.1 第 2 步可直接对正式库副本使用。
+- 全仓类型检查、规范检查、测试与前后端构建通过。
+- 仍需现场：22.1 备份/QA 环境/切换/回滚演练、22.2 真机多设备验收、第 10 人定稿。
 
 ## 涉及文件（实施前先核对）
 

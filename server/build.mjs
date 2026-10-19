@@ -7,6 +7,8 @@ await build({
   entryPoints: {
     index: `${root}/src/index.ts`,
     member: `${root}/src/cli/member.ts`,
+    'migrate-check': `${root}/src/cli/migrate-check.ts`,
+    leaderboard: `${root}/src/cli/leaderboard.ts`,
     'riichi-gate': `${root}/src/riichi/gate.ts`,
     'arcade-gate': `${root}/src/arcade/gate.ts`,
   },

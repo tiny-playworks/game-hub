@@ -131,6 +131,7 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
   const snapshotRef = useRef<MemberSnapshot | null>(null);
   const identityEpochRef = useRef(0);
   const serverAvailableRef = useRef(false);
+  const arcadeRoundStarts = useRef(new Map<string, number>());
   const profileWriterRef = useRef<((patch: PlayerProfilePatch) => Promise<void>) | null>(null);
   const mutationQueue = useRef<Promise<void>>(Promise.resolve());
   const [error, setError] = useState<HouseholdApiError | Error | null>(null);
@@ -365,6 +366,7 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
   }, [reviseSnapshot]);
 
   const performArcadeEvent = useCallback(async (event: ArcadeMemberEvent) => {
+    if (event.type === 'start') arcadeRoundStarts.current.set(event.roundId, Date.now());
     if (serverAvailableRef.current) {
       try {
         const response = await reviseSnapshot((revision) => submitMemberArcadeEvent(revision, event));
@@ -374,10 +376,17 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
     const current = snapshotRef.current;
     if (!current) throw new Error('Not logged in');
     markOffline();
-    if (event.type === 'finish') await queueOfflineArcade(current.memberId, deviceId, event.roundId, {
-      gameId: event.gameId, difficulty: event.difficulty, score: event.score ?? 0,
-      outcome: event.outcome ?? 'lose', meta: event.meta,
-    });
+    if (event.type === 'finish') {
+      const startedAt = arcadeRoundStarts.current.get(event.roundId);
+      arcadeRoundStarts.current.delete(event.roundId);
+      await queueOfflineArcade(current.memberId, deviceId, event.roundId, {
+        gameId: event.gameId, difficulty: event.difficulty, score: event.score ?? 0,
+        outcome: event.outcome ?? 'lose',
+        // Lets the server rank the result; without it the result only counts personally.
+        meta: startedAt === undefined ? event.meta
+          : { ...event.meta, durationMs: Math.max(0, Date.now() - startedAt) },
+      });
+    }
     return { coinsEarned: 0, capReached: false, pending: true };
   }, [reviseSnapshot, markOffline, deviceId]);
 

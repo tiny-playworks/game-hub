@@ -11,7 +11,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "gate:arcade": "node dist/arcade-gate.mjs",
     "start": "node dist/index.mjs",
-    "member": "node dist/member.mjs"
+    "member": "node dist/member.mjs",
+    "leaderboard": "node dist/leaderboard.mjs",
+    "migrate-check": "node dist/migrate-check.mjs"
   },
   "dependencies": {
     "fastify": "5.12.5",

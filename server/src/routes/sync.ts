@@ -9,9 +9,11 @@ import type {
   SyncBatchResponse,
   SyncRejectedItem,
 } from '../../../shared/contracts/sync';
+import { normalizeArcadeDifficulty } from '@/lib/arcade';
 import { apiError, requireSession } from '../auth';
 import { archiveReplay, getMember, readSnapshot, saveSnapshot, transaction } from '../db';
 import { isReplayFile, restoreMatch, toReplayFile, type RiichiMatchState } from '@/pages/mahjong/japanese/engine';
+import { recordRankedResult, reportedDurationMs, statsFor } from '../services/leaderboard';
 import { replayFreeContinuation } from '../riichi/continuation';
 import {
   processOfflineArcadeReceipt,
@@ -154,6 +156,21 @@ export function registerSyncRoutes(app: FastifyInstance, db: DatabaseSync): void
             }
           } else if (receipt.matchSource === 'arcade') {
             settleResult = processOfflineArcadeReceipt(snapshot, receipt);
+            if (receipt.payload.source === 'arcade') {
+              const arcade = receipt.payload.arcade;
+              recordRankedResult(db, {
+                memberId: member.id,
+                roundId: receipt.matchId,
+                gameId: arcade.gameId,
+                difficulty: normalizeArcadeDifficulty(arcade.gameId, arcade.difficulty),
+                outcome: arcade.outcome,
+                score: arcade.score,
+                stats: statsFor(settleResult.snapshot, arcade.gameId,
+                  normalizeArcadeDifficulty(arcade.gameId, arcade.difficulty)),
+                occurredAt: Date.parse(receipt.occurredAt),
+                durationMs: reportedDurationMs(arcade.meta),
+              });
+            }
           } else {
             throw new Error('UNKNOWN_MATCH_SOURCE');
           }

@@ -11,6 +11,8 @@ import type {
 import { apiError, requireSession } from '../auth';
 import { getMember, readSnapshot, saveSnapshot, transaction } from '../db';
 import { runSnapshotMutation } from '../snapshotRuntime';
+import { exceedsArcadeScoreCap } from '../services/arcadeLimits';
+import { recordRankedResult, statsFor } from '../services/leaderboard';
 
 type StoredRound = {
   game_id: string;
@@ -32,7 +34,7 @@ function validatePlausibleFinish(
   score: number,
   meta: Record<string, unknown> | undefined,
 ): void {
-  if (!isIntInRange(score, 0, 10_000_000))
+  if (!isIntInRange(score, 0, 10_000_000) || exceedsArcadeScoreCap(gameId, score))
     throw apiError(400, 'BAD_REQUEST');
 
   if (meta?.maxCombo !== undefined && !isIntInRange(meta.maxCombo, 0, 100_000))
@@ -256,6 +258,19 @@ export function registerArcadeRoutes(app: FastifyInstance, db: DatabaseSync): vo
           'INSERT INTO arcade_rounds(member_id, round_id, game_id, difficulty, started_at) VALUES (?, ?, ?, ?, ?)',
         ).run(member.id, event.roundId, event.gameId, event.difficulty, now);
       } else {
+        const standing = recordRankedResult(db, {
+          memberId: member.id,
+          roundId: event.roundId,
+          gameId: event.gameId,
+          difficulty: event.difficulty,
+          outcome: event.outcome!,
+          score: event.score!,
+          stats: statsFor(updated.snapshot, event.gameId, event.difficulty),
+          occurredAt: now,
+          durationMs: existing ? now - existing.started_at : null,
+          now,
+        });
+        if (standing) updated.result.leaderboard = standing;
         db.prepare(
           'UPDATE arcade_rounds SET finished_at = ?, result_json = ? WHERE member_id = ? AND round_id = ?',
         ).run(now, JSON.stringify(updated.result), member.id, event.roundId);

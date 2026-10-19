@@ -2,6 +2,7 @@ import { chmodSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
+import { getBestValue, type GameStats } from '@/lib/arcadeStats';
 import type { MemberSnapshot } from '../../shared/contracts/member';
 import { normalizeThemeChallengeState } from '../../shared/contracts/challenge';
 import { normalizeJourneyProgress } from '../../shared/contracts/journey';
@@ -240,6 +241,49 @@ function migrate(db: DatabaseSync): void {
     CREATE INDEX IF NOT EXISTS family_cups_updated
       ON family_cups(updated_at DESC);
   `);
+  const hadLeaderboard = Boolean(db
+    .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'leaderboard_entries'")
+    .get());
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS leaderboard_entries (
+      member_id TEXT NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+      round_id TEXT NOT NULL,
+      game_id TEXT NOT NULL,
+      difficulty TEXT NOT NULL,
+      value INTEGER NOT NULL,
+      occurred_at INTEGER NOT NULL,
+      hidden_at INTEGER,
+      hidden_reason TEXT,
+      PRIMARY KEY(member_id, round_id)
+    );
+    CREATE INDEX IF NOT EXISTS leaderboard_entries_board
+      ON leaderboard_entries(game_id, difficulty, occurred_at);
+    CREATE TABLE IF NOT EXISTS leaderboard_week_settlements (
+      week_id TEXT PRIMARY KEY,
+      settled_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS weekly_champions (
+      week_id TEXT NOT NULL,
+      game_id TEXT NOT NULL,
+      difficulty TEXT NOT NULL,
+      member_id TEXT NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+      value INTEGER NOT NULL,
+      awarded_at INTEGER NOT NULL,
+      PRIMARY KEY(week_id, game_id, difficulty, member_id)
+    );
+    CREATE TABLE IF NOT EXISTS family_feed (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      kind TEXT NOT NULL,
+      member_id TEXT,
+      game_id TEXT,
+      difficulty TEXT,
+      value INTEGER,
+      week_id TEXT,
+      cup_id TEXT,
+      created_at INTEGER NOT NULL
+    );
+  `);
+  if (!hadLeaderboard) backfillLeaderboard(db);
   const journeySql = db
     .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'journey_attempts'")
     .get() as { sql?: string } | undefined;
@@ -716,6 +760,7 @@ export function recordFamilyCupMatch(
        SET status = ?, updated_at = ?, completed_at = ?
        WHERE cup_id = ?`,
     ).run(nextStatus, now, isCompleted ? now : null, cupId);
+    if (isCompleted) appendFamilyFeed(db, { kind: 'family-cup', cupId, createdAt: now });
 
     const updatedRow = db
       .prepare('SELECT * FROM family_cups WHERE cup_id = ?')
@@ -745,3 +790,69 @@ export function listFamilyCups(
 }
 
 
+
+/**
+ * One-time seeding when the leaderboard tables are first created: every member's
+ * existing personal bests become `occurred_at = 0` entries (all-time board only),
+ * so boards agree with personal-best displays from day one.
+ */
+function backfillLeaderboard(db: DatabaseSync): void {
+  const rows = db.prepare('SELECT id, snapshot FROM members').all() as Array<{ id: string; snapshot: string }>;
+  const insert = db.prepare(
+    `INSERT OR IGNORE INTO leaderboard_entries
+       (member_id, round_id, game_id, difficulty, value, occurred_at)
+     VALUES (?, ?, ?, ?, ?, 0)`,
+  );
+  transaction(db, () => {
+    for (const row of rows) {
+      let stats: Record<string, GameStats>;
+      try {
+        stats = (JSON.parse(row.snapshot) as MemberSnapshot).arcade?.stats ?? {};
+      } catch {
+        continue;
+      }
+      for (const [key, value] of Object.entries(stats)) {
+        const [gameId, difficulty] = key.split(':');
+        if (!gameId || !difficulty || gameId === 'mahjong-japanese') continue;
+        const best = getBestValue(gameId, value);
+        if (best !== null && Number.isSafeInteger(best) && best > 0)
+          insert.run(row.id, `legacy:${key}`, gameId, difficulty, best);
+      }
+    }
+  });
+}
+
+const FAMILY_FEED_LIMIT = 100;
+
+export function appendFamilyFeed(
+  db: DatabaseSync,
+  item: {
+    kind: 'family-record' | 'weekly-champion' | 'family-cup';
+    memberId?: string | null;
+    gameId?: string | null;
+    difficulty?: string | null;
+    value?: number | null;
+    weekId?: string | null;
+    cupId?: string | null;
+    createdAt?: number;
+  },
+): void {
+  db.prepare(
+    `INSERT INTO family_feed (kind, member_id, game_id, difficulty, value, week_id, cup_id, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    item.kind,
+    item.memberId ?? null,
+    item.gameId ?? null,
+    item.difficulty ?? null,
+    item.value ?? null,
+    item.weekId ?? null,
+    item.cupId ?? null,
+    item.createdAt ?? Date.now(),
+  );
+  db.prepare(
+    `DELETE FROM family_feed WHERE id NOT IN (
+       SELECT id FROM family_feed ORDER BY id DESC LIMIT ?
+     )`,
+  ).run(FAMILY_FEED_LIMIT);
+}

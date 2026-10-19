@@ -9,6 +9,7 @@ import type { RankedState } from '../../src/lib/ranked';
 import type { WalletState } from '../../src/lib/wallet';
 import type { WeeklyTaskState } from '../../src/lib/weeklyTasks';
 import type { ArcadeStoredState } from '../../src/lib/arcadeStats';
+import type { LeaderboardStanding } from './leaderboard';
 import type { ThemeChallengeState } from './challenge';
 import type { JourneyProgressState } from './journey';
 
@@ -46,6 +47,8 @@ export interface ArcadeMemberResult {
     previousBest: number | null;
     currentBest: number | null;
   };
+  /** Present when the result reached the family boards (member, online, long enough). */
+  leaderboard?: LeaderboardStanding;
 }
 
 export interface MemberSummary {

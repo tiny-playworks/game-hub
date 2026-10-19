@@ -26,6 +26,7 @@ import type {
   OfflineReceiptResult,
 } from '../../../shared/contracts/sync';
 import { runSnapshotMutation } from '../snapshotRuntime';
+import { exceedsArcadeScoreCap } from './arcadeLimits';
 
 function isIntInRange(value: unknown, min: number, max: number): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= min && value <= max;
@@ -38,7 +39,7 @@ export function validatePlausibleArcadeFinish(
   meta?: Record<string, unknown>,
 ): boolean {
   if (!games.some((g) => g.id === gameId)) return false;
-  if (!isIntInRange(score, 0, 10_000_000)) return false;
+  if (!isIntInRange(score, 0, 10_000_000) || exceedsArcadeScoreCap(gameId, score)) return false;
   if (meta?.maxCombo !== undefined && !isIntInRange(meta.maxCombo, 0, 100_000)) return false;
 
   switch (gameId) {
@@ -61,8 +62,15 @@ export function validatePlausibleArcadeFinish(
       if (outcome === 'lose' && score !== 0) return false;
       break;
     }
+    case 'tetris': {
+      if (
+        meta?.lines !== undefined &&
+        (!isIntInRange(meta.lines, 0, 10_000) || score < meta.lines)
+      )
+        return false;
+      break;
+    }
     case 'snake':
-    case 'tetris':
     case 'breakout': {
       if (score < 0) return false;
       break;
