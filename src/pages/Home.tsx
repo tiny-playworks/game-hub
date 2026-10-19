@@ -70,9 +70,11 @@ const Home = () => {
   const [categoryId, setCategoryId] = useState('mini');
   const character = getCharacterById(characters.activeCharacterId);
   const signedToday = checkin.dateKey === getBeijingDateKey();
-  const canResume = isActive || (memberMode
-    ? memberMatchStatus !== undefined && memberMatchStatus !== 'matchEnd'
-    : hasResumableMatch());
+  const canResume =
+    isActive ||
+    (memberMode
+      ? memberMatchStatus !== undefined && memberMatchStatus !== 'matchEnd'
+      : hasResumableMatch());
   const refresh = useCallback(() => {
     setDaily(getDailyTaskState());
     setWeekly(getWeeklyTaskState());
@@ -94,7 +96,7 @@ const Home = () => {
 
   return (
     <div className="venue-home lobby-page min-h-screen bg-background text-foreground">
-      <main className="mx-auto max-w-[1440px] px-4 py-6 sm:px-8 sm:py-8">
+      <main className="mx-auto max-w-360 px-4 py-6 sm:px-8 sm:py-8">
         <div className="venue-page-heading">
           <div>
             <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">
@@ -109,7 +111,7 @@ const Home = () => {
           className="lobby-main-grid grid gap-5"
           aria-label={t('lobby.title')}
         >
-          <article className="venue-companion felt-surface relative flex min-h-[400px] flex-col overflow-hidden rounded-[28px] border border-gold/40 p-6 text-paper">
+          <article className="venue-companion felt-surface relative flex min-h-100 flex-col overflow-hidden rounded-[28px] border border-gold/40 p-6 text-paper">
             <div className="flex items-center justify-between text-xs text-paper/70">
               <span>{t('lobby.companion')}</span>
               <span className="rounded-full border border-gold/40 px-2.5 py-1 text-gold">
@@ -173,7 +175,7 @@ const Home = () => {
           </article>
           <div className="venue-modes flex min-w-0 flex-col gap-4">
             <RankedLobbyCard />
-            <article className="venue-free felt-surface rounded-[24px] border border-gold/30 p-5 text-paper">
+            <article className="venue-free felt-surface rounded-3xl border border-gold/30 p-5 text-paper">
               <div className="flex items-center gap-3">
                 <div className="venue-free-icon flex size-11 shrink-0 items-center justify-center rounded-xl border border-gold/30 bg-paper/10">
                   <Play className="size-5 text-gold" />
@@ -214,19 +216,30 @@ const Home = () => {
                 ) : null}
               </div>
             </article>
-            <article className="venue-free venue-journey felt-surface rounded-[24px] border border-gold/30 p-5 text-paper">
+            <article className="venue-free venue-journey felt-surface rounded-3xl border border-gold/30 p-5 text-paper">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex min-w-0 items-center gap-3">
                   <div className="venue-free-icon flex size-11 shrink-0 items-center justify-center rounded-xl border border-gold/30 bg-paper/10">
                     <ScrollText className="size-5 text-gold" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold">{t('journey.title')}</h2>
-                    <p className="mt-1 text-xs leading-5 text-paper/70">{t('journey.lobbyDescription')}</p>
+                    <h2 className="text-lg font-semibold">
+                      {t('journey.title')}
+                    </h2>
+                    <p className="mt-1 text-xs leading-5 text-paper/70">
+                      {t('journey.lobbyDescription')}
+                    </p>
                   </div>
                 </div>
-                <Button asChild variant="outline" className="shrink-0 rounded-xl border-paper/25 bg-transparent text-paper hover:bg-paper/10 hover:text-paper">
-                  <Link to="/journey">{t('journey.enter')}<ArrowRight className="size-4" /></Link>
+                <Button
+                  asChild
+                  variant="outline"
+                  className="shrink-0 rounded-xl border-paper/25 bg-transparent text-paper hover:bg-paper/10 hover:text-paper"
+                >
+                  <Link to="/journey">
+                    {t('journey.enter')}
+                    <ArrowRight className="size-4" />
+                  </Link>
                 </Button>
               </div>
             </article>
@@ -251,7 +264,9 @@ const Home = () => {
                       setCheckinBusy(true);
                       try {
                         if (memberMode)
-                          await household!.performProgressAction({ type: 'checkin' });
+                          await household!.performProgressAction({
+                            type: 'checkin',
+                          });
                         else checkinToday();
                         setCheckinError(false);
                         refresh();
@@ -269,7 +284,11 @@ const Home = () => {
                         : 'home.quick.checkin',
                     )}
                   </Button>
-                  {checkinError && <span role="alert" className="text-xs text-destructive">{t('save.failed')}</span>}
+                  {checkinError && (
+                    <span role="alert" className="text-xs text-destructive">
+                      {t('save.failed')}
+                    </span>
+                  )}
                 </div>
               </div>
               <ul className="mt-3 divide-y">
@@ -433,7 +452,7 @@ const Home = () => {
                 <Link
                   key={game.id}
                   to={game.path}
-                  className="venue-arcade-entry paper-texture group flex w-[230px] shrink-0 flex-col rounded-[22px] border border-wood/20 bg-card p-5 transition hover:-translate-y-1 hover:border-primary/40 hover:shadow-md"
+                  className="venue-arcade-entry paper-texture group flex w-57.5 shrink-0 flex-col rounded-[22px] border border-wood/20 bg-card p-5 transition hover:-translate-y-1 hover:border-primary/40 hover:shadow-md"
                 >
                   <VenueGameGlyph gameId={game.id} />
                   <div className="venue-arcade-copy">

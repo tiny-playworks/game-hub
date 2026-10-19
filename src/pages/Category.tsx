@@ -68,7 +68,7 @@ const Category = () => {
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-8 md:py-10">
-        <section className="overflow-hidden rounded-[32px] premium-panel-soft">
+        <section className="overflow-hidden rounded-4xl premium-panel-soft">
           <div className="relative grid gap-6 px-6 py-6 md:px-8 lg:grid-cols-[1.16fr_0.84fr] lg:items-end lg:gap-8 lg:py-8">
             <div className="relative z-10 space-y-4">
               <div className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">
