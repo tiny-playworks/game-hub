@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
-import woodFrame from '@/assets/cosmetics/avatar-frame-wood.png';
-import goldFrame from '@/assets/cosmetics/avatar-frame-gold.png';
-import sakuraFrame from '@/assets/cosmetics/avatar-frame-sakura.png';
-import rankFrame from '@/assets/cosmetics/avatar-frame-rank.png';
-import characterFrame from '@/assets/cosmetics/avatar-frame-character.png';
+import woodFrame from '@/assets/cosmetics/avatar-frame-wood.webp';
+import goldFrame from '@/assets/cosmetics/avatar-frame-gold.webp';
+import sakuraFrame from '@/assets/cosmetics/avatar-frame-sakura.webp';
+import rankFrame from '@/assets/cosmetics/avatar-frame-rank.webp';
+import characterFrame from '@/assets/cosmetics/avatar-frame-character.webp';
 import { useCosmetics } from '@/hooks/useCosmetics';
 import { cn } from '@/lib/utils';
 

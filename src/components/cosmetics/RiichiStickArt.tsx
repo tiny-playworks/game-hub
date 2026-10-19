@@ -1,8 +1,8 @@
-import defaultStick from '@/assets/cosmetics/riichi-stick-default.png';
-import inkStick from '@/assets/cosmetics/riichi-stick-ink.png';
-import lightningStick from '@/assets/cosmetics/riichi-stick-lightning.png';
-import sakuraStick from '@/assets/cosmetics/riichi-stick-sakura.png';
-import sparksStick from '@/assets/cosmetics/riichi-stick-sparks.png';
+import defaultStick from '@/assets/cosmetics/riichi-stick-default.webp';
+import inkStick from '@/assets/cosmetics/riichi-stick-ink.webp';
+import lightningStick from '@/assets/cosmetics/riichi-stick-lightning.webp';
+import sakuraStick from '@/assets/cosmetics/riichi-stick-sakura.webp';
+import sparksStick from '@/assets/cosmetics/riichi-stick-sparks.webp';
 
 const stickArt: Record<string, string> = {
   'riichi-default': defaultStick,

@@ -114,7 +114,7 @@
   position: absolute;
   z-index: 2;
   inset: -1px;
-  background: url('./assets/cosmetics/tile-rim-jade.png') center / 100% 100%
+  background: url('./assets/cosmetics/tile-rim-jade.webp') center / 100% 100%
     no-repeat;
   content: '';
   pointer-events: none;
@@ -125,7 +125,7 @@
 .cosmetic-preview[data-tile-back='back-blue'] .cosmetic-sample-back::after,
 .cosmetic-preview[data-tile-back='back-waves'] .cosmetic-sample-back::after,
 .cosmetic-preview[data-tile-back='back-rin'] .cosmetic-sample-back::after {
-  background-image: url('./assets/cosmetics/tile-rim-blue.png');
+  background-image: url('./assets/cosmetics/tile-rim-blue.webp');
 }
 [data-tile-back='back-vermilion'] .riichi-tile-back-rotator::after,
 [data-tile-back='back-gold'] .riichi-tile-back-rotator::after,
@@ -133,13 +133,13 @@
 .cosmetic-preview[data-tile-back='back-vermilion'] .cosmetic-sample-back::after,
 .cosmetic-preview[data-tile-back='back-gold'] .cosmetic-sample-back::after,
 .cosmetic-preview[data-tile-back='back-koharu'] .cosmetic-sample-back::after {
-  background-image: url('./assets/cosmetics/tile-rim-vermilion.png');
+  background-image: url('./assets/cosmetics/tile-rim-vermilion.webp');
 }
 [data-tile-back='back-sakura'] .riichi-tile-back-rotator::after,
 [data-tile-back='back-sora'] .riichi-tile-back-rotator::after,
 .cosmetic-preview[data-tile-back='back-sakura'] .cosmetic-sample-back::after,
 .cosmetic-preview[data-tile-back='back-sora'] .cosmetic-sample-back::after {
-  background-image: url('./assets/cosmetics/tile-rim-sakura.png');
+  background-image: url('./assets/cosmetics/tile-rim-sakura.webp');
 }
 :root,
 [data-table-felt='felt-green'] {
