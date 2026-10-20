@@ -29,7 +29,9 @@ const Game2048 = () => {
   const [gain, setGain] = useState({ value: 0, id: 0 });
   const [moves, setMoves] = useState(0);
   const [continuing, setContinuing] = useState(false);
+  const [banking, setBanking] = useState(false);
   const challengeGoal = arcadeChallengeGoal('2048', difficulty);
+  const challengeOver = mode === 'challenge' && (maxTile >= challengeGoal.target || moves >= challengeGoal.moves);
   const milestone = mode === 'classic' && maxTile >= 2048 && !continuing && !result;
   const emptyCells =
     size * size -
@@ -38,17 +40,17 @@ const Game2048 = () => {
 
   useArcadeSnapshot(() => ({ ...state, maxTile, maxCombo, boardSize: size }));
   useEffect(() => {
-    if (state.gameOver || (mode === 'challenge' && (maxTile >= challengeGoal.target || moves >= challengeGoal.moves)))
+    if (state.gameOver || challengeOver)
       finish(maxTile >= 2048 ? 'win' : 'lose', state.score, {
         maxTile,
         maxCombo,
         moves,
       });
-  }, [state.gameOver, state.score, maxTile, maxCombo, moves, mode, challengeGoal.target, challengeGoal.moves, finish]);
+  }, [state.gameOver, state.score, maxTile, maxCombo, moves, challengeOver, finish]);
 
   const tryMove = useCallback(
     (dir: Dir) => {
-      if (paused || result || milestone) return;
+      if (paused || result || milestone || banking || state.gameOver || challengeOver) return;
       const { addedScore, isMoved } = move(dir);
       if (isMoved) setMoves((count) => count + 1);
       if (addedScore > 0)
@@ -57,7 +59,7 @@ const Game2048 = () => {
         shake();
       }
     },
-    [move, shake, paused, result, milestone],
+    [move, shake, paused, result, milestone, banking, state.gameOver, challengeOver],
   );
   const swipe = useSwipeControls(tryMove);
 
@@ -116,7 +118,7 @@ const Game2048 = () => {
             variant="outline"
             size="sm"
             onClick={undo}
-            disabled={!canUndo || !!result || paused || mode === 'challenge'}
+            disabled={!canUndo || !!result || paused || banking || state.gameOver || mode === 'challenge'}
           >
             <Undo2 className="size-4" />
             {t('arcade.undo')}
@@ -129,7 +131,7 @@ const Game2048 = () => {
       }
     >
       <div className="puzzle-2048 w-full flex flex-col items-center">
-        {milestone ? <div className="game-milestone" role="status"><strong>{formatMessage(locale, 'play.tileMilestone', { target: 2048 })}</strong><div><Button onClick={() => setContinuing(true)}>{t('play.continue2048')}</Button><Button variant="outline" onClick={() => finish('win', state.score, { maxTile, maxCombo, moves })}>{t('play.finish2048')}</Button></div></div> : null}
+        {milestone ? <div className="game-milestone" role="status"><strong>{formatMessage(locale, 'play.tileMilestone', { target: 2048 })}</strong><div><Button disabled={banking} onClick={() => setContinuing(true)}>{t('play.continue2048')}</Button><Button variant="outline" disabled={banking} onClick={() => { setBanking(true); finish('win', state.score, { maxTile, maxCombo, moves }); }}>{t('play.finish2048')}</Button></div></div> : null}
         <GameProgress
           label={t('arcade.nextTarget')}
           value={nextTarget}

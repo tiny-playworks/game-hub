@@ -69,7 +69,7 @@ export const playMessages: Record<'zh' | 'en', Record<string, string>> = {
     'play.trial.goal.go': '对 AI 完成一局并取得胜利',
     'play.trial.goal.chess': '在 {target} 手内战胜 AI',
     'play.trial.goal.xiangqi': '在 {target} 手内战胜 AI',
-    'play.trial.goal.doudizhu': '在 {target} 手内和队友赢下这副牌',
+    'play.trial.goal.doudizhu': '在 {target} 手内赢下这副牌',
     'play.trial.goal.shengji': '赢下本副，并至少晋升 {target} 级',
     'play.personalProgress': '这次挑战',
   },
@@ -152,7 +152,7 @@ export const playMessages: Record<'zh' | 'en', Record<string, string>> = {
     'play.trial.goal.chess': 'Beat the AI within {target} moves',
     'play.trial.goal.xiangqi': 'Beat the AI within {target} moves',
     'play.trial.goal.doudizhu':
-      'Win this deal with your team within {target} plays',
+      'Win this deal within {target} plays',
     'play.trial.goal.shengji':
       'Win this deal and advance at least {target} levels',
     'play.personalProgress': 'This challenge',

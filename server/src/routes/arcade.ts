@@ -261,7 +261,17 @@ export function registerArcadeRoutes(app: FastifyInstance, db: DatabaseSync): vo
         (now < existing.started_at - 5_000 || now - existing.started_at > MAX_ROUND_AGE_MS)
       )
         throw apiError(400, 'BAD_REQUEST');
-      const updated = settle(snapshot, event.type === 'finish' && existing ? { ...event, meta: { ...event.meta, durationMs: now - existing.started_at } } : event);
+      let finishEvent = event;
+      if (event.type === 'finish' && existing) {
+        const elapsed = Math.max(0, now - existing.started_at);
+        const reported = event.meta?.durationMs;
+        // Retried starts may reach the server only after the challenge ended.
+        const durationMs = event.challengeId && isIntInRange(reported, 0, MAX_ROUND_AGE_MS)
+          ? Math.max(elapsed, reported)
+          : elapsed;
+        finishEvent = { ...event, meta: { ...event.meta, durationMs } };
+      }
+      const updated = settle(snapshot, finishEvent);
       const next = saveSnapshot(db, current, updated.snapshot);
       if (event.type === 'start') {
         db.prepare(
