@@ -8,20 +8,30 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { migrateLegacyArcadeStats } from '@/lib/achievements';
 import { useOptionalHousehold } from '@/contexts/HouseholdContext';
 import {
   type ArcadeDifficulty,
   getArcadeDifficulty,
+  normalizeArcadeDifficulty,
   setArcadeDifficulty,
 } from '@/lib/arcade';
 import { emitGameEvent } from '@/lib/gameEvents';
 import { createUuid } from '@/lib/uuid';
 import { gameStorage } from '@/lib/storage';
 import { arcadeFeedbackToken, playArcadeFeedback } from '@/lib/arcadeFeedback';
-import { ARCADE_CHALLENGE_ID, ARCADE_CHALLENGE_STORAGE_KEY, recordArcadeChallenge, type ChallengeResult } from '../../shared/contracts/arcadeChallenge';
+import {
+  ARCADE_CHALLENGE_ID,
+  ARCADE_CHALLENGE_STORAGE_KEY,
+  recordArcadeChallenge,
+  type ChallengeResult,
+} from '../../shared/contracts/arcadeChallenge';
 import type { ArcadeRecord } from '@/store/gameStore';
-import type { ArcadeMemberEvent, ArcadeMemberResult } from '../../shared/contracts/member';
+import type {
+  ArcadeMemberEvent,
+  ArcadeMemberResult,
+} from '../../shared/contracts/member';
 import type { LeaderboardStanding } from '../../shared/contracts/leaderboard';
 
 export type ArcadeOutcome = 'win' | 'lose' | 'draw';
@@ -87,11 +97,21 @@ export function ArcadeSession({
 }) {
   const household = useOptionalHousehold();
   const memberMode = Boolean(household?.currentMember);
+  const [query, setQuery] = useSearchParams();
   const [difficulty, setDifficulty] = useState(() =>
-    getArcadeDifficulty(gameId),
+    query.has('difficulty')
+      ? normalizeArcadeDifficulty(
+          gameId,
+          query.get('difficulty'),
+        )
+      : getArcadeDifficulty(gameId),
   );
   const [round, setRound] = useState(0);
-  const [mode, setMode] = useState<'classic' | 'challenge'>(() => new URLSearchParams(window.location.search).get('mode') === 'challenge' ? 'challenge' : 'classic');
+  const [mode, setMode] = useState<'classic' | 'challenge'>(() =>
+    query.get('mode') === 'challenge'
+      ? 'challenge'
+      : 'classic',
+  );
   const [paused, setPaused] = useState(false);
   const [result, setResult] = useState<ArcadeResult | null>(null);
   const [settlementRetrying, setSettlementRetrying] = useState(false);
@@ -116,7 +136,9 @@ export function ArcadeSession({
       ...(mode === 'challenge' ? { challengeId: ARCADE_CHALLENGE_ID } : {}),
     };
     if (memberMode) {
-      void household!.performArcadeEvent({ ...event, type: 'start' }).catch(() => {});
+      void household!
+        .performArcadeEvent({ ...event, type: 'start' })
+        .catch(() => {});
     } else if (mode === 'classic') {
       emitGameEvent({
         gameId,
@@ -147,31 +169,44 @@ export function ArcadeSession({
   const changeDifficulty = useCallback(
     (next: ArcadeDifficulty) => {
       if (next === difficulty) return;
+      const applyDifficulty = () => {
+        setDifficulty(next);
+        setQuery((current) => { const changed = new URLSearchParams(current); changed.set('difficulty', next); return changed; }, { replace: true });
+        restart();
+      };
       if (memberMode) {
-        void household!.updateArcadeDifficulty(gameId, next).then(() => {
-          setSettingsError(false);
-          setDifficulty(next);
-          restart();
-        }).catch(() => setSettingsError(true));
+        void household!
+          .updateArcadeDifficulty(gameId, next)
+          .then(() => {
+            setSettingsError(false);
+            applyDifficulty();
+          })
+          .catch(() => setSettingsError(true));
       } else {
         setArcadeDifficulty(gameId, next);
-        setDifficulty(next);
-        restart();
+        applyDifficulty();
       }
     },
-    [gameId, difficulty, restart, memberMode, household],
+    [gameId, difficulty, restart, memberMode, household, setQuery],
   );
-  const changeMode = useCallback((next: 'classic' | 'challenge') => {
-    if (next === mode) return;
-    setMode(next);
-    restart();
-  }, [mode, restart]);
+  const changeMode = useCallback(
+    (next: 'classic' | 'challenge') => {
+      if (next === mode) return;
+      setMode(next);
+      setQuery((current) => { const changed = new URLSearchParams(current); if (next === 'challenge') changed.set('mode', 'challenge'); else changed.delete('mode'); return changed; }, { replace: true });
+      restart();
+    },
+    [mode, restart, setQuery],
+  );
   const finish = useCallback(
     (outcome: ArcadeOutcome, score = 0, meta: Record<string, unknown> = {}) => {
       if (receipt.current.finished) return;
       start();
       receipt.current.finished = true;
-      meta = { ...meta, durationMs: Math.max(0, Date.now() - receipt.current.startedAt) };
+      meta = {
+        ...meta,
+        durationMs: Math.max(0, Date.now() - receipt.current.startedAt),
+      };
       const event = {
         gameId,
         difficulty,
@@ -191,35 +226,61 @@ export function ArcadeSession({
           meta,
         };
         pendingFinish.current = finishEvent;
-        void household!.performArcadeEvent(finishEvent).then((settled) => {
-          if (receipt.current.id !== roundId) return;
-          setPaused(false);
-          pendingFinish.current = null;
-          setResult(settledResult(outcome, score, settled));
-        }).catch(() => {
-          if (receipt.current.id !== roundId) return;
-          setPaused(false);
-          setResult({
-            isNewBest: false,
-            previousBest: null,
-            currentBest: null,
-            outcome,
-            score,
-            coinsEarned: 0,
-            capReached: false,
-            settlementFailed: true,
+        void household!
+          .performArcadeEvent(finishEvent)
+          .then((settled) => {
+            if (receipt.current.id !== roundId) return;
+            setPaused(false);
+            pendingFinish.current = null;
+            setResult(settledResult(outcome, score, settled));
+          })
+          .catch(() => {
+            if (receipt.current.id !== roundId) return;
+            setPaused(false);
+            setResult({
+              isNewBest: false,
+              previousBest: null,
+              currentBest: null,
+              outcome,
+              score,
+              coinsEarned: 0,
+              capReached: false,
+              settlementFailed: true,
+            });
           });
-        });
         return;
       }
       if (mode === 'challenge') {
         let raw: unknown = null;
-        try { raw = JSON.parse(gameStorage.getItem(ARCADE_CHALLENGE_STORAGE_KEY) ?? 'null'); } catch { /* A missing practice ledger starts empty. */ }
-        const challenge = recordArcadeChallenge(raw, receipt.current.id, { gameId, difficulty, outcome, score, meta }, Date.now());
-        gameStorage.setItem(ARCADE_CHALLENGE_STORAGE_KEY, JSON.stringify(challenge.state));
+        try {
+          raw = JSON.parse(
+            gameStorage.getItem(ARCADE_CHALLENGE_STORAGE_KEY) ?? 'null',
+          );
+        } catch {
+          /* A missing practice ledger starts empty. */
+        }
+        const challenge = recordArcadeChallenge(
+          raw,
+          receipt.current.id,
+          { gameId, difficulty, outcome, score, meta },
+          Date.now(),
+        );
+        gameStorage.setItem(
+          ARCADE_CHALLENGE_STORAGE_KEY,
+          JSON.stringify(challenge.state),
+        );
         window.dispatchEvent(new Event('game-hub:arcade-challenges'));
         setPaused(false);
-        setResult({ isNewBest: false, previousBest: null, currentBest: null, outcome, score, coinsEarned: 0, capReached: false, challenge: challenge.result });
+        setResult({
+          isNewBest: false,
+          previousBest: null,
+          currentBest: null,
+          outcome,
+          score,
+          coinsEarned: 0,
+          capReached: false,
+          challenge: challenge.result,
+        });
         return;
       }
       const finished = emitGameEvent({ ...event, type: 'finish' });
@@ -251,34 +312,60 @@ export function ArcadeSession({
   );
   const retrySettlement = useCallback(() => {
     const event = pendingFinish.current;
-    if (!memberMode || !event || settlementRetrying || event.type !== 'finish') return;
+    if (!memberMode || !event || settlementRetrying || event.type !== 'finish')
+      return;
     setSettlementRetrying(true);
-    void household!.performArcadeEvent({
-      type: 'start', roundId: event.roundId,
-      gameId: event.gameId, difficulty: event.difficulty,
-      ...(event.challengeId ? { challengeId: event.challengeId } : {}),
-    }).then(() => household!.performArcadeEvent(event)).then((settled) => {
-      if (receipt.current.id !== event.roundId) return;
-      pendingFinish.current = null;
-      setResult(settledResult(event.outcome ?? 'lose', event.score ?? 0, settled));
-    }).catch(() => {
-      // Keep the same round id and result available for another attempt.
-    }).finally(() => setSettlementRetrying(false));
+    void household!
+      .performArcadeEvent({
+        type: 'start',
+        roundId: event.roundId,
+        gameId: event.gameId,
+        difficulty: event.difficulty,
+        ...(event.challengeId ? { challengeId: event.challengeId } : {}),
+      })
+      .then(() => household!.performArcadeEvent(event))
+      .then((settled) => {
+        if (receipt.current.id !== event.roundId) return;
+        pendingFinish.current = null;
+        setResult(
+          settledResult(event.outcome ?? 'lose', event.score ?? 0, settled),
+        );
+      })
+      .catch(() => {
+        // Keep the same round id and result available for another attempt.
+      })
+      .finally(() => setSettlementRetrying(false));
   }, [memberMode, household, settlementRetrying]);
-  const snapshot = useCallback((reader: () => unknown) => {
-    snapshotReader.current = reader;
-    const token = arcadeFeedbackToken(reader());
-    if (feedback.current.token && token !== feedback.current.token && !paused && !receipt.current.finished && Date.now() - feedback.current.at > 90) {
-      playArcadeFeedback('move');
-      feedback.current.at = Date.now();
-    }
-    feedback.current.token = token;
-    return () => {
-      if (snapshotReader.current === reader) snapshotReader.current = null;
-    };
-  }, [paused]);
+  const snapshot = useCallback(
+    (reader: () => unknown) => {
+      snapshotReader.current = reader;
+      const token = arcadeFeedbackToken(reader());
+      if (
+        feedback.current.token &&
+        token !== feedback.current.token &&
+        !paused &&
+        !receipt.current.finished &&
+        Date.now() - feedback.current.at > 90
+      ) {
+        playArcadeFeedback('move');
+        feedback.current.at = Date.now();
+      }
+      feedback.current.token = token;
+      return () => {
+        if (snapshotReader.current === reader) snapshotReader.current = null;
+      };
+    },
+    [paused],
+  );
   useEffect(() => {
-    if (result) playArcadeFeedback(result.isNewBest ? 'record' : result.challenge?.cleared || result.outcome === 'win' ? 'win' : 'lose');
+    if (result)
+      playArcadeFeedback(
+        result.isNewBest
+          ? 'record'
+          : result.challenge?.cleared || result.outcome === 'win'
+            ? 'win'
+            : 'lose',
+      );
   }, [result?.outcome, result?.challenge?.cleared, result?.isNewBest]);
   useEffect(() => {
     migrateLegacyArcadeStats();

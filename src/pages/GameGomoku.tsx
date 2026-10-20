@@ -119,6 +119,7 @@ const GameGomoku = () => {
 
   /** 人机模式一次退两手，直接回到玩家可落子的局面 */
   const undo = () => {
+    if (arcade.mode === 'challenge' || paused) return;
     if (paused || arcade.result) return;
     if (aiTimer.current) clearTimeout(aiTimer.current);
     setThinking(false);
@@ -235,7 +236,9 @@ const GameGomoku = () => {
               variant="outline"
               size="sm"
               onClick={undo}
-              disabled={history.length === 0 || thinking}
+              disabled={
+                history.length === 0 || thinking || arcade.mode === 'challenge'
+              }
             >
               <Undo2 className="size-3.5" />
               {t('common.undo')}

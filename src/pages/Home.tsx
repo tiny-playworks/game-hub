@@ -107,12 +107,36 @@ const Home = () => {
             {t('lobby.welcome')}
           </p>
         </div>
-        <section className="play-focus-banner" aria-labelledby="play-focus-title">
-          <div><p className="play-eyebrow">RIICHI · ARCADE · FAMILY</p><h2 id="play-focus-title">{t('play.focus')}</h2><p>{t('play.focusDescription')}</p></div>
+        <section
+          className="play-focus-banner"
+          aria-labelledby="play-focus-title"
+        >
+          <div>
+            <p className="play-eyebrow">RIICHI · ARCADE · FAMILY</p>
+            <h2 id="play-focus-title">{t('play.focus')}</h2>
+            <p>{t('play.focusDescription')}</p>
+          </div>
           <div className="play-focus-actions">
-            <Button asChild size="lg"><Link to={canResume ? (isActive ? '/game/mahjong-japanese' : '/game/mahjong-japanese?resume=1') : '/journey'}><Play className="size-4" />{t(canResume ? 'play.continue' : 'journey.start')}</Link></Button>
-            <Link to="/game/mahjong-japanese">{t('play.quickStart')}<ArrowRight className="size-3.5" /></Link>
-            <a href="#arcade-corner">{t('play.arcade')}</a><Link to="/family">{t('play.family')}</Link>
+            <Button asChild size="lg">
+              <Link
+                to={
+                  canResume
+                    ? isActive
+                      ? '/game/mahjong-japanese'
+                      : '/game/mahjong-japanese?resume=1'
+                    : '/journey'
+                }
+              >
+                <Play className="size-4" />
+                {t(canResume ? 'play.continue' : 'journey.start')}
+              </Link>
+            </Button>
+            <Link to="/game/mahjong-japanese">
+              {t('play.quickStart')}
+              <ArrowRight className="size-3.5" />
+            </Link>
+            <a href="#arcade-corner">{t('play.arcade')}</a>
+            <Link to="/family">{t('play.family')}</Link>
           </div>
         </section>
         <CuratedRotationPanel />
@@ -253,6 +277,102 @@ const Home = () => {
               </div>
             </article>
           </div>
+        </section>
+
+        <section
+          id="arcade-corner"
+          className="venue-arcade mt-8"
+          aria-labelledby="arcade-heading"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Gamepad2 className="size-5 text-wood" />
+              <h2 id="arcade-heading" className="text-xl font-semibold">
+                {t('lobby.arcade')}
+              </h2>
+              <span className="text-xs text-muted-foreground">
+                16 {t('lobby.games')}
+              </span>
+              <Link
+                to="/leaderboard"
+                className="inline-flex items-center gap-1 rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-medium text-foreground hover:bg-gold/20"
+              >
+                {t('venue.nav.leaderboard')}
+                <ArrowRight className="size-3" />
+              </Link>
+            </div>
+            <div
+              role="tablist"
+              aria-label={t('lobby.arcade')}
+              className="flex gap-1 rounded-full border bg-card p-1"
+            >
+              {categories.map((category) => (
+                <button
+                  key={category.id}
+                  id={`arcade-tab-${category.id}`}
+                  type="button"
+                  role="tab"
+                  aria-controls="arcade-panel"
+                  aria-selected={categoryId === category.id}
+                  className={cn(
+                    'rounded-full px-4 py-1.5 text-xs transition',
+                    categoryId === category.id
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-muted',
+                  )}
+                  onClick={() => setCategoryId(category.id)}
+                >
+                  {t(`category.${category.id}.name`)}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div
+            id="arcade-panel"
+            role="tabpanel"
+            aria-labelledby={`arcade-tab-${categoryId}`}
+            className="mt-4 flex gap-4 overflow-x-auto pb-3"
+          >
+            {games
+              .filter((game) => game.categoryId === categoryId)
+              .map((game) => (
+                <Link
+                  key={game.id}
+                  to={game.path}
+                  className="venue-arcade-entry paper-texture group flex w-57.5 shrink-0 flex-col rounded-[22px] border border-wood/20 bg-card p-5 transition hover:-translate-y-1 hover:border-primary/40 hover:shadow-md"
+                >
+                  <VenueGameGlyph gameId={game.id} />
+                  <div className="venue-arcade-copy">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3>{t(`game.${game.id}.name`)}</h3>
+                      <span
+                        role="img"
+                        aria-label={`${t('lobby.difficulty')} ${game.difficulty}`}
+                        className="venue-game-difficulty"
+                      >
+                        {'★'.repeat(game.difficulty)}
+                      </span>
+                    </div>
+                    <p>{t(`game.${game.id}.description`)}</p>
+                    <PersonalBest gameId={game.id} />
+                    <span className="venue-game-link">
+                      {t('common.startGame')}{' '}
+                      <ArrowRight className="size-3.5" />
+                    </span>
+                  </div>
+                </Link>
+              ))}
+          </div>
+          <Link
+            to={`/category/${categoryId}`}
+            className="mt-2 inline-flex items-center gap-1 text-xs text-primary"
+          >
+            {t('lobby.viewCategory')}
+            <ArrowRight className="size-3.5" />
+          </Link>
+        </section>
+        <details className="play-growth-drawer">
+          <summary>{t('play.growth')}</summary>
           <aside className="venue-task-stack">
             <ThemeChallengePanel />
             <section className="venue-task-panel venue-daily">
@@ -403,96 +523,7 @@ const Home = () => {
             </section>
             <FamilyFeedLobbyPanel />
           </aside>
-        </section>
-
-        <section id="arcade-corner" className="venue-arcade mt-8" aria-labelledby="arcade-heading">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Gamepad2 className="size-5 text-wood" />
-              <h2 id="arcade-heading" className="text-xl font-semibold">
-                {t('lobby.arcade')}
-              </h2>
-              <span className="text-xs text-muted-foreground">
-                16 {t('lobby.games')}
-              </span>
-              <Link
-                to="/leaderboard"
-                className="inline-flex items-center gap-1 rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-medium text-foreground hover:bg-gold/20"
-              >
-                {t('venue.nav.leaderboard')}
-                <ArrowRight className="size-3" />
-              </Link>
-            </div>
-            <div
-              role="tablist"
-              aria-label={t('lobby.arcade')}
-              className="flex gap-1 rounded-full border bg-card p-1"
-            >
-              {categories.map((category) => (
-                <button
-                  key={category.id}
-                  id={`arcade-tab-${category.id}`}
-                  type="button"
-                  role="tab"
-                  aria-controls="arcade-panel"
-                  aria-selected={categoryId === category.id}
-                  className={cn(
-                    'rounded-full px-4 py-1.5 text-xs transition',
-                    categoryId === category.id
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-muted',
-                  )}
-                  onClick={() => setCategoryId(category.id)}
-                >
-                  {t(`category.${category.id}.name`)}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div
-            id="arcade-panel"
-            role="tabpanel"
-            aria-labelledby={`arcade-tab-${categoryId}`}
-            className="mt-4 flex gap-4 overflow-x-auto pb-3"
-          >
-            {games
-              .filter((game) => game.categoryId === categoryId)
-              .map((game) => (
-                <Link
-                  key={game.id}
-                  to={game.path}
-                  className="venue-arcade-entry paper-texture group flex w-57.5 shrink-0 flex-col rounded-[22px] border border-wood/20 bg-card p-5 transition hover:-translate-y-1 hover:border-primary/40 hover:shadow-md"
-                >
-                  <VenueGameGlyph gameId={game.id} />
-                  <div className="venue-arcade-copy">
-                    <div className="flex items-center justify-between gap-2">
-                      <h3>{t(`game.${game.id}.name`)}</h3>
-                      <span
-                        role="img"
-                        aria-label={`${t('lobby.difficulty')} ${game.difficulty}`}
-                        className="venue-game-difficulty"
-                      >
-                        {'★'.repeat(game.difficulty)}
-                      </span>
-                    </div>
-                    <p>{t(`game.${game.id}.description`)}</p>
-                    <PersonalBest gameId={game.id} />
-                    <span className="venue-game-link">
-                      {t('common.startGame')}{' '}
-                      <ArrowRight className="size-3.5" />
-                    </span>
-                  </div>
-                </Link>
-              ))}
-          </div>
-          <Link
-            to={`/category/${categoryId}`}
-            className="mt-2 inline-flex items-center gap-1 text-xs text-primary"
-          >
-            {t('lobby.viewCategory')}
-            <ArrowRight className="size-3.5" />
-          </Link>
-        </section>
+        </details>
         <footer className="mt-8 flex flex-wrap items-center justify-between gap-2 border-t border-wood/20 pt-5 text-xs text-muted-foreground">
           <span>{t('lobby.footer')}</span>
           <Link to="/profile">

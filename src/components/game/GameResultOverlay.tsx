@@ -1,5 +1,6 @@
 import { Flag, Trophy } from 'lucide-react';
-import { type ReactNode, useEffect, useRef } from 'react';
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useOptionalArcade } from '@/contexts/ArcadeContext';
@@ -42,7 +43,7 @@ const TONE_STYLE: Record<ResultTone, { ring: string; badge: string }> = {
 
 /**
  * 统一的对局结算弹层：覆盖在棋盘/牌桌上方，而不是只把结果塞进标题栏。
- * 用 `absolute inset-0`，所以父容器必须是 `relative`。
+ * 挂在游戏外壳根节点，避免棋盘裁切、暗色继承和变换父级影响结算。
  */
 export const GameResultOverlay = ({
   open,
@@ -58,7 +59,10 @@ export const GameResultOverlay = ({
 }: GameResultOverlayProps) => {
   const { t, locale } = useLocale();
   const arcade = useOptionalArcade();
+  const anchor = useRef<HTMLSpanElement>(null);
+  const [host, setHost] = useState<HTMLElement | null>(null);
   const card = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => { setHost(anchor.current?.closest<HTMLElement>('.game-shell') ?? document.body); }, []);
   useEffect(() => {
     if (!open) return;
     const previous = document.activeElement;
@@ -69,11 +73,21 @@ export const GameResultOverlay = ({
       if (previous instanceof HTMLElement && previous.isConnected)
         previous.focus({ preventScroll: true });
     };
-  }, [open]);
-  if (!open) return null;
+  }, [open, host]);
+  if (!open) return <span ref={anchor} hidden />;
 
-  const effectiveTone = arcade?.result?.challenge ? (arcade.result.challenge.cleared ? 'win' : 'lose') : tone;
-  const effectiveTitle = arcade?.result?.challenge ? t(arcade.result.challenge.cleared ? 'play.trialCleared' : 'play.trialRetry') : title;
+  const effectiveTone = arcade?.result?.challenge
+    ? arcade.result.challenge.cleared
+      ? 'win'
+      : 'lose'
+    : tone;
+  const effectiveTitle = arcade?.result?.challenge
+    ? t(
+        arcade.result.challenge.cleared
+          ? 'play.trialCleared'
+          : 'play.trialRetry',
+      )
+    : title;
   const style = TONE_STYLE[effectiveTone];
   const game = games.find((item) => item.id === arcade?.gameId);
   const unitLabel = t(
@@ -84,7 +98,7 @@ export const GameResultOverlay = ({
   const standing = arcade?.result?.leaderboard;
   const guide = arcade?.gameId ? arcadeGuides[arcade.gameId] : undefined;
 
-  return (
+  const content = (
     <div
       role="alertdialog"
       aria-modal="true"
@@ -126,12 +140,32 @@ export const GameResultOverlay = ({
           {t('common.gameResult')}
         </p>
         <h2 className="text-xl font-bold text-foreground">{effectiveTitle}</h2>
-        {arcade?.result?.challenge ? <div className="game-challenge-result" data-cleared={arcade.result.challenge.cleared}>
-          <p>{formatMessage(locale, `play.trial.goal.${arcade.gameId}`, arcadeChallengeGoal(arcade.gameId, arcade.difficulty))}</p>
-          <strong>{formatMessage(locale, 'play.trialAttempts', { attempts: arcade.result.challenge.attempts, clears: arcade.result.challenge.clears })}</strong>
-          <p>{formatMessage(locale, 'play.bestTime', { seconds: (arcade.result.challenge.durationMs / 1000).toFixed(1) })}</p>
-          <small>{t('play.practiceOnly')}</small>
-        </div> : null}
+        {arcade?.result?.challenge ? (
+          <div
+            className="game-challenge-result"
+            data-cleared={arcade.result.challenge.cleared}
+          >
+            <p>
+              {formatMessage(
+                locale,
+                `play.trial.goal.${arcade.gameId}${arcade.gameId === 'tictactoe' && arcade.difficulty === 'hard' ? '.hard' : ''}`,
+                arcadeChallengeGoal(arcade.gameId, arcade.difficulty),
+              )}
+            </p>
+            <strong>
+              {formatMessage(locale, 'play.trialAttempts', {
+                attempts: arcade.result.challenge.attempts,
+                clears: arcade.result.challenge.clears,
+              })}
+            </strong>
+            <p>
+              {formatMessage(locale, 'play.bestTime', {
+                seconds: (arcade.result.challenge.durationMs / 1000).toFixed(1),
+              })}
+            </p>
+            <small>{t('play.practiceOnly')}</small>
+          </div>
+        ) : null}
         {(isNewBest ?? arcade?.result?.isNewBest) && (
           <div className="mt-3 rounded-xl border border-gold bg-gold/15 p-3 text-sm">
             <strong className="text-gold">{t('arcade.newBest')}</strong>
@@ -207,7 +241,7 @@ export const GameResultOverlay = ({
         )}
         {arcade?.result?.settlementFailed && (
           <p role="alert" className="mt-3 text-sm text-destructive">
-            {t('arcade.settlementFailed')}
+            {t(arcade.mode === 'challenge' ? 'play.trialSaveFailed' : 'arcade.settlementFailed')}
           </p>
         )}
         {arcade?.result?.settlementPending && (
@@ -217,8 +251,8 @@ export const GameResultOverlay = ({
         )}
         {arcade?.result &&
           !arcade.result.settlementFailed &&
-          !arcade.result.settlementPending && (
-            arcade.mode === 'challenge' ? null :
+          !arcade.result.settlementPending &&
+          (arcade.mode === 'challenge' ? null : (
             <p className="mt-3 text-sm text-primary">
               +{arcade.result.coinsEarned} {t('wallet.coins')}
               {arcade.result.capReached && (
@@ -227,7 +261,7 @@ export const GameResultOverlay = ({
                 </span>
               )}
             </p>
-          )}
+          ))}
         <div className="mt-5 flex flex-col gap-2">
           {arcade?.result?.settlementFailed && (
             <Button
@@ -243,7 +277,12 @@ export const GameResultOverlay = ({
             disabled={arcade?.result?.settlementFailed}
             className="w-full"
           >
-            {restartLabel ?? t(arcade?.mode === 'challenge' ? 'play.trialNext' : 'common.playAgain')}
+            {restartLabel ??
+              t(
+                arcade?.mode === 'challenge'
+                  ? 'play.trialNext'
+                  : 'common.playAgain',
+              )}
           </Button>
           {extraAction}
           <Button asChild variant="ghost" size="sm" className="w-full">
@@ -253,4 +292,5 @@ export const GameResultOverlay = ({
       </div>
     </div>
   );
+  return <><span ref={anchor} hidden />{host ? createPortal(content, host) : content}</>;
 };

@@ -15,6 +15,7 @@ import { DataManagementCard } from '@/components/profile/DataManagementCard';
 import { TrainingSummary } from '@/components/profile/TrainingSummary';
 import { WalletCard } from '@/components/profile/WalletCard';
 import { WeeklyChampionsCard } from '@/components/profile/WeeklyChampionsCard';
+import { ChallengeProgress } from '@/components/profile/ChallengeProgress';
 import { RankedProfilePanel } from '@/components/ranked/RankedProfilePanel';
 import { TaskClaimButton } from '@/components/TaskClaimButton';
 import { Button } from '@/components/ui/button';
@@ -166,14 +167,17 @@ const Profile = () => {
   const [characterState, setCharacterState] = useState<PlayerCharacterState>(
     getPlayerCharacterState,
   );
-  const [themeChallenges, setThemeChallenges] = useState(getThemeChallengeState);
+  const [themeChallenges, setThemeChallenges] = useState(
+    getThemeChallengeState,
+  );
   const [recentFeed, setRecentFeed] = useState(() => getFullGrowthFeed());
   const growthHistoryMeta = useMemo(
     () =>
-      t(memberMode ? 'profile.growthHistory.memberMeta' : 'profile.growthHistory.meta').replace(
-        '{{count}}',
-        String(recentFeed.length),
-      ),
+      t(
+        memberMode
+          ? 'profile.growthHistory.memberMeta'
+          : 'profile.growthHistory.meta',
+      ).replace('{{count}}', String(recentFeed.length)),
     [memberMode, recentFeed.length, t],
   );
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -217,7 +221,11 @@ const Profile = () => {
 
   useEffect(() => {
     window.addEventListener(THEME_CHALLENGES_CHANGED_EVENT, refreshDashboard);
-    return () => window.removeEventListener(THEME_CHALLENGES_CHANGED_EVENT, refreshDashboard);
+    return () =>
+      window.removeEventListener(
+        THEME_CHALLENGES_CHANGED_EVENT,
+        refreshDashboard,
+      );
   }, [refreshDashboard]);
 
   const saveNickname = () => {
@@ -301,7 +309,9 @@ const Profile = () => {
         : claimWeekMilestone(CHECKIN_WEEK_MILESTONES[0]);
       refreshDashboard();
       if (result.ok)
-        setCheckinFeedback(`${t('profile.checkin.feedback.week')}${result.awardedPoints}`);
+        setCheckinFeedback(
+          `${t('profile.checkin.feedback.week')}${result.awardedPoints}`,
+        );
     } catch {
       setCheckinFeedback(t('save.failed'));
     } finally {
@@ -317,7 +327,9 @@ const Profile = () => {
         : claimMonthMilestone(CHECKIN_MONTH_MILESTONES[0]);
       refreshDashboard();
       if (result.ok)
-        setCheckinFeedback(`${t('profile.checkin.feedback.month')}${result.awardedPoints}`);
+        setCheckinFeedback(
+          `${t('profile.checkin.feedback.month')}${result.awardedPoints}`,
+        );
     } catch {
       setCheckinFeedback(t('save.failed'));
     } finally {
@@ -630,7 +642,11 @@ const Profile = () => {
                 );
               })}
             </div>
-            {characterError && <p role="alert" className="mt-2 text-sm text-destructive">{characterError}</p>}
+            {characterError && (
+              <p role="alert" className="mt-2 text-sm text-destructive">
+                {characterError}
+              </p>
+            )}
           </section>
 
           <section className="rounded-3xl border border-border paper-texture bg-card p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
@@ -1096,6 +1112,7 @@ const Profile = () => {
           <FamilyHeadToHead />
           <DataManagementCard />
         </div>
+        <ChallengeProgress />
       </main>
     </div>
   );

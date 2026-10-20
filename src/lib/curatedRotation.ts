@@ -1,4 +1,8 @@
-import { JOURNEY_STAGES, getJourneyStage, getJourneyStageForCharacter } from './riichiJourney';
+import {
+  JOURNEY_STAGES,
+  getJourneyStage,
+  getJourneyStageForCharacter,
+} from './riichiJourney';
 import { gameStorage } from './storage';
 
 export const CURATED_ROTATION_VERSION = 1;
@@ -21,9 +25,7 @@ export interface CuratedFamilyCupItem {
 }
 
 export type CuratedConfigItem =
-  | CuratedJourneyItem
-  | CuratedReplayBranchItem
-  | CuratedFamilyCupItem;
+  CuratedJourneyItem | CuratedReplayBranchItem | CuratedFamilyCupItem;
 
 export interface CuratedRotationConfig {
   version: number;
@@ -56,7 +58,9 @@ export const CURATED_ROTATION_CONFIGS: Record<number, CuratedRotationConfig> = {
   2: CURATED_ROTATION_CONFIG_V2,
 };
 
-export function getActiveCuratedRotationConfig(version = CURATED_ROTATION_VERSION): CuratedRotationConfig {
+export function getActiveCuratedRotationConfig(
+  version = CURATED_ROTATION_VERSION,
+): CuratedRotationConfig {
   return CURATED_ROTATION_CONFIGS[version] ?? CURATED_ROTATION_CONFIG_V1;
 }
 
@@ -64,6 +68,7 @@ export interface CuratedPlayerContext {
   memberMode: boolean;
   isServerAvailable: boolean;
   completedJourneyStageIds: string[];
+  completedJourneyVariationIds?: string[];
   companionCharacterId?: string;
   hasEligibleReplay: boolean;
 }
@@ -92,28 +97,41 @@ export function resolveCuratedRecommendations(
       let stage = item.stageId ? getJourneyStage(item.stageId) : undefined;
       if (!stage) {
         // 查找第一个未完成的巡礼关卡
-        stage = JOURNEY_STAGES.find((s) => !context.completedJourneyStageIds.includes(s.id));
+        stage = JOURNEY_STAGES.find(
+          (s) => !context.completedJourneyStageIds.includes(s.id),
+        );
       }
       if (!stage) {
         // 如果全部 9 关均已完成，优先推荐当前伴侣的对应关卡或第一关重温
-        stage = (context.companionCharacterId ? getJourneyStageForCharacter(context.companionCharacterId) : undefined)
-          ?? JOURNEY_STAGES[0];
+        stage =
+          (context.companionCharacterId
+            ? getJourneyStageForCharacter(context.companionCharacterId)
+            : undefined) ?? JOURNEY_STAGES[0];
       }
 
       if (stage) {
         const isCompleted = context.completedJourneyStageIds.includes(stage.id);
-        const stageIndex = JOURNEY_STAGES.findIndex((s) => s.id === stage!.id) + 1;
+        const stageIndex =
+          JOURNEY_STAGES.findIndex((s) => s.id === stage!.id) + 1;
         result.push({
           id: item.id,
           type: 'journey',
           stageId: stage.id,
-          titleKey: isCompleted ? 'curated.journey.revisitTitle' : 'curated.journey.nextTitle',
+          titleKey: isCompleted
+            ? 'play.curatedVariationTitle'
+            : 'curated.journey.nextTitle',
           titleParams: { stage: stage.titleKey, index: stageIndex },
-          descKey: isCompleted ? 'curated.journey.revisitDesc' : 'curated.journey.nextDesc',
-          descParams: { venue: stage.venueKey, index: stageIndex, stage: stage.titleKey },
+          descKey: isCompleted
+            ? 'play.curatedVariationDesc'
+            : 'curated.journey.nextDesc',
+          descParams: {
+            venue: stage.venueKey,
+            index: stageIndex,
+            stage: stage.titleKey,
+          },
           tagKey: isCompleted ? 'curated.tag.revisit' : 'curated.tag.recommend',
           badge: isCompleted ? 'revisit' : 'recommend',
-          targetPath: `/journey?stage=${stage.id}`,
+          targetPath: `/journey?stage=${stage.id}${isCompleted ? `&variation=${context.completedJourneyVariationIds?.includes(`${stage.id}:1`) && !context.completedJourneyVariationIds?.includes(`${stage.id}:2`) ? '2' : '1'}` : ''}`,
         });
       }
     } else if (item.type === 'replay_branch') {
@@ -160,7 +178,10 @@ export function getCuratedBadges(): string[] {
   }
 }
 
-export function recordCuratedBadge(badgeId: string): { newlyEarned: boolean; badges: string[] } {
+export function recordCuratedBadge(badgeId: string): {
+  newlyEarned: boolean;
+  badges: string[];
+} {
   const current = getCuratedBadges();
   if (current.includes(badgeId)) {
     return { newlyEarned: false, badges: current };

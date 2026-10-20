@@ -4,7 +4,17 @@ export const playMessages: Record<'zh' | 'en', Record<string, string>> = {
     'arcade.difficulty.2048.normal': '宽阔 5×5',
     'arcade.difficulty.2048.hard': '紧凑 3×3',
     'play.focus': '下一局，试试新解法',
-    'play.focusDescription': '一张桌、一个目标。从挑战出发，把每次复盘变成下一次进步。',
+    'play.growth': '成长、委托与家庭动态',
+    'play.challengeHistory': '我的挑战足迹',
+    'play.challengeEmpty':
+      '在街机中选择挑战局，第一份个人挑战记录就从这里开始。',
+    'play.bestDuration': '达成最快 {seconds} 秒',
+    'play.curatedVariationTitle': '变化挑战：{stage}',
+    'play.curatedVariationDesc':
+      '主线已通关，换一副可反复重试的起手，试试同一主题的新解法。',
+    'play.trial.goal.tictactoe.hard': '对抗最强 AI，保持不败',
+    'play.focusDescription':
+      '一张桌、一个目标。从挑战出发，把每次复盘变成下一次进步。',
     'play.quickStart': '快速开桌',
     'play.continue': '接着上一局',
     'play.advanced': '对手、手感与桌布设置',
@@ -18,14 +28,17 @@ export const playMessages: Record<'zh' | 'en', Record<string, string>> = {
     'play.journeyReview': '复盘刚才这一局',
     'play.variation': '变化挑战 {number}',
     'play.mainStage': '主线关卡',
-    'play.variationHint': '同一主题，新局面。可用相同起手反复尝试，成绩单独记录。',
+    'play.variationHint':
+      '同一主题，新局面。可用相同起手反复尝试，成绩单独记录。',
     'play.variationLocked': '通关本关，解锁两种变化挑战',
     'play.nextVariation': '换一种局面',
-    'play.journeyProgress': '主线 {completed}/{total} · 变化挑战 {variations}/20',
+    'play.journeyProgress':
+      '主线 {completed}/{total} · 变化挑战 {variations}/20',
     'play.practiceOnly': '独立练习记录 · 不发雀币、不计经典榜',
     'play.classic': '经典局',
     'play.trial': '挑战局',
-    'play.trialHint': '切换模式会重新开始。挑战按当前难度记录，不影响经典战绩。',
+    'play.trialHint':
+      '切换模式会重新开始。挑战按当前难度记录，不影响经典战绩。',
     'play.trialCleared': '挑战达成',
     'play.trialRetry': '距离目标又近了一步',
     'play.trialAttempts': '已尝试 {attempts} 次 · 达成 {clears} 次',
@@ -65,11 +78,23 @@ export const playMessages: Record<'zh' | 'en', Record<string, string>> = {
     'arcade.difficulty.2048.normal': 'Roomy 5×5',
     'arcade.difficulty.2048.hard': 'Compact 3×3',
     'play.focus': 'A new line for your next game',
-    'play.focusDescription': 'One table, one goal. Turn a challenge and its review into your next step forward.',
+    'play.growth': 'Growth, tasks & family activity',
+    'play.challengeHistory': 'My challenge trail',
+    'play.challengeEmpty':
+      'Choose Challenge in the arcade to start your personal challenge history.',
+    'play.bestDuration': 'Fastest clear: {seconds}s',
+    'play.curatedVariationTitle': 'Variation: {stage}',
+    'play.curatedVariationDesc':
+      'Main stage cleared. Try a different, repeatable opening with the same tactical theme.',
+    'play.trial.goal.tictactoe.hard':
+      'Stay undefeated against the strongest AI',
+    'play.focusDescription':
+      'One table, one goal. Turn a challenge and its review into your next step forward.',
     'play.quickStart': 'Quick start',
     'play.continue': 'Continue your game',
     'play.advanced': 'Opponents, controls & table style',
-    'play.quickHint': 'Your current opponents and preferences are ready. Choose a match length and play.',
+    'play.quickHint':
+      'Your current opponents and preferences are ready. Choose a match length and play.',
     'play.family': 'Play with family',
     'play.arcade': 'Visit the arcade',
     'play.reviewPractice': 'Try another choice',
@@ -79,46 +104,57 @@ export const playMessages: Record<'zh' | 'en', Record<string, string>> = {
     'play.journeyReview': 'Review this round',
     'play.variation': 'Variation {number}',
     'play.mainStage': 'Main stage',
-    'play.variationHint': 'Same theme, a new position. Retry the same opening; results are tracked separately.',
+    'play.variationHint':
+      'Same theme, a new position. Retry the same opening; results are tracked separately.',
     'play.variationLocked': 'Clear this stage to unlock two variations',
     'play.nextVariation': 'Try a different position',
-    'play.journeyProgress': 'Main stages {completed}/{total} · Variations {variations}/20',
+    'play.journeyProgress':
+      'Main stages {completed}/{total} · Variations {variations}/20',
     'play.practiceOnly': 'Practice records only · No coins or classic rankings',
     'play.classic': 'Classic',
     'play.trial': 'Challenge',
-    'play.trialHint': 'Switching restarts the game. Challenges are tracked by difficulty, separately from classic records.',
+    'play.trialHint':
+      'Switching restarts the game. Challenges are tracked by difficulty, separately from classic records.',
     'play.trialCleared': 'Challenge cleared',
     'play.trialRetry': 'One step closer',
     'play.trialAttempts': '{attempts} attempts · {clears} clears',
     'play.trialNext': 'Try the challenge again',
-    'play.trialSaveFailed': 'Your challenge result was not saved. Keep this page open and retry.',
+    'play.trialSaveFailed':
+      'Your challenge result was not saved. Keep this page open and retry.',
     'play.saving': 'Saving…',
     'play.bestTime': 'This attempt: {seconds}s',
     'play.continue2048': 'Keep going',
-    'play.tileMilestone': '{target} reached! Keep building toward the next tile',
+    'play.tileMilestone':
+      '{target} reached! Keep building toward the next tile',
     'play.finish2048': 'Bank this score',
     'play.boardSize': '{size}×{size} board',
     'play.rematch': 'Play another match',
-    'play.rematchHint': 'The host can reopen this table. Ready up to play again.',
+    'play.rematchHint':
+      'The host can reopen this table. Ready up to play again.',
     'play.nextDeal': 'Level up · Next deal',
     'play.level': 'Our level / Their level',
-    'play.levelResult': 'Promoted {levels} level(s) · Continue with the next deal',
-    'play.trial.goal.guess-number': 'Find the answer in at most {target} guesses',
+    'play.levelResult':
+      'Promoted {levels} level(s) · Continue with the next deal',
+    'play.trial.goal.guess-number':
+      'Find the answer in at most {target} guesses',
     'play.trial.goal.memory': 'Clear every pair with at most {target} mistakes',
     'play.trial.goal.rubiks': 'Solve the cube within {target} seconds',
     'play.trial.goal.2048': 'Build {target} within {moves} moves',
     'play.trial.goal.snake': 'Reach at least {target} points',
     'play.trial.goal.shooter': 'Break through and reach {target} points',
     'play.trial.goal.tetris': 'Clear at least {target} lines',
-    'play.trial.goal.breakout': 'Clear the board with at least {target} lives left',
+    'play.trial.goal.breakout':
+      'Clear the board with at least {target} lives left',
     'play.trial.goal.tank': 'Defeat every enemy without damaging your base',
     'play.trial.goal.tictactoe': 'Win a game against the AI',
     'play.trial.goal.gomoku': 'Beat the AI within {target} moves',
     'play.trial.goal.go': 'Finish and win a game against the AI',
     'play.trial.goal.chess': 'Beat the AI within {target} moves',
     'play.trial.goal.xiangqi': 'Beat the AI within {target} moves',
-    'play.trial.goal.doudizhu': 'Win this deal with your team within {target} plays',
-    'play.trial.goal.shengji': 'Win this deal and advance at least {target} levels',
+    'play.trial.goal.doudizhu':
+      'Win this deal with your team within {target} plays',
+    'play.trial.goal.shengji':
+      'Win this deal and advance at least {target} levels',
     'play.personalProgress': 'This challenge',
   },
 };

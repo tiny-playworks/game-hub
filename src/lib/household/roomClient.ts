@@ -36,10 +36,10 @@ export function useRoomClient(roomId?: string, memberId?: string) {
     try {
       const summary = await getRoom(roomId);
       setRoom(summary);
-      if (summary.status === 'playing') {
+      if (summary.status === 'playing' || summary.status === 'finished') {
         const pView = await getRoomPlayerView(roomId).catch(() => null);
         if (pView) setView(pView);
-      }
+      } else setView(null);
     } catch (err: unknown) {
       if (err instanceof Error) setError(err.message);
     }

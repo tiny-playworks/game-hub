@@ -123,6 +123,7 @@ export async function buildMatchReview(
   options: {
     viewerSeat?: number;
     practiceRound?: boolean;
+    decisionStartIndex?: number;
     signal?: AbortSignal;
     onProgress?: (progress: number) => void;
   } = {},
@@ -212,7 +213,9 @@ export async function buildMatchReview(
         if (lastDiscard) {
           const state = frames[lastDiscard.frameIndex].round;
           const visible = visibleCountsFor(state, viewerSeat);
-          const legal = [...(state.turnOptions?.discardable ?? state.hands[viewerSeat])];
+          const legal = [
+            ...(state.turnOptions?.discardable ?? state.hands[viewerSeat]),
+          ];
           const safest =
             legal.sort(
               (a, b) =>
@@ -245,7 +248,9 @@ export async function buildMatchReview(
       // These are observations of the actual outcome, never a claim about an alternate win.
       for (const choice of declarationChoices) {
         const lostStick =
-          choice.playerRiichi && !ownWin && next.round.riichiDeclared[viewerSeat];
+          choice.playerRiichi &&
+          !ownWin &&
+          next.round.riichiDeclared[viewerSeat];
         const valueDifference = ownWin && ownWin.ten >= 3900;
         const exposedLoss =
           choice.playerRiichi && result.settlement.deltas[viewerSeat] <= -4000;
@@ -257,7 +262,8 @@ export async function buildMatchReview(
         candidates.set(choice.frameIndex, {
           ...choice,
           reason: choice.aiRiichi ? 'riichi' : 'dama',
-          impact: 5000 + (exposedLoss ? -result.settlement.deltas[viewerSeat] : 0),
+          impact:
+            5000 + (exposedLoss ? -result.settlement.deltas[viewerSeat] : 0),
           loss: lostStick ? 1000 : 0,
         });
       }
@@ -273,7 +279,10 @@ export async function buildMatchReview(
   }
   if (options.signal?.aborted)
     throw new DOMException('Review cancelled', 'AbortError');
-  if (match.status !== 'matchEnd' && !(options.practiceRound && match.status === 'roundEnd'))
+  if (
+    match.status !== 'matchEnd' &&
+    !(options.practiceRound && match.status === 'roundEnd')
+  )
     throw new Error('Match is not complete');
   stats.averageWin = stats.wins ? Math.round(totalWin / stats.wins) : 0;
   options.onProgress?.(1);
@@ -282,6 +291,9 @@ export async function buildMatchReview(
     frames,
     stats,
     decisions: [...candidates.values()]
+      .filter(
+        (decision) => decision.frameIndex >= (options.decisionStartIndex ?? 0),
+      )
       .sort((a, b) => b.impact - a.impact || a.frameIndex - b.frameIndex)
       .slice(0, 8),
   };

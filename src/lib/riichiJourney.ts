@@ -262,6 +262,9 @@ function generateStageStart(stage: JourneyStageDefinition): RiichiMatchState {
     throw new Error('Journey defense stage must begin under riichi threat');
   if (stage.id === 'aya-riichi' && (match.round.turnOptions?.riichiDiscards.length ?? 0) === 0)
     throw new Error('Journey riichi stage must begin with a riichi discard available');
+  if ((stage.id === 'yoru-reading' || stage.id === 'chitose-closed') &&
+    match.round.melds[0].some((meld) => meld.type !== 'angang'))
+    throw new Error('Closed-hand journey stages must begin with a closed hand');
   if (stage.id === 'mahiru-flush' && computeSuitFocusCount(match, 0) < 9)
     throw new Error('Journey flush stage must begin with a concentrated suit hand');
   return match;

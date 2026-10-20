@@ -68,10 +68,13 @@ function TrackedPage({
   gameId: string;
   children: ReactElement;
 }) {
-  const { isLoading } = useHousehold();
+  const { isLoading, currentMember } = useHousehold();
   if (isLoading) return <PageFallback />;
   return (
-    <ArcadeSession key={gameId} gameId={gameId}>
+    <ArcadeSession
+      key={`${gameId}:${currentMember?.id ?? 'guest'}`}
+      gameId={gameId}
+    >
       {children}
     </ArcadeSession>
   );
@@ -93,168 +96,206 @@ const App = () => {
           <StorageNotice />
           <HouseholdNotice />
           <CosmeticsProvider>
-          <VenueNavigation />
-          <RankedNavigationGuard />
-          <AchievementUnlockToast />
-          <GrowthPointToast />
-          <CoinsToast />
-          <AffinityNotice />
-          <PageErrorBoundary showStorageNotice={false}>
-            <Suspense fallback={<PageFallback />}>
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/family" element={<HouseholdReady><FamilyLobby /></HouseholdReady>} />
-                <Route path="/family/:roomId" element={<HouseholdReady><FamilyRoom /></HouseholdReady>} />
-                <Route path="/family/games/:roomId" element={<HouseholdReady><FamilyGameRoom /></HouseholdReady>} />
-                <Route path="/leaderboard" element={<HouseholdReady><Leaderboard /></HouseholdReady>} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/replays" element={<ReplayArchive />} />
-                <Route path="/replays/training" element={<RiichiTraining />} />
-                <Route path="/journey" element={<Journey />} />
-                <Route path="/shop" element={<Shop />} />
-                <Route path="/characters" element={<Characters />} />
-                <Route path="/characters/:id" element={<CharacterProfile />} />
-                <Route path="/achievements" element={<Achievements />} />
-                <Route path="/category/:categoryId" element={<Category />} />
-                <Route
-                  path="/game/mahjong-japanese"
-                  element={<HouseholdReady><GameMahjongJapanese /></HouseholdReady>}
-                />
-                <Route
-                  path="/game/guess-number"
-                  element={
-                    <TrackedPage gameId="guess-number">
-                      <GameGuessNumber />
-                    </TrackedPage>
-                  }
-                />
-                <Route
-                  path="/game/tictactoe"
-                  element={
-                    <TrackedPage gameId="tictactoe">
-                      <GameTictactoe />
-                    </TrackedPage>
-                  }
-                />
-                <Route
-                  path="/game/memory"
-                  element={
-                    <TrackedPage gameId="memory">
-                      <GameMemory />
-                    </TrackedPage>
-                  }
-                />
-                <Route
-                  path="/game/2048"
-                  element={
-                    <TrackedPage gameId="2048">
-                      <Game2048 />
-                    </TrackedPage>
-                  }
-                />
-                <Route
-                  path="/game/snake"
-                  element={
-                    <TrackedPage gameId="snake">
-                      <GameSnake />
-                    </TrackedPage>
-                  }
-                />
-                <Route
-                  path="/game/breakout"
-                  element={
-                    <TrackedPage gameId="breakout">
-                      <GameBreakout />
-                    </TrackedPage>
-                  }
-                />
-                <Route
-                  path="/game/shooter"
-                  element={
-                    <TrackedPage gameId="shooter">
-                      <GameShooter />
-                    </TrackedPage>
-                  }
-                />
-                <Route
-                  path="/game/tank"
-                  element={
-                    <TrackedPage gameId="tank">
-                      <GameTank />
-                    </TrackedPage>
-                  }
-                />
-                <Route
-                  path="/game/tetris"
-                  element={
-                    <TrackedPage gameId="tetris">
-                      <GameTetris />
-                    </TrackedPage>
-                  }
-                />
-                <Route
-                  path="/game/rubiks"
-                  element={
-                    <TrackedPage gameId="rubiks">
-                      <GameRubiks />
-                    </TrackedPage>
-                  }
-                />
-                <Route
-                  path="/game/go"
-                  element={
-                    <TrackedPage gameId="go">
-                      <GameGo />
-                    </TrackedPage>
-                  }
-                />
-                <Route
-                  path="/game/gomoku"
-                  element={
-                    <TrackedPage gameId="gomoku">
-                      <GameGomoku />
-                    </TrackedPage>
-                  }
-                />
-                <Route
-                  path="/game/xiangqi"
-                  element={
-                    <TrackedPage gameId="xiangqi">
-                      <GameXiangqi />
-                    </TrackedPage>
-                  }
-                />
-                <Route
-                  path="/game/chess"
-                  element={
-                    <TrackedPage gameId="chess">
-                      <GameChess />
-                    </TrackedPage>
-                  }
-                />
-                <Route
-                  path="/game/doudizhu"
-                  element={
-                    <TrackedPage gameId="doudizhu">
-                      <GameDoudizhu />
-                    </TrackedPage>
-                  }
-                />
-                <Route
-                  path="/game/shengji"
-                  element={
-                    <TrackedPage gameId="shengji">
-                      <GameShengji />
-                    </TrackedPage>
-                  }
-                />
-              </Routes>
-            </Suspense>
-          </PageErrorBoundary>
-        </CosmeticsProvider>
+            <VenueNavigation />
+            <RankedNavigationGuard />
+            <AchievementUnlockToast />
+            <GrowthPointToast />
+            <CoinsToast />
+            <AffinityNotice />
+            <PageErrorBoundary showStorageNotice={false}>
+              <Suspense fallback={<PageFallback />}>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route
+                    path="/family"
+                    element={
+                      <HouseholdReady>
+                        <FamilyLobby />
+                      </HouseholdReady>
+                    }
+                  />
+                  <Route
+                    path="/family/:roomId"
+                    element={
+                      <HouseholdReady>
+                        <FamilyRoom />
+                      </HouseholdReady>
+                    }
+                  />
+                  <Route
+                    path="/family/games/:roomId"
+                    element={
+                      <HouseholdReady>
+                        <FamilyGameRoom />
+                      </HouseholdReady>
+                    }
+                  />
+                  <Route
+                    path="/leaderboard"
+                    element={
+                      <HouseholdReady>
+                        <Leaderboard />
+                      </HouseholdReady>
+                    }
+                  />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/replays" element={<ReplayArchive />} />
+                  <Route
+                    path="/replays/training"
+                    element={<RiichiTraining />}
+                  />
+                  <Route path="/journey" element={<Journey />} />
+                  <Route path="/shop" element={<Shop />} />
+                  <Route path="/characters" element={<Characters />} />
+                  <Route
+                    path="/characters/:id"
+                    element={<CharacterProfile />}
+                  />
+                  <Route path="/achievements" element={<Achievements />} />
+                  <Route path="/category/:categoryId" element={<Category />} />
+                  <Route
+                    path="/game/mahjong-japanese"
+                    element={
+                      <HouseholdReady>
+                        <GameMahjongJapanese />
+                      </HouseholdReady>
+                    }
+                  />
+                  <Route
+                    path="/game/guess-number"
+                    element={
+                      <TrackedPage gameId="guess-number">
+                        <GameGuessNumber />
+                      </TrackedPage>
+                    }
+                  />
+                  <Route
+                    path="/game/tictactoe"
+                    element={
+                      <TrackedPage gameId="tictactoe">
+                        <GameTictactoe />
+                      </TrackedPage>
+                    }
+                  />
+                  <Route
+                    path="/game/memory"
+                    element={
+                      <TrackedPage gameId="memory">
+                        <GameMemory />
+                      </TrackedPage>
+                    }
+                  />
+                  <Route
+                    path="/game/2048"
+                    element={
+                      <TrackedPage gameId="2048">
+                        <Game2048 />
+                      </TrackedPage>
+                    }
+                  />
+                  <Route
+                    path="/game/snake"
+                    element={
+                      <TrackedPage gameId="snake">
+                        <GameSnake />
+                      </TrackedPage>
+                    }
+                  />
+                  <Route
+                    path="/game/breakout"
+                    element={
+                      <TrackedPage gameId="breakout">
+                        <GameBreakout />
+                      </TrackedPage>
+                    }
+                  />
+                  <Route
+                    path="/game/shooter"
+                    element={
+                      <TrackedPage gameId="shooter">
+                        <GameShooter />
+                      </TrackedPage>
+                    }
+                  />
+                  <Route
+                    path="/game/tank"
+                    element={
+                      <TrackedPage gameId="tank">
+                        <GameTank />
+                      </TrackedPage>
+                    }
+                  />
+                  <Route
+                    path="/game/tetris"
+                    element={
+                      <TrackedPage gameId="tetris">
+                        <GameTetris />
+                      </TrackedPage>
+                    }
+                  />
+                  <Route
+                    path="/game/rubiks"
+                    element={
+                      <TrackedPage gameId="rubiks">
+                        <GameRubiks />
+                      </TrackedPage>
+                    }
+                  />
+                  <Route
+                    path="/game/go"
+                    element={
+                      <TrackedPage gameId="go">
+                        <GameGo />
+                      </TrackedPage>
+                    }
+                  />
+                  <Route
+                    path="/game/gomoku"
+                    element={
+                      <TrackedPage gameId="gomoku">
+                        <GameGomoku />
+                      </TrackedPage>
+                    }
+                  />
+                  <Route
+                    path="/game/xiangqi"
+                    element={
+                      <TrackedPage gameId="xiangqi">
+                        <GameXiangqi />
+                      </TrackedPage>
+                    }
+                  />
+                  <Route
+                    path="/game/chess"
+                    element={
+                      <TrackedPage gameId="chess">
+                        <GameChess />
+                      </TrackedPage>
+                    }
+                  />
+                  <Route
+                    path="/game/doudizhu"
+                    element={
+                      <TrackedPage gameId="doudizhu">
+                        <GameDoudizhu />
+                      </TrackedPage>
+                    }
+                  />
+                  <Route
+                    path="/game/shengji"
+                    element={
+                      <TrackedPage gameId="shengji">
+                        <GameShengji />
+                      </TrackedPage>
+                    }
+                  />
+                </Routes>
+              </Suspense>
+            </PageErrorBoundary>
+          </CosmeticsProvider>
         </LocaleProvider>
       </HouseholdProvider>
-  </BrowserRouter>
+    </BrowserRouter>
   );
 };
 

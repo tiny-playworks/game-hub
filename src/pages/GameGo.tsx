@@ -131,6 +131,7 @@ const GameGo = () => {
 
   /** 人机模式一次退两手，回到玩家的回合 */
   const undo = () => {
+    if (arcade.mode === 'challenge' || paused) return;
     if (paused || arcade.result) return;
     if (aiTimer.current) clearTimeout(aiTimer.current);
     setThinking(false);
@@ -246,7 +247,9 @@ const GameGo = () => {
               variant="outline"
               size="sm"
               onClick={undo}
-              disabled={past.length === 0 || thinking}
+              disabled={
+                past.length === 0 || thinking || arcade.mode === 'challenge'
+              }
             >
               <Undo2 className="size-3.5" />
               {t('common.undo')}

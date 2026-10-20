@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2, RotateCcw, Sparkles } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { RiichiPracticeTable } from '@/components/riichi/RiichiPracticeTable';
@@ -70,6 +70,8 @@ export default function Journey() {
     ? memberProgress
     : guestProgress;
   const isMember = household.mode !== 'guest-local';
+  const owner = household.currentMember?.id ?? 'guest';
+  const attemptEpoch = useRef(0);
   const variationUnlocked = !variation || Boolean(selectedStage && progress?.stages[selectedStage.id]?.completed);
 
   useEffect(() => {
@@ -87,6 +89,13 @@ export default function Journey() {
   }, []);
 
   useEffect(() => {
+    attemptEpoch.current++;
+    setEvaluation(null);
+    setPendingInput(null);
+    setSubmitError(false);
+    setSubmitting(false);
+    setFinishedMatch(null);
+    setReviewOpen(false);
     if (!selectedStage || !rulesReady || !variationUnlocked) {
       setGame(null);
       return;
@@ -108,7 +117,7 @@ export default function Journey() {
       setGame(null);
       setLoadFailed(true);
     }
-  }, [selectedStage, attemptKey, rulesReady, variation, variationUnlocked]);
+  }, [selectedStage, attemptKey, rulesReady, variation, variationUnlocked, owner]);
 
   const openStage = useCallback((stageId: string | null, nextVariation?: JourneyVariation) => {
     setEvaluation(null);
@@ -120,11 +129,13 @@ export default function Journey() {
   }, [setSearchParams]);
 
   const saveAttempt = useCallback(async (input: JourneyAttemptInput) => {
+    const epoch = attemptEpoch.current;
     setSubmitting(true);
     setSubmitError(false);
     try {
       if (isMember) {
         const result = await household.submitJourneyAttempt(input);
+        if (epoch !== attemptEpoch.current) return;
         setEvaluation(result.evaluation);
       } else {
         const result = recordLocalJourneyAttempt(input);
@@ -133,9 +144,9 @@ export default function Journey() {
       }
       setPendingInput(null);
     } catch {
-      setSubmitError(true);
+      if (epoch === attemptEpoch.current) setSubmitError(true);
     } finally {
-      setSubmitting(false);
+      if (epoch === attemptEpoch.current) setSubmitting(false);
     }
   }, [household, isMember]);
 

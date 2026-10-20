@@ -20,7 +20,9 @@ export function CuratedRotationPanel() {
   const isServerAvailable = household?.isServerAvailable ?? false;
 
   const [hasEligibleReplay, setHasEligibleReplay] = useState(false);
-  const [recommendations, setRecommendations] = useState<ResolvedCuratedItem[]>([]);
+  const [recommendations, setRecommendations] = useState<ResolvedCuratedItem[]>(
+    [],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -32,9 +34,11 @@ export function CuratedRotationPanel() {
           fetchReplayList({ source: 'ai-ranked', limit: 1 }, memberMode),
         ]);
         if (!cancelled) {
-          const eligible = lists.flatMap((list) => list.items).some(
-            (item) => item.source === 'free' || item.source === 'ai-ranked',
-          );
+          const eligible = lists
+            .flatMap((list) => list.items)
+            .some(
+              (item) => item.source === 'free' || item.source === 'ai-ranked',
+            );
           setHasEligibleReplay(eligible);
         }
       } catch {
@@ -63,6 +67,9 @@ export function CuratedRotationPanel() {
       memberMode,
       isServerAvailable,
       completedJourneyStageIds,
+      completedJourneyVariationIds: Object.entries(progress?.variations ?? {})
+        .filter(([, item]) => item.completed)
+        .map(([id]) => id),
       companionCharacterId: characters.activeCharacterId,
       hasEligibleReplay,
     });
@@ -107,7 +114,10 @@ export function CuratedRotationPanel() {
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <div className="flex items-center gap-2">
           <Sparkles className="size-4 text-gold" />
-          <h2 id="curated-heading" className="text-lg font-semibold tracking-tight text-foreground">
+          <h2
+            id="curated-heading"
+            className="text-lg font-semibold tracking-tight text-foreground"
+          >
             {t('curated.sectionTitle')}
           </h2>
           <span className="text-xs text-muted-foreground hidden sm:inline">
@@ -143,17 +153,23 @@ export function CuratedRotationPanel() {
           const resolvedTitleParams: Record<string, string | number> = {};
           if (item.titleParams) {
             for (const [k, v] of Object.entries(item.titleParams)) {
-              resolvedTitleParams[k] = typeof v === 'string' && v.includes('.') ? t(v) : v;
+              resolvedTitleParams[k] =
+                typeof v === 'string' && v.includes('.') ? t(v) : v;
             }
           }
           const resolvedDescParams: Record<string, string | number> = {};
           if (item.descParams) {
             for (const [k, v] of Object.entries(item.descParams)) {
-              resolvedDescParams[k] = typeof v === 'string' && v.includes('.') ? t(v) : v;
+              resolvedDescParams[k] =
+                typeof v === 'string' && v.includes('.') ? t(v) : v;
             }
           }
 
-          const title = formatMessage(locale, item.titleKey, resolvedTitleParams);
+          const title = formatMessage(
+            locale,
+            item.titleKey,
+            resolvedTitleParams,
+          );
           const desc = formatMessage(locale, item.descKey, resolvedDescParams);
 
           return (

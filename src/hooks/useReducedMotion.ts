@@ -6,5 +6,9 @@ const subscribe = (listener: () => void) => {
   return () => media.removeEventListener('change', listener);
 };
 export function useReducedMotion() {
-  return useSyncExternalStore(subscribe, () => window.matchMedia(query).matches, () => false);
+  return useSyncExternalStore(
+    subscribe,
+    () => window.matchMedia(query).matches,
+    () => false,
+  );
 }
