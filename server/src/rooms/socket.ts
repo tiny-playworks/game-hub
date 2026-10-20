@@ -67,7 +67,8 @@ export function setupRoomWebSocket(
     }
 
     let activeRoomId: string | null = null;
-    const games = gameManager ? gameSocketSession(ws, gameManager, member.id, session.device_id) : null;
+    const games = gameManager ? gameSocketSession(ws, gameManager, member.id, session.device_id,
+      () => Boolean(db.prepare('SELECT 1 FROM sessions WHERE token_hash = ? AND expires_at > ?').get(tokenHash(token), Date.now()))) : null;
     let unsubscribe: (() => void) | null = null;
     const releaseRoom = () => {
       if (unsubscribe) unsubscribe();

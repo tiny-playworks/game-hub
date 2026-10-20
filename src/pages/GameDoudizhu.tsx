@@ -270,6 +270,7 @@ const GameDoudizhu = () => {
         <div className="mt-4 flex min-h-23 justify-center px-2 pt-3">
           <CardFan
             cards={myHand}
+            locale={locale}
             selected={selected}
             disabledCards={!myTurn}
             onCardClick={toggleCard}

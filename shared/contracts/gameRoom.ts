@@ -21,9 +21,15 @@ export type GameRoomSeat =
   | { type: 'empty'; seatIndex: number }
   | { type: 'ai'; seatIndex: number; difficulty: FamilyGameDifficulty }
   | {
-      type: 'human'; seatIndex: number; memberId: string; nickname: string;
-      avatarPresetId: string; ready: boolean; connected: boolean;
-      autoplay: boolean; exited: boolean;
+      type: 'human';
+      seatIndex: number;
+      memberId: string;
+      nickname: string;
+      avatarPresetId: string;
+      ready: boolean;
+      connected: boolean;
+      autoplay: boolean;
+      exited: boolean;
     };
 
 export interface GameRoomResult {
@@ -94,7 +100,8 @@ export interface DoudizhuRoomBoard {
   ply: number;
 }
 
-export type GameBoardView = GomokuRoomBoard | XiangqiRoomBoard | DoudizhuRoomBoard;
+export type GameBoardView =
+  GomokuRoomBoard | XiangqiRoomBoard | DoudizhuRoomBoard;
 export interface GameRoomView {
   room: GameRoomSummary;
   viewerSeat: number | null;
@@ -120,8 +127,20 @@ export interface GameRoomCommand {
   commandId: string;
   roomId: string;
   expectedRevision: number;
-  type: 'join' | 'leave' | 'ready' | 'ai' | 'settings' | 'start' | 'rematch'
-    | 'takeover' | 'action' | 'resign' | 'end' | 'offer' | 'respond';
+  type:
+    | 'join'
+    | 'leave'
+    | 'ready'
+    | 'ai'
+    | 'settings'
+    | 'start'
+    | 'rematch'
+    | 'takeover'
+    | 'action'
+    | 'resign'
+    | 'end'
+    | 'offer'
+    | 'respond';
   payload?: {
     seatIndex?: number;
     ready?: boolean;

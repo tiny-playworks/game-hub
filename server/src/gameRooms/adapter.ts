@@ -1,5 +1,9 @@
 import type {
-  FamilyGameId, GameAction, GameBoardView, GameOutcome, GameRoomSettings,
+  FamilyGameId,
+  GameAction,
+  GameBoardView,
+  GameOutcome,
+  GameRoomSettings,
 } from '../../../shared/contracts/gameRoom';
 
 export interface AdapterResult {

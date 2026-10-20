@@ -3,9 +3,13 @@ import type { DatabaseSync } from 'node:sqlite';
 export function migrateGameRooms(db: DatabaseSync): void {
   // family_results is the common household reward ledger. Existing riichi writes
   // keep their default source and keep counting the same daily household cap.
-  const columns = db.prepare('PRAGMA table_info(family_results)').all() as { name: string }[];
+  const columns = db.prepare('PRAGMA table_info(family_results)').all() as {
+    name: string;
+  }[];
   if (!columns.some((column) => column.name === 'source')) {
-    db.exec("ALTER TABLE family_results ADD COLUMN source TEXT NOT NULL DEFAULT 'family'");
+    db.exec(
+      "ALTER TABLE family_results ADD COLUMN source TEXT NOT NULL DEFAULT 'family'",
+    );
   }
   db.exec(`
     CREATE UNIQUE INDEX IF NOT EXISTS family_results_source

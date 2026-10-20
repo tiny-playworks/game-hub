@@ -33,12 +33,12 @@ export interface CardFace {
 }
 
 /** 把牌值解码为可渲染的牌面 */
-export const getCardFace = (card: number): CardFace => {
+export const getCardFace = (card: number, locale: 'zh' | 'en' = 'zh'): CardFace => {
   if (card === CARD_SMALL_JOKER) {
-    return { rank: '小', suit: '王', red: false, isJoker: true, name: '小王' };
+    return { rank: locale === 'en' ? 'B' : '小', suit: locale === 'en' ? 'J' : '王', red: false, isJoker: true, name: locale === 'en' ? 'Black Joker' : '小王' };
   }
   if (card === CARD_BIG_JOKER) {
-    return { rank: '大', suit: '王', red: true, isJoker: true, name: '大王' };
+    return { rank: locale === 'en' ? 'R' : '大', suit: locale === 'en' ? 'J' : '王', red: true, isJoker: true, name: locale === 'en' ? 'Red Joker' : '大王' };
   }
   const suitIndex = Math.floor(card / 13);
   const rank = RANK_LABELS[card % 13] ?? '?';
@@ -48,7 +48,7 @@ export const getCardFace = (card: number): CardFace => {
     suit,
     red: suitIndex === 1 || suitIndex === 3,
     isJoker: false,
-    name: `${SUIT_NAMES[suitIndex] ?? ''}${rank}`,
+    name: locale === 'en' ? `${rank} of ${['Spades', 'Hearts', 'Clubs', 'Diamonds'][suitIndex] ?? ''}` : `${SUIT_NAMES[suitIndex] ?? ''}${rank}`,
   };
 };
 
@@ -71,6 +71,7 @@ const PIP_CLASS: Record<CardSize, string> = {
 
 interface PlayingCardProps {
   card: number;
+  locale?: 'zh' | 'en';
   size?: CardSize;
   /** 选中态：向上抬起 */
   selected?: boolean;
@@ -88,6 +89,7 @@ interface PlayingCardProps {
  */
 export const PlayingCard = ({
   card,
+  locale = 'zh',
   size = 'md',
   selected,
   dimmed,
@@ -96,7 +98,7 @@ export const PlayingCard = ({
   style,
   className,
 }: PlayingCardProps) => {
-  const face = getCardFace(card);
+  const face = getCardFace(card, locale);
 
   const content = (
     <>
@@ -175,6 +177,7 @@ export const CardBack = ({
 
 interface CardFanProps {
   cards: number[];
+  locale?: 'zh' | 'en';
   size?: CardSize;
   /** 每张牌露出的宽度（rem）。牌多时收窄，保证一行装得下 */
   reveal?: number;
@@ -192,6 +195,7 @@ interface CardFanProps {
  */
 export const CardFan = ({
   cards,
+  locale = 'zh',
   size = 'md',
   reveal,
   selected,
@@ -213,6 +217,7 @@ export const CardFan = ({
         <PlayingCard
           key={card}
           card={card}
+          locale={locale}
           size={size}
           selected={selectedSet.has(card)}
           dimmed={dimmedSet.has(card)}
