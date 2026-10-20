@@ -1,3 +1,4 @@
+import { blocksArcadeShortcut } from '@/lib/arcadeInput';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { VirtualController } from '@/components/common/VirtualController';
 import { GameProgress } from '@/components/game/GameProgress';
@@ -191,11 +192,7 @@ const GameBreakout = () => {
   useEffect(() => {
     const keyDown = (event: KeyboardEvent) => {
       if (pausedRef.current || arcade.result) return;
-      if (
-        event.target instanceof Element &&
-        event.target.closest('input, textarea, select, button')
-      )
-        return;
+      if (blocksArcadeShortcut(event)) return;
       if (event.code === 'ArrowLeft' || event.code === 'KeyA') {
         event.preventDefault();
         keys.current.left = true;
@@ -247,7 +244,7 @@ const GameBreakout = () => {
     <GameShell
       autoStart={false}
       title={t('game.breakout.name')}
-      subtitle={t('breakout.controls')}
+      subtitle={t('game.breakout.description')}
       status={
         <>
           <StatPill label={t('arcade.score')} value={hud.score} />

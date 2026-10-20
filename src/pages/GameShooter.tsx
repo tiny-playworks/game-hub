@@ -1,3 +1,4 @@
+import { blocksArcadeShortcut } from '@/lib/arcadeInput';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import flightSprites from '@/assets/arcade/flight-sprites.png';
 import {
@@ -192,13 +193,7 @@ const GameShooter = () => {
   }, [difficulty]);
   useEffect(() => {
     const keyDown = (event: KeyboardEvent) => {
-      if (
-        event.target instanceof Element &&
-        event.target.closest(
-          'input, textarea, select, button, [contenteditable="true"]',
-        )
-      )
-        return;
+      if (blocksArcadeShortcut(event)) return;
       if (pausedRef.current || statusRef.current === 'over') return;
       if (event.code === 'ArrowLeft' || event.code === 'KeyA') {
         event.preventDefault();

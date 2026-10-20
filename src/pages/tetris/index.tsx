@@ -1,3 +1,4 @@
+import { blocksArcadeShortcut } from '@/lib/arcadeInput';
 import {
   type TouchEvent,
   type PointerEvent,
@@ -178,11 +179,7 @@ const GameTetris3D = ({
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (
-        event.target instanceof Element &&
-        event.target.closest('input, textarea, select, button')
-      )
-        return;
+      if (blocksArcadeShortcut(event)) return;
       const current = stateRef.current;
       if (event.code === 'Space') {
         event.preventDefault();

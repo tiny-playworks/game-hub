@@ -1,3 +1,4 @@
+import { blocksArcadeShortcut } from '@/lib/arcadeInput';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { GameProgress } from '@/components/game/GameProgress';
 import { GameReadyOverlay } from '@/components/game/GameReadyOverlay';
@@ -144,11 +145,7 @@ const GameGuessNumber = () => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (paused || status !== 'playing') return;
-      if (
-        e.target instanceof Element &&
-        e.target.closest('input, textarea, select, button')
-      )
-        return;
+      if (blocksArcadeShortcut(e)) return;
       if (e.key >= '0' && e.key <= '9') {
         handleInput(e.key);
       } else if (e.key === 'Backspace') {

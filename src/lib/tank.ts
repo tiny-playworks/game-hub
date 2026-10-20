@@ -67,7 +67,7 @@ export function createPlayerTank(): TankEntity {
   const { tile, tankW, tankH } = TANK;
   return {
     x: 6 * tile + (tile - tankW) / 2,
-    y: 11 * tile + (tile - tankH) / 2,
+    y: 10 * tile + (tile - tankH) / 2,
     dir: 'up',
     moveCounter: 0,
     isPlayer: true,

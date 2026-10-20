@@ -1,3 +1,4 @@
+import { blocksArcadeShortcut } from '@/lib/arcadeInput';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   type ActionType,
@@ -322,11 +323,7 @@ const GameTank = () => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (pausedRef.current || arcade.result) return;
-      if (
-        e.target instanceof Element &&
-        e.target.closest('input, textarea, select, button')
-      )
-        return;
+      if (blocksArcadeShortcut(e)) return;
       const key =
         (
           {
