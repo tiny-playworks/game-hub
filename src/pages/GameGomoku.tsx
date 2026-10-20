@@ -13,6 +13,7 @@ import { useLocale } from '@/contexts/LocaleContext';
 import { GOMOKU_SIZE, type GomokuStone, getGomokuWin } from '@/lib/gomoku';
 import { chooseGomokuMove } from '@/lib/gomokuAi';
 import { cn } from '@/lib/utils';
+import { InviteFamilyButton } from '@/components/household/InviteFamilyButton';
 
 type Opponent = 'ai' | 'human';
 
@@ -207,6 +208,7 @@ const GameGomoku = () => {
       }
       toolbar={
         <>
+          <InviteFamilyButton gameId="gomoku" />
           <SegmentedControl
             ariaLabel={t('common.opponent')}
             value={opponent}

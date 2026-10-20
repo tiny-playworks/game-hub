@@ -4,6 +4,7 @@ import type { RoomCommand, RoomSettings } from '../../../shared/contracts/room';
 import type { RiichiAiLevel } from '@/pages/mahjong/japanese/engine/rules';
 import { apiError, requireSession } from '../auth';
 import type { RoomManager } from '../rooms/RoomManager';
+import { assertNoActiveMatch } from '../gameRooms/activeMatch';
 
 interface CreateRoomBody {
   nickname?: string;
@@ -43,6 +44,7 @@ export function registerRoomRoutes(
     const { member, session } = requireSession(db, request);
     const body = (request.body ?? {}) as CreateRoomBody;
     const settings = body.settings ?? {};
+    assertNoActiveMatch(db, member.id);
 
     try {
       const summary = roomManager.createRoom(
@@ -91,6 +93,8 @@ export function registerRoomRoutes(
     if (typeof body.seatIndex !== 'number') {
       throw apiError(400, 'BAD_REQUEST');
     }
+
+    assertNoActiveMatch(db, member.id, roomId);
 
     try {
       return roomManager.joinSeat(
@@ -178,6 +182,9 @@ export function registerRoomRoutes(
   app.post('/api/v1/rooms/:roomId/start', async (request) => {
     const { member } = requireSession(db, request);
     const { roomId } = request.params as { roomId: string };
+    for (const seat of roomManager.getRoom(roomId)?.seats ?? []) {
+      if (seat.type === 'human') assertNoActiveMatch(db, seat.memberId, roomId);
+    }
 
     try {
       const result = roomManager.startGame(roomId, member.id);

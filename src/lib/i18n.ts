@@ -4,6 +4,7 @@ import { aoiMessages } from './aoiMessages';
 import { tsubakiMessages } from './tsubakiMessages';
 import { curatedMessages } from './curatedMessages';
 import { familyMessages } from './familyMessages';
+import { gameRoomMessages } from './gameRoomMessages';
 import { journeyMessages } from './journeyMessages';
 import { practiceMessages } from './practiceMessages';
 import { replayBranchMessages } from './replayBranchMessages';
@@ -4588,6 +4589,7 @@ const warnedMissingKeys = new Set<string>();
 
 export function getMessage(locale: Locale, key: string): string {
   const translated =
+    gameRoomMessages[locale]?.[key] ??
     (leaderboardMessages[locale] as Record<string, string> | undefined)?.[key] ??
     curatedMessages[locale]?.[key] ??
     familyMessages[locale]?.[key] ??

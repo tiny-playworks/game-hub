@@ -11,6 +11,8 @@ import type {
 import { getMember, type MemberRow, type SessionRow } from '../db';
 import { createHash } from 'node:crypto';
 import type { RoomManager } from './RoomManager';
+import type { GameRoomManager } from '../gameRooms/GameRoomManager';
+import { gameSocketSession } from '../gameRooms/socket';
 
 const COOKIE = 'gh_session';
 
@@ -31,6 +33,7 @@ export function setupRoomWebSocket(
   httpServer: Server,
   db: DatabaseSync,
   roomManager: RoomManager,
+  gameManager?: GameRoomManager,
 ): WebSocketServer {
   const wss = new WebSocketServer({ server: httpServer, path: '/ws', maxPayload: 16384 });
   const connections = new Map<string, number>();
@@ -64,6 +67,7 @@ export function setupRoomWebSocket(
     }
 
     let activeRoomId: string | null = null;
+    const games = gameManager ? gameSocketSession(ws, gameManager, member.id, session.device_id) : null;
     let unsubscribe: (() => void) | null = null;
     const releaseRoom = () => {
       if (unsubscribe) unsubscribe();
@@ -93,7 +97,13 @@ export function setupRoomWebSocket(
         }
         const message = JSON.parse(data.toString());
 
-        if (message.type === 'subscribe_room' && typeof message.roomId === 'string') {
+        if (message.type === 'subscribe_game_room' && typeof message.roomId === 'string' && games) {
+          releaseRoom();
+          games.subscribe(message.roomId);
+        } else if (message.type === 'game_command' && message.command && games) {
+          games.command(message.command);
+        } else if (message.type === 'subscribe_room' && typeof message.roomId === 'string') {
+          games?.release();
           const targetRoomId = message.roomId;
           releaseRoom();
           activeRoomId = targetRoomId;

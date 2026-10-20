@@ -6,6 +6,7 @@ import { getBestValue, type GameStats } from '@/lib/arcadeStats';
 import type { MemberSnapshot } from '../../shared/contracts/member';
 import { normalizeThemeChallengeState } from '../../shared/contracts/challenge';
 import { normalizeJourneyProgress } from '../../shared/contracts/journey';
+import { migrateGameRooms } from './gameRooms/schema';
 import {
   computeCupMatchPoints,
   computeCupStandings,
@@ -285,6 +286,7 @@ function migrate(db: DatabaseSync): void {
     );
   `);
   if (!hadLeaderboard) backfillLeaderboard(db);
+  migrateGameRooms(db);
   const journeySql = db
     .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'journey_attempts'")
     .get() as { sql?: string } | undefined;
@@ -851,7 +853,7 @@ const FAMILY_FEED_LIMIT = 100;
 export function appendFamilyFeed(
   db: DatabaseSync,
   item: {
-    kind: 'family-record' | 'weekly-champion' | 'family-cup';
+    kind: 'family-record' | 'weekly-champion' | 'family-cup' | 'family-arcade';
     memberId?: string | null;
     gameId?: string | null;
     difficulty?: string | null;

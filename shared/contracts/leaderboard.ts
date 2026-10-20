@@ -30,7 +30,7 @@ export interface LeaderboardStanding {
   isFamilyRecord: boolean;
 }
 
-export type FamilyFeedKind = 'family-record' | 'weekly-champion' | 'family-cup';
+export type FamilyFeedKind = 'family-record' | 'weekly-champion' | 'family-cup' | 'family-arcade';
 
 export interface FamilyFeedItem {
   id: number;

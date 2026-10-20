@@ -46,6 +46,7 @@ const GameTictactoe = lazyPage(() => import('@/pages/GameTictactoe'));
 const GameXiangqi = lazyPage(() => import('@/pages/GameXiangqi'));
 const FamilyLobby = lazyPage(() => import('@/pages/FamilyLobby'));
 const FamilyRoom = lazyPage(() => import('@/pages/FamilyRoom'));
+const FamilyGameRoom = lazyPage(() => import('@/pages/FamilyGameRoom'));
 const ReplayArchive = lazyPage(() => import('@/pages/ReplayArchive'));
 const RiichiTraining = lazyPage(() => import('@/pages/RiichiTraining'));
 const Journey = lazyPage(() => import('@/pages/Journey'));
@@ -103,6 +104,7 @@ const App = () => {
                 <Route path="/" element={<Home />} />
                 <Route path="/family" element={<HouseholdReady><FamilyLobby /></HouseholdReady>} />
                 <Route path="/family/:roomId" element={<HouseholdReady><FamilyRoom /></HouseholdReady>} />
+                <Route path="/family/games/:roomId" element={<HouseholdReady><FamilyGameRoom /></HouseholdReady>} />
                 <Route path="/leaderboard" element={<HouseholdReady><Leaderboard /></HouseholdReady>} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/replays" element={<ReplayArchive />} />

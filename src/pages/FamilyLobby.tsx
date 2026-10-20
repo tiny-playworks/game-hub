@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Crown,
   Play,
@@ -16,21 +16,36 @@ import { createRoom, listFamilyCups, listRooms } from '@/lib/household/api';
 import { formatMessage } from '@/lib/i18n';
 import { getCharacterById } from '@/lib/playerCharacters';
 import type { FamilyCupSummary, RoomSeat, RoomSettings, RoomSummary } from '../../shared/contracts/room';
+import { FAMILY_GAME_IDS, type FamilyGameId, type GameRoomSummary } from '../../shared/contracts/gameRoom';
+import { FamilyGameRoomCard } from '@/components/household/FamilyGameRoomCard';
+import { FamilyHeadToHead } from '@/components/household/FamilyHeadToHead';
+import { GameRoomSettingsFields, defaultGameRoomSettings } from '@/components/household/GameRoomSettingsFields';
+import { createGameRoom, listGameRooms } from '@/lib/household/gameRoomClient';
+import { HouseholdApiError } from '@/lib/household/api';
 
 export default function FamilyLobby() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const selectedGame = FAMILY_GAME_IDS.find((id) => id === searchParams.get('game'));
   const { t, locale } = useLocale();
   const household = useOptionalHousehold();
   const member = household?.currentMember;
   const isMember = household?.mode === 'member-online';
 
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
+  const [gameRooms, setGameRooms] = useState<GameRoomSummary[]>([]);
+  const [filter, setFilter] = useState<'all' | 'riichi' | FamilyGameId>(selectedGame ?? 'all');
+  const [createGame, setCreateGame] = useState<'riichi' | FamilyGameId>(selectedGame ?? 'riichi');
+  const [gameSettings, setGameSettings] = useState(defaultGameRoomSettings);
   const [recentCups, setRecentCups] = useState<FamilyCupSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(searchParams.get('create') === '1');
+  const visibleRooms = filter === 'all' || filter === 'riichi' ? rooms : [];
+  const visibleGames = filter === 'all' ? gameRooms : gameRooms.filter((room) => room.gameId === filter);
+  const roomCount = visibleRooms.length + visibleGames.length;
 
   // 创建房间表单状态
   const [cupTotalMatches, setCupTotalMatches] = useState<null | 2 | 3>(null);
@@ -47,17 +62,20 @@ export default function FamilyLobby() {
   const fetchRooms = useCallback(async () => {
     if (!isMember) {
       setRooms([]);
+      setGameRooms([]);
       setRecentCups([]);
       setListError(null);
       return;
     }
     setLoading(true);
     try {
-      const [roomData, cupsData] = await Promise.all([
+      const [roomData, cupsData, gameData] = await Promise.all([
         listRooms(),
         listFamilyCups(5).catch(() => []),
+        listGameRooms(),
       ]);
       setRooms(roomData);
+      setGameRooms(gameData);
       setRecentCups(cupsData);
       setListError(null);
     } catch {
@@ -79,6 +97,12 @@ export default function FamilyLobby() {
     setCreating(true);
     setCreateError(null);
     try {
+      if (createGame !== 'riichi') {
+        const created = await createGameRoom(createGame, gameSettings);
+        setShowCreateModal(false);
+        navigate(`/family/games/${created.room.id}`);
+        return;
+      }
       const created = await createRoom(
         {
           matchLength,
@@ -91,8 +115,8 @@ export default function FamilyLobby() {
       );
       setShowCreateModal(false);
       navigate(`/family/${created.id}`);
-    } catch {
-      setCreateError('family.lobby.createError');
+    } catch (error) {
+      setCreateError(error instanceof HouseholdApiError ? error.messageKey : 'family.lobby.createError');
     } finally {
       setCreating(false);
     }
@@ -104,7 +128,7 @@ export default function FamilyLobby() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-border">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight">{t('family.lobby.title')}</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{t('gameRoom.title')}</h1>
             {household?.isServerAvailable && (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                 <ShieldCheck className="h-3.5 w-3.5" /> {t('family.lobby.connected')}
@@ -112,7 +136,7 @@ export default function FamilyLobby() {
             )}
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            {t('family.lobby.intro')}
+            {t('gameRoom.intro')}
           </p>
         </div>
 
@@ -130,7 +154,7 @@ export default function FamilyLobby() {
 
           <Button
             onClick={() => { setCreateError(null); setShowCreateModal(true); }}
-            disabled={!member}
+            disabled={!isMember}
             className="flex items-center gap-1.5 bg-primary text-primary-foreground font-semibold shadow"
           >
             <Plus className="h-4 w-4" />
@@ -153,9 +177,14 @@ export default function FamilyLobby() {
 
       {/* 房间列表 */}
       <div className="mt-6">
+        <div className="mb-5 flex flex-wrap gap-2" aria-label={t('gameRoom.game')}>
+          {(['all', 'riichi', ...FAMILY_GAME_IDS] as const).map((game) => <Button key={game} variant={filter === game ? 'default' : 'outline'} className="min-h-11" onClick={() => { setFilter(game); if (game !== 'all') setCreateGame(game); }}>
+            {t(game === 'all' ? 'gameRoom.all' : game === 'riichi' ? 'gameRoom.riichi' : `game.${game}.name`)}
+          </Button>)}
+        </div>
         <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
           <Users className="h-4 w-4 text-primary" />
-          {formatMessage(locale, 'family.lobby.rooms', { count: rooms.length })}
+          {formatMessage(locale, 'family.lobby.rooms', { count: roomCount })}
         </h2>
 
         {listError && isMember && (
@@ -167,7 +196,7 @@ export default function FamilyLobby() {
           </div>
         )}
 
-        {!listError && rooms.length === 0 ? (
+        {!listError && roomCount === 0 ? (
           <div className="text-center py-16 border border-dashed border-border rounded-2xl bg-card/50">
             <Users className="h-10 w-10 mx-auto text-muted-foreground mb-3 opacity-40" />
             <p className="text-base font-medium text-foreground">{t(isMember ? 'family.lobby.noRooms' : 'family.lobby.signInToSee')}</p>
@@ -184,9 +213,10 @@ export default function FamilyLobby() {
               </Button>
             )}
           </div>
-        ) : rooms.length > 0 ? (
+        ) : roomCount > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {rooms.map((room) => {
+            {visibleGames.map((room) => <FamilyGameRoomCard key={room.id} room={room} />)}
+            {visibleRooms.map((room) => {
               const isPlaying = room.status === 'playing';
               const isFinished = room.status === 'finished';
 
@@ -283,6 +313,8 @@ export default function FamilyLobby() {
         ) : null}
       </div>
 
+      <FamilyHeadToHead />
+
       {/* 近期杯赛记录 */}
       {isMember && recentCups.length > 0 && (
         <div className="mt-10">
@@ -356,10 +388,16 @@ export default function FamilyLobby() {
       {/* 创建房间弹窗 */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6 shadow-xl space-y-5">
+          <div role="dialog" aria-modal="true" aria-label={t('family.lobby.dialogTitle')} className="bg-card border border-border rounded-2xl w-full max-w-md max-h-[90dvh] overflow-y-auto p-6 shadow-xl space-y-5">
             <h3 className="text-lg font-bold">{t('family.lobby.dialogTitle')}</h3>
 
             <div className="space-y-4">
+              <label className="block text-sm">{t('gameRoom.game')}
+                <select value={createGame} onChange={(event) => setCreateGame(event.target.value as typeof createGame)} className="mt-1 min-h-11 w-full rounded-lg border border-border bg-background px-3">
+                  {(['riichi', ...FAMILY_GAME_IDS] as const).map((game) => <option key={game} value={game}>{t(game === 'riichi' ? 'gameRoom.riichi' : `game.${game}.name`)}</option>)}
+                </select>
+              </label>
+              {createGame !== 'riichi' ? <GameRoomSettingsFields gameId={createGame} value={gameSettings} onChange={setGameSettings} /> : <>
               <div>
                 <label className="text-xs font-semibold text-muted-foreground block mb-1.5">
                   {t('family.cup.modeLabel')}
@@ -479,6 +517,7 @@ export default function FamilyLobby() {
                   ))}
                 </div>
               </div>
+              </>}
             </div>
 
             {createError && (

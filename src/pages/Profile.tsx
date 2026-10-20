@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom';
 import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
 import { CharacterOutfitPicker } from '@/components/characters/CharacterOutfitPicker';
 import { PlayerAvatar } from '@/components/home/PlayerAvatar';
+import { FamilyHeadToHead } from '@/components/household/FamilyHeadToHead';
 import { DataManagementCard } from '@/components/profile/DataManagementCard';
 import { TrainingSummary } from '@/components/profile/TrainingSummary';
 import { WalletCard } from '@/components/profile/WalletCard';
@@ -1092,6 +1093,7 @@ const Profile = () => {
           <WalletCard />
           <RankedProfilePanel />
           <WeeklyChampionsCard />
+          <FamilyHeadToHead />
           <DataManagementCard />
         </div>
       </main>

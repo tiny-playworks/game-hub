@@ -8,10 +8,13 @@ import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import {
   applyAITurn,
+  bidForSeat,
+  canBidForSeat,
   type Card,
   canPass,
   canPlay,
   createInitialState,
+  createBiddingState,
   type DoudizhuState,
   findHint,
   handTypeLabel,
@@ -22,6 +25,8 @@ import {
   sortHandForDisplay,
 } from '@/lib/doudizhu';
 import { cn } from '@/lib/utils';
+import { formatMessage } from '@/lib/i18n';
+import { InviteFamilyButton } from '@/components/household/InviteFamilyButton';
 
 /** 座位：0=上家（左），1=你，2=下家（右） */
 const SEAT_LEFT = 0;
@@ -33,10 +38,11 @@ const AI_PLAY_MS = 780;
 type SeatAction = { kind: 'play'; cards: Card[] } | { kind: 'pass' } | null;
 
 const GameDoudizhu = () => {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const arcade = useArcade();
   const { difficulty, paused, finish, newRound, start } = arcade;
   const [state, setState] = useState<DoudizhuState>(() => createInitialState());
+  const [biddingEnabled, setBiddingEnabled] = useState(false);
   const [selected, setSelected] = useState<Card[]>([]);
   const [actions, setActions] = useState<Record<number, SeatAction>>({
     0: null,
@@ -126,11 +132,11 @@ const GameDoudizhu = () => {
   const restart = useCallback(() => {
     newRound();
     start();
-    setState(createInitialState());
+    setState(biddingEnabled ? createBiddingState() : createInitialState());
     setSelected([]);
     setActions({ 0: null, 1: null, 2: null });
     triedHints.current = [];
-  }, [newRound, start]);
+  }, [newRound, start, biddingEnabled]);
 
   const iAmLandlord = state.landlord === SEAT_ME;
   const iWon =
@@ -140,7 +146,7 @@ const GameDoudizhu = () => {
         ? state.winner === 0
         : state.winner === 1;
 
-  const statusText = state.gameOver
+  const statusText = state.phase === 'bidding' ? t('gameRoom.bidding') : state.gameOver
     ? state.winner === 0
       ? t('game.doudizhu.status.landlordWin')
       : t('game.doudizhu.status.peasantWin')
@@ -174,6 +180,12 @@ const GameDoudizhu = () => {
   return (
     <GameShell
       onRestart={restart}
+      settings={<label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={biddingEnabled} onChange={(event) => {
+        const enabled = event.target.checked;
+        setBiddingEnabled(enabled); newRound(); start();
+        setState(enabled ? createBiddingState() : createInitialState());
+        setSelected([]); setActions({ 0: null, 1: null, 2: null }); triedHints.current = [];
+      }} />{t('gameRoom.bidMode')}</label>}
       title={t('game.doudizhu.name')}
       subtitle={t('game.doudizhu.rules')}
       status={
@@ -181,7 +193,7 @@ const GameDoudizhu = () => {
           <StatPill
             label={t('game.doudizhu.role')}
             value={
-              iAmLandlord
+              state.phase === 'bidding' ? t('gameRoom.bidding') : iAmLandlord
                 ? t('game.doudizhu.landlord')
                 : t('game.doudizhu.peasant')
             }
@@ -195,6 +207,7 @@ const GameDoudizhu = () => {
       }
       toolbar={
         <>
+          <InviteFamilyButton gameId="doudizhu" />
           <span
             className={cn(
               'game-pill',
@@ -267,6 +280,9 @@ const GameDoudizhu = () => {
 
         {/* 出牌操作 */}
         <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+          {state.phase === 'bidding' ? [0, 1, 2, 3].map((score) => <Button key={score} className="min-h-11" disabled={paused || !canBidForSeat(state, SEAT_ME, score)} onClick={() => setState(bidForSeat(state, SEAT_ME, score))}>
+            {score ? formatMessage(locale, 'gameRoom.bid', { score }) : t('gameRoom.noBid')}
+          </Button>) : null}
           <Button
             variant="outline"
             size="sm"

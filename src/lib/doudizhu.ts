@@ -325,6 +325,13 @@ function shuffle<T>(arr: T[], rng?: Rng | unknown): T[] {
 }
 
 export interface DoudizhuState {
+  /** Omitted in older single-player saves: equivalent to playing. */
+  phase?: 'bidding' | 'playing';
+  bottomCards?: Card[];
+  bids?: { seat: number; score: number }[];
+  highestBid?: number;
+  firstBidder?: number;
+  dealNumber?: number;
   /** 三人手牌，0=下家(左)，1=己方，2=上家(右) */
   hands: [Card[], Card[], Card[]];
   /** 地主 0/1/2 */
@@ -378,6 +385,8 @@ export function createInitialState(rng?: Rng | unknown): DoudizhuState {
     playedCards: [],
     playCounts: [0, 0, 0],
     spring: false,
+    phase: 'playing',
+    bottomCards: landCards,
   };
 }
 
@@ -388,13 +397,22 @@ export function isLandlord(state: DoudizhuState): boolean {
 
 /** 当前是否轮到己方 */
 export function isMyTurn(state: DoudizhuState): boolean {
-  return state.currentPlayer === 1 && !state.gameOver;
+  return isTurnOf(state, 1);
+}
+
+export function isTurnOf(state: DoudizhuState, seat: number): boolean {
+  return state.phase !== 'bidding' && state.currentPlayer === seat && !state.gameOver;
 }
 
 /** 能否出牌：无上家出牌或已两人 pass 则可出任意合法牌型；否则必须同类型且更大，或出炸弹/火箭 */
 export function canPlay(state: DoudizhuState, selected: Card[]): boolean {
-  if (state.gameOver || state.currentPlayer !== 1) return false;
-  const myHand = state.hands[1];
+  return canPlayForSeat(state, 1, selected);
+}
+
+export function canPlayForSeat(state: DoudizhuState, seat: number, selected: Card[]): boolean {
+  if (!Number.isInteger(seat) || seat < 0 || seat > 2 || !isTurnOf(state, seat) ||
+    !Array.isArray(selected) || selected.some((card) => !Number.isInteger(card) || card < 0 || card > 53)) return false;
+  const myHand = state.hands[seat];
   if (!hasCards(myHand, selected)) return false;
   const hand = parseHand(selected);
   if (!hand) return false;
@@ -407,7 +425,11 @@ export function canPlay(state: DoudizhuState, selected: Card[]): boolean {
 
 /** 能否 pass（有上家出牌且未连续两人 pass） */
 export function canPass(state: DoudizhuState): boolean {
-  if (state.gameOver || state.currentPlayer !== 1) return false;
+  return canPassForSeat(state, 1);
+}
+
+export function canPassForSeat(state: DoudizhuState, seat: number): boolean {
+  if (!isTurnOf(state, seat)) return false;
   return state.lastPlay !== null && state.passCount < 2;
 }
 
@@ -456,6 +478,52 @@ function playHandBy(
     gameOver,
     winner,
   };
+}
+
+export function playHandForSeat(state: DoudizhuState, seat: number, cards: Card[]): DoudizhuState {
+  return canPlayForSeat(state, seat, cards) ? playHandBy(state, seat, cards) : state;
+}
+
+export function passForSeat(state: DoudizhuState, seat: number): DoudizhuState {
+  return canPassForSeat(state, seat) ? passTurn(state) : state;
+}
+
+/** Bidding deals never give anyone the bottom cards before a landlord is chosen. */
+export function createBiddingState(rng?: Rng, firstBidder?: number, dealNumber = 1): DoudizhuState {
+  const rand = resolveRng(rng);
+  const [a, b, c, bottomCards] = deal(createDeck(rand));
+  const first = firstBidder ?? Math.floor(rand() * 3);
+  return { hands: [a, b, c], landlord: -1, currentPlayer: first, lastPlay: null,
+    passCount: 0, gameOver: false, winner: null, playedCards: [], playCounts: [0, 0, 0],
+    spring: false, phase: 'bidding', bottomCards, bids: [], highestBid: 0,
+    firstBidder: first, dealNumber };
+}
+
+export function canBidForSeat(state: DoudizhuState, seat: number, score: number): boolean {
+  return state.phase === 'bidding' && !state.gameOver && state.currentPlayer === seat &&
+    Number.isInteger(score) && score >= 0 && score <= 3 &&
+    (score === 0 || score > (state.highestBid ?? 0));
+}
+
+export function bidForSeat(state: DoudizhuState, seat: number, score: number, rng?: Rng): DoudizhuState {
+  if (!canBidForSeat(state, seat, score)) return state;
+  const bids = [...(state.bids ?? []), { seat, score }];
+  const highestBid = Math.max(state.highestBid ?? 0, score);
+  if (score < 3 && bids.length < 3) return { ...state, bids, highestBid, currentPlayer: nextPlayer(seat) };
+  if (!highestBid) return createBiddingState(rng, nextPlayer(state.firstBidder ?? seat), (state.dealNumber ?? 1) + 1);
+  const landlord = bids.find((bid) => bid.score === highestBid)!.seat;
+  const hands = state.hands.map((hand, index) => index === landlord ? [...hand, ...(state.bottomCards ?? [])] : hand) as DoudizhuState['hands'];
+  return { ...state, hands, landlord, bids, highestBid, phase: 'playing', currentPlayer: landlord };
+}
+
+export function getAIBid(state: DoudizhuState, seat: number, difficulty = 'normal'): number {
+  const hand = state.hands[seat];
+  const groups = groupByRank(hand);
+  const strength = [...groups.values()].filter((cards) => cards.length === 4).length * 4 +
+    hand.filter((card) => cardRank(card) >= 12).length * 1.5 +
+    Number(hand.includes(52) && hand.includes(53)) * 3;
+  const target = strength >= 8 ? 3 : strength >= 5 ? 2 : strength >= (difficulty === 'easy' ? 4 : 2.5) ? 1 : 0;
+  return target > (state.highestBid ?? 0) ? target : 0;
 }
 
 /** 执行出牌（己方），返回新状态；不校验 canPlay，调用方保证合法 */
@@ -767,8 +835,14 @@ export function getAIPlay(
   state: DoudizhuState,
   difficulty: string = 'normal',
 ): { type: 'play'; cards: Card[] } | { type: 'pass' } {
+  return state.currentPlayer === 1 ? { type: 'pass' } : getAIPlayForSeat(state, state.currentPlayer, difficulty);
+}
+
+export function getAIPlayForSeat(
+  state: DoudizhuState, seat: number, difficulty = 'normal',
+): { type: 'play'; cards: Card[] } | { type: 'pass' } {
   const who = state.currentPlayer;
-  if (who === 1 || state.gameOver) return { type: 'pass' };
+  if (who !== seat || !isTurnOf(state, seat)) return { type: 'pass' };
 
   const hand = state.hands[who];
   if (hand.length === 0) return { type: 'pass' };
@@ -834,6 +908,7 @@ export function applyAITurn(
   difficulty: string = 'normal',
 ): DoudizhuState {
   if (state.gameOver || state.currentPlayer === 1) return state;
+  if (state.phase === 'bidding') return bidForSeat(state, state.currentPlayer, getAIBid(state, state.currentPlayer, difficulty));
 
   const action = getAIPlay(state, difficulty);
   if (action.type === 'pass') {

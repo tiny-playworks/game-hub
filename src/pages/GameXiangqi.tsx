@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import { cn } from '@/lib/utils';
+import { InviteFamilyButton } from '@/components/household/InviteFamilyButton';
 import {
   type Board,
   createInitialBoard,
@@ -285,6 +286,7 @@ const GameXiangqi = () => {
       }
       toolbar={
         <>
+          <InviteFamilyButton gameId="xiangqi" />
           <SegmentedControl
             ariaLabel={t('common.opponent')}
             value={opponent}

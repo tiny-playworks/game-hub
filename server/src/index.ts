@@ -15,6 +15,8 @@ import { registerJourneyRoutes } from './routes/journey';
 import { RoomManager } from './rooms/RoomManager';
 import { registerRoomRoutes } from './routes/rooms';
 import { setupRoomWebSocket } from './rooms/socket';
+import { GameRoomManager } from './gameRooms/GameRoomManager';
+import { registerGameRoomRoutes } from './routes/gameRooms';
 
 const app = Fastify({
   logger: true,
@@ -57,8 +59,11 @@ registerLeaderboardRoutes(app, db);
 
 const roomManager = new RoomManager(db);
 registerRoomRoutes(app, db, roomManager);
+const gameManager = new GameRoomManager(db, (error) => app.log.error(error));
+registerGameRoomRoutes(app, db, gameManager);
 
 app.addHook('onClose', async () => {
+  gameManager.close();
   db.close();
 });
 
@@ -68,7 +73,7 @@ try {
     host: process.env.GAME_HUB_HOST ?? '0.0.0.0',
     port: Number(process.env.GAME_HUB_PORT ?? 8787),
   });
-  setupRoomWebSocket(app.server, db, roomManager);
+  setupRoomWebSocket(app.server, db, roomManager, gameManager);
 } catch (error) {
   app.log.error(error);
   process.exitCode = 1;

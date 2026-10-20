@@ -15,6 +15,7 @@ import { runSnapshotMutation } from '../snapshotRuntime';
 import { applyEvent, createMatch, nextServerAiEvent } from '../riichi/runtime';
 import { replayFreeContinuation } from '../riichi/continuation';
 import type { ResumeSaveRecord } from '../../../shared/contracts/sync';
+import { assertNoActiveMatch } from '../gameRooms/activeMatch';
 
 type MatchRow = {
   match_id: string;
@@ -170,6 +171,7 @@ export function registerRiichiRoutes(app: FastifyInstance, db: DatabaseSync): vo
       if (snapshot.ranked.activeMatchId) throw apiError(409, 'RANKED_MATCH_ACTIVE');
       const seed = randomInt(0, 0x1_0000_0000);
       if (input.source === 'ai-ranked') {
+        assertNoActiveMatch(db, member.id);
         const rooms = db.prepare('SELECT summary_json FROM active_rooms').all() as Array<{ summary_json: string }>;
         if (rooms.some((row) => { const room = JSON.parse(row.summary_json); return room.status === 'playing' &&
           room.seats.some((seat: { type: string; memberId?: string }) => seat.type === 'human' && seat.memberId === member.id); }))

@@ -14,6 +14,9 @@ export function formatFamilyFeedItem(
   const gameId = item.gameId ?? '';
   const game = games.find((g) => g.id === gameId);
   const gameName = getMessage(locale, `game.${gameId}.name`);
+  if (item.kind === 'family-arcade') {
+    return formatMessage(locale, 'gameRoom.feed', { nickname, game: gameName });
+  }
   const diffLabel = item.difficulty
     ? getMessage(
         locale,
