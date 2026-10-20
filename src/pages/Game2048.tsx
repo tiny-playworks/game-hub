@@ -31,12 +31,18 @@ const Game2048 = () => {
   const [continuing, setContinuing] = useState(false);
   const [banking, setBanking] = useState(false);
   const challengeGoal = arcadeChallengeGoal('2048', difficulty);
-  const challengeOver = mode === 'challenge' && (maxTile >= challengeGoal.target || moves >= challengeGoal.moves);
-  const milestone = mode === 'classic' && maxTile >= 2048 && !continuing && !result;
+  const challengeOver =
+    mode === 'challenge' &&
+    (maxTile >= challengeGoal.target || moves >= challengeGoal.moves);
+  const milestone =
+    mode === 'classic' && maxTile >= 2048 && !continuing && !result;
   const emptyCells =
     size * size -
     Object.values(state.tiles).filter((tile) => !tile.mergedInto).length;
-  const nextTarget = mode === 'challenge' ? challengeGoal.target : 2 ** Math.ceil(Math.log2(Math.max(4, maxTile + 1)));
+  const nextTarget =
+    mode === 'challenge'
+      ? challengeGoal.target
+      : 2 ** Math.ceil(Math.log2(Math.max(4, maxTile + 1)));
 
   useArcadeSnapshot(() => ({ ...state, maxTile, maxCombo, boardSize: size }));
   useEffect(() => {
@@ -46,11 +52,27 @@ const Game2048 = () => {
         maxCombo,
         moves,
       });
-  }, [state.gameOver, state.score, maxTile, maxCombo, moves, challengeOver, finish]);
+  }, [
+    state.gameOver,
+    state.score,
+    maxTile,
+    maxCombo,
+    moves,
+    challengeOver,
+    finish,
+  ]);
 
   const tryMove = useCallback(
     (dir: Dir) => {
-      if (paused || result || milestone || banking || state.gameOver || challengeOver) return;
+      if (
+        paused ||
+        result ||
+        milestone ||
+        banking ||
+        state.gameOver ||
+        challengeOver
+      )
+        return;
       const { addedScore, isMoved } = move(dir);
       if (isMoved) setMoves((count) => count + 1);
       if (addedScore > 0)
@@ -59,7 +81,16 @@ const Game2048 = () => {
         shake();
       }
     },
-    [move, shake, paused, result, milestone, banking, state.gameOver, challengeOver],
+    [
+      move,
+      shake,
+      paused,
+      result,
+      milestone,
+      banking,
+      state.gameOver,
+      challengeOver,
+    ],
   );
   const swipe = useSwipeControls(tryMove);
 
@@ -118,7 +149,14 @@ const Game2048 = () => {
             variant="outline"
             size="sm"
             onClick={undo}
-            disabled={!canUndo || !!result || paused || banking || state.gameOver || mode === 'challenge'}
+            disabled={
+              !canUndo ||
+              !!result ||
+              paused ||
+              banking ||
+              state.gameOver ||
+              mode === 'challenge'
+            }
           >
             <Undo2 className="size-4" />
             {t('arcade.undo')}
@@ -131,7 +169,28 @@ const Game2048 = () => {
       }
     >
       <div className="puzzle-2048 w-full flex flex-col items-center">
-        {milestone ? <div className="game-milestone" role="status"><strong>{formatMessage(locale, 'play.tileMilestone', { target: 2048 })}</strong><div><Button disabled={banking} onClick={() => setContinuing(true)}>{t('play.continue2048')}</Button><Button variant="outline" disabled={banking} onClick={() => { setBanking(true); finish('win', state.score, { maxTile, maxCombo, moves }); }}>{t('play.finish2048')}</Button></div></div> : null}
+        {milestone ? (
+          <div className="game-milestone" role="status">
+            <strong>
+              {formatMessage(locale, 'play.tileMilestone', { target: 2048 })}
+            </strong>
+            <div>
+              <Button disabled={banking} onClick={() => setContinuing(true)}>
+                {t('play.continue2048')}
+              </Button>
+              <Button
+                variant="outline"
+                disabled={banking}
+                onClick={() => {
+                  setBanking(true);
+                  finish('win', state.score, { maxTile, maxCombo, moves });
+                }}
+              >
+                {t('play.finish2048')}
+              </Button>
+            </div>
+          </div>
+        ) : null}
         <GameProgress
           label={t('arcade.nextTarget')}
           value={nextTarget}
@@ -151,7 +210,7 @@ const Game2048 = () => {
             {Array.from({ length: size * size }).map((_, i) => (
               <div
                 key={i}
-                className="p-1 md:p-[6px]"
+                className="p-1 md:p-1.5"
                 style={{ width: `${100 / size}%`, height: `${100 / size}%` }}
               >
                 <div className="w-full h-full bg-[#cdc1b4] dark:bg-[#3a3a3a] rounded-md md:rounded-lg" />
@@ -224,7 +283,11 @@ const Game2048 = () => {
           <span>
             {size}×{size} · {t('arcade.emptyCells')} {emptyCells}
           </span>
-          {mode === 'challenge' ? <span>{moves}/{challengeGoal.moves} {t('arcade.unit.moves')}</span> : null}
+          {mode === 'challenge' ? (
+            <span>
+              {moves}/{challengeGoal.moves} {t('arcade.unit.moves')}
+            </span>
+          ) : null}
         </div>
       </div>
 
