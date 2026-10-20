@@ -1,5 +1,6 @@
 import {
   type TouchEvent,
+  type PointerEvent,
   useCallback,
   useEffect,
   useMemo,
@@ -7,6 +8,8 @@ import {
   useState,
 } from 'react';
 import { GameResultOverlay } from '@/components/game/GameResultOverlay';
+import { GameProgress } from '@/components/game/GameProgress';
+import { GameReadyOverlay } from '@/components/game/GameReadyOverlay';
 import { GameShell, StatPill } from '@/components/game/GameShell';
 import { Button } from '@/components/ui/button';
 import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
@@ -175,6 +178,11 @@ const GameTetris3D = ({
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.target instanceof Element &&
+        event.target.closest('input, textarea, select, button')
+      )
+        return;
       const current = stateRef.current;
       if (event.code === 'Space') {
         event.preventDefault();
@@ -271,6 +279,28 @@ const GameTetris3D = ({
           : t('tetris.status.playing');
 
   const skillReady = state.skillEnergy >= state.skillMax;
+  const holdMove = (direction: HorizontalDir) => ({
+    onPointerDown: (event: PointerEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      if (pausedRef.current || stateRef.current.status !== 'playing') return;
+      event.currentTarget.setPointerCapture(event.pointerId);
+      const result = dasArrOnKeyDown(dasRef.current, direction);
+      dasRef.current = result.state;
+      if (result.fire) dispatch({ type: 'move', dx: direction });
+    },
+    onPointerUp: () => {
+      dasRef.current = dasArrOnKeyUp(dasRef.current, direction);
+    },
+    onPointerCancel: () => {
+      dasRef.current = dasArrOnKeyUp(dasRef.current, direction);
+    },
+    onLostPointerCapture: () => {
+      dasRef.current = dasArrOnKeyUp(dasRef.current, direction);
+    },
+    onClick: (event: React.MouseEvent<HTMLButtonElement>) => {
+      if (event.detail === 0) dispatch({ type: 'move', dx: direction });
+    },
+  });
 
   const handleTouchStart = (event: TouchEvent<HTMLElement>) => {
     const touch = event.changedTouches[0];
@@ -301,21 +331,37 @@ const GameTetris3D = ({
       autoStart={false}
       title={t('game.tetris.name')}
       subtitle={t('tetris.help')}
-      status={<StatPill label={t('arcade.unit.points')} value={state.score} />}
+      status={
+        <>
+          <StatPill label={t('arcade.score')} value={state.score} />
+          <StatPill label={t('arcade.clearedLines')} value={state.lines} />
+        </>
+      }
       toolbar={
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          aria-label={t('tetris.toggleTheme')}
-          onClick={() =>
-            setTheme((current) => (current === 'glass' ? 'neon' : 'glass'))
-          }
-        >
-          {t('tetris.toggleTheme')}
-        </Button>
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-label={t('tetris.toggleTheme')}
+            onClick={() =>
+              setTheme((current) => (current === 'glass' ? 'neon' : 'glass'))
+            }
+          >
+            {t('tetris.toggleTheme')}
+          </Button>
+          <Button variant="outline" size="sm" onClick={arcade.restart}>
+            {t('common.restart')}
+          </Button>
+        </>
       }
     >
+      <GameProgress
+        label={t('arcade.nextTarget')}
+        current={state.lines}
+        target={(Math.floor(state.lines / 10) + 1) * 10}
+        value={`${state.lines} / ${(Math.floor(state.lines / 10) + 1) * 10} ${t('arcade.lines')}`}
+      />
       <div
         className={`tetris-game tetris-theme-${theme}`}
         style={{ minHeight: 0, width: '100%' }}
@@ -338,26 +384,18 @@ const GameTetris3D = ({
               onRestart={arcade.restart}
             />
             {state.status === 'idle' && (
-              <button
-                type="button"
-                className="tetris-start-layer"
-                onClick={() => dispatch({ type: 'start' })}
-              >
-                <span>{t('tetris.startTip')}</span>
-              </button>
+              <GameReadyOverlay
+                title={t('game.tetris.name')}
+                description={t('tetris.startTip')}
+                onStart={() => dispatch({ type: 'start' })}
+              />
             )}
           </section>
 
           <aside className="tetris-side" aria-label={t('category.mini.name')}>
             <div className="tetris-card tetris-stats">
               <span>
-                {formatMessage(locale, 'tetris.score', { score: state.score })}
-              </span>
-              <span>
                 {formatMessage(locale, 'tetris.level', { level: state.level })}
-              </span>
-              <span>
-                {formatMessage(locale, 'tetris.lines', { lines: state.lines })}
               </span>
               <span>
                 {formatMessage(locale, 'tetris.bestLines', {
@@ -443,8 +481,6 @@ const GameTetris3D = ({
                 )}
               </div>
             </div>
-
-            <p className="tetris-help">{t('tetris.help')}</p>
           </aside>
         </main>
 
@@ -483,7 +519,7 @@ const GameTetris3D = ({
             variant="outline"
             size="sm"
             disabled={state.status !== 'playing'}
-            onClick={() => dispatch({ type: 'move', dx: -1 })}
+            {...holdMove(-1)}
           >
             {t('tetris.mobile.left')}
           </Button>
@@ -491,7 +527,7 @@ const GameTetris3D = ({
             variant="outline"
             size="sm"
             disabled={state.status !== 'playing'}
-            onClick={() => dispatch({ type: 'move', dx: 1 })}
+            {...holdMove(1)}
           >
             {t('tetris.mobile.right')}
           </Button>

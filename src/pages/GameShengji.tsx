@@ -270,8 +270,11 @@ const GameShengji = () => {
         </div>
 
         {/* 手牌：主牌金框、分牌绿框，本墩不能出的会变灰 */}
-        <div className="mt-3 flex min-h-22 justify-center px-1 pt-3">
-          <div className="flex items-end">
+        <div
+          className="mt-3 flex min-h-22 justify-center px-1 pt-3"
+          style={{ containerType: 'inline-size' }}
+        >
+          <div className="flex items-end" style={{ maxWidth: '100%' }}>
             {sortedHand.map((card, index) => {
               const canPlayThis =
                 isMyTurn(state) && !holding && validSet.has(card);
@@ -290,7 +293,10 @@ const GameShengji = () => {
                       'shadow-[0_0_0_1.5px_rgba(5,150,105,0.65)]',
                   )}
                   style={{
-                    marginLeft: index === 0 ? 0 : '-1.35rem',
+                    marginLeft:
+                      index === 0
+                        ? 0
+                        : `calc(min(1.75rem, (100cqw - 3.1rem) / ${Math.max(1, sortedHand.length - 1)}) - 3.1rem)`,
                     animationDelay: `${Math.min(index, 12) * 18}ms`,
                   }}
                 />

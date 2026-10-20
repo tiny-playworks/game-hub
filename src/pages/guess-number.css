@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
-
 @keyframes blink-red {
   0%,
   100% {
@@ -61,4 +59,128 @@
 .font-led {
   font-family: 'Share Tech Mono', monospace;
   text-shadow: 0 0 10px currentColor;
+}
+
+.game-stage .guess-console {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  overflow: hidden;
+  padding: 24px;
+  border: 1px solid #536361;
+  border-radius: 14px;
+  color: #e7e9df;
+  background: #192e35;
+  box-shadow: 0 18px 36px -24px #172c3870;
+}
+.guess-console-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #435859;
+  font-size: 12px;
+  color: #a5bab6;
+}
+.guess-console-top strong {
+  font:
+    600 34px/1 ui-monospace,
+    monospace;
+  color: #e0b960;
+  font-variant-numeric: tabular-nums;
+}
+.guess-history {
+  height: 142px;
+  margin: 18px 0;
+  overflow-y: auto;
+  font-size: 13px;
+}
+.guess-history > p {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: #a5bab6;
+}
+.guess-history > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 8px 0;
+  border-bottom: 1px solid #354d50;
+}
+.guess-input {
+  width: 100%;
+  min-height: 66px;
+  text-align: center;
+  border: 1px solid #59716d;
+  border-radius: 9px;
+  background: #102329;
+  color: #f1cd7d;
+  font:
+    600 34px/1.2 ui-monospace,
+    monospace;
+  letter-spacing: 8px;
+}
+.guess-input:focus-visible {
+  outline: 2px solid #d5af5a;
+  outline-offset: 3px;
+}
+.guess-input-hint {
+  min-height: 22px;
+  margin: 8px 0 12px;
+  font-size: 12px;
+  text-align: center;
+  color: #bcd1c9;
+}
+.guess-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.guess-keypad [data-slot='button'] {
+  height: 48px;
+  border: 1px solid #596b66;
+  border-bottom-width: 3px;
+  border-radius: 8px;
+  background: #2b4549;
+  color: #f5f3eb;
+  font:
+    600 19px/1 ui-monospace,
+    monospace;
+}
+.guess-keypad [data-slot='button']:active {
+  transform: translateY(2px);
+  border-bottom-width: 1px;
+}
+.guess-keypad .guess-confirm {
+  background: #c85542;
+  border-color: #a84435;
+  color: #fff9ed;
+  font-size: 14px;
+}
+.guess-history .text-blue-600 {
+  color: #94bcea;
+}
+.guess-history .text-red-500 {
+  color: #f39b8b;
+}
+.guess-history .text-green-500 {
+  color: #9bd5ac;
+}
+@media (max-width: 767px) {
+  .game-stage .guess-console {
+    padding: 18px;
+  }
+  .guess-history {
+    height: 108px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-blink-red,
+  .animate-blink-fast,
+  .animate-glitch,
+  .animate-slide-up-fade {
+    animation: none;
+  }
 }

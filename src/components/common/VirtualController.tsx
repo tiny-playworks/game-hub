@@ -1,11 +1,12 @@
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp } from 'lucide-react';
-import type React from 'react';
-import { cn } from '../../lib/utils';
+import { type PointerEvent, useEffect, useRef } from 'react';
+import { useOptionalArcade } from '@/contexts/ArcadeContext';
+import { useLocale } from '@/contexts/LocaleContext';
+import { cn } from '@/lib/utils';
 
 export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
 export type ActionType = 'A' | 'B';
 export type ControllerTone = 'light' | 'dark';
-
 interface VirtualControllerProps {
   onDirection?: (dir: Direction) => void;
   onDirectionEnd?: (dir: Direction) => void;
@@ -14,150 +15,142 @@ interface VirtualControllerProps {
   className?: string;
   showActions?: boolean;
   tone?: ControllerTone;
+  horizontalOnly?: boolean;
+  actions?: ActionType[];
+  actionLabels?: Partial<Record<ActionType, string>>;
 }
+const directions = [
+  { value: 'UP', Icon: ArrowUp, column: 2, row: 1, zh: '向上', en: 'Up' },
+  { value: 'LEFT', Icon: ArrowLeft, column: 1, row: 2, zh: '向左', en: 'Left' },
+  {
+    value: 'RIGHT',
+    Icon: ArrowRight,
+    column: 3,
+    row: 2,
+    zh: '向右',
+    en: 'Right',
+  },
+  { value: 'DOWN', Icon: ArrowDown, column: 2, row: 3, zh: '向下', en: 'Down' },
+] as const;
 
-export function VirtualController({
-  onDirection,
-  onDirectionEnd,
-  onAction,
-  onActionEnd,
-  className,
-  showActions = true,
-  tone = 'light',
-}: VirtualControllerProps) {
-  const buttonTone =
-    tone === 'dark'
-      ? 'bg-black/25 active:bg-black/40 border-black/10'
-      : 'bg-white/20 active:bg-white/40 border-white/10';
-  const iconTone = tone === 'dark' ? 'text-zinc-900' : 'text-white';
-
-  // Use touch events to prevent default zooming/scrolling on mobile
-  const handleDirection = (e: React.PointerEvent, dir: Direction) => {
-    e.preventDefault();
-    onDirection?.(dir);
+type Press =
+  | { type: 'direction'; value: Direction }
+  | { type: 'action'; value: ActionType };
+export function VirtualController(props: VirtualControllerProps) {
+  const {
+    className,
+    showActions = true,
+    tone = 'light',
+    horizontalOnly = false,
+    actions = ['B', 'A'],
+    actionLabels,
+  } = props;
+  const arcade = useOptionalArcade();
+  const { locale } = useLocale();
+  const disabled = Boolean(arcade?.paused || arcade?.result);
+  const callbacks = useRef(props);
+  callbacks.current = props;
+  const held = useRef(new Map<number, Press>());
+  const release = (id: number) => {
+    const press = held.current.get(id);
+    if (!press) return;
+    held.current.delete(id);
+    if (press.type === 'direction')
+      callbacks.current.onDirectionEnd?.(press.value);
+    else callbacks.current.onActionEnd?.(press.value);
   };
-
-  const handleDirectionEnd = (e: React.PointerEvent, dir: Direction) => {
-    e.preventDefault();
-    onDirectionEnd?.(dir);
+  const releaseAll = () => {
+    for (const id of held.current.keys()) release(id);
   };
-
-  const handleAction = (e: React.PointerEvent, action: ActionType) => {
-    e.preventDefault();
-    onAction?.(action);
+  const releaseRef = useRef(releaseAll);
+  releaseRef.current = releaseAll;
+  useEffect(() => {
+    const clear = () => releaseRef.current();
+    window.addEventListener('blur', clear);
+    return () => {
+      window.removeEventListener('blur', clear);
+      clear();
+    };
+  }, []);
+  useEffect(() => {
+    if (disabled) releaseRef.current();
+  }, [disabled]);
+  const press = (id: number, input: Press) => {
+    if (disabled || held.current.has(id)) return;
+    held.current.set(id, input);
+    if (input.type === 'direction')
+      callbacks.current.onDirection?.(input.value);
+    else callbacks.current.onAction?.(input.value);
   };
-
-  const handleActionEnd = (e: React.PointerEvent, action: ActionType) => {
-    e.preventDefault();
-    onActionEnd?.(action);
-  };
-
+  const bind = (input: Press) => ({
+    disabled,
+    onPointerDown: (event: PointerEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      press(event.pointerId, input);
+    },
+    onPointerUp: (event: PointerEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      release(event.pointerId);
+    },
+    onPointerCancel: (event: PointerEvent<HTMLButtonElement>) =>
+      release(event.pointerId),
+    onLostPointerCapture: (event: PointerEvent<HTMLButtonElement>) =>
+      release(event.pointerId),
+    onKeyDown: (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (event.key !== ' ' && event.key !== 'Enter') return;
+      event.preventDefault();
+      event.stopPropagation();
+      press(-1, input);
+    },
+    onKeyUp: (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (event.key !== ' ' && event.key !== 'Enter') return;
+      event.preventDefault();
+      event.stopPropagation();
+      release(-1);
+    },
+    onBlur: () => release(-1),
+  });
   return (
     <div
-      className={cn(
-        'fixed bottom-8 left-0 right-0 z-50 flex justify-between px-6 pointer-events-none md:hidden',
-        className,
-      )}
+      className={cn('virtual-controller', className)}
+      data-tone={tone}
+      data-direction-only={!showActions}
+      aria-label={locale === 'zh' ? '触屏操作' : 'Touch controls'}
     >
-      {/* D-Pad (Left Side) */}
-      <div className="relative w-36 h-36 pointer-events-auto opacity-70 hover:opacity-100 transition-opacity">
-        <button
-          type="button"
-          onPointerDown={(e) => handleDirection(e, 'UP')}
-          onPointerUp={(e) => handleDirectionEnd(e, 'UP')}
-          onPointerCancel={(e) => handleDirectionEnd(e, 'UP')}
-          onPointerLeave={(e) => handleDirectionEnd(e, 'UP')}
-          className={cn(
-            'absolute top-0 left-1/2 -translate-x-1/2 w-12 h-12 backdrop-blur-sm rounded-t-lg flex items-center justify-center border',
-            buttonTone,
-          )}
-          aria-label="Up"
-        >
-          <ArrowUp className={cn('w-6 h-6', iconTone)} />
-        </button>
-        <button
-          type="button"
-          onPointerDown={(e) => handleDirection(e, 'LEFT')}
-          onPointerUp={(e) => handleDirectionEnd(e, 'LEFT')}
-          onPointerCancel={(e) => handleDirectionEnd(e, 'LEFT')}
-          onPointerLeave={(e) => handleDirectionEnd(e, 'LEFT')}
-          className={cn(
-            'absolute top-1/2 left-0 -translate-y-1/2 w-12 h-12 backdrop-blur-sm rounded-l-lg flex items-center justify-center border',
-            buttonTone,
-          )}
-          aria-label="Left"
-        >
-          <ArrowLeft className={cn('w-6 h-6', iconTone)} />
-        </button>
-        <button
-          type="button"
-          onPointerDown={(e) => handleDirection(e, 'RIGHT')}
-          onPointerUp={(e) => handleDirectionEnd(e, 'RIGHT')}
-          onPointerCancel={(e) => handleDirectionEnd(e, 'RIGHT')}
-          onPointerLeave={(e) => handleDirectionEnd(e, 'RIGHT')}
-          className={cn(
-            'absolute top-1/2 right-0 -translate-y-1/2 w-12 h-12 backdrop-blur-sm rounded-r-lg flex items-center justify-center border',
-            buttonTone,
-          )}
-          aria-label="Right"
-        >
-          <ArrowRight className={cn('w-6 h-6', iconTone)} />
-        </button>
-        <button
-          type="button"
-          onPointerDown={(e) => handleDirection(e, 'DOWN')}
-          onPointerUp={(e) => handleDirectionEnd(e, 'DOWN')}
-          onPointerCancel={(e) => handleDirectionEnd(e, 'DOWN')}
-          onPointerLeave={(e) => handleDirectionEnd(e, 'DOWN')}
-          className={cn(
-            'absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-12 backdrop-blur-sm rounded-b-lg flex items-center justify-center border',
-            buttonTone,
-          )}
-          aria-label="Down"
-        >
-          <ArrowDown className={cn('w-6 h-6', iconTone)} />
-        </button>
-        <div
-          className={cn(
-            'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 backdrop-blur-sm border',
-            buttonTone,
-          )}
-        />
+      <div className="virtual-dpad" data-horizontal={horizontalOnly}>
+        {directions
+          .filter(
+            ({ value }) =>
+              !horizontalOnly || value === 'LEFT' || value === 'RIGHT',
+          )
+          .map(({ value, Icon, column, row, zh, en }, index) => (
+            <button
+              key={value}
+              type="button"
+              aria-label={locale === 'zh' ? zh : en}
+              style={{
+                gridColumn: horizontalOnly ? index + 1 : column,
+                gridRow: horizontalOnly ? 1 : row,
+              }}
+              {...bind({ type: 'direction', value })}
+            >
+              <Icon />
+            </button>
+          ))}
       </div>
-
-      {/* Action Buttons (Right Side) */}
       {showActions && (
-        <div className="relative w-32 h-32 pointer-events-auto opacity-70 hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-          <button
-            type="button"
-            onPointerDown={(e) => handleAction(e, 'B')}
-            onPointerUp={(e) => handleActionEnd(e, 'B')}
-            onPointerCancel={(e) => handleActionEnd(e, 'B')}
-            onPointerLeave={(e) => handleActionEnd(e, 'B')}
-            className={cn(
-              'w-14 h-14 rounded-full backdrop-blur-sm flex items-center justify-center border mt-12 font-bold text-xl',
-              buttonTone,
-              iconTone,
-            )}
-            aria-label="Action B"
-          >
-            B
-          </button>
-          <button
-            type="button"
-            onPointerDown={(e) => handleAction(e, 'A')}
-            onPointerUp={(e) => handleActionEnd(e, 'A')}
-            onPointerCancel={(e) => handleActionEnd(e, 'A')}
-            onPointerLeave={(e) => handleActionEnd(e, 'A')}
-            className={cn(
-              'w-14 h-14 rounded-full backdrop-blur-sm flex items-center justify-center border mb-12 font-bold text-xl',
-              buttonTone,
-              iconTone,
-            )}
-            aria-label="Action A"
-          >
-            A
-          </button>
+        <div className="virtual-actions">
+          {actions.map((value) => (
+            <button
+              key={value}
+              type="button"
+              aria-label={actionLabels?.[value] ?? value}
+              {...bind({ type: 'action', value })}
+            >
+              {actionLabels?.[value] ?? value}
+            </button>
+          ))}
         </div>
       )}
     </div>

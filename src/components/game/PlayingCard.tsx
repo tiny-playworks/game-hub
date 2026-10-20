@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { cn } from '@/lib/utils';
+import './playing-cards.css';
 
 /** 0–51 为四花色，52=小王，53=大王。花色顺序：黑桃、红桃、梅花、方片 */
 const SUIT_SYMBOLS = ['♠', '♥', '♣', '♦'] as const;
@@ -224,32 +225,50 @@ export const CardFan = ({
   animate,
 }: CardFanProps) => {
   const step = reveal ?? (size === 'sm' ? 1.05 : 1.15);
-  const width = size === 'sm' ? 2.2 : 3.1;
-  const offset = -(width - step);
   const selectedSet = new Set(selected);
   const dimmedSet = new Set(dimmedCards);
+  const rowLength = Math.ceil(cards.length / 2);
+  const rows =
+    cards.length > 10 && onCardClick
+      ? [cards.slice(0, rowLength), cards.slice(rowLength)]
+      : [cards];
 
   return (
-    <div className={cn('flex items-end', className)}>
-      {cards.map((card, index) => (
-        <PlayingCard
-          key={card}
-          card={card}
-          locale={locale}
-          size={size}
-          selected={selectedSet.has(card)}
-          dimmed={dimmedSet.has(card)}
-          disabled={disabledCards}
-          onClick={onCardClick ? () => onCardClick(card) : undefined}
-          className={animate ? 'animate-card-deal' : undefined}
-          style={{
-            marginLeft: index === 0 ? 0 : `${offset}rem`,
-            animationDelay: animate
-              ? `${Math.min(index, 16) * 16}ms`
-              : undefined,
-          }}
-        />
-      ))}
+    <div
+      className={cn('card-fan-viewport', className)}
+      data-card-size={size}
+      style={
+        {
+          width: `calc(${Math.max(0, cards.length - 1)} * ${step}rem + var(--fan-card-width))`,
+          '--fan-step': `min(${step}rem, calc((100cqw - var(--fan-card-width)) / ${Math.max(1, cards.length - 1)}))`,
+          '--fan-row-step': `min(2rem, calc((100cqw - var(--fan-card-width)) / ${Math.max(1, rowLength - 1)}))`,
+        } as CSSProperties
+      }
+    >
+      <div className="card-fan-rows" data-two-rows={rows.length === 2}>
+        {rows.map((row, rowIndex) => (
+          <div className="card-fan-row" key={rowIndex}>
+            {row.map((card, index) => (
+              <PlayingCard
+                key={card}
+                card={card}
+                locale={locale}
+                size={size}
+                selected={selectedSet.has(card)}
+                dimmed={dimmedSet.has(card)}
+                disabled={disabledCards}
+                onClick={onCardClick ? () => onCardClick(card) : undefined}
+                className={animate ? 'animate-card-deal' : undefined}
+                style={{
+                  animationDelay: animate
+                    ? `${Math.min(index, 16) * 16}ms`
+                    : undefined,
+                }}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

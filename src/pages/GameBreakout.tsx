@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { VirtualController } from '@/components/common/VirtualController';
+import { GameProgress } from '@/components/game/GameProgress';
+import { GameReadyOverlay } from '@/components/game/GameReadyOverlay';
 import { GameResultOverlay } from '@/components/game/GameResultOverlay';
 import { GameShell, StatPill } from '@/components/game/GameShell';
 import { Button } from '@/components/ui/button';
@@ -11,193 +14,235 @@ import {
   createInitialState,
   stepBreakout,
 } from '@/lib/breakout';
-import { formatMessage } from '@/lib/i18n';
 
-const {
-  canvasW: CANVAS_W,
-  canvasH: CANVAS_H,
-  paddleH: PADDLE_H,
-  ballR: BALL_R,
-  paddleY,
-} = BREAKOUT;
-
-type GameStatus = BreakoutState['status'];
-
+const { canvasW: W, canvasH: H, paddleH, ballR, paddleY } = BREAKOUT;
 const GameBreakout = () => {
-  const { locale, t } = useLocale();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { t } = useLocale();
   const arcade = useArcade();
   const { difficulty, paused, finish } = arcade;
-  const PADDLE_W =
+  const paddleWidth =
     difficulty === 'easy' ? 150 : difficulty === 'hard' ? 70 : 100;
-  const ballSpeed =
-    difficulty === 'easy' ? 0.75 : difficulty === 'hard' ? 1.3 : 1;
+  const speed = difficulty === 'easy' ? 0.75 : difficulty === 'hard' ? 1.3 : 1;
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
-  const [score, setScore] = useState(0);
-  const [lives, setLives] = useState(3);
-  const [status, setStatus] = useState<GameStatus>('idle');
-
-  const stateRef = useRef({
-    ...createInitialState(),
-    lastTime: 0,
-  });
-
-  const resetGame = arcade.restart;
-
+  const stateRef = useRef(createInitialState());
+  const keys = useRef({ left: false, right: false });
+  const [hud, setHud] = useState({ score: 0, lives: 3 });
+  const [status, setStatus] = useState<BreakoutState['status']>('idle');
   const launch = useCallback(() => {
-    if (pausedRef.current) return;
-    if (status === 'idle' && !stateRef.current.launched) {
-      stateRef.current.launched = true;
-      stateRef.current.ballVx = 4 * ballSpeed;
-      stateRef.current.ballVy = -6 * ballSpeed;
-      stateRef.current.status = 'playing';
-      setStatus('playing');
-    } else if (status === 'paused') {
-      stateRef.current.status = 'playing';
-      setStatus('playing');
-    }
-  }, [status, ballSpeed]);
-
+    const state = stateRef.current;
+    if (pausedRef.current || state.status !== 'idle') return;
+    state.launched = true;
+    state.ballVx = 4 * speed;
+    state.ballVy = -6 * speed;
+    state.status = 'playing';
+    setStatus('playing');
+    arcade.start();
+  }, [speed, arcade.start]);
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let rafId = 0;
-    let mouseX = CANVAS_W / 2;
-
-    const setPaddleFromClientX = (clientX: number) => {
-      const rect = canvas.getBoundingClientRect();
-      const scaleX = CANVAS_W / rect.width;
-      mouseX = (clientX - rect.left) * scaleX;
-    };
-
-    const handlePointerMove = (e: PointerEvent) => {
-      e.preventDefault();
-      setPaddleFromClientX(e.clientX);
-    };
-
-    const handlePointerDown = (e: PointerEvent) => {
-      e.preventDefault();
-      setPaddleFromClientX(e.clientX);
-      launch();
-    };
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (pausedRef.current || arcade.result) return;
-      if (e.code === 'Space') {
-        e.preventDefault();
-        if (status === 'idle' || status === 'paused') launch();
-        else if (status === 'playing') arcade.setPaused(true);
-      }
-    };
-
-    canvas.addEventListener('pointermove', handlePointerMove);
-    canvas.addEventListener('pointerdown', handlePointerDown);
-    window.addEventListener('keydown', handleKeyDown);
-
-    const gameLoop = (time: number) => {
-      const state = stateRef.current;
-      const dt = Math.min((time - state.lastTime) / 16, 4);
-      state.lastTime = time;
-
-      if (status === 'idle' || status === 'paused' || status === 'playing') {
-        state.paddleX = clampPaddleX(mouseX - PADDLE_W / 2, PADDLE_W);
-      }
-
-      if ((status === 'idle' || status === 'paused') && !state.launched) {
-        state.ballX = state.paddleX + PADDLE_W / 2;
-      }
-
-      if (status === 'playing' && state.launched && !pausedRef.current) {
-        const { state: next, events } = stepBreakout(
-          {
-            paddleX: state.paddleX,
-            ballX: state.ballX,
-            ballY: state.ballY,
-            ballVx: state.ballVx,
-            ballVy: state.ballVy,
-            bricks: state.bricks,
-            launched: state.launched,
-            lives: state.lives,
-            score: state.score,
-            status: 'playing',
-          },
-          dt,
-          PADDLE_W,
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+    let frame = 0;
+    let last = 0;
+    let trail: { x: number; y: number }[] = [];
+    let flashes: {
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+      life: number;
+    }[] = [];
+    const reducedMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches;
+    const palette = [
+      '#cb6553',
+      '#d28b56',
+      '#d2ae62',
+      '#7e9e74',
+      '#568b8b',
+      '#6b829d',
+    ];
+    const loop = (time: number) => {
+      const dt = last ? Math.min(2, (time - last) / (1000 / 60)) : 1;
+      last = time;
+      const current = stateRef.current;
+      if (
+        !pausedRef.current &&
+        (current.status === 'playing' || current.status === 'idle')
+      ) {
+        const direction =
+          Number(keys.current.right) - Number(keys.current.left);
+        current.paddleX = clampPaddleX(
+          current.paddleX + direction * 9 * dt,
+          paddleWidth,
         );
-
-        state.ballX = next.ballX;
-        state.ballY = next.ballY;
-        state.ballVx = next.ballVx;
-        state.ballVy = next.ballVy;
-        state.bricks = next.bricks;
-        state.launched = next.launched;
-        state.lives = next.lives;
-        state.score = next.score;
-        state.status = next.status;
-
-        for (const event of events) {
-          if (event.type === 'brick_hit') {
-            setScore(next.score);
-          } else if (event.type === 'life_lost') {
-            setLives(event.lives);
-            setStatus('idle');
-          } else if (event.type === 'lose') {
-            setLives(0);
-            setStatus('lose');
-          } else if (event.type === 'win') {
-            setStatus('win');
+        if (!current.launched)
+          current.ballX = current.paddleX + paddleWidth / 2;
+      }
+      if (current.status === 'playing' && !pausedRef.current) {
+        let remaining = dt;
+        while (remaining > 0 && stateRef.current.status === 'playing') {
+          const step = Math.min(0.5, remaining);
+          const previous = stateRef.current;
+          const result = stepBreakout(previous, step, paddleWidth);
+          stateRef.current = result.state;
+          if (result.events.length) {
+            setHud({ score: result.state.score, lives: result.state.lives });
+            for (const event of result.events) {
+              if (event.type === 'brick_hit' && !reducedMotion) {
+                const brick = previous.bricks.find(
+                  (item, index) =>
+                    item.alive && !result.state.bricks[index].alive,
+                );
+                if (brick)
+                  flashes.push({
+                    x: brick.x,
+                    y: brick.y,
+                    w: brick.w,
+                    h: brick.h,
+                    life: 16,
+                  });
+              }
+            }
+            if (result.state.status !== 'playing') {
+              setStatus(result.state.status);
+              trail = [];
+            }
           }
+          remaining -= step;
         }
       }
-
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-
-      state.bricks.forEach((b) => {
-        if (!b.alive) return;
-        ctx.fillStyle = b.color;
-        ctx.fillRect(b.x, b.y, b.w, b.h);
-        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-        ctx.strokeRect(b.x, b.y, b.w, b.h);
+      const state = stateRef.current;
+      ctx.fillStyle = '#122b31';
+      ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = '#b9cfc40a';
+      for (let x = 0; x <= W; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, H);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= H; y += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(W, y);
+        ctx.stroke();
+      }
+      state.bricks.forEach((brick, index) => {
+        if (!brick.alive) return;
+        ctx.fillStyle = palette[Math.floor(index / BREAKOUT.brickCols)];
+        ctx.beginPath();
+        ctx.roundRect(brick.x, brick.y, brick.w, brick.h, 5);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff2e';
+        ctx.fillRect(brick.x + 3, brick.y + 3, brick.w - 6, 2);
       });
-
-      ctx.fillStyle = '#e2e8f0';
-      ctx.fillRect(state.paddleX, paddleY, PADDLE_W, PADDLE_H);
-
-      ctx.fillStyle = '#fbbf24';
+      if (state.launched && !pausedRef.current && !reducedMotion) {
+        trail.push({ x: state.ballX, y: state.ballY });
+        if (trail.length > 12) trail.shift();
+      }
+      trail.forEach((point, index) => {
+        ctx.globalAlpha = (index / trail.length) * 0.35;
+        ctx.fillStyle = '#e5c478';
+        ctx.beginPath();
+        ctx.arc(
+          point.x,
+          point.y,
+          (ballR * index) / trail.length,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+      flashes = flashes.filter((flash) => {
+        if (!pausedRef.current) flash.life -= dt;
+        if (flash.life <= 0) return false;
+        ctx.globalAlpha = flash.life / 16;
+        ctx.fillStyle = '#f4e4b8';
+        ctx.beginPath();
+        ctx.roundRect(
+          flash.x - (16 - flash.life),
+          flash.y - 2,
+          flash.w + (16 - flash.life) * 2,
+          flash.h + 4,
+          6,
+        );
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        return true;
+      });
+      ctx.fillStyle = '#b9d7c0';
       ctx.beginPath();
-      ctx.arc(state.ballX, state.ballY, BALL_R, 0, Math.PI * 2);
+      ctx.roundRect(state.paddleX, paddleY, paddleWidth, paddleH, 6);
       ctx.fill();
-
-      rafId = requestAnimationFrame(gameLoop);
+      ctx.fillStyle = '#e8c676';
+      ctx.beginPath();
+      ctx.arc(state.ballX, state.ballY, ballR, 0, Math.PI * 2);
+      ctx.fill();
+      frame = requestAnimationFrame(loop);
     };
-
-    stateRef.current.lastTime = performance.now();
-    rafId = requestAnimationFrame(gameLoop);
-
+    frame = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(frame);
+  }, [paddleWidth]);
+  useEffect(() => {
+    const keyDown = (event: KeyboardEvent) => {
+      if (pausedRef.current || arcade.result) return;
+      if (
+        event.target instanceof Element &&
+        event.target.closest('input, textarea, select, button')
+      )
+        return;
+      if (event.code === 'ArrowLeft' || event.code === 'KeyA') {
+        event.preventDefault();
+        keys.current.left = true;
+      }
+      if (event.code === 'ArrowRight' || event.code === 'KeyD') {
+        event.preventDefault();
+        keys.current.right = true;
+      }
+      if (event.code === 'Space') {
+        event.preventDefault();
+        launch();
+      }
+    };
+    const keyUp = (event: KeyboardEvent) => {
+      if (event.code === 'ArrowLeft' || event.code === 'KeyA')
+        keys.current.left = false;
+      if (event.code === 'ArrowRight' || event.code === 'KeyD')
+        keys.current.right = false;
+    };
+    window.addEventListener('keydown', keyDown);
+    window.addEventListener('keyup', keyUp);
     return () => {
-      cancelAnimationFrame(rafId);
-      canvas.removeEventListener('pointermove', handlePointerMove);
-      canvas.removeEventListener('pointerdown', handlePointerDown);
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keydown', keyDown);
+      window.removeEventListener('keyup', keyUp);
     };
-  }, [status, launch, PADDLE_W, arcade.setPaused, arcade.result]);
-
+  }, [launch, arcade.result]);
+  useEffect(() => {
+    if (paused) keys.current = { left: false, right: false };
+  }, [paused]);
+  useEffect(() => {
+    if (status === 'win' || status === 'lose')
+      finish(status, hud.score, { lives: hud.lives });
+  }, [status, hud.score, hud.lives, finish]);
   useArcadeSnapshot(() => ({
     ...stateRef.current,
-    status,
-    paddleWidth: PADDLE_W,
-    ballSpeed,
+    paddleWidth,
+    ballSpeed: speed,
   }));
-  useEffect(() => {
-    if (status === 'playing') arcade.start();
-    if (status === 'win' || status === 'lose') finish(status, score, { lives });
-  }, [status, score, lives, arcade.start, finish]);
+  const movePaddle = (clientX: number) => {
+    if (pausedRef.current || arcade.result) return;
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    stateRef.current.paddleX = clampPaddleX(
+      ((clientX - rect.left) * W) / rect.width - paddleWidth / 2,
+      paddleWidth,
+    );
+  };
   return (
     <GameShell
       autoStart={false}
@@ -205,60 +250,70 @@ const GameBreakout = () => {
       subtitle={t('breakout.controls')}
       status={
         <>
-          <StatPill label={t('arcade.unit.points')} value={score} />
-          <StatPill label={t('arcade.lives')} value={lives} />
+          <StatPill label={t('arcade.score')} value={hud.score} />
+          <StatPill label={t('arcade.lives')} value={hud.lives} />
         </>
       }
       toolbar={
-        <Button variant="outline" size="sm" onClick={resetGame}>
+        <Button variant="outline" size="sm" onClick={arcade.restart}>
           {t('common.restart')}
         </Button>
       }
     >
-      <div className="flex w-full flex-col items-center justify-center pb-44 md:pb-4">
-        <div className="relative inline-block rounded-lg border-2 border-border bg-black shadow-xl">
-          <canvas
-            ref={canvasRef}
-            width={CANVAS_W}
-            height={CANVAS_H}
-            className="block cursor-none"
-            style={{
-              width: 'min(100vw - 2rem, 800px)',
-              height: 'auto',
-              touchAction: 'none',
-            }}
-          />
-
-          {(status === 'idle' || status === 'paused') && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 rounded-lg">
-              <p className="mb-4 text-lg text-white">
-                {status === 'idle'
-                  ? t('breakout.launchTip')
-                  : t('breakout.pausedTip')}
-              </p>
-              <Button onClick={launch}>{t('common.startOrContinue')}</Button>
-            </div>
-          )}
-
-          <GameResultOverlay
-            open={status === 'win' || status === 'lose'}
-            tone={status === 'win' ? 'win' : 'lose'}
+      <GameProgress
+        label={t('arcade.bricks')}
+        current={hud.score / 10}
+        target={60}
+      />
+      <div className="arcade-canvas-frame" style={{ width: '100%' }}>
+        <canvas
+          ref={canvasRef}
+          width={W}
+          height={H}
+          style={{ width: '100%' }}
+          aria-label={t('game.breakout.name')}
+          onPointerMove={(event) => {
+            event.preventDefault();
+            movePaddle(event.clientX);
+          }}
+          onPointerDown={(event) => {
+            event.preventDefault();
+            event.currentTarget.setPointerCapture(event.pointerId);
+            movePaddle(event.clientX);
+            launch();
+          }}
+        />
+        {status === 'idle' && (
+          <GameReadyOverlay
             title={
-              status === 'win' ? t('breakout.win') : t('breakout.gameOver')
+              hud.lives < 3 ? t('breakout.launchTip') : t('game.breakout.name')
             }
-            description={formatMessage(locale, 'breakout.finalScore', {
-              score,
-            })}
-            onRestart={resetGame}
+            description={t('arcade.breakoutReady')}
+            onStart={launch}
+            label={hud.lives < 3 ? t('common.startOrContinue') : undefined}
           />
-        </div>
-
-        <p className="mt-4 text-center text-sm text-muted-foreground">
-          {t('breakout.controls')}
-        </p>
+        )}
+        <GameResultOverlay
+          open={status === 'win' || status === 'lose'}
+          tone={status === 'win' ? 'win' : 'lose'}
+          title={status === 'win' ? t('breakout.win') : t('breakout.gameOver')}
+          description={`${hud.score} ${t('arcade.unit.points')}`}
+          onRestart={arcade.restart}
+        />
       </div>
+      <VirtualController
+        horizontalOnly
+        showActions={false}
+        onDirection={(direction) => {
+          if (direction === 'LEFT') keys.current.left = true;
+          if (direction === 'RIGHT') keys.current.right = true;
+        }}
+        onDirectionEnd={(direction) => {
+          if (direction === 'LEFT') keys.current.left = false;
+          if (direction === 'RIGHT') keys.current.right = false;
+        }}
+      />
     </GameShell>
   );
 };
-
 export default GameBreakout;

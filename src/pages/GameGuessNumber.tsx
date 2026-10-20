@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { GameProgress } from '@/components/game/GameProgress';
+import { GameReadyOverlay } from '@/components/game/GameReadyOverlay';
 import { GameResultOverlay } from '@/components/game/GameResultOverlay';
 import { GameShell, StatPill } from '@/components/game/GameShell';
 import { Button } from '@/components/ui/button';
@@ -54,15 +56,19 @@ const getHeatColor = (heat: GuessHistory['heat']) => {
 const GameGuessNumber = () => {
   const { locale, t } = useLocale();
   const shake = useScreenShake();
-  const { difficulty, paused, finish, restart } = useArcade();
+  const { difficulty, paused, finish, restart, start } = useArcade();
   const MAX = difficulty === 'easy' ? 100 : difficulty === 'hard' ? 1000 : 500;
   const [answer] = useState(
     () => Math.floor(Math.random() * (MAX - MIN + 1)) + MIN,
   );
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIME);
-  const [status, setStatus] = useState<'playing' | 'won' | 'lost'>('playing');
+  const [status, setStatus] = useState<'ready' | 'playing' | 'won' | 'lost'>(
+    'ready',
+  );
   const [history, setHistory] = useState<GuessHistory[]>([]);
   const [currentGuess, setCurrentGuess] = useState('');
+  const [bounds, setBounds] = useState({ min: MIN, max: MAX });
+  const [inputError, setInputError] = useState(false);
 
   const logRef = useRef<HTMLDivElement>(null);
 
@@ -108,12 +114,14 @@ const GameGuessNumber = () => {
     if (paused || status !== 'playing' || !currentGuess) return;
 
     const n = Number.parseInt(currentGuess, 10);
-    if (Number.isNaN(n) || n < MIN || n > MAX) {
+    if (Number.isNaN(n) || n < bounds.min || n > bounds.max) {
       shake();
+      setInputError(true);
       setCurrentGuess('');
       return;
     }
 
+    setInputError(false);
     const distance = Math.abs(answer - n);
     const { heat, message } = getHeat(distance, n > answer, t);
 
@@ -123,17 +131,24 @@ const GameGuessNumber = () => {
     if (distance === 0) {
       setStatus('won');
     } else {
-      shake();
+      setBounds((previous) =>
+        n > answer ? { ...previous, max: n - 1 } : { ...previous, min: n + 1 },
+      );
       setTimeLeft((prev) => Math.max(0, prev - PENALTY_TIME));
     }
 
     setCurrentGuess('');
-  }, [answer, currentGuess, shake, status, t, paused, MAX]);
+  }, [answer, currentGuess, shake, status, t, paused, bounds]);
 
   // Keyboard support
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (paused || status !== 'playing') return;
+      if (
+        e.target instanceof Element &&
+        e.target.closest('input, textarea, select, button')
+      )
+        return;
       if (e.key >= '0' && e.key <= '9') {
         handleInput(e.key);
       } else if (e.key === 'Backspace') {
@@ -149,13 +164,14 @@ const GameGuessNumber = () => {
   useArcadeSnapshot(() => ({
     status,
     range: [MIN, MAX],
+    remainingRange: [bounds.min, bounds.max],
     timeLeft,
     attempts: history.length,
     history,
     input: currentGuess,
   }));
   useEffect(() => {
-    if (status !== 'playing')
+    if (status === 'won' || status === 'lost')
       finish(status === 'won' ? 'win' : 'lose', history.length, {
         range: MAX,
         guesses: history.length,
@@ -180,119 +196,113 @@ const GameGuessNumber = () => {
 
   return (
     <GameShell
+      autoStart={false}
       title={t('game.guess-number.name')}
       subtitle={formatMessage(locale, 'guess.range', { min: MIN, max: MAX })}
       status={
-        <StatPill label={t('arcade.unit.attempts')} value={history.length} />
+        <>
+          <StatPill label={t('arcade.attempts')} value={history.length} />
+          <StatPill
+            label={t('arcade.timeLeft')}
+            value={timeLeft}
+            tone={timeLeft <= 10 ? 'danger' : 'default'}
+          />
+        </>
+      }
+      toolbar={
+        <Button variant="outline" size="sm" onClick={restart}>
+          {t('common.restart')}
+        </Button>
       }
     >
-      <div className="relative mx-auto w-full max-w-sm rounded-2xl bg-[#111] px-4 py-6 text-zinc-300 flex flex-col items-center">
-        {/* Header Title */}
-        <div className="text-center mb-6">
-          <p className="text-xs text-zinc-500 font-mono">{t('guess.defuse')}</p>
-          <h1 className="text-3xl font-black text-red-600 tracking-widest font-led mb-1">
-            {t('game.guess-number.name')}
-          </h1>
-          <p className="text-xs text-zinc-500 font-mono">
-            {formatMessage(locale, 'guess.range', { min: MIN, max: MAX })}
+      <GameProgress
+        label={t('arcade.possibleRange')}
+        value={`${bounds.min} – ${bounds.max}`}
+        current={MAX - (bounds.max - bounds.min) - 1}
+        target={MAX - 1}
+      />
+      <div className="guess-console">
+        <div className="guess-console-top">
+          <span>{t('arcade.guessClue')}</span>
+          <strong className={timeLeft <= 10 ? 'text-red-300' : ''}>
+            {Math.floor(timeLeft / 60)
+              .toString()
+              .padStart(2, '0')}
+            :{(timeLeft % 60).toString().padStart(2, '0')}
+          </strong>
+        </div>
+        <div ref={logRef} className="guess-history" aria-live="polite">
+          {history.length === 0 && <p>{t('guess.waitingInput')}</p>}
+          {history.map((entry, index) => (
+            <div key={index}>
+              <span>
+                #{index + 1} · <strong>{entry.guess}</strong>
+              </span>
+              <span className={getHeatColor(entry.heat)}>{entry.message}</span>
+            </div>
+          ))}
+        </div>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            submitGuess();
+          }}
+        >
+          <label className="sr-only" htmlFor="guess-code">
+            {t('guess.waitingInput')}
+          </label>
+          <input
+            id="guess-code"
+            className="guess-input"
+            inputMode="numeric"
+            autoComplete="off"
+            value={currentGuess}
+            disabled={paused || status !== 'playing'}
+            placeholder={'_'.repeat(String(MAX).length)}
+            onChange={(event) => {
+              setInputError(false);
+              setCurrentGuess(
+                event.target.value
+                  .replace(/[^0-9]/g, '')
+                  .slice(0, String(MAX).length),
+              );
+            }}
+          />
+          <p className="guess-input-hint" role="status">
+            {inputError
+              ? t('arcade.outsideRange')
+              : `${bounds.min} – ${bounds.max}`}
           </p>
-        </div>
-
-        {/* Timer Display */}
-        <div
-          className={cn(
-            'w-full bg-[#050505] border-2 rounded-lg p-6 mb-6 flex justify-center items-center relative overflow-hidden shadow-[0_0_20px_rgba(220,38,38,0.15)]',
-            status === 'lost'
-              ? 'border-red-600 animate-glitch'
-              : status === 'won'
-                ? 'border-green-500'
-                : timeLeft <= 10
-                  ? 'border-red-500 animate-blink-red'
-                  : 'border-zinc-800',
-          )}
-        >
-          {/* Glare effect */}
-          <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent pointer-events-none" />
-
-          <div
-            className={cn(
-              'text-6xl font-led font-black tabular-nums tracking-widest',
-              status === 'won'
-                ? 'text-green-500 text-shadow-none'
-                : timeLeft <= 10
-                  ? 'text-red-500 animate-pulse'
-                  : 'text-red-500',
-            )}
-          >
-            00:{timeLeft.toString().padStart(2, '0')}
-          </div>
-        </div>
-
-        {/* History Log Display */}
-        <div
-          ref={logRef}
-          className="w-full h-40 bg-[#0a0a0a] border border-zinc-800 rounded mb-6 p-3 overflow-y-auto font-mono text-sm space-y-2 flex flex-col shadow-inner"
-        >
-          {history.length === 0 && (
-            <div className="text-zinc-600 italic text-center mt-auto mb-auto">
-              {t('guess.waitingInput')}
-            </div>
-          )}
-          {history.map((h, i) => (
-            <div
-              key={i}
-              className="flex justify-between items-center bg-zinc-900/50 px-2 py-1.5 rounded animate-slide-up-fade border border-zinc-800/50"
-            >
-              <span className="text-zinc-400">
-                #{i + 1} &gt; {h.guess}
-              </span>
-              <span
-                className={cn(
-                  'uppercase text-xs tracking-wider',
-                  getHeatColor(h.heat),
-                )}
+          <div className="guess-keypad">
+            {padKeys.map((key) => (
+              <Button
+                key={key}
+                type="button"
+                disabled={paused || status !== 'playing'}
+                onClick={() => {
+                  if (key === 'C') handleBackspace();
+                  else if (key === 'SUBMIT') submitGuess();
+                  else handleInput(key);
+                }}
+                className={cn(key === 'SUBMIT' && 'guess-confirm')}
               >
-                {h.message}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* Current Input */}
-        <div className="w-full bg-zinc-900 border-t-2 border-b-2 border-zinc-800 py-3 mb-6 flex justify-center items-center h-16">
-          <div className="text-4xl font-led text-red-500 tracking-[0.2em]">
-            {currentGuess.padEnd(String(MAX).length, '_')}
+                {key === 'SUBMIT' ? t('guess.btn') : key === 'C' ? '⌫' : key}
+              </Button>
+            ))}
           </div>
-        </div>
-
-        {/* Numpad */}
-        <div className="w-full grid grid-cols-3 gap-3 mb-8">
-          {padKeys.map((k) => (
-            <Button
-              key={k}
-              variant="outline"
-              disabled={status !== 'playing'}
-              onClick={() => {
-                if (k === 'C') handleBackspace();
-                else if (k === 'SUBMIT') submitGuess();
-                else handleInput(k);
-              }}
-              className={cn(
-                'h-14 text-xl font-bold rounded-lg border-b-4 active:border-b-0 active:translate-y-1 transition-all',
-                k === 'SUBMIT'
-                  ? 'bg-red-900/20 text-red-500 border-red-900 hover:bg-red-900/40'
-                  : k === 'C'
-                    ? 'bg-zinc-800 text-zinc-400 border-zinc-900 hover:bg-zinc-700'
-                    : 'bg-zinc-800 text-white border-zinc-900 hover:bg-zinc-700 hover:text-white',
-              )}
-            >
-              {k === 'SUBMIT' ? t('guess.btn') : k}
-            </Button>
-          ))}
-        </div>
-
+        </form>
+        {status === 'ready' && (
+          <GameReadyOverlay
+            title={t('game.guess-number.name')}
+            description={t('arcade.guessReady')}
+            onStart={() => {
+              setStatus('playing');
+              start();
+            }}
+          />
+        )}
         <GameResultOverlay
-          open={status !== 'playing'}
+          open={status === 'won' || status === 'lost'}
           tone={status === 'won' ? 'win' : 'lose'}
           title={status === 'won' ? t('guess.won') : t('guess.lost')}
           description={formatMessage(
@@ -306,5 +316,4 @@ const GameGuessNumber = () => {
     </GameShell>
   );
 };
-
 export default GameGuessNumber;

@@ -204,7 +204,7 @@ const GameRubiks = ({
     >
       <div
         className="rubiks-stage-shell relative w-full overflow-hidden rounded-2xl"
-        style={{ display: 'block', height: 'min(72dvh, 680px)' }}
+        style={{ display: 'block', height: 'min(60dvh, 620px)' }}
       >
         <div ref={stageRef} className="rubiks-stage h-full w-full" />
         <GameResultOverlay

@@ -1,7 +1,5 @@
 .snake-canvas-container {
-  box-shadow:
-    0 0 20px rgba(34, 197, 94, 0.2),
-    inset 0 0 20px rgba(34, 197, 94, 0.1);
+  box-shadow: 0 18px 36px -24px #172c3880;
   transition: box-shadow 0.3s ease;
 }
 
@@ -25,7 +23,7 @@
 .responsive-canvas-wrapper {
   position: relative;
   width: 100%;
-  max-width: 400px;
+  max-width: 480px;
   aspect-ratio: 1 / 1;
   margin: 0 auto;
 }
@@ -37,4 +35,10 @@
   width: 100%;
   height: 100%;
   image-rendering: pixelated;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snake-canvas-container.game-over {
+    animation: none;
+  }
 }

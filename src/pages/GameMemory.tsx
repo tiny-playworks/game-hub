@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { GameResultOverlay } from '@/components/game/GameResultOverlay';
+import { GameReadyOverlay } from '@/components/game/GameReadyOverlay';
+import { GameProgress } from '@/components/game/GameProgress';
 import { GameShell, StatPill } from '@/components/game/GameShell';
 import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -15,7 +17,9 @@ import './memory.css';
 
 const GameMemory = () => {
   const { t } = useLocale();
-  const { difficulty, paused, result, finish, restart } = useArcade();
+  const { difficulty, paused, result, finish, restart, start } = useArcade();
+  const [phase, setPhase] = useState<'ready' | 'preview' | 'playing'>('ready');
+  const [previewSeconds, setPreviewSeconds] = useState(3);
   const shake = useScreenShake();
   const rows = difficulty === 'hard' ? 6 : 4;
   const cols = difficulty === 'easy' ? 4 : 6;
@@ -39,14 +43,35 @@ const GameMemory = () => {
   const dispatchRef = useRef(dispatch);
   dispatchRef.current = dispatch;
   const cleared = allMatched(state.cards);
+  const pairsFound = state.cards.filter((card) => card.matched).length / 2;
   useEffect(() => {
-    if (paused || result || cleared || state.status !== 'playing') return;
+    if (phase !== 'preview' || paused) return;
+    if (previewSeconds <= 0) {
+      setPhase('playing');
+      start();
+      return;
+    }
+    const timer = window.setTimeout(
+      () => setPreviewSeconds((seconds) => seconds - 1),
+      1000,
+    );
+    return () => window.clearTimeout(timer);
+  }, [phase, paused, previewSeconds, start]);
+  useEffect(() => {
+    if (
+      phase !== 'playing' ||
+      paused ||
+      result ||
+      cleared ||
+      state.status !== 'playing'
+    )
+      return;
     const timer = window.setInterval(
       () => dispatchRef.current({ type: 'TICK' }),
       1000,
     );
     return () => window.clearInterval(timer);
-  }, [paused, result, cleared, state.status]);
+  }, [phase, paused, result, cleared, state.status]);
   useEffect(() => {
     if (paused || !state.lock || cleared) return;
     const errors = state.cards.flatMap((card, index) =>
@@ -76,25 +101,40 @@ const GameMemory = () => {
     rows,
     cols,
     status: state.status,
+    phase,
     timeLeft: state.timeLeft,
     moves: state.moves,
     cards: state.cards.map((card) => ({
       ...card,
-      emoji: card.flipped || card.matched ? card.emoji : null,
+      emoji:
+        phase === 'preview' || card.flipped || card.matched ? card.emoji : null,
     })),
   }));
   return (
     <GameShell
+      autoStart={false}
       title={t('game.memory.name')}
       subtitle={t('game.memory.description')}
       status={
         <>
-          <StatPill label={t('arcade.unit.moves')} value={state.moves} />
-          <StatPill label={t('arcade.unit.seconds')} value={state.timeLeft} />
+          <StatPill label={t('arcade.pairAttempts')} value={state.moves} />
+          <StatPill label={t('arcade.timeLeft')} value={state.timeLeft} />
         </>
       }
     >
-      <div className="relative w-full max-w-xl rounded-2xl bg-zinc-50 p-3 text-zinc-900 dark:bg-[#0f172a] dark:text-zinc-100 sm:p-5">
+      <GameProgress
+        label={t('arcade.matchedPairs')}
+        current={pairsFound}
+        target={(rows * cols) / 2}
+        feedback={
+          phase === 'preview'
+            ? `${t('arcade.previewing')} · ${previewSeconds}`
+            : pairsFound > 0 && !state.lock
+              ? t('arcade.memoryBonus')
+              : undefined
+        }
+      />
+      <div className="memory-stage relative w-full max-w-xl rounded-2xl bg-zinc-50 p-3 text-zinc-900 dark:bg-[#0f172a] dark:text-zinc-100 sm:p-5">
         <div className="mb-4 h-2 overflow-hidden rounded-full bg-zinc-200 dark:bg-slate-800">
           <div
             className={cn(
@@ -118,17 +158,24 @@ const GameMemory = () => {
             >
               <button
                 type="button"
-                disabled={paused || !!result || state.lock || card.matched}
+                disabled={
+                  phase !== 'playing' ||
+                  paused ||
+                  !!result ||
+                  state.lock ||
+                  card.matched
+                }
                 data-memory-index={index}
                 onClick={() => dispatch({ type: 'FLIP', index })}
                 aria-label={
-                  card.flipped || card.matched
+                  phase === 'preview' || card.flipped || card.matched
                     ? card.emoji
                     : `${t('memory.faceDown')} ${index + 1}`
                 }
                 className={cn(
                   'memory-card cursor-pointer border-0 bg-transparent p-0',
-                  (card.flipped || card.matched) && 'flipped',
+                  (phase === 'preview' || card.flipped || card.matched) &&
+                    'flipped',
                   card.error && 'shake',
                 )}
               >
@@ -140,12 +187,21 @@ const GameMemory = () => {
                     card.error && 'error',
                   )}
                 >
-                  {card.flipped || card.matched ? card.emoji : ''}
+                  {phase === 'preview' || card.flipped || card.matched
+                    ? card.emoji
+                    : ''}
                 </div>
               </button>
             </div>
           ))}
         </div>
+        {phase === 'ready' && (
+          <GameReadyOverlay
+            title={t('game.memory.name')}
+            description={t('arcade.preview')}
+            onStart={() => setPhase('preview')}
+          />
+        )}
         <GameResultOverlay
           open={!!result}
           tone={cleared ? 'win' : 'lose'}

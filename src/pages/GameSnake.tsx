@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { VirtualController } from '@/components/common/VirtualController';
+import { GameProgress } from '@/components/game/GameProgress';
+import { GameReadyOverlay } from '@/components/game/GameReadyOverlay';
+import { useSwipeControls } from '@/hooks/useSwipeControls';
 import { GameResultOverlay } from '@/components/game/GameResultOverlay';
 import { GameShell, StatPill } from '@/components/game/GameShell';
 import { Button } from '@/components/ui/button';
@@ -16,9 +19,9 @@ import { cn } from '@/lib/utils';
 import { useScreenShake } from '../hooks/useScreenShake';
 import './snake.css';
 
-const W = 400;
-const H = 400;
-const CELL = 20;
+const W = 480;
+const H = 480;
+const CELL = 24;
 const COLS = W / CELL;
 const ROWS = H / CELL;
 
@@ -43,10 +46,18 @@ const GameSnake = () => {
   pausedRef.current = paused;
 
   const [score, setScore] = useState(0);
-  const [status, setStatus] = useState<'idle' | 'playing' | 'over'>('idle');
+  const [length, setLength] = useState(3);
+  const turns = useRef<SnakeDir[]>([]);
+  const [status, setStatus] = useState<'idle' | 'playing' | 'over' | 'win'>(
+    'idle',
+  );
 
   const stateRef = useRef({
-    snake: [{ x: Math.floor(COLS / 2), y: Math.floor(ROWS / 2) }],
+    snake: [
+      { x: 10, y: 10 },
+      { x: 9, y: 10 },
+      { x: 8, y: 10 },
+    ],
     dir: 'right' as SnakeDir,
     nextDir: 'right' as SnakeDir,
     food: { x: 0, y: 0, type: 'normal', timer: 0 } as SnakeFood,
@@ -84,26 +95,15 @@ const GameSnake = () => {
     );
   }, []);
 
-  const reset = useCallback(() => {
-    stateRef.current = {
-      snake: [{ x: Math.floor(COLS / 2), y: Math.floor(ROWS / 2) }],
-      dir: 'right',
-      nextDir: 'right',
-      food: { x: 0, y: 0, type: 'normal', timer: 0 },
-      particles: [],
-      lastTick: performance.now(),
-    };
-    placeFood();
-    setScore(0);
-    setStatus('idle');
-  }, [placeFood]);
+  const reset = arcade.restart;
 
   const start = useCallback(() => {
     if (pausedRef.current) return;
-    if (stateRef.current.snake.length === 1) placeFood();
+    if (status !== 'idle') return;
+    placeFood();
     setStatus('playing');
     stateRef.current.lastTick = performance.now();
-  }, [placeFood]);
+  }, [placeFood, status]);
 
   useEffect(() => {
     placeFood();
@@ -128,11 +128,11 @@ const GameSnake = () => {
       const state = stateRef.current;
 
       // Draw background
-      ctx.fillStyle = '#050505';
+      ctx.fillStyle = '#122b31';
       ctx.fillRect(0, 0, W, H);
 
       // Draw grid
-      ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+      ctx.strokeStyle = 'rgba(171,202,185,0.055)';
       ctx.lineWidth = 1;
       for (let i = 0; i <= W; i += CELL) {
         ctx.beginPath();
@@ -156,13 +156,14 @@ const GameSnake = () => {
 
         // Logic Tick
         const currentSpeed = Math.max(
-          35,
+          difficulty === 'hard' ? 55 : 75,
           (difficulty === 'easy' ? 210 : difficulty === 'hard' ? 85 : 150) -
-            score * 0.2,
+            Math.floor(score / 50) * 6,
         ); // gets faster as score increases
         if (timestamp - state.lastTick > currentSpeed) {
           state.lastTick = timestamp;
 
+          state.nextDir = turns.current.shift() ?? state.dir;
           const result = stepSnake(
             {
               snake: state.snake,
@@ -188,6 +189,8 @@ const GameSnake = () => {
 
           if (result.ate) {
             setScore((s) => s + result.scoreDelta);
+            setLength(result.state.snake.length);
+            if (result.state.food.x < 0) setStatus('win');
             const head = result.state.snake[0];
             if (result.foodType === 'golden') {
               createParticles(head.x, head.y, '#eab308', 30);
@@ -199,13 +202,13 @@ const GameSnake = () => {
       }
 
       // Draw Particles
-      state.particles.forEach((p, i) => {
+      state.particles = state.particles.filter((p) => {
         p.x += p.vx;
         p.y += p.vy;
         p.life++;
         const alpha = 1 - p.life / p.maxLife;
         if (alpha <= 0) {
-          state.particles.splice(i, 1);
+          return false;
         } else {
           ctx.fillStyle = p.color;
           ctx.globalAlpha = alpha;
@@ -214,6 +217,7 @@ const GameSnake = () => {
           ctx.fill();
           ctx.globalAlpha = 1.0;
         }
+        return true;
       });
 
       // Draw Food
@@ -237,7 +241,7 @@ const GameSnake = () => {
         ctx.strokeStyle = '#fef08a';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        const pct = Math.max(0, state.food.timer / 3000);
+        const pct = Math.max(0, state.food.timer / 6000);
         ctx.arc(
           state.food.x * CELL + CELL / 2,
           state.food.y * CELL + CELL / 2,
@@ -265,27 +269,46 @@ const GameSnake = () => {
       state.snake.forEach((s, i) => {
         const pct = i / state.snake.length;
         // Gradient from bright cyan to deep blue
-        const r = Math.floor(6 + pct * (15 - 6));
-        const g = Math.floor(182 - pct * (182 - 23));
-        const b = Math.floor(212 - pct * (212 - 42));
+        const r = Math.floor(116 - pct * 62);
+        const g = Math.floor(190 - pct * 75);
+        const b = Math.floor(155 - pct * 50);
 
         ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
         if (i === 0) {
           // Head glows
-          ctx.shadowBlur = 10;
-          ctx.shadowColor = '#22d3ee'; // cyan-400
+          ctx.shadowBlur = 4;
+          ctx.shadowColor = '#91c6a4'; // cyan-400
         } else {
           ctx.shadowBlur = 0;
         }
 
         // Draw slightly rounded rect
         const pad = i === 0 ? 0 : 1;
-        ctx.fillRect(
+        ctx.beginPath();
+        ctx.roundRect(
           s.x * CELL + pad,
           s.y * CELL + pad,
           CELL - pad * 2,
           CELL - pad * 2,
+          5,
         );
+        ctx.fill();
+        if (i === 0) {
+          ctx.fillStyle = '#122b31';
+          const horizontal = state.dir === 'left' || state.dir === 'right';
+          const front = state.dir === 'right' || state.dir === 'down' ? 16 : 7;
+          for (const eye of [7, 16]) {
+            ctx.beginPath();
+            ctx.arc(
+              s.x * CELL + (horizontal ? front : eye),
+              s.y * CELL + (horizontal ? eye : front),
+              2,
+              0,
+              Math.PI * 2,
+            );
+            ctx.fill();
+          }
+        }
       });
       ctx.shadowBlur = 0;
     };
@@ -296,13 +319,29 @@ const GameSnake = () => {
 
   const handleDirection = useCallback(
     (dir: SnakeDir) => {
-      if (pausedRef.current) return;
+      if (
+        pausedRef.current ||
+        arcade.result ||
+        (status !== 'idle' && status !== 'playing')
+      )
+        return;
       const state = stateRef.current;
       if (status === 'idle') start();
-      if (canSetDir(state.dir, dir)) state.nextDir = dir;
+      const previous = turns.current.at(-1) ?? state.dir;
+      if (
+        dir !== previous &&
+        canSetDir(previous, dir) &&
+        turns.current.length < 2
+      )
+        turns.current.push(dir);
     },
-    [status, start],
+    [status, start, arcade.result],
   );
+
+  const swipe = useSwipeControls(handleDirection, true);
+  useEffect(() => {
+    stateRef.current.lastTick = performance.now();
+  }, [paused]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -348,61 +387,58 @@ const GameSnake = () => {
   }));
   useEffect(() => {
     if (status === 'playing') arcade.start();
-    if (status === 'over') finish('lose', score);
+    if (status === 'over' || status === 'win')
+      finish(status === 'win' ? 'win' : 'lose', score);
   }, [status, score, arcade.start, finish]);
   return (
     <GameShell
       autoStart={false}
       title={t('game.snake.name')}
       subtitle={t('game.snake.description')}
-      status={<StatPill label={t('arcade.unit.points')} value={score} />}
+      status={
+        <>
+          <StatPill label={t('arcade.score')} value={score} />
+          <StatPill label={t('arcade.snakeLength')} value={length} />
+        </>
+      }
       toolbar={
         <Button variant="outline" size="sm" onClick={reset}>
           {t('common.restart')}
         </Button>
       }
     >
-      <div className="flex w-full flex-col items-center justify-center pb-44 md:pb-4">
+      <GameProgress
+        label={t('arcade.nextTarget')}
+        current={score}
+        target={(Math.floor(score / 100) + 1) * 100}
+      />
+      <div className="flex w-full flex-col items-center justify-center">
         <div
           className={cn(
-            'responsive-canvas-wrapper snake-canvas-container rounded-xl overflow-hidden border border-cyan-900/50',
+            'responsive-canvas-wrapper snake-canvas-container arcade-canvas-frame',
             status === 'over' && 'game-over border-red-500',
           )}
+          {...swipe}
         >
           <canvas ref={canvasRef} width={W} height={H} className="block" />
 
           <GameResultOverlay
-            open={status === 'over'}
-            tone="lose"
-            title={t('snake.gameOver')}
+            open={status === 'over' || status === 'win'}
+            tone={status === 'win' ? 'win' : 'lose'}
+            title={status === 'win' ? t('common.youWin') : t('snake.gameOver')}
             description={String(score) + ' ' + t('arcade.unit.points')}
             onRestart={reset}
           />
-          {/* Overlays */}
           {status === 'idle' && (
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
-              {status === 'idle' && (
-                <>
-                  <h2 className="text-3xl font-black text-cyan-400 mb-2 tracking-widest">
-                    {t('game.snake.name')}
-                  </h2>
-                  <p className="text-zinc-400 font-mono text-sm mb-6 max-w-[250px]">
-                    {t('common.pressArrowToStart')} <br />
-                    {t('snake.goldenFoodTip')}
-                  </p>
-                  <Button
-                    onClick={start}
-                    className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold px-8 shadow-[0_0_15px_rgba(6,182,212,0.5)]"
-                  >
-                    {t('common.start')}
-                  </Button>
-                </>
-              )}
-            </div>
+            <GameReadyOverlay
+              title={t('game.snake.name')}
+              description={t('arcade.snakeReady')}
+              onStart={start}
+            />
           )}
         </div>
 
-        {/* Mobile Virtual Controller */}
+        <p className="arcade-session-note">{t('arcade.snakeGolden')}</p>
         <VirtualController
           showActions={false}
           onDirection={(d) => handleDirection(d.toLowerCase() as SnakeDir)}

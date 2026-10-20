@@ -1,10 +1,13 @@
-import { useCallback, useEffect } from 'react';
+import { RotateCcw, Undo2 } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { GameProgress } from '@/components/game/GameProgress';
 import { GameResultOverlay } from '@/components/game/GameResultOverlay';
 import { GameShell, StatPill } from '@/components/game/GameShell';
 import { Button } from '@/components/ui/button';
 import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import { cn } from '@/lib/utils';
+import { useSwipeControls } from '@/hooks/useSwipeControls';
 import { VirtualController } from '../components/common/VirtualController';
 import type { Dir } from '../hooks/use2048Engine';
 import { useEngine2048 } from '../hooks/use2048Engine';
@@ -21,6 +24,14 @@ const Game2048 = () => {
     ...Object.values(state.tiles).map((tile) => tile.value),
   );
   const shake = useScreenShake();
+  const [gain, setGain] = useState({ value: 0, id: 0 });
+  const emptyCells =
+    size * size -
+    Object.values(state.tiles).filter((tile) => !tile.mergedInto).length;
+  const nextTarget = Math.min(
+    2048,
+    2 ** Math.ceil(Math.log2(Math.max(4, maxTile + 1))),
+  );
 
   useArcadeSnapshot(() => ({ ...state, maxTile, maxCombo, boardSize: size }));
   useEffect(() => {
@@ -35,15 +46,23 @@ const Game2048 = () => {
     (dir: Dir) => {
       if (paused || result) return;
       const { addedScore } = move(dir);
+      if (addedScore > 0)
+        setGain((previous) => ({ value: addedScore, id: previous.id + 1 }));
       if (addedScore >= 512) {
         shake();
       }
     },
     [move, shake, paused, result],
   );
+  const swipe = useSwipeControls(tryMove);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof Element &&
+        e.target.closest('input, textarea, select, [contenteditable="true"]')
+      )
+        return;
       if (state.gameOver) return;
       switch (e.key) {
         case 'ArrowLeft':
@@ -85,7 +104,7 @@ const Game2048 = () => {
     <GameShell
       title={t('game.2048.name')}
       subtitle={t('game.2048.description')}
-      status={<StatPill label={t('2048.score')} value={state.score} />}
+      status={<StatPill label={t('arcade.score')} value={state.score} />}
       toolbar={
         <>
           <Button
@@ -94,25 +113,31 @@ const Game2048 = () => {
             onClick={undo}
             disabled={!canUndo || !!result || paused}
           >
-            {t('2048.undo')}
+            <Undo2 className="size-4" />
+            {t('arcade.undo')}
           </Button>
           <Button variant="outline" size="sm" onClick={restart}>
-            {t('2048.newGame')}
+            <RotateCcw className="size-4" />
+            {t('arcade.restart')}
           </Button>
         </>
       }
     >
-      <div className="w-full flex flex-col items-center pb-32 sm:pb-4">
-        {/* Combo Banner */}
-        <div className="h-6 mb-2">
-          {state.combo > 1 && (
-            <div className="text-[#f67c5f] font-bold text-lg animate-pop-in">
-              {state.combo} Combo!
-            </div>
-          )}
-        </div>
+      <div className="puzzle-2048 w-full flex flex-col items-center">
+        <GameProgress
+          label={t('arcade.nextTarget')}
+          value={nextTarget}
+          current={maxTile}
+          target={nextTarget}
+          feedback={
+            state.combo > 1 ? `${t('arcade.combo')} ×${state.combo}` : undefined
+          }
+        />
 
-        <div className="relative w-full max-w-[340px] sm:max-w-[400px] aspect-square bg-[#bbada0] dark:bg-[#2a2a2a] rounded-lg p-2 md:p-3 overflow-hidden shadow-2xl">
+        <div
+          className="puzzle-2048-board relative w-full aspect-square p-2 md:p-3 overflow-hidden"
+          {...swipe}
+        >
           {/* Background grid */}
           <div className="absolute inset-2 md:inset-3 flex flex-wrap">
             {Array.from({ length: size * size }).map((_, i) => (
@@ -125,6 +150,12 @@ const Game2048 = () => {
               </div>
             ))}
           </div>
+
+          {gain.value > 0 && (
+            <span key={gain.id} className="puzzle-2048-gain" aria-hidden="true">
+              +{gain.value}
+            </span>
+          )}
 
           {/* Active tiles */}
           <div className="absolute inset-2 md:inset-3">
@@ -178,10 +209,18 @@ const Game2048 = () => {
             onRestart={restart}
           />
         </div>
+        <div className="arcade-session-note">
+          <span>
+            {t('arcade.combo')} <strong>×{state.combo}</strong>
+          </span>
+          <span>
+            {size}×{size} · {t('arcade.emptyCells')} {emptyCells}
+          </span>
+        </div>
       </div>
 
       <VirtualController
-        onDirection={(dir) => tryMove(dir as Dir)}
+        onDirection={(dir) => tryMove(dir.toLowerCase() as Dir)}
         showActions={false}
         className="pb-safe"
         tone="dark"

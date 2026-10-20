@@ -1,0 +1,43 @@
+.card-fan-viewport {
+  --fan-card-width: 3.1rem;
+  max-width: 100%;
+  min-width: 0;
+  container-type: inline-size;
+}
+.card-fan-viewport[data-card-size='sm'] {
+  --fan-card-width: 2.2rem;
+}
+@media (min-width: 640px) {
+  .card-fan-viewport[data-card-size='md'] {
+    --fan-card-width: 3.45rem;
+  }
+}
+.card-fan-rows {
+  display: flex;
+  align-items: end;
+}
+.card-fan-row {
+  display: contents;
+}
+.card-fan-row > .playing-card {
+  margin-left: calc(var(--fan-step) - var(--fan-card-width));
+}
+.card-fan-row:first-child > .playing-card:first-child {
+  margin-left: 0;
+}
+@container (max-width: 400px) {
+  .card-fan-rows[data-two-rows='true'] {
+    display: grid;
+    gap: 17px;
+    --fan-step: var(--fan-row-step);
+  }
+  .card-fan-rows[data-two-rows='true'] .card-fan-row {
+    display: flex;
+    justify-content: center;
+  }
+  .card-fan-rows[data-two-rows='true']
+    .card-fan-row
+    > .playing-card:first-child {
+    margin-left: 0;
+  }
+}

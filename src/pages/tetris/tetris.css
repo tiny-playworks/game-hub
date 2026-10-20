@@ -236,6 +236,70 @@
   display: none;
 }
 
+.game-shell .tetris-game {
+  padding: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #10242e;
+}
+.game-shell .tetris-shell {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) 190px;
+  gap: 14px;
+  padding: 14px;
+}
+.game-shell .tetris-stage {
+  min-height: 0;
+  height: min(64dvh, 620px);
+  border-radius: 10px;
+  box-shadow: none;
+  touch-action: none;
+}
+.game-shell .tetris-side {
+  gap: 12px;
+}
+.game-shell .tetris-card {
+  border-radius: 10px;
+  padding: 13px;
+  box-shadow: none;
+  background: #1a303a;
+  border-color: #3a505a;
+}
+.game-shell .tetris-stats {
+  gap: 9px;
+}
+.game-shell .tetris-stats span,
+.game-shell .tetris-status {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.game-shell .tetris-energy-bar {
+  height: 6px;
+  border: 0;
+  background: #0e2029;
+}
+.game-shell .tetris-energy-bar i {
+  background: #c4a456;
+  box-shadow: none;
+}
+.game-shell .tetris-next-title {
+  font-size: 13px;
+}
+.game-shell .tetris-skill-card button {
+  min-height: 42px;
+  white-space: normal;
+  color: #e5e8dd;
+  background: #365b5c;
+  border-color: #547570;
+}
+.game-shell .tetris-status {
+  color: #a9c5bc;
+}
+.game-shell .tetris-next-grid {
+  max-width: 100%;
+}
+
 @media (max-width: 900px) {
   .tetris-toolbar,
   .tetris-shell {
@@ -286,5 +350,96 @@
     min-width: 0;
     min-height: 2.35rem;
     padding-inline: 0.3rem;
+  }
+}
+
+@media (max-width: 1050px) and (min-width: 768px) {
+  .game-shell .tetris-shell {
+    grid-template-columns: minmax(0, 1fr) 150px;
+    gap: 10px;
+    padding: 10px;
+  }
+}
+@media (min-width: 768px) and (max-width: 900px) {
+  .game-shell .tetris-mobile-controls {
+    position: static;
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin: 0;
+    padding: 10px;
+    border: 0;
+    border-top: 1px solid #38505b;
+    border-radius: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+  .game-shell .tetris-mobile-controls button { min-height: 44px; touch-action: none; }
+}
+@media (max-width: 767px) {
+  .game-shell[data-game-shell='tetris'] .game-scoreboard {
+    flex-wrap: nowrap;
+  }
+  .game-shell[data-game-shell='tetris'] .game-scoreboard .game-pill {
+    min-width: 64px;
+    padding: 8px 10px;
+  }
+  .game-shell[data-game-shell='tetris'] .game-session-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .game-shell .tetris-game {
+    display: flex;
+    flex-direction: column;
+  }
+  .game-shell .tetris-shell {
+    display: contents;
+  }
+  .game-shell .tetris-stage {
+    order: 1;
+    width: calc(100% - 20px);
+    height: min(41dvh, 390px);
+    margin: 10px;
+  }
+  .game-shell .tetris-side {
+    order: 3;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 10px;
+  }
+  .game-shell .tetris-stats {
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 14px;
+  }
+  .game-shell .tetris-status {
+    display: none;
+  }
+  .game-shell .tetris-card {
+    padding: 10px;
+  }
+  .game-shell .tetris-mobile-controls {
+    order: 2;
+    position: static;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin: 0;
+    padding: 10px;
+    border: 0;
+    border-top: 1px solid #38505b;
+    border-radius: 0;
+    background: #10242e;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+  .game-shell .tetris-mobile-controls button {
+    min-height: 44px;
+    font-size: 12px;
+    touch-action: none;
+    color: #e5e8dd;
+    background: #29434c;
+    border: 1px solid #4a6268;
   }
 }

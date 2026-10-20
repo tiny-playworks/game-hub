@@ -80,14 +80,15 @@ export function placeFood(
   options?: { goldenChance?: number; goldenTimerMs?: number },
 ): SnakeFood {
   const goldenChance = options?.goldenChance ?? 0.15;
-  const goldenTimerMs = options?.goldenTimerMs ?? 3000;
+  const goldenTimerMs = options?.goldenTimerMs ?? 6000;
   const body = new Set(snake.map((s) => `${s.x},${s.y}`));
-  let x: number;
-  let y: number;
-  do {
-    x = Math.floor(rng() * cols);
-    y = Math.floor(rng() * rows);
-  } while (body.has(`${x},${y}`));
+  const free: SnakeCell[] = [];
+  for (let y = 0; y < rows; y++)
+    for (let x = 0; x < cols; x++)
+      if (!body.has(`${x},${y}`)) free.push({ x, y });
+  if (free.length === 0) return { x: -1, y: -1, type: 'normal', timer: 0 };
+  const { x, y } =
+    free[Math.min(free.length - 1, Math.floor(rng() * free.length))];
 
   const isGolden = rng() < goldenChance;
   return {

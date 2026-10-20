@@ -141,3 +141,46 @@
     width 1s linear,
     background-color 0.3s ease;
 }
+
+.memory-stage {
+  background: var(--arcade-surface);
+  border: 1px solid var(--arcade-line);
+  box-shadow: 0 14px 30px -24px #172c3860;
+}
+.memory-stage .memory-back {
+  background-color: #243d44;
+  border: 3px solid #657c77;
+}
+.memory-stage .memory-back::after {
+  border-style: solid;
+  border-color: #c4ad6d60;
+}
+.memory-stage .memory-front {
+  background: #fff9ed;
+  border-color: #dbd3bd;
+  font-size: clamp(20px, 4vw, 36px);
+}
+.memory-stage .memory-front.matched {
+  background: #deebe0;
+  border-color: #72a389;
+  animation-iteration-count: 1;
+}
+.memory-stage .memory-front.error {
+  background: #f6ded5;
+  border-color: #c85542;
+}
+.memory-card:focus-visible {
+  outline: 3px solid var(--arcade-red);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .memory-card {
+    transition: none;
+  }
+  .memory-card.shake,
+  .animate-fly-in,
+  .memory-front.matched {
+    animation: none;
+  }
+}

@@ -1,4 +1,13 @@
-import { ChevronLeft, Pause, Settings } from 'lucide-react';
+import {
+  ChevronLeft,
+  Expand,
+  Gamepad2,
+  Lightbulb,
+  Pause,
+  Play,
+  Settings,
+  Target,
+} from 'lucide-react';
 import {
   type ReactNode,
   useCallback,
@@ -14,7 +23,6 @@ import {
   DialogDescription,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { WalletBadge } from '@/components/WalletBadge';
 import { useOptionalArcade } from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import { usePlayerProfile } from '@/hooks/usePlayerProfile';
@@ -24,10 +32,12 @@ import {
   difficultyLabelKey,
 } from '@/lib/arcade';
 import { updatePlayerProfile } from '@/lib/playerProfile';
+import { arcadeGuides } from '@/lib/arcadeGuide';
 import { cn } from '@/lib/utils';
 import { PersonalBest } from './PersonalBest';
 import { FamilyStandingPill } from './FamilyStandingPill';
 import { SegmentedControl } from './SegmentedControl';
+import './game-shell.css';
 
 interface GameShellProps {
   gameId?: string;
@@ -73,6 +83,9 @@ export const GameShell = ({
   const arcade = useOptionalArcade();
   const profile = usePlayerProfile();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [guideExpanded, setGuideExpanded] = useState(
+    () => window.matchMedia('(min-width: 1024px)').matches,
+  );
   const beforeSettings = useRef(false);
   const root = useRef<HTMLDivElement>(null);
   const id = gameId ?? arcade?.gameId;
@@ -85,6 +98,17 @@ export const GameShell = ({
     [arcade?.setPaused, onPause],
   );
   const restart = onRestart ?? arcade?.restart;
+  const guide = id ? arcadeGuides[id] : undefined;
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 1024px)');
+    const update = () => setGuideExpanded(media.matches);
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void root.current?.requestFullscreen?.().catch(() => {});
+  };
   useEffect(() => {
     if (autoStart) arcade?.start();
   }, [autoStart, arcade?.start]);
@@ -110,10 +134,9 @@ export const GameShell = ({
         event.stopImmediatePropagation();
         pause(!isPaused);
       }
-      if (event.key.toLowerCase() === 'f') {
+      if (event.key.toLowerCase() === 'f' && !event.repeat) {
         event.preventDefault();
-        if (document.fullscreenElement) document.exitFullscreen();
-        else root.current?.requestFullscreen().catch(() => {});
+        toggleFullscreen();
       }
     };
     const blur = () => {
@@ -143,49 +166,47 @@ export const GameShell = ({
     <div
       ref={root}
       data-game-shell={id}
-      className={cn('game-shell-ambient min-h-[100dvh]', className)}
+      className={cn('game-shell-ambient game-shell min-h-[100dvh]', className)}
     >
       <header className="game-shell-header sticky top-0 z-30">
-        <div className="mx-auto flex max-w-5xl items-center gap-3 px-3 py-2.5 sm:px-4">
+        <div className="game-shell-topbar">
           <Link
             to="/"
             aria-label={t('common.backToList')}
-            className="-ml-1 flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-gold/15 text-wood transition hover:bg-gold/30 hover:text-foreground active:scale-95"
+            className="game-shell-back"
           >
             <ChevronLeft className="size-5" />
+            <span>{t('arcade.corner')}</span>
           </Link>
 
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-base font-semibold text-foreground sm:text-lg">
-              {title}
-            </h1>
-            {subtitle && (
-              <p className="hidden truncate text-xs text-muted-foreground sm:block">
-                {subtitle}
-              </p>
-            )}
+          <div className="game-shell-heading">
+            <h1>{title}</h1>
           </div>
 
-          <div className="flex max-w-[60%] shrink-0 flex-wrap items-center justify-end gap-1.5 sm:max-w-none">
-            <WalletBadge />
-            {status}
-            {id && <PersonalBest gameId={id} difficulty={arcade?.difficulty} />}
-            {id && (
-              <FamilyStandingPill
-                gameId={id}
-                difficulty={arcade?.difficulty}
-                standing={arcade?.result?.leaderboard}
-              />
+          <div className="game-shell-tools">
+            {arcade && (
+              <button
+                type="button"
+                className="game-shell-difficulty"
+                onClick={() => openSettings(true)}
+              >
+                {t(difficultyLabelKey(arcade.gameId, arcade.difficulty))}
+                <Settings className="size-3.5" />
+              </button>
             )}
             {(arcade || onPause) && (
               <Button
                 variant="outline"
                 size="icon"
-                aria-label={t('arcade.pause')}
+                aria-label={t(isPaused ? 'arcade.resume' : 'arcade.pause')}
                 onClick={() => pause(!isPaused)}
                 disabled={!!arcade?.result}
               >
-                <Pause className="size-4" />
+                {isPaused ? (
+                  <Play className="size-4" />
+                ) : (
+                  <Pause className="size-4" />
+                )}
               </Button>
             )}
             {(arcade || settings) && (
@@ -198,22 +219,73 @@ export const GameShell = ({
                 <Settings className="size-4" />
               </Button>
             )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="game-shell-fullscreen"
+              aria-label={t('arcade.fullscreen')}
+              onClick={toggleFullscreen}
+            >
+              <Expand className="size-4" />
+            </Button>
           </div>
         </div>
-
-        {toolbar && (
-          <div className="mx-auto max-w-5xl px-3 pb-2.5 sm:px-4">
-            <div className="flex flex-wrap items-center gap-2">{toolbar}</div>
-          </div>
-        )}
       </header>
 
-      <main className="mx-auto flex w-full max-w-5xl flex-col items-center px-3 py-4 sm:px-4 sm:py-6">
-        {children}
-        {footer && (
-          <div className="mt-4 w-full max-w-xl text-center text-xs leading-6 text-muted-foreground">
-            {footer}
+      <main className={cn('game-workspace', !guide && 'game-workspace-wide')}>
+        <section className="game-play-column" aria-label={title}>
+          <div className="game-session-bar">
+            <div className="game-scoreboard">
+              {status}
+              {id && (
+                <PersonalBest gameId={id} difficulty={arcade?.difficulty} />
+              )}
+            </div>
+            {toolbar && <div className="game-session-actions">{toolbar}</div>}
           </div>
+          <div className="game-stage">{children}</div>
+          {footer && <div className="game-shell-footer">{footer}</div>}
+        </section>
+        {guide && (
+          <aside className="game-guide">
+            <div className="game-guide-goal">
+              <p>
+                <Target className="size-4" />
+                {t('arcade.thisRound')}
+              </p>
+              <h2>{t(`arcade.goal.${guide.goal}`)}</h2>
+            </div>
+            <details
+              className="game-guide-details"
+              open={guideExpanded}
+              onToggle={(event) => setGuideExpanded(event.currentTarget.open)}
+            >
+              <summary>
+                <Gamepad2 className="size-4" />
+                {t('arcade.howToPlay')}
+              </summary>
+              <div className="game-guide-content">
+                <p>{subtitle}</p>
+                <h3>{t('arcade.operation')}</h3>
+                <p className="game-guide-inputs">
+                  {t(`arcade.input.${guide.controls}`)}
+                </p>
+                <h3>
+                  <Lightbulb className="size-4" />
+                  {t('arcade.tip')}
+                </h3>
+                <p>{t(`arcade.tip.${guide.tip}`)}</p>
+                <p className="game-guide-shortcuts">{t('arcade.controls')}</p>
+                {id && (
+                  <FamilyStandingPill
+                    gameId={id}
+                    difficulty={arcade?.difficulty}
+                    standing={arcade?.result?.leaderboard}
+                  />
+                )}
+              </div>
+            </details>
+          </aside>
         )}
       </main>
       <Dialog
@@ -313,7 +385,10 @@ export const StatPill = ({
   tone = 'default',
   className,
 }: StatPillProps) => (
-  <span className={cn('game-pill', TONE_CLASS[tone], className)}>
+  <span
+    data-stat-tone={tone}
+    className={cn('game-pill', TONE_CLASS[tone], className)}
+  >
     <span className="opacity-70">{label}</span>
     <span className="font-semibold text-foreground">{value}</span>
   </span>

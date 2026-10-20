@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 
 export function useScreenShake() {
   const shake = useCallback(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     // Prevent adding multiple classes if already shaking
     if (document.body.classList.contains('animate-game-shake')) {
       document.body.classList.remove('animate-game-shake');

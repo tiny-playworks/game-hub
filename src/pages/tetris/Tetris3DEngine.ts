@@ -14,7 +14,7 @@ import {
   Mesh,
   MeshBasicMaterial,
   OrthographicCamera,
-  PCFSoftShadowMap,
+  PCFShadowMap,
   PlaneGeometry,
   PointLight,
   Points,
@@ -171,7 +171,7 @@ export class Tetris3DEngine implements TetrisEngineController {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setClearColor(new Color('#020617'));
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = PCFSoftShadowMap;
+    this.renderer.shadowMap.type = PCFShadowMap;
     this.renderer.toneMapping = ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.08;
     this.renderer.domElement.className = 'tetris-canvas';

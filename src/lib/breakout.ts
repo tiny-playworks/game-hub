@@ -152,15 +152,17 @@ export function resolveCircleRectBounce(
 export function bounceOffPaddle(
   ballX: number,
   _ballY: number,
-  _ballVx: number,
+  ballVx: number,
   ballVy: number,
   paddleX: number,
   paddleW: number = BREAKOUT.paddleW,
 ): { ballVx: number; ballVy: number } {
-  const hitPos = (ballX - paddleX) / paddleW;
+  const hitPos = Math.max(0, Math.min(1, (ballX - paddleX) / paddleW));
+  const speed = Math.max(4, Math.hypot(ballVx, ballVy));
+  const angle = (hitPos - 0.5) * Math.PI * 0.72;
   return {
-    ballVy: -Math.abs(ballVy),
-    ballVx: (hitPos - 0.5) * 10,
+    ballVy: -Math.cos(angle) * speed,
+    ballVx: Math.sin(angle) * speed,
   };
 }
 

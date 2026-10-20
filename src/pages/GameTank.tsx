@@ -5,6 +5,8 @@ import {
   VirtualController,
 } from '@/components/common/VirtualController';
 import { GameResultOverlay } from '@/components/game/GameResultOverlay';
+import { GameReadyOverlay } from '@/components/game/GameReadyOverlay';
+import { GameProgress } from '@/components/game/GameProgress';
 import { GameShell, StatPill } from '@/components/game/GameShell';
 import { Button } from '@/components/ui/button';
 import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
@@ -79,10 +81,18 @@ const GameTank = () => {
     if (!ctx) return;
 
     let rafId = 0;
+    let lastTime = 0;
+    let accumulator = 0;
 
-    const loop = () => {
+    const loop = (time: number) => {
+      const delta = lastTime ? Math.min(64, time - lastTime) : 1000 / 60;
+      lastTime = time;
+      accumulator =
+        pausedRef.current || status !== 'playing'
+          ? 0
+          : Math.min(64, accumulator + delta);
       const state = stateRef.current;
-      const { map, player, enemies, bullets } = state;
+      const { map, player } = state;
 
       ctx.fillStyle = '#1e293b';
       ctx.fillRect(0, 0, W, H);
@@ -118,7 +128,13 @@ const GameTank = () => {
         ctx.fillText(t('tank.descriptionPrompt'), W / 2, H / 2 + 48);
       }
 
-      if (status === 'playing' && !pausedRef.current) {
+      while (
+        status === 'playing' &&
+        !pausedRef.current &&
+        accumulator >= 1000 / 60
+      ) {
+        accumulator -= 1000 / 60;
+        const { enemies, bullets } = state;
         const dirs: { key: string; dir: TankDir }[] = [
           { key: 'ArrowUp', dir: 'up' },
           { key: 'ArrowDown', dir: 'down' },
@@ -201,6 +217,7 @@ const GameTank = () => {
           if (stepped.event === 'base') {
             baseDamaged.current = true;
             setStatus('over');
+            accumulator = 0;
             continue;
           }
           if (!stepped.bullet) continue;
@@ -216,6 +233,7 @@ const GameTank = () => {
             }
           } else if (bulletHitsTank(bullet, player)) {
             setStatus('over');
+            accumulator = 0;
             continue;
           }
           nextBullets.push(bullet);
@@ -224,6 +242,7 @@ const GameTank = () => {
 
         if (state.enemies.length === 0 && state.enemySpawnQueue <= 0) {
           setStatus('win');
+          accumulator = 0;
         }
 
         const remaining = countRemainingEnemies(
@@ -250,14 +269,23 @@ const GameTank = () => {
         ctx.rotate(angle);
         ctx.translate(-TANK_W / 2, -TANK_H / 2);
         ctx.fillStyle = color;
-        ctx.fillRect(2, 2, TANK_W - 4, TANK_H - 4);
-        ctx.strokeStyle = '#0f172a';
-        ctx.strokeRect(0, 0, TANK_W, TANK_H);
+        ctx.fillRect(0, 3, 5, TANK_H - 6);
+        ctx.fillRect(TANK_W - 5, 3, 5, TANK_H - 6);
+        ctx.fillRect(5, 6, TANK_W - 10, TANK_H - 10);
+        ctx.fillStyle = '#dde2b8';
+        ctx.fillRect(TANK_W / 2 - 2, 0, 4, TANK_H / 2);
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(TANK_W / 2, TANK_H / 2, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#10242b';
+        ctx.lineWidth = 2;
+        ctx.stroke();
         ctx.restore();
       };
 
       drawTank(player, '#22c55e');
-      enemies.forEach((e) => {
+      state.enemies.forEach((e) => {
         drawTank(e, '#ef4444');
       });
 
@@ -295,20 +323,43 @@ const GameTank = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (pausedRef.current || arcade.result) return;
       if (
+        e.target instanceof Element &&
+        e.target.closest('input, textarea, select, button')
+      )
+        return;
+      const key =
+        (
+          {
+            KeyW: 'ArrowUp',
+            KeyS: 'ArrowDown',
+            KeyA: 'ArrowLeft',
+            KeyD: 'ArrowRight',
+          } as Record<string, string>
+        )[e.code] ?? e.code;
+      if (
         ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(
-          e.code,
+          key,
         )
       ) {
         e.preventDefault();
-        stateRef.current.keys[e.code] = true;
-        if (status === 'idle' && e.code === 'Space') {
+        stateRef.current.keys[key] = true;
+        if (status === 'idle' && key === 'Space') {
           setStatus('playing');
         }
       }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (stateRef.current.keys[e.code] !== undefined) {
-        stateRef.current.keys[e.code] = false;
+      const key =
+        (
+          {
+            KeyW: 'ArrowUp',
+            KeyS: 'ArrowDown',
+            KeyA: 'ArrowLeft',
+            KeyD: 'ArrowRight',
+          } as Record<string, string>
+        )[e.code] ?? e.code;
+      if (stateRef.current.keys[key] !== undefined) {
+        stateRef.current.keys[key] = false;
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -375,8 +426,13 @@ const GameTank = () => {
         </Button>
       }
     >
-      <div className="flex w-full flex-col items-center justify-center pb-44 md:pb-4">
-        <div className="relative">
+      <GameProgress
+        label={t('arcade.defeated')}
+        current={enemyCount - remainingEnemies}
+        target={enemyCount}
+      />
+      <div className="flex w-full flex-col items-center justify-center">
+        <div className="arcade-canvas-frame">
           <button
             type="button"
             className="rounded-lg border-2 border-border bg-black block"
@@ -388,11 +444,18 @@ const GameTank = () => {
               height={H}
               className="block cursor-pointer"
               style={{
-                width: 'min(calc(100vw - 2rem), 416px)',
+                width: 'min(100%, 480px)',
                 height: 'auto',
               }}
             />
           </button>
+          {status === 'idle' && (
+            <GameReadyOverlay
+              title={t('game.tank.name')}
+              description={t('tank.descriptionPrompt')}
+              onStart={start}
+            />
+          )}
           <GameResultOverlay
             open={status === 'over' || status === 'win'}
             tone={status === 'win' ? 'win' : 'lose'}
@@ -410,6 +473,8 @@ const GameTank = () => {
         </p>
         <VirtualController
           tone="dark"
+          actions={['A']}
+          actionLabels={{ A: t('arcade.fire') }}
           onDirection={(dir) => setVirtualDirection(dir, true)}
           onDirectionEnd={(dir) => setVirtualDirection(dir, false)}
           onAction={(action) => setVirtualAction(action, true)}

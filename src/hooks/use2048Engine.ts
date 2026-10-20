@@ -21,9 +21,13 @@ export function useEngine2048(size = 4) {
     createInitialState(Math.random, nextIdRef.current, size),
   );
   const [maxCombo, setMaxCombo] = useState(0);
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
   const initGame = useCallback(() => {
-    setState(createInitialState(Math.random, nextIdRef.current, size));
+    const initial = createInitialState(Math.random, nextIdRef.current, size);
+    stateRef.current = initial;
+    setState(initial);
     setHistory([]);
     setMaxCombo(0);
   }, [size]);
@@ -36,30 +40,33 @@ export function useEngine2048(size = 4) {
     if (history.length === 0) return;
     const previous = history[history.length - 1];
     setHistory((prev) => prev.slice(0, -1));
+    stateRef.current = previous;
     setState(previous);
   }, [history]);
 
   const move = useCallback(
     (dir: Dir): { addedScore: number; isMoved: boolean } => {
-      const result = moveBoard(state, dir, Math.random, nextIdRef.current);
+      const previous = stateRef.current;
+      const result = moveBoard(previous, dir, Math.random, nextIdRef.current);
       if (!result.isMoved) {
         return { addedScore: 0, isMoved: false };
       }
 
       setHistory((prev) => {
-        const next = [...prev, state];
+        const next = [...prev, previous];
         if (next.length > 5) next.shift();
         return next;
       });
 
       setMaxCombo((m) => Math.max(m, result.state.combo));
+      stateRef.current = result.state;
       setState(result.state);
       return {
         addedScore: result.addedScore,
         isMoved: true,
       };
     },
-    [state],
+    [],
   );
 
   return {

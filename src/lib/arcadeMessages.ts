@@ -1,5 +1,94 @@
 export const arcadeMessages: Record<'zh' | 'en', Record<string, string>> = {
   zh: {
+    'arcade.corner': '街机角',
+    'arcade.lines': '行',
+    'arcade.score': '当前得分',
+    'arcade.undo': '撤回',
+    'arcade.restart': '重新开始',
+    'arcade.attempts': '尝试次数',
+    'arcade.pairAttempts': '配对次数',
+    'arcade.timeLeft': '剩余秒数',
+    'arcade.clearedLines': '已消行',
+    'arcade.defeated': '已击败敌军',
+    'arcade.fullscreen': '切换全屏',
+    'arcade.thisRound': '这一局',
+    'arcade.howToPlay': '玩法与操作',
+    'arcade.operation': '操作',
+    'arcade.tip': '一点诀窍',
+    'arcade.nextTarget': '下一个目标',
+    'arcade.matchedPairs': '已找到配对',
+    'arcade.preview': '先记住这些图案，准备好再开始。',
+    'arcade.previewing': '记住位置，马上开始',
+    'arcade.memoryBonus': '配对成功 +3 秒',
+    'arcade.snakeReady':
+      '吃下果实，留出回旋的空间。\n方向键 / WASD 或滑动转向。',
+    'arcade.snakeGolden': '金色果实限时 6 秒，值 50 分',
+    'arcade.snakeLength': '长度',
+    'arcade.wave': '波次',
+    'arcade.shooterReady':
+      '守住防线，保留三格护盾。\n拖动战机自动射击，或用方向键与空格。',
+    'arcade.shooterShield': '护盾',
+    'arcade.fire': '射击',
+    'arcade.survival': '存活',
+    'arcade.bricks': '已清除砖块',
+    'arcade.breakoutReady': '移动挡板接住小球。\n击球位置决定反弹角度。',
+    'arcade.guessReady': '60 秒找出密码。\n每次猜错扣 5 秒，线索会缩小范围。',
+    'arcade.possibleRange': '可能范围',
+    'arcade.outsideRange': '请输入当前范围内的数字',
+    'arcade.guessClue': '根据线索缩小范围',
+    'arcade.combo': '连续合并',
+    'arcade.emptyCells': '空位',
+    'arcade.goal.guess': '60 秒破解密码',
+    'arcade.goal.tictactoe': '三子连成一线',
+    'arcade.goal.memory': '找齐所有配对',
+    'arcade.goal.2048': '合出 2048',
+    'arcade.goal.snake': '吃果实，突破纪录',
+    'arcade.goal.breakout': '清空 60 块砖',
+    'arcade.goal.shooter': '守住防线，迎接下一波',
+    'arcade.goal.tank': '守住基地，歼灭敌军',
+    'arcade.goal.tetris': '消行，构筑连击',
+    'arcade.goal.rubiks': '让六面各归一色',
+    'arcade.goal.go': '围出更多领地',
+    'arcade.goal.gomoku': '先连成五子',
+    'arcade.goal.xiangqi': '将死对方的将帅',
+    'arcade.goal.chess': '将死对方的国王',
+    'arcade.goal.doudizhu': '和同阵营先出完牌',
+    'arcade.goal.shengji': '和搭档争分升级',
+    'arcade.input.guess': '数字键 / 小键盘 · 输入\nEnter · 确认　退格 · 删除',
+    'arcade.input.place': '点击空位 · 落子\n操作栏 · 切换对手 / 重新开始',
+    'arcade.input.flip': '点击卡牌 · 翻开\n相同图案配对 · 增加 3 秒',
+    'arcade.input.slide': '方向键 / WASD · 移动\n滑动棋盘 · 移动',
+    'arcade.input.steer': '方向键 / WASD · 转向\n滑动棋盘 / 方向按钮 · 转向',
+    'arcade.input.paddle':
+      '鼠标 / 拖动 · 移动挡板\n← → / A D · 移动　空格 · 发球',
+    'arcade.input.shoot':
+      '← → / A D · 移动　空格 · 射击\n按住并拖动战场 · 移动与自动射击',
+    'arcade.input.tank': '方向键 / WASD · 移动\n空格 / 射击按钮 · 开火',
+    'arcade.input.tetris':
+      '← → · 移动　↑ / X · 旋转\n空格 · 硬降　C · 暂存　E · 技能',
+    'arcade.input.rubiks':
+      '单指 / 左键拖动 · 转动一层\n双指 / 右键拖动 · 旋转视角',
+    'arcade.input.piece': '点击棋子 · 选中\n点击目标位置 · 走子',
+    'arcade.input.cards':
+      '点击手牌 · 选择 / 取消\n出牌按钮 · 确认　提示 · 建议牌型',
+    'arcade.tip.guess': '每次都选剩余范围的中间值，能更快排除一半可能。',
+    'arcade.tip.tictactoe': '先争中心，再看角落。让下一步同时形成两个威胁。',
+    'arcade.tip.memory': '按固定顺序翻牌；遇到见过的图案，再回去找它的伙伴。',
+    'arcade.tip.2048': '把最大数字留在角落，让空位连在一起。',
+    'arcade.tip.snake':
+      '先想好吃到果实后的出口；金色果实值分高，但别为它封死退路。',
+    'arcade.tip.breakout': '用挡板边缘打斜球，让小球进入砖墙上方。',
+    'arcade.tip.shooter': '提前移动到敌机下方；漏过或碰撞都会损失一格护盾。',
+    'arcade.tip.tank': '先守基地两侧通道，利用砖墙挡住敌方火线。',
+    'arcade.tip.tetris':
+      '保持表面平整，留出一列长井；暂存能帮你等到合适的长条。',
+    'arcade.tip.rubiks': '先完成一面十字，再处理角块；别只盯着一种颜色。',
+    'arcade.tip.go': '先稳住角和边，再向中腹扩张；留意棋块的气。',
+    'arcade.tip.gomoku': '进攻前先检查对方的活三和冲四，兼顾两条方向。',
+    'arcade.tip.xiangqi': '先出动大子，车马炮协同；进攻时别忽略将帅安全。',
+    'arcade.tip.chess': '尽早出子并保护国王，每步落子前看看对手的威胁。',
+    'arcade.tip.doudizhu': '先理清单张与对子，保留关键大牌；农民要给队友让路。',
+    'arcade.tip.shengji': '记住主牌和分牌，留意搭档先前出过的花色。',
     'arcade.personalBest': '个人最佳',
     'arcade.pause': '暂停',
     'arcade.paused': '已暂停',
@@ -205,6 +294,114 @@ export const arcadeMessages: Record<'zh' | 'en', Record<string, string>> = {
       '困难档为标准井字棋：先连成三子获胜，九格填满则和棋。',
   },
   en: {
+    'arcade.corner': 'Arcade',
+    'arcade.lines': 'lines',
+    'arcade.score': 'Score',
+    'arcade.undo': 'Undo',
+    'arcade.restart': 'Restart',
+    'arcade.attempts': 'Attempts',
+    'arcade.pairAttempts': 'Attempts',
+    'arcade.timeLeft': 'Seconds left',
+    'arcade.clearedLines': 'Lines cleared',
+    'arcade.defeated': 'Enemies defeated',
+    'arcade.fullscreen': 'Toggle fullscreen',
+    'arcade.thisRound': 'This round',
+    'arcade.howToPlay': 'How to play',
+    'arcade.operation': 'Controls',
+    'arcade.tip': 'A little strategy',
+    'arcade.nextTarget': 'Next target',
+    'arcade.matchedPairs': 'Pairs found',
+    'arcade.preview': 'Take a moment to remember the cards before starting.',
+    'arcade.previewing': 'Remember the positions. Starting soon.',
+    'arcade.memoryBonus': 'Match! +3 seconds',
+    'arcade.snakeReady':
+      'Collect fruit and leave room to turn.\nUse arrows / WASD or swipe to steer.',
+    'arcade.snakeGolden': 'Golden fruit: 50 points, 6 seconds',
+    'arcade.snakeLength': 'Length',
+    'arcade.wave': 'Wave',
+    'arcade.shooterReady':
+      'Defend the line with three shields.\nDrag to move and fire, or use arrows and Space.',
+    'arcade.shooterShield': 'Shields',
+    'arcade.fire': 'Fire',
+    'arcade.survival': 'Survival',
+    'arcade.bricks': 'Bricks cleared',
+    'arcade.breakoutReady':
+      'Catch the ball with your paddle.\nYour contact point controls the bounce angle.',
+    'arcade.guessReady':
+      'Find the code in 60 seconds.\nWrong guesses cost 5 seconds; clues narrow the range.',
+    'arcade.possibleRange': 'Possible range',
+    'arcade.outsideRange': 'Choose a number inside the remaining range',
+    'arcade.guessClue': 'Narrow the range using the clues',
+    'arcade.combo': 'Merge streak',
+    'arcade.emptyCells': 'Empty',
+    'arcade.goal.guess': 'Crack the code in 60 seconds',
+    'arcade.goal.tictactoe': 'Connect three in a row',
+    'arcade.goal.memory': 'Find every matching pair',
+    'arcade.goal.2048': 'Make 2048',
+    'arcade.goal.snake': 'Collect fruit. Beat your best.',
+    'arcade.goal.breakout': 'Clear all 60 bricks',
+    'arcade.goal.shooter': 'Hold the line. Face the next wave.',
+    'arcade.goal.tank': 'Protect the base. Defeat the enemy.',
+    'arcade.goal.tetris': 'Clear lines. Build combos.',
+    'arcade.goal.rubiks': 'One color on every face',
+    'arcade.goal.go': 'Secure more territory',
+    'arcade.goal.gomoku': 'Connect five first',
+    'arcade.goal.xiangqi': 'Checkmate the opposing general',
+    'arcade.goal.chess': 'Checkmate the opposing king',
+    'arcade.goal.doudizhu': 'Empty your team’s hands first',
+    'arcade.goal.shengji': 'Score and advance with your partner',
+    'arcade.input.guess':
+      'Number keys / keypad · Enter digits\nEnter · Confirm　Backspace · Erase',
+    'arcade.input.place':
+      'Click an empty point · Place\nToolbar · Change opponent / Restart',
+    'arcade.input.flip': 'Click a card · Flip\nMatch a pair · Gain 3 seconds',
+    'arcade.input.slide': 'Arrows / WASD · Move\nSwipe the board · Move',
+    'arcade.input.steer':
+      'Arrows / WASD · Steer\nSwipe / Direction buttons · Steer',
+    'arcade.input.paddle':
+      'Mouse / Drag · Move paddle\n← → / A D · Move　Space · Launch',
+    'arcade.input.shoot':
+      '← → / A D · Move　Space · Fire\nHold and drag on the field · Move and fire',
+    'arcade.input.tank': 'Arrows / WASD · Move\nSpace / Fire button · Shoot',
+    'arcade.input.tetris':
+      '← → · Move　↑ / X · Rotate\nSpace · Drop　C · Hold　E · Skill',
+    'arcade.input.rubiks':
+      'One finger / Left drag · Turn a layer\nTwo fingers / Right drag · Rotate view',
+    'arcade.input.piece': 'Click a piece · Select\nClick a destination · Move',
+    'arcade.input.cards':
+      'Click cards · Select / Deselect\nPlay · Confirm　Hint · Suggested hand',
+    'arcade.tip.guess':
+      'Try the midpoint of the remaining range to rule out half the possibilities.',
+    'arcade.tip.tictactoe':
+      'Take the center, then the corners. Create two threats with one move.',
+    'arcade.tip.memory':
+      'Work in a consistent order. When you recognize a card, find its partner.',
+    'arcade.tip.2048':
+      'Keep your largest tile in a corner and keep empty cells connected.',
+    'arcade.tip.snake':
+      'Plan your exit before eating. Golden fruit is valuable, but leave a way out.',
+    'arcade.tip.breakout':
+      'Use the paddle edges to send the ball behind the brick wall.',
+    'arcade.tip.shooter':
+      'Line up beneath incoming enemies. Collisions and missed enemies both cost a shield.',
+    'arcade.tip.tank':
+      'Defend the paths beside your base and use brick walls to block enemy fire.',
+    'arcade.tip.tetris':
+      'Keep the stack flat with a well for long pieces. Hold helps you wait for the right one.',
+    'arcade.tip.rubiks':
+      'Build a cross first, then solve the corners. Track more than one color.',
+    'arcade.tip.go':
+      'Secure corners and sides before expanding. Watch the liberties of each group.',
+    'arcade.tip.gomoku':
+      'Check enemy open threes and fours before attacking. Watch both directions.',
+    'arcade.tip.xiangqi':
+      'Develop your rooks, horses and cannons together, while keeping your general safe.',
+    'arcade.tip.chess':
+      'Develop your pieces and protect your king. Check the opponent’s threats before moving.',
+    'arcade.tip.doudizhu':
+      'Organize singles and pairs, save key high cards, and leave openings for your partner.',
+    'arcade.tip.shengji':
+      'Track trumps and scoring cards. Remember which suits your partner has played.',
     'arcade.personalBest': 'Personal best',
     'arcade.pause': 'Pause',
     'arcade.paused': 'Paused',

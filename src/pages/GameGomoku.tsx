@@ -153,7 +153,7 @@ const GameGomoku = () => {
         : 'lose';
 
   const resultTitle = !win
-    ? ''
+    ? t('arcade.draw')
     : opponent === 'human'
       ? `${win.stone === 'B' ? t('game.gomoku.black') : t('game.gomoku.white')} ${t('common.wins')}`
       : win.stone === humanStone

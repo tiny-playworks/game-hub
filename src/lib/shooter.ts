@@ -2,13 +2,13 @@ export const SHOOTER = {
   w: 400,
   h: 560,
   playerW: 36,
-  playerH: 28,
+  playerH: 42,
   bulletW: 4,
   bulletH: 8,
   bulletSpeed: -10,
   enemySpeed: 2,
   enemyW: 32,
-  enemyH: 24,
+  enemyH: 36,
   spawnInterval: 90,
   playerSpeed: 5,
   fireCooldownFrames: 8,
@@ -34,6 +34,8 @@ export interface ShooterState {
   fireCooldown: number;
   score: number;
   status: ShooterStatus;
+  shields?: number;
+  invulnerableFrames?: number;
 }
 
 export interface ShooterInput {
@@ -43,7 +45,8 @@ export interface ShooterInput {
 }
 
 export type ShooterEvent =
-  { type: 'enemy_destroyed'; scoreDelta: number } | { type: 'player_hit' };
+  | { type: 'enemy_destroyed'; scoreDelta: number; x: number; y: number }
+  | { type: 'player_hit' };
 
 export function playerY(): number {
   return SHOOTER.h - SHOOTER.playerH - 20;
@@ -58,6 +61,8 @@ export function createInitialShooterState(): ShooterState {
     fireCooldown: 0,
     score: 0,
     status: 'idle',
+    shields: 3,
+    invulnerableFrames: 0,
   };
 }
 
@@ -91,6 +96,8 @@ export function stepShooter(
   let spawnCounter = state.spawnCounter;
   let score = state.score;
   let status: ShooterStatus = state.status;
+  let shields = state.shields ?? 3;
+  let invulnerableFrames = Math.max(0, (state.invulnerableFrames ?? 0) - dt);
   let bullets = state.bullets.map((b) => ({ ...b }));
   let enemies = state.enemies.map((e) => ({ ...e }));
 
@@ -121,15 +128,20 @@ export function stepShooter(
     .map((b) => ({ ...b, y: b.y + SHOOTER.bulletSpeed * dt }))
     .filter((b) => b.y > -SHOOTER.bulletH);
 
-  const spawnInterval =
-    difficulty === 'easy'
+  const wave = Math.min(8, Math.floor(score / 100) + 1);
+  const spawnInterval = Math.max(
+    25,
+    (difficulty === 'easy'
       ? 130
       : difficulty === 'hard'
         ? 50
-        : SHOOTER.spawnInterval;
+        : SHOOTER.spawnInterval) -
+      (wave - 1) * 5,
+  );
   const enemySpeed =
     SHOOTER.enemySpeed *
-    (difficulty === 'easy' ? 0.7 : difficulty === 'hard' ? 1.45 : 1);
+    (difficulty === 'easy' ? 0.7 : difficulty === 'hard' ? 1.45 : 1) *
+    (1 + (wave - 1) * 0.07);
   spawnCounter += dt;
   if (spawnCounter >= spawnInterval) {
     spawnCounter -= spawnInterval;
@@ -139,9 +151,7 @@ export function stepShooter(
     });
   }
 
-  enemies = enemies
-    .map((e) => ({ ...e, y: e.y + enemySpeed * dt }))
-    .filter((e) => e.y < SHOOTER.h + SHOOTER.enemyH);
+  enemies = enemies.map((e) => ({ ...e, y: e.y + enemySpeed * dt }));
 
   const survivingEnemies: ShooterEnemy[] = [];
   for (const enemy of enemies) {
@@ -160,11 +170,17 @@ export function stepShooter(
     if (hitBulletIndex >= 0) {
       bullets = bullets.filter((_, i) => i !== hitBulletIndex);
       score += 10;
-      events.push({ type: 'enemy_destroyed', scoreDelta: 10 });
+      events.push({
+        type: 'enemy_destroyed',
+        scoreDelta: 10,
+        x: enemy.x + SHOOTER.enemyW / 2,
+        y: enemy.y + SHOOTER.enemyH / 2,
+      });
       continue;
     }
 
     if (
+      enemy.y > py + SHOOTER.playerH ||
       aabbOverlap(
         enemy.x,
         enemy.y,
@@ -176,8 +192,13 @@ export function stepShooter(
         SHOOTER.playerH,
       )
     ) {
-      status = 'over';
-      events.push({ type: 'player_hit' });
+      if (invulnerableFrames <= 0) {
+        shields -= 1;
+        invulnerableFrames = 90;
+        if (shields <= 0) status = 'over';
+        events.push({ type: 'player_hit' });
+      }
+      continue;
     }
     survivingEnemies.push(enemy);
   }
@@ -191,6 +212,8 @@ export function stepShooter(
       fireCooldown,
       score,
       status,
+      shields,
+      invulnerableFrames,
     },
     events,
   };
