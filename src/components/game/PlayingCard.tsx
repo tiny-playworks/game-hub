@@ -33,12 +33,27 @@ export interface CardFace {
 }
 
 /** 把牌值解码为可渲染的牌面 */
-export const getCardFace = (card: number, locale: 'zh' | 'en' = 'zh'): CardFace => {
+export const getCardFace = (
+  card: number,
+  locale: 'zh' | 'en' = 'zh',
+): CardFace => {
   if (card === CARD_SMALL_JOKER) {
-    return { rank: locale === 'en' ? 'B' : '小', suit: locale === 'en' ? 'J' : '王', red: false, isJoker: true, name: locale === 'en' ? 'Black Joker' : '小王' };
+    return {
+      rank: locale === 'en' ? 'B' : '小',
+      suit: locale === 'en' ? 'J' : '王',
+      red: false,
+      isJoker: true,
+      name: locale === 'en' ? 'Black Joker' : '小王',
+    };
   }
   if (card === CARD_BIG_JOKER) {
-    return { rank: locale === 'en' ? 'R' : '大', suit: locale === 'en' ? 'J' : '王', red: true, isJoker: true, name: locale === 'en' ? 'Red Joker' : '大王' };
+    return {
+      rank: locale === 'en' ? 'R' : '大',
+      suit: locale === 'en' ? 'J' : '王',
+      red: true,
+      isJoker: true,
+      name: locale === 'en' ? 'Red Joker' : '大王',
+    };
   }
   const suitIndex = Math.floor(card / 13);
   const rank = RANK_LABELS[card % 13] ?? '?';
@@ -48,7 +63,10 @@ export const getCardFace = (card: number, locale: 'zh' | 'en' = 'zh'): CardFace 
     suit,
     red: suitIndex === 1 || suitIndex === 3,
     isJoker: false,
-    name: locale === 'en' ? `${rank} of ${['Spades', 'Hearts', 'Clubs', 'Diamonds'][suitIndex] ?? ''}` : `${SUIT_NAMES[suitIndex] ?? ''}${rank}`,
+    name:
+      locale === 'en'
+        ? `${rank} of ${['Spades', 'Hearts', 'Clubs', 'Diamonds'][suitIndex] ?? ''}`
+        : `${SUIT_NAMES[suitIndex] ?? ''}${rank}`,
   };
 };
 

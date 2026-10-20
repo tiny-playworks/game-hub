@@ -21,7 +21,10 @@ export function gameSocketSession(
   };
   const heartbeat = setInterval(() => {
     if (!roomId) return;
-    if (!authorized()) { ws.close(4401, 'UNAUTHORIZED'); return; }
+    if (!authorized()) {
+      ws.close(4401, 'UNAUTHORIZED');
+      return;
+    }
     if (!alive) {
       ws.terminate();
       return;
@@ -54,7 +57,10 @@ export function gameSocketSession(
       roomId = target;
       manager.connection(target, memberId, deviceId, true);
       const publish = () => {
-        if (!authorized()) { ws.close(4401, 'UNAUTHORIZED'); return; }
+        if (!authorized()) {
+          ws.close(4401, 'UNAUTHORIZED');
+          return;
+        }
         const view = manager.view(target, memberId, deviceId);
         if (view) send({ type: 'game_room', view });
       };

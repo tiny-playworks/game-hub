@@ -19,17 +19,28 @@ export function useGameRoom(roomId: string, memberId?: string) {
   const latest = useRef<GameRoomView | null>(null);
   const connection = useRef<GameRoomConnection | null>(null);
   const busy = useRef(false);
-  const update = useCallback((next: GameRoomView) => {
-    if (
-      latest.current?.room.id === next.room.id &&
-      latest.current.room.revision > next.room.revision
-    )
-      return;
-    latest.current = next;
-    setView(next);
-  }, []);
+  const generation = useRef(0);
+  const activeScope = useRef<string | null>(null);
+  const scopeKey = `${roomId}:${memberId ?? ''}`;
+  const update = useCallback(
+    (next: GameRoomView) => {
+      if (activeScope.current !== scopeKey || next.room.id !== roomId) return;
+      if (
+        latest.current?.room.id === next.room.id &&
+        latest.current.room.revision > next.room.revision
+      )
+        return;
+      latest.current = next;
+      setView(next);
+    },
+    [roomId, scopeKey],
+  );
 
   useEffect(() => {
+    generation.current++;
+    activeScope.current = memberId ? scopeKey : null;
+    busy.current = false;
+    setPending(false);
     latest.current = null;
     setView(null);
     setError(null);
@@ -57,18 +68,27 @@ export function useGameRoom(roomId: string, memberId?: string) {
     connection.current = client;
     return () => {
       disposed = true;
+      generation.current++;
+      activeScope.current = null;
       client.close();
       connection.current = null;
       setConnected(false);
     };
-  }, [roomId, memberId, update]);
+  }, [roomId, memberId, scopeKey, update]);
 
   const send = useCallback(
     async (
       type: GameRoomCommand['type'],
       payload?: GameRoomCommand['payload'],
     ) => {
-      if (!latest.current || busy.current) return false;
+      if (
+        !memberId ||
+        activeScope.current !== scopeKey ||
+        !latest.current ||
+        busy.current
+      )
+        return false;
+      const requestGeneration = generation.current;
       const command: GameRoomCommand = {
         protocol: 1,
         commandId: createUuid(),
@@ -83,18 +103,24 @@ export function useGameRoom(roomId: string, memberId?: string) {
       try {
         const ack = await (connection.current?.command(command) ??
           sendGameCommand(command));
+        if (generation.current !== requestGeneration) return false;
         if (ack.view) update(ack.view);
         if (!ack.accepted) setError(ack.code ?? 'ACTION_REJECTED');
         return ack.accepted;
       } catch (reason) {
-        setError(reason instanceof HouseholdApiError ? reason.code : 'NETWORK');
+        if (generation.current === requestGeneration)
+          setError(
+            reason instanceof HouseholdApiError ? reason.code : 'NETWORK',
+          );
         return false;
       } finally {
-        busy.current = false;
-        setPending(false);
+        if (generation.current === requestGeneration) {
+          busy.current = false;
+          setPending(false);
+        }
       }
     },
-    [roomId, update],
+    [roomId, memberId, scopeKey, update],
   );
 
   return { view, connected, pending, error, send, update };

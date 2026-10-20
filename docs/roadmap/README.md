@@ -75,9 +75,9 @@ P1–P6 的“纯本地、禁止后端/账号/联机、移动端不专门改造�
 | P21  | 精选轮换与回访                         | 本地非 NAS 端已交付；待 NAS 部署与轮换体验     | [P21](./P21-curated-rotation.md)    |
 | P22  | 第三轮收尾：P19–P21 NAS 上线与第 10 人 | 本地非 NAS 项已全部完成（迁移演练 + 22.3 第 10 人椿）；仅待 NAS 部署/现场验收 | [P22](./P22-round3-closeout.md)     |
 | P23  | 家庭排行榜与动态                       | 本地非 NAS 端已全部交付（服务端 + 前端界面 + CLI）；待 NAS 部署验收 | [P23](./P23-family-leaderboard.md)  |
-| P24  | 通用房间内核 + 五子棋对战              | 未开始                                             | [P24](./P24-room-kernel-gomoku.md)  |
-| P25  | 中国象棋对战（提和/悔棋/局时/观战）    | 未开始                                             | [P25](./P25-xiangqi-battle.md)      |
-| P26  | 斗地主对战（暗牌/叫分/托管）           | 未开始                                             | [P26](./P26-doudizhu-battle.md)     |
+| P24  | 通用房间内核 + 五子棋对战              | 本地实现与双成员整局核对完成；边界回归及 NAS 待验 | [P24](./P24-room-kernel-gomoku.md)  |
+| P25  | 中国象棋对战（提和/悔棋/局时/观战）    | 本地实现与基础流程核对完成；边界回归及 NAS 待验 | [P25](./P25-xiangqi-battle.md)      |
+| P26  | 斗地主对战（暗牌/叫分/托管）           | 本地实现与三成员整局核对完成；完整边界及 NAS 待验 | [P26](./P26-doudizhu-battle.md)     |
 | P27  | 日麻房间迁移至通用内核（可选）         | 待 P24–P26 NAS 验收后决定                          | [P27](./P27-riichi-room-migration.md) |
 
 ```mermaid
@@ -130,7 +130,7 @@ graph LR
 - `member-online`：NAS 为权威数据源；客户端缓存已确认档案，使用版本化 API。
 - `member-offline`：仅此前成功登录并缓存档案的设备可用；已加载的自由局/小游戏继续游玩，待确认奖励单独显示。
 - `memberId`、`deviceId`、`matchId`、`eventId` 均为 UUID 字符串；UUID 必须兼容局域网 HTTP。服务端以会话认定成员与设备，不信任请求自报身份。
-- `matchSource = 'free' | 'ai-ranked' | 'family' | 'arcade'`；统计和结算保留来源，AI 段位仅接受 `ai-ranked`。第四轮 P24 起计划新增 `'family-arcade'`（家人街机对战），见 4.7。
+- `matchSource = 'free' | 'ai-ranked' | 'family' | 'arcade' | 'family-arcade'`；统计和结算保留来源，AI 段位仅接受 `ai-ranked`。`family-arcade` 为家人街机对战的独立在线来源，不接受离线上报，见 4.7。
 - 首次迁移只能把一个完整旧本地存档导入空成员一次。导入前下载备份，服务端校验各业务字段，提交成功才标记已迁移；其他设备的旧存档不自动合并。
 
 ### 4.2 成员档案、同步与存档
@@ -180,7 +180,7 @@ graph LR
 ### 4.7 第四轮边界（P22–P27 规划）
 
 - **排行榜（P23）**：只读聚合服务端已接受的成员街机成绩（在线 `arcade_rounds` + 已接受离线凭据），口径与 `getBestValue` 一致；不进入任何经济结算。周冠军唯一键 `(weekId, gameId, difficulty, memberId)`，惰性结算、不回溯。被管理 CLI 隐藏的成绩只退出榜单，不回收已发奖励。
-- **通用房间内核（P24）**：新协议 `shared/contracts/gameRoom.ts` 沿用 4.4 命令信封、幂等、revision、私有视角与服务端 deadline 原则；REST 新前缀，`/ws` 复用连接与认证。现有日麻房间协议与行为在 P27 之前不得改变。
+- **通用房间内核（P24）**：协议 `shared/contracts/gameRoom.ts` 沿用 4.4 命令信封、幂等、revision、私有视角与服务端 deadline 原则；REST `/api/v1/game-rooms`，`/ws` 复用连接与认证，以 `subscribe_game_room` / `game_command` 区分街机消息。现有日麻房间协议与行为在 P27 之前不得改变。
 - **`family-arcade` 结算**：≥2 真人完赛且本人未主动退出才发奖；认输视为完赛告负；“结束对局（不计胜负）”与 24 小时作废不发奖、不计对线表。使用街机单局公式，与 4.5 家庭日麻共享每人每日 200 上限，唯一键 `(memberId, matchId, source)`。不计个人 vs AI 统计、成就与排行榜；不接受离线上报。
 - **全局一人一局**：同一成员同一时刻最多一个进行中的在线对局（日麻家庭房间、AI 段位局、对战房间之一）；棋类观战不计入。
 - **隐藏信息**：斗地主等暗牌游戏沿用 4.4 规则——他人手牌、未公开底牌、seed 与 AI 内部状态不下发；暗牌游戏不开放观战。

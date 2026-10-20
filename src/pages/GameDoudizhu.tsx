@@ -66,6 +66,10 @@ const GameDoudizhu = () => {
     const who = state.currentPlayer;
     const id = setTimeout(() => {
       const next = applyAITurn(state, difficulty);
+      if (state.phase === 'bidding') {
+        setState(next);
+        return;
+      }
       const played =
         next.lastPlay !== state.lastPlay && next.lastPlay?.player === who;
       setActions((prev) => ({
@@ -146,13 +150,16 @@ const GameDoudizhu = () => {
         ? state.winner === 0
         : state.winner === 1;
 
-  const statusText = state.phase === 'bidding' ? t('gameRoom.bidding') : state.gameOver
-    ? state.winner === 0
-      ? t('game.doudizhu.status.landlordWin')
-      : t('game.doudizhu.status.peasantWin')
-    : myTurn
-      ? t('game.doudizhu.status.yourTurn')
-      : t('game.doudizhu.status.otherTurn');
+  const statusText =
+    state.phase === 'bidding'
+      ? t('gameRoom.bidding')
+      : state.gameOver
+        ? state.winner === 0
+          ? t('game.doudizhu.status.landlordWin')
+          : t('game.doudizhu.status.peasantWin')
+        : myTurn
+          ? t('game.doudizhu.status.yourTurn')
+          : t('game.doudizhu.status.otherTurn');
 
   useArcadeSnapshot(() => ({
     ...state,
@@ -180,12 +187,25 @@ const GameDoudizhu = () => {
   return (
     <GameShell
       onRestart={restart}
-      settings={<label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={biddingEnabled} onChange={(event) => {
-        const enabled = event.target.checked;
-        setBiddingEnabled(enabled); newRound(); start();
-        setState(enabled ? createBiddingState() : createInitialState());
-        setSelected([]); setActions({ 0: null, 1: null, 2: null }); triedHints.current = [];
-      }} />{t('gameRoom.bidMode')}</label>}
+      settings={
+        <label className="flex min-h-11 items-center gap-3 text-sm">
+          <input
+            type="checkbox"
+            checked={biddingEnabled}
+            onChange={(event) => {
+              const enabled = event.target.checked;
+              setBiddingEnabled(enabled);
+              newRound();
+              start();
+              setState(enabled ? createBiddingState() : createInitialState());
+              setSelected([]);
+              setActions({ 0: null, 1: null, 2: null });
+              triedHints.current = [];
+            }}
+          />
+          {t('gameRoom.bidMode')}
+        </label>
+      }
       title={t('game.doudizhu.name')}
       subtitle={t('game.doudizhu.rules')}
       status={
@@ -193,9 +213,11 @@ const GameDoudizhu = () => {
           <StatPill
             label={t('game.doudizhu.role')}
             value={
-              state.phase === 'bidding' ? t('gameRoom.bidding') : iAmLandlord
-                ? t('game.doudizhu.landlord')
-                : t('game.doudizhu.peasant')
+              state.phase === 'bidding'
+                ? t('gameRoom.bidding')
+                : iAmLandlord
+                  ? t('game.doudizhu.landlord')
+                  : t('game.doudizhu.peasant')
             }
             tone={iAmLandlord ? 'danger' : 'default'}
           />
@@ -229,6 +251,41 @@ const GameDoudizhu = () => {
     >
       <div className="relative w-full max-w-2xl">
         <div className="table-felt rounded-2xl p-3 sm:p-5">
+          {biddingEnabled ? (
+            <div className="mb-4 space-y-2 text-center text-xs text-white/85">
+              <div className="flex items-center justify-center gap-2">
+                <span>{t('gameRoom.bottom')}</span>
+                {state.phase === 'bidding' ? (
+                  <span className="tracking-[0.6em]">▧▧▧</span>
+                ) : (
+                  <CardFan
+                    cards={state.bottomCards ?? []}
+                    locale={locale}
+                    size="sm"
+                  />
+                )}
+              </div>
+              <div className="flex flex-wrap justify-center gap-2">
+                {state.bids?.map((bid) => (
+                  <span key={bid.seat}>
+                    {t(
+                      bid.seat === SEAT_ME
+                        ? 'gameRoom.you'
+                        : bid.seat === SEAT_LEFT
+                          ? 'game.doudizhu.seatPrev'
+                          : 'game.doudizhu.seatNext',
+                    )}{' '}
+                    ·{' '}
+                    {bid.score
+                      ? formatMessage(locale, 'gameRoom.bid', {
+                          score: bid.score,
+                        })
+                      : t('gameRoom.noBid')}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
           {/* 两位对手 */}
           <div className="flex items-start justify-between gap-2">
             <OpponentSeat
@@ -281,9 +338,20 @@ const GameDoudizhu = () => {
 
         {/* 出牌操作 */}
         <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-          {state.phase === 'bidding' ? [0, 1, 2, 3].map((score) => <Button key={score} className="min-h-11" disabled={paused || !canBidForSeat(state, SEAT_ME, score)} onClick={() => setState(bidForSeat(state, SEAT_ME, score))}>
-            {score ? formatMessage(locale, 'gameRoom.bid', { score }) : t('gameRoom.noBid')}
-          </Button>) : null}
+          {state.phase === 'bidding'
+            ? [0, 1, 2, 3].map((score) => (
+                <Button
+                  key={score}
+                  className="min-h-11"
+                  disabled={paused || !canBidForSeat(state, SEAT_ME, score)}
+                  onClick={() => setState(bidForSeat(state, SEAT_ME, score))}
+                >
+                  {score
+                    ? formatMessage(locale, 'gameRoom.bid', { score })
+                    : t('gameRoom.noBid')}
+                </Button>
+              ))
+            : null}
           <Button
             variant="outline"
             size="sm"

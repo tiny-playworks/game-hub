@@ -561,6 +561,8 @@ export class GameRoomManager {
         record.deadline = null;
         record.clockStartedAt = null;
         room.firstSeat = (room.firstSeat + 1) % adapter.seats;
+        room.settings.firstPlayer =
+          room.firstSeat === seat.seatIndex ? 'host' : 'opponent';
         for (const item of room.seats)
           if (item.type === 'human') {
             if (item.exited)
@@ -578,10 +580,19 @@ export class GameRoomManager {
       if (room.status !== 'waiting')
         throw apiError(400, 'GAME_ALREADY_STARTED');
       if (command.type === 'settings') {
+        const previousFirst = room.settings.firstPlayer;
         room.settings = parseGameSettings({
           ...room.settings,
           ...payload.settings,
         });
+        if (previousFirst !== room.settings.firstPlayer) {
+          room.firstSeat =
+            room.settings.firstPlayer === 'random'
+              ? randomInt(adapter.seats)
+              : room.settings.firstPlayer === 'host'
+                ? seat.seatIndex
+                : (seat.seatIndex + 1) % adapter.seats;
+        }
         for (const item of room.seats)
           if (item.type === 'ai') item.difficulty = room.settings.difficulty;
         for (const item of room.seats)
