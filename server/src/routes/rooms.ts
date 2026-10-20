@@ -178,6 +178,17 @@ export function registerRoomRoutes(
     }
   });
 
+  app.post('/api/v1/rooms/:roomId/rematch', async (request) => {
+    const { member } = requireSession(db, request);
+    const { roomId } = request.params as { roomId: string };
+    const { expectedRevision } = (request.body ?? {}) as { expectedRevision?: number };
+    if (!Number.isSafeInteger(expectedRevision) || Number(expectedRevision) < 0) throw apiError(400, 'BAD_REQUEST');
+    if (roomManager.getRoom(roomId)?.hostMemberId !== member.id) throw apiError(403, 'ONLY_HOST_CAN_START');
+    try {
+      return roomManager.reopenForRematch(roomId, member.id, expectedRevision!);
+    } catch (error) { throw apiError(409, error instanceof Error ? error.message : 'BAD_REQUEST'); }
+  });
+
   // 开始对局（仅房主）
   app.post('/api/v1/rooms/:roomId/start', async (request) => {
     const { member } = requireSession(db, request);

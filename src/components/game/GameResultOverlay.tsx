@@ -8,6 +8,7 @@ import { games } from '@/data/games';
 import { formatMessage } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { arcadeGuides } from '@/lib/arcadeGuide';
+import { arcadeChallengeGoal } from '../../../shared/contracts/arcadeChallenge';
 
 export type ResultTone = 'win' | 'lose' | 'draw';
 
@@ -71,7 +72,9 @@ export const GameResultOverlay = ({
   }, [open]);
   if (!open) return null;
 
-  const style = TONE_STYLE[tone];
+  const effectiveTone = arcade?.result?.challenge ? (arcade.result.challenge.cleared ? 'win' : 'lose') : tone;
+  const effectiveTitle = arcade?.result?.challenge ? t(arcade.result.challenge.cleared ? 'play.trialCleared' : 'play.trialRetry') : title;
+  const style = TONE_STYLE[effectiveTone];
   const game = games.find((item) => item.id === arcade?.gameId);
   const unitLabel = t(
     game?.bestMetric === 'wins'
@@ -85,7 +88,7 @@ export const GameResultOverlay = ({
     <div
       role="alertdialog"
       aria-modal="true"
-      aria-label={title}
+      aria-label={effectiveTitle}
       onKeyDown={(event) => {
         if (event.key !== 'Tab') return;
         const controls = card.current?.querySelectorAll<HTMLElement>(
@@ -102,7 +105,7 @@ export const GameResultOverlay = ({
           first.focus();
         }
       }}
-      className="animate-overlay-in absolute inset-0 z-40 flex items-center justify-center rounded-[inherit] bg-slate-950/45 p-4 backdrop-blur-[3px]"
+      className="game-result-overlay animate-overlay-in absolute inset-0 z-40 flex items-center justify-center rounded-[inherit] bg-slate-950/45 p-4 backdrop-blur-[3px]"
     >
       <div
         ref={card}
@@ -112,7 +115,7 @@ export const GameResultOverlay = ({
         )}
       >
         <div className="game-result-emblem" aria-hidden="true">
-          {tone === 'win' ? <Trophy /> : <Flag />}
+          {effectiveTone === 'win' ? <Trophy /> : <Flag />}
         </div>
         <p
           className={cn(
@@ -122,7 +125,13 @@ export const GameResultOverlay = ({
         >
           {t('common.gameResult')}
         </p>
-        <h2 className="text-xl font-bold text-foreground">{title}</h2>
+        <h2 className="text-xl font-bold text-foreground">{effectiveTitle}</h2>
+        {arcade?.result?.challenge ? <div className="game-challenge-result" data-cleared={arcade.result.challenge.cleared}>
+          <p>{formatMessage(locale, `play.trial.goal.${arcade.gameId}`, arcadeChallengeGoal(arcade.gameId, arcade.difficulty))}</p>
+          <strong>{formatMessage(locale, 'play.trialAttempts', { attempts: arcade.result.challenge.attempts, clears: arcade.result.challenge.clears })}</strong>
+          <p>{formatMessage(locale, 'play.bestTime', { seconds: (arcade.result.challenge.durationMs / 1000).toFixed(1) })}</p>
+          <small>{t('play.practiceOnly')}</small>
+        </div> : null}
         {(isNewBest ?? arcade?.result?.isNewBest) && (
           <div className="mt-3 rounded-xl border border-gold bg-gold/15 p-3 text-sm">
             <strong className="text-gold">{t('arcade.newBest')}</strong>
@@ -209,6 +218,7 @@ export const GameResultOverlay = ({
         {arcade?.result &&
           !arcade.result.settlementFailed &&
           !arcade.result.settlementPending && (
+            arcade.mode === 'challenge' ? null :
             <p className="mt-3 text-sm text-primary">
               +{arcade.result.coinsEarned} {t('wallet.coins')}
               {arcade.result.capReached && (
@@ -233,7 +243,7 @@ export const GameResultOverlay = ({
             disabled={arcade?.result?.settlementFailed}
             className="w-full"
           >
-            {restartLabel ?? t('common.playAgain')}
+            {restartLabel ?? t(arcade?.mode === 'challenge' ? 'play.trialNext' : 'common.playAgain')}
           </Button>
           {extraAction}
           <Button asChild variant="ghost" size="sm" className="w-full">

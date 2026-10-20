@@ -19,6 +19,8 @@ import { normalizeRankedState } from '@/lib/ranked';
 import { normalizeWalletState } from '@/lib/wallet';
 import { normalizeThemeChallengeState } from '../../shared/contracts/challenge';
 import { normalizeJourneyProgress } from '../../shared/contracts/journey';
+import { normalizeArcadeChallenges, ARCADE_CHALLENGE_STORAGE_KEY } from '../../shared/contracts/arcadeChallenge';
+
 import {
   createWeeklyTaskState,
   normalizeWeeklyTaskState,
@@ -26,6 +28,7 @@ import {
 import type { MemberSnapshot } from '../../shared/contracts/member';
 
 const KNOWN_KEYS = new Set([
+  ARCADE_CHALLENGE_STORAGE_KEY,
   'game-hub-player-profile',
   'game-hub-growth-state',
   'game-hub-player-characters',
@@ -88,6 +91,7 @@ export function createEmptySnapshot(memberId: string, nickname: string): MemberS
     weeklyTasks: createWeeklyTaskState(),
     themeChallenges: normalizeThemeChallengeState(null),
     journey: normalizeJourneyProgress(null),
+    arcadeChallenges: normalizeArcadeChallenges(null),
     checkin: createDefaultCheckinState(),
     ranked: normalizeRankedState(null),
     preferences: {
@@ -172,6 +176,7 @@ export function parseLegacyImport(
     optionalObject(data, 'game-hub-theme-challenges-v1'),
   );
   snapshot.journey = normalizeJourneyProgress(optionalObject(data, 'game-hub-journey-v1'));
+  snapshot.arcadeChallenges = normalizeArcadeChallenges(optionalObject(data, ARCADE_CHALLENGE_STORAGE_KEY));
   if (
     snapshot.journey.stages['tsubaki-finale']?.completed &&
     !snapshot.characters.unlockedCharacterIds.includes('tsubaki')

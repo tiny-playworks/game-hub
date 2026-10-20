@@ -4,6 +4,7 @@ import { CharacterPortraitSlot } from '@/components/characters/CharacterPortrait
 import { CosmeticEffect } from '@/components/cosmetics/CosmeticEffect';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useCosmetics } from '@/hooks/useCosmetics';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { getCharacterById } from '@/lib/playerCharacters';
 import type { RiichiPlayerSettings } from '@/lib/playerProfile';
 import { cn } from '@/lib/utils';
@@ -17,18 +18,19 @@ export function CharacterCutIn({
 }) {
   const { t } = useLocale();
   const { equipped } = useCosmetics();
+  const reducedMotion = useReducedMotion();
   const moment = useRiichiStore((state) => state.cutIns[0]);
   const finish = useRiichiStore((state) => state.finishCutIn);
   const clear = useRiichiStore((state) => state.clearCutIns);
   useEffect(() => {
     if (!moment) return;
-    if (mode === 'off') {
+    if (mode === 'off' || reducedMotion) {
       clear();
       return;
     }
     const timer = window.setTimeout(
       () => finish(moment.id),
-      CUT_IN_DURATION_MS,
+      mode === 'simple' ? 350 : CUT_IN_DURATION_MS,
     );
     const skip = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
@@ -40,8 +42,8 @@ export function CharacterCutIn({
       window.clearTimeout(timer);
       document.removeEventListener('keydown', skip);
     };
-  }, [moment, mode, finish, clear]);
-  if (!moment || mode === 'off' || typeof document === 'undefined') return null;
+  }, [moment, mode, reducedMotion, finish, clear]);
+  if (!moment || mode === 'off' || reducedMotion || typeof document === 'undefined') return null;
   const character = getCharacterById(moment.characterId);
   return createPortal(
     <button

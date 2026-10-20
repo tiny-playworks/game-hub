@@ -42,6 +42,8 @@ const GameShengji = () => {
   const { difficulty, paused, finish, newRound, start } = arcade;
   const [state, setState] = useState<ShengjiState>(createInitialState);
   const [holding, setHolding] = useState(false);
+  const [teamLevels, setTeamLevels] = useState<[number, number]>([0, 0]);
+  const levelLabels = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
   const myHand = state.hands[0];
   const validPlays = useMemo(() => getValidPlays(state, 0), [state]);
@@ -69,6 +71,7 @@ const GameShengji = () => {
     newRound();
     start();
     setState(createInitialState());
+    setTeamLevels([0, 0]);
     setHolding(false);
   }, [newRound, start]);
 
@@ -116,6 +119,19 @@ const GameShengji = () => {
   const iAmDealerTeam = myTeam === dealerTeam;
   /** 我方是庄家队时要守住 40 分，是闲家队时要攒到 40 分 */
   const iWon = iAmDealerTeam ? !state.defenderUpgrade : state.defenderUpgrade;
+  const levelsEarned = state.defenderUpgrade ? Math.max(1, Math.floor((state.teamScores[1] - 40) / 40)) : state.teamScores[1] === 0 ? 3 : state.teamScores[1] < 20 ? 2 : 1;
+  const nextDeal = () => {
+    const winnerTeam = (state.defenderUpgrade ? 1 - dealerTeam : dealerTeam) as 0 | 1;
+    const levels: [number, number] = [...teamLevels];
+    levels[winnerTeam] = Math.min(12, levels[winnerTeam] + levelsEarned);
+    const dealer = state.defenderUpgrade ? (state.dealer + 1) % 4 : partner(state.dealer);
+    const rank = levels[winnerTeam] === 0 ? 12 : levels[winnerTeam] - 1;
+    newRound();
+    setTeamLevels(levels);
+    setHolding(false);
+    setState(createInitialState({ dealer, levelRank: rank }));
+    start();
+  };
 
   const statusText = state.roundOver
     ? state.defenderUpgrade
@@ -166,6 +182,7 @@ const GameShengji = () => {
       subtitle={t('game.shengji.rules')}
       status={
         <>
+          <StatPill label={t('play.level')} value={`${levelLabels[teamLevels[0]]} / ${levelLabels[teamLevels[1]]}`} />
           <StatPill label={t('game.shengji.trump')} value={trumpLabel} />
           <StatPill
             label={t('game.shengji.defenderPoints')}
@@ -339,7 +356,8 @@ const GameShengji = () => {
               )}
             </div>
           }
-          onRestart={restart}
+          onRestart={nextDeal}
+          restartLabel={t('play.nextDeal')}
         />
       </div>
     </GameShell>

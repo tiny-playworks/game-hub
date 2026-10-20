@@ -64,6 +64,7 @@ export default function FamilyRoom() {
     removeAi,
     setReady,
     startGame,
+    rematch,
     discardTile,
     declareRiichi,
     declareTsumo,
@@ -81,6 +82,7 @@ export default function FamilyRoom() {
 
   // 倒计时剩余秒数状态
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
+  const [rematching, setRematching] = useState(false);
 
   useEffect(() => {
     if (!view?.serverDeadline) {
@@ -838,12 +840,18 @@ export default function FamilyRoom() {
 
             <div className="flex items-center justify-end gap-2 pt-2">
               {isFinished ? (
+                <div className="w-full space-y-3">
+                <p className="text-xs text-white/60">{t('play.rematchHint')}</p>
+                {error ? <p role="alert" className="text-xs text-amber-300">{error}</p> : null}
+                <div className="family-rematch-actions">
+                {isHost ? <Button disabled={rematching || !connected} onClick={async () => { setRematching(true); try { await rematch(); } finally { setRematching(false); } }}>{t(rematching ? 'play.saving' : 'play.rematch')}</Button> : null}
                 <Button
                   onClick={() => navigate('/family')}
                   className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
                 >
                   {t('family.room.return')}
                 </Button>
+                </div></div>
               ) : isSpectator ? (
                 <p className="w-full text-center text-sm text-white/70">{t('family.room.waitNext')}</p>
               ) : (

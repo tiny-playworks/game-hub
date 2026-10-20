@@ -1,4 +1,5 @@
 import type { MemberSnapshot } from '../../../shared/contracts/member';
+import { normalizeArcadeChallenges, ARCADE_CHALLENGE_STORAGE_KEY } from '../../../shared/contracts/arcadeChallenge';
 import { normalizeThemeChallengeState } from '../../../shared/contracts/challenge';
 import { normalizeJourneyProgress } from '../../../shared/contracts/journey';
 import { JOURNEY_PROGRESS_CHANGED_EVENT, JOURNEY_PROGRESS_STORAGE_KEY } from '@/lib/journeyProgress';
@@ -60,6 +61,7 @@ export function createStorageFromSnapshot(snapshot: MemberSnapshot): MemoryStora
     'game-hub-theme-challenges-v1',
     JSON.stringify(normalizeThemeChallengeState(snapshot.themeChallenges)),
   );
+  storage.setItem(ARCADE_CHALLENGE_STORAGE_KEY, JSON.stringify(normalizeArcadeChallenges(snapshot.arcadeChallenges)));
   storage.setItem('game-hub-checkin-state', JSON.stringify(snapshot.checkin));
   storage.setItem(JOURNEY_PROGRESS_STORAGE_KEY, JSON.stringify(normalizeJourneyProgress(snapshot.journey)));
   storage.setItem('game-hub-ranked-v1', JSON.stringify(snapshot.ranked));
@@ -77,7 +79,7 @@ export function createStorageFromSnapshot(snapshot: MemberSnapshot): MemoryStora
       if (
         typeof value === 'string' &&
         key !== 'game-hub-theme-challenges-v1' &&
-        key !== JOURNEY_PROGRESS_STORAGE_KEY
+        key !== JOURNEY_PROGRESS_STORAGE_KEY && key !== ARCADE_CHALLENGE_STORAGE_KEY
       ) {
         storage.setItem(key, value);
       }

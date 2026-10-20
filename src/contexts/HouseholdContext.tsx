@@ -375,6 +375,7 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
     }
     const current = snapshotRef.current;
     if (!current) throw new Error('Not logged in');
+    if (event.challengeId) throw new Error('Challenge result requires an online connection');
     markOffline();
     if (event.type === 'finish') {
       const startedAt = arcadeRoundStarts.current.get(event.roundId);

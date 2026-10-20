@@ -4,9 +4,11 @@ import {
   normalizeJourneyProgress,
   isJourneyAttemptId,
   isJourneyStageId,
+  isJourneyVariation,
   type JourneyAttemptInput,
   type JourneyEvaluation,
   type JourneyStageId,
+  type JourneyVariation,
 } from '../../shared/contracts/journey';
 export { JOURNEY_STAGE_IDS, normalizeJourneyProgress };
 import {
@@ -174,6 +176,26 @@ export const JOURNEY_STAGES: readonly JourneyStageDefinition[] = [
 const AI_LEVELS: RiichiSeatAiLevels = ['standard', 'standard', 'standard', 'standard'];
 const MAX_JOURNEY_EVENTS = 512;
 
+/** Authored legal openings, version 1; the original ten stages remain unchanged. */
+const VARIATION_OPENINGS: Record<JourneyStageId, readonly { seed: number; prefixEventCount: number }[]> = {
+  'aoi-balance': [{ seed: 104, prefixEventCount: 8 }, { seed: 105, prefixEventCount: 8 }],
+  'rin-tempo': [{ seed: 133, prefixEventCount: 29 }, { seed: 134, prefixEventCount: 9 }],
+  'mio-defense': [{ seed: 103, prefixEventCount: 46 }, { seed: 104, prefixEventCount: 63 }],
+  'koharu-call': [{ seed: 141, prefixEventCount: 13 }, { seed: 143, prefixEventCount: 41 }],
+  'chitose-closed': [{ seed: 156, prefixEventCount: 12 }, { seed: 157, prefixEventCount: 9 }],
+  'sora-value': [{ seed: 162, prefixEventCount: 13 }, { seed: 163, prefixEventCount: 22 }],
+  'aya-riichi': [{ seed: 177, prefixEventCount: 35 }, { seed: 181, prefixEventCount: 19 }],
+  'mahiru-flush': [{ seed: 185, prefixEventCount: 22 }, { seed: 186, prefixEventCount: 29 }],
+  'yoru-reading': [{ seed: 191, prefixEventCount: 33 }, { seed: 192, prefixEventCount: 51 }],
+  'tsubaki-finale': [{ seed: 208, prefixEventCount: 16 }, { seed: 209, prefixEventCount: 42 }],
+};
+
+export function getJourneyOpening(stageId: JourneyStageId, variation?: JourneyVariation): JourneyStageDefinition {
+  const stage = getJourneyStage(stageId);
+  if (!stage || (variation !== undefined && !isJourneyVariation(variation))) throw new Error('Unknown journey opening');
+  return variation ? { ...stage, ...VARIATION_OPENINGS[stageId][Number(variation) - 1] } : stage;
+}
+
 export function getJourneyStage(id: unknown): JourneyStageDefinition | null {
   return JOURNEY_STAGES.find((stage) => stage.id === id) ?? null;
 }
@@ -246,9 +268,8 @@ function generateStageStart(stage: JourneyStageDefinition): RiichiMatchState {
 }
 
 /** Build a fresh copy so retries cannot mutate the shared deterministic preset. */
-export function createJourneyMatch(stageId: JourneyStageId): RiichiMatchState {
-  const stage = getJourneyStage(stageId);
-  if (!stage) throw new Error('Unknown journey stage');
+export function createJourneyMatch(stageId: JourneyStageId, variation?: JourneyVariation): RiichiMatchState {
+  const stage = getJourneyOpening(stageId, variation);
   return structuredClone(generateStageStart(stage));
 }
 
@@ -267,6 +288,7 @@ function inputIsValid(input: JourneyAttemptInput): boolean {
     typeof input === 'object' &&
     isJourneyAttemptId(input.attemptId) &&
     isJourneyStageId(input.stageId) &&
+    (input.variation === undefined || isJourneyVariation(input.variation)) &&
     input.contentVersion === JOURNEY_CONTENT_VERSION &&
     isReplayFile(input.replay);
 }
@@ -318,8 +340,7 @@ export function resolveFailureReasonKey(
 /** Replays and verifies the fixed opening, every deterministic AI action, and the goal. */
 export function validateJourneyAttempt(input: JourneyAttemptInput): JourneyEvaluation {
   if (!inputIsValid(input)) throw new Error('Invalid journey attempt');
-  const stage = getJourneyStage(input.stageId);
-  if (!stage) throw new Error('Invalid journey stage');
+  const stage = getJourneyOpening(input.stageId, input.variation);
   const file: RiichiReplayFile = input.replay;
   if (
     file.ranked !== undefined ||

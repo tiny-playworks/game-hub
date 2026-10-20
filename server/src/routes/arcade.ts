@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { FastifyInstance } from 'fastify';
 import { games } from '@/data/games';
+import { ARCADE_CHALLENGE_ID, recordArcadeChallenge } from '../../../shared/contracts/arcadeChallenge';
 import { normalizeArcadeDifficulty } from '@/lib/arcade';
 import { emitGameEvent } from '@/lib/gameEvents';
 import { gameStore } from '@/store/gameStoreCore';
@@ -15,6 +16,7 @@ import { exceedsArcadeScoreCap } from '../services/arcadeLimits';
 import { recordRankedResult, statsFor } from '../services/leaderboard';
 
 type StoredRound = {
+  challenge_id: string | null;
   game_id: string;
   difficulty: string;
   started_at: number;
@@ -162,6 +164,7 @@ function parseEvent(body: unknown): { baseRevision: number; event: ArcadeMemberE
   const gameId = value.gameId;
   const difficulty = value.difficulty;
   if ((value.type !== 'start' && value.type !== 'finish') ||
+    (value.challengeId !== undefined && value.challengeId !== ARCADE_CHALLENGE_ID) ||
     typeof value.roundId !== 'string' ||
     !/^arcade:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value.roundId) ||
     typeof gameId !== 'string' ||
@@ -193,6 +196,13 @@ function settle(snapshot: ReturnType<typeof readSnapshot>, event: ArcadeMemberEv
   snapshot: ReturnType<typeof readSnapshot>;
   result: ArcadeMemberResult;
 } {
+  if (event.challengeId) {
+    if (event.type === 'start') return { snapshot, result: { coinsEarned: 0, capReached: false } };
+    const { state, result } = recordArcadeChallenge(snapshot.arcadeChallenges, event.roundId, {
+      gameId: event.gameId, difficulty: event.difficulty, outcome: event.outcome!, score: event.score!, meta: event.meta,
+    }, Date.now());
+    return { snapshot: { ...snapshot, arcadeChallenges: state }, result: { coinsEarned: 0, capReached: false, challenge: result } };
+  }
   const updated = runSnapshotMutation(snapshot, () => {
     gameStore.setState({
       stats: snapshot.arcade.stats,
@@ -231,10 +241,10 @@ export function registerArcadeRoutes(app: FastifyInstance, db: DatabaseSync): vo
       if (!current) throw apiError(401, 'UNAUTHORIZED');
       const snapshot = readSnapshot(current);
       const existing = db.prepare(
-        'SELECT game_id, difficulty, started_at, finished_at, result_json FROM arcade_rounds WHERE member_id = ? AND round_id = ?',
+        'SELECT game_id, difficulty, challenge_id, started_at, finished_at, result_json FROM arcade_rounds WHERE member_id = ? AND round_id = ?',
       ).get(member.id, event.roundId) as StoredRound | undefined;
       if (existing && (existing.game_id !== event.gameId ||
-        existing.difficulty !== event.difficulty))
+        existing.difficulty !== event.difficulty || existing.challenge_id !== (event.challengeId ?? null)))
         throw apiError(409, 'ROUND_CONFLICT');
       if (event.type === 'start' && existing)
         return { snapshot, result: { coinsEarned: 0, capReached: false } };
@@ -251,14 +261,14 @@ export function registerArcadeRoutes(app: FastifyInstance, db: DatabaseSync): vo
         (now < existing.started_at - 5_000 || now - existing.started_at > MAX_ROUND_AGE_MS)
       )
         throw apiError(400, 'BAD_REQUEST');
-      const updated = settle(snapshot, event);
+      const updated = settle(snapshot, event.type === 'finish' && existing ? { ...event, meta: { ...event.meta, durationMs: now - existing.started_at } } : event);
       const next = saveSnapshot(db, current, updated.snapshot);
       if (event.type === 'start') {
         db.prepare(
-          'INSERT INTO arcade_rounds(member_id, round_id, game_id, difficulty, started_at) VALUES (?, ?, ?, ?, ?)',
-        ).run(member.id, event.roundId, event.gameId, event.difficulty, now);
+          'INSERT INTO arcade_rounds(member_id, round_id, game_id, difficulty, challenge_id, started_at) VALUES (?, ?, ?, ?, ?, ?)',
+        ).run(member.id, event.roundId, event.gameId, event.difficulty, event.challengeId ?? null, now);
       } else {
-        const standing = recordRankedResult(db, {
+        const standing = event.challengeId ? null : recordRankedResult(db, {
           memberId: member.id,
           roundId: event.roundId,
           gameId: event.gameId,

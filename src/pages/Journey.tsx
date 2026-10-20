@@ -11,7 +11,7 @@ import {
   getCharacterById,
   markCharactersEncountered,
 } from '@/lib/playerCharacters';
-import { JOURNEY_CONTENT_VERSION } from '../../shared/contracts/journey';
+import { JOURNEY_CONTENT_VERSION, isJourneyVariation, type JourneyVariation } from '../../shared/contracts/journey';
 import { createUuid } from '@/lib/uuid';
 import {
   getJourneyProgress,
@@ -21,12 +21,14 @@ import {
 } from '@/lib/journeyProgress';
 import {
   createJourneyMatch,
+  getJourneyOpening,
   getJourneyStage,
   JOURNEY_STAGES,
 } from '@/lib/riichiJourney';
 import { preloadRiichiRules } from '@/lib/riichiRules';
 import { toReplayFile, type RiichiMatchState } from '@/pages/mahjong/japanese/engine/match';
 import { cn } from '@/lib/utils';
+import { MatchReviewDialog } from '@/pages/mahjong/japanese/components/MatchReview';
 
 export default function Journey() {
   const { t, locale } = useLocale();
@@ -34,6 +36,10 @@ export default function Journey() {
   const [searchParams, setSearchParams] = useSearchParams();
   const stageParam = searchParams.get('stage');
   const selectedStage = getJourneyStage(stageParam);
+  const rawVariation = searchParams.get('variation');
+  const variation = isJourneyVariation(rawVariation) ? rawVariation : undefined;
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [finishedMatch, setFinishedMatch] = useState<RiichiMatchState | null>(null);
   const [rulesReady, setRulesReady] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [guestProgress, setGuestProgress] = useState(getJourneyProgress);
@@ -41,6 +47,7 @@ export default function Journey() {
   const [game, setGame] = useState<{
     stageId: string;
     attemptKey: number;
+    variation?: JourneyVariation;
     match: RiichiMatchState;
   } | null>(null);
   const [evaluation, setEvaluation] = useState<{
@@ -63,6 +70,7 @@ export default function Journey() {
     ? memberProgress
     : guestProgress;
   const isMember = household.mode !== 'guest-local';
+  const variationUnlocked = !variation || Boolean(selectedStage && progress?.stages[selectedStage.id]?.completed);
 
   useEffect(() => {
     let active = true;
@@ -79,7 +87,7 @@ export default function Journey() {
   }, []);
 
   useEffect(() => {
-    if (!selectedStage || !rulesReady) {
+    if (!selectedStage || !rulesReady || !variationUnlocked) {
       setGame(null);
       return;
     }
@@ -87,24 +95,27 @@ export default function Journey() {
       setGame({
         stageId: selectedStage.id,
         attemptKey,
-        match: createJourneyMatch(selectedStage.id),
+        variation,
+        match: createJourneyMatch(selectedStage.id, variation),
       });
       if (!isMember) markCharactersEncountered(selectedStage.opponents);
       setEvaluation(null);
       setPendingInput(null);
       setSubmitError(false);
+      setFinishedMatch(null);
+      setReviewOpen(false);
     } catch {
       setGame(null);
       setLoadFailed(true);
     }
-  }, [selectedStage, attemptKey, rulesReady]);
+  }, [selectedStage, attemptKey, rulesReady, variation, variationUnlocked]);
 
-  const openStage = useCallback((stageId: string | null) => {
+  const openStage = useCallback((stageId: string | null, nextVariation?: JourneyVariation) => {
     setEvaluation(null);
     setPendingInput(null);
     setSubmitError(false);
     setAttemptKey(0);
-    if (stageId) setSearchParams({ stage: stageId });
+    if (stageId) setSearchParams({ stage: stageId, ...(nextVariation ? { variation: nextVariation } : {}) });
     else setSearchParams({});
   }, [setSearchParams]);
 
@@ -135,10 +146,12 @@ export default function Journey() {
       stageId: selectedStage.id,
       contentVersion: JOURNEY_CONTENT_VERSION,
       replay: toReplayFile(match),
+      ...(variation ? { variation } : {}),
     };
+    setFinishedMatch(match);
     setPendingInput(input);
     void saveAttempt(input);
-  }, [selectedStage, pendingInput, evaluation, submitting, saveAttempt]);
+  }, [selectedStage, variation, pendingInput, evaluation, submitting, saveAttempt]);
 
   const retryRound = useCallback(() => {
     setEvaluation(null);
@@ -147,10 +160,10 @@ export default function Journey() {
     setAttemptKey((key) => key + 1);
   }, []);
 
-  const selectedStageProgress = selectedStage ? progress?.stages[selectedStage.id] : null;
+  const selectedStageProgress = selectedStage ? (variation ? progress?.variations?.[`${selectedStage.id}:${variation}`] : progress?.stages[selectedStage.id]) : null;
   const nextStage = selectedStage?.nextStageId ? getJourneyStage(selectedStage.nextStageId) : null;
   const gameReady = !!selectedStage && game?.stageId === selectedStage.id &&
-    game.attemptKey === attemptKey;
+    game.attemptKey === attemptKey && game.variation === variation;
   if (household.isLoading) {
     return <main className="container flex min-h-[60vh] items-center justify-center px-4 text-muted-foreground">{t('journey.loading')}</main>;
   }
@@ -178,6 +191,15 @@ export default function Journey() {
             </CardContent>
           </Card>
         ) : null}
+
+        <div className="journey-season-progress">
+          <span>{formatMessage(locale, 'play.journeyProgress', {
+            completed: Object.values(progress?.stages ?? {}).filter((item) => item.completed).length,
+            total: JOURNEY_STAGES.length,
+            variations: Object.values(progress?.variations ?? {}).filter((item) => item.completed).length,
+          })}</span>
+          <progress max={JOURNEY_STAGES.length} value={Object.values(progress?.stages ?? {}).filter((item) => item.completed).length} aria-label={t('play.mainStage')} />
+        </div>
 
         {!selectedStage ? (
           <section className="grid gap-4 md:grid-cols-3" aria-label={t('journey.choose')}>
@@ -222,6 +244,16 @@ export default function Journey() {
                     <Button onClick={() => openStage(stage.id)} className="w-full rounded-xl">
                       {t('journey.start')}<ArrowRight className="ml-1.5 size-4" />
                     </Button>
+                    {item?.completed ? (
+                      <div className="flex gap-2">
+                        {(['1', '2'] as const).map((value) => (
+                          <Button key={value} variant="outline" size="sm" className="flex-1" onClick={() => openStage(stage.id, value)}>
+                            {progress?.variations?.[`${stage.id}:${value}`]?.completed ? <CheckCircle2 className="size-3.5" /> : <Sparkles className="size-3.5" />}
+                            {formatMessage(locale, 'play.variation', { number: value })}
+                          </Button>
+                        ))}
+                      </div>
+                    ) : <p className="text-xs text-muted-foreground">{t('play.variationLocked')}</p>}
                   </CardContent>
                 </Card>
               );
@@ -233,6 +265,7 @@ export default function Journey() {
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">{t(selectedStage.venueKey)}</p>
                 <h2 className="mt-1 text-xl font-semibold">{t(selectedStage.titleKey)}</h2>
+                {variation ? <p className="mt-2 font-semibold text-primary">{formatMessage(locale, 'play.variation', { number: variation })} · {t('play.variationHint')}</p> : null}
                 <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">{t(selectedStage.goalKey)}</p>
                 <p className="mt-1.5 text-xs italic text-muted-foreground">{t(selectedStage.introKey)}</p>
               </div>
@@ -244,9 +277,10 @@ export default function Journey() {
               </div>
             </section>
 
+            {!variationUnlocked ? <Card><CardContent className="p-6"><p>{t('play.variationLocked')}</p><Button className="mt-3" onClick={() => openStage(selectedStage.id)}>{t('play.mainStage')}</Button></CardContent></Card> : null}
             {gameReady && !evaluation ? (
               <RiichiPracticeTable
-                key={`${selectedStage.id}-${attemptKey}`}
+                key={`${selectedStage.id}-${variation ?? 'main'}-${attemptKey}`}
                 initialMatch={game.match}
                 title={t(selectedStage.titleKey)}
                 objective={t(selectedStage.goalKey)}
@@ -255,7 +289,7 @@ export default function Journey() {
               />
             ) : null}
 
-            {selectedStage && !gameReady && !loadFailed ? (
+            {selectedStage && variationUnlocked && !gameReady && !loadFailed ? (
               <Card><CardContent className="flex min-h-72 items-center justify-center gap-3 text-sm text-muted-foreground"><RotateCcw className="size-4 animate-spin" />{t('journey.loading')}</CardContent></Card>
             ) : null}
 
@@ -310,6 +344,8 @@ export default function Journey() {
                   </dl>
                   <div className="flex flex-wrap gap-2">
                     <Button onClick={retryRound}><RotateCcw className="mr-1.5 size-4" />{t('journey.retry')}</Button>
+                    {finishedMatch ? <Button variant="secondary" onClick={() => setReviewOpen(true)}>{t('play.journeyReview')}</Button> : null}
+                    {evaluation.completed ? <Button variant="outline" onClick={() => openStage(selectedStage.id, variation === '1' ? '2' : '1')}><Sparkles className="mr-1.5 size-4" />{t('play.nextVariation')}</Button> : null}
                     {evaluation.completed && nextStage ? (
                       <Button variant="secondary" onClick={() => openStage(nextStage.id)}>
                         {formatMessage(locale, 'journey.nextStage', { title: t(nextStage.titleKey) })}
@@ -324,6 +360,7 @@ export default function Journey() {
                 </CardContent>
               </Card>
             ) : null}
+            {reviewOpen && finishedMatch ? <MatchReviewDialog file={toReplayFile(finishedMatch)} practiceRound practiceStartIndex={getJourneyOpening(selectedStage.id, variation).prefixEventCount} onClose={() => setReviewOpen(false)} /> : null}
 
             {selectedStageProgress?.completed && !evaluation ? (
               <p className="text-center text-xs text-muted-foreground">{t('journey.completed')} · {selectedStageProgress.attempts}</p>

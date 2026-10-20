@@ -35,6 +35,8 @@ import { updatePlayerProfile } from '@/lib/playerProfile';
 import { arcadeGuides } from '@/lib/arcadeGuide';
 import { cn } from '@/lib/utils';
 import { PersonalBest } from './PersonalBest';
+import { ArcadeChallengePanel } from './ArcadeChallengePanel';
+import { stopSoundEffects, unlockAudioContext } from '@/lib/speech';
 import { FamilyStandingPill } from './FamilyStandingPill';
 import { SegmentedControl } from './SegmentedControl';
 import './game-shell.css';
@@ -83,9 +85,7 @@ export const GameShell = ({
   const arcade = useOptionalArcade();
   const profile = usePlayerProfile();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [guideExpanded, setGuideExpanded] = useState(
-    () => window.matchMedia('(min-width: 1024px)').matches,
-  );
+  const [guideExpanded, setGuideExpanded] = useState(false);
   const beforeSettings = useRef(false);
   const root = useRef<HTMLDivElement>(null);
   const id = gameId ?? arcade?.gameId;
@@ -100,11 +100,8 @@ export const GameShell = ({
   const restart = onRestart ?? arcade?.restart;
   const guide = id ? arcadeGuides[id] : undefined;
   useEffect(() => {
-    const media = window.matchMedia('(min-width: 1024px)');
-    const update = () => setGuideExpanded(media.matches);
-    media.addEventListener('change', update);
-    return () => media.removeEventListener('change', update);
-  }, []);
+    if (profile.audioVolumes.sfx <= 0) stopSoundEffects();
+  }, [profile.audioVolumes.sfx]);
   const toggleFullscreen = () => {
     if (document.fullscreenElement) void document.exitFullscreen();
     else void root.current?.requestFullscreen?.().catch(() => {});
@@ -166,7 +163,10 @@ export const GameShell = ({
     <div
       ref={root}
       data-game-shell={id}
-      className={cn('game-shell-ambient game-shell min-h-[100dvh]', className)}
+      data-presentation={profile.riichiSettings.presentation}
+      onPointerDownCapture={unlockAudioContext}
+      onKeyDownCapture={unlockAudioContext}
+      className={cn('game-shell-ambient game-shell min-h-dvh', className)}
     >
       <header className="game-shell-header sticky top-0 z-30">
         <div className="game-shell-topbar">
@@ -237,12 +237,13 @@ export const GameShell = ({
           <div className="game-session-bar">
             <div className="game-scoreboard">
               {status}
-              {id && (
+              {id && arcade?.mode !== 'challenge' && (
                 <PersonalBest gameId={id} difficulty={arcade?.difficulty} />
               )}
             </div>
             {toolbar && <div className="game-session-actions">{toolbar}</div>}
           </div>
+          {arcade ? <ArcadeChallengePanel /> : null}
           <div className="game-stage">{children}</div>
           {footer && <div className="game-shell-footer">{footer}</div>}
         </section>
@@ -276,7 +277,7 @@ export const GameShell = ({
                 </h3>
                 <p>{t(`arcade.tip.${guide.tip}`)}</p>
                 <p className="game-guide-shortcuts">{t('arcade.controls')}</p>
-                {id && (
+                {id && arcade?.mode !== 'challenge' && (
                   <FamilyStandingPill
                     gameId={id}
                     difficulty={arcade?.difficulty}
@@ -313,6 +314,28 @@ export const GameShell = ({
         <DialogContent className="paper-texture rounded-3xl">
           <DialogTitle>{t('arcade.settings')}</DialogTitle>
           <DialogDescription>{t('arcade.difficultyRestart')}</DialogDescription>
+          <p className="text-xs text-muted-foreground">{t('play.trialHint')}</p>
+          <label className="flex items-center justify-between gap-3 text-sm">
+            <span>{t('riichi.settings.presentation')}</span>
+            <select
+              value={profile.riichiSettings.presentation}
+              onChange={(event) =>
+                updatePlayerProfile({
+                  riichiSettings: {
+                    ...profile.riichiSettings,
+                    presentation: event.target.value as
+                      'full' | 'simple' | 'off',
+                  },
+                })
+              }
+            >
+              {(['full', 'simple', 'off'] as const).map((mode) => (
+                <option key={mode} value={mode}>
+                  {t(`riichi.settings.presentation.${mode}`)}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="flex items-center justify-between gap-3 text-sm">
             <span>{t('arcade.sound')}</span>
             <input

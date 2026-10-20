@@ -128,7 +128,7 @@ export function stepShooter(
     .map((b) => ({ ...b, y: b.y + SHOOTER.bulletSpeed * dt }))
     .filter((b) => b.y > -SHOOTER.bulletH);
 
-  const wave = Math.min(8, Math.floor(score / 100) + 1);
+  const wave = Math.floor(score / 100) + 1;
   const spawnInterval = Math.max(
     25,
     (difficulty === 'easy'
@@ -141,7 +141,7 @@ export function stepShooter(
   const enemySpeed =
     SHOOTER.enemySpeed *
     (difficulty === 'easy' ? 0.7 : difficulty === 'hard' ? 1.45 : 1) *
-    (1 + (wave - 1) * 0.07);
+    (1 + Math.min(wave - 1, 14) * 0.07);
   spawnCounter += dt;
   if (spawnCounter >= spawnInterval) {
     spawnCounter -= spawnInterval;

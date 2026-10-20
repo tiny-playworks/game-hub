@@ -12,6 +12,7 @@ import type { ArcadeStoredState } from '../../src/lib/arcadeStats';
 import type { LeaderboardStanding } from './leaderboard';
 import type { ThemeChallengeState } from './challenge';
 import type { JourneyProgressState } from './journey';
+import type { ArcadeChallengeState, ChallengeResult } from './arcadeChallenge';
 
 export type HouseholdMode = 'guest-local' | 'member-online' | 'member-offline';
 
@@ -29,6 +30,7 @@ export interface ProgressActionResult {
 }
 
 export type ArcadeMemberEvent = {
+  challengeId?: 'focus-v1';
   type: 'start' | 'finish';
   roundId: string;
   gameId: string;
@@ -39,6 +41,7 @@ export type ArcadeMemberEvent = {
 };
 
 export interface ArcadeMemberResult {
+  challenge?: ChallengeResult;
   coinsEarned: number;
   capReached: boolean;
   pending?: boolean;
@@ -75,6 +78,7 @@ export interface MemberSnapshot {
   weeklyTasks: WeeklyTaskState;
   themeChallenges: ThemeChallengeState;
   journey: JourneyProgressState;
+  arcadeChallenges?: ArcadeChallengeState;
   checkin: CheckinState;
   ranked: RankedState;
   preferences: {

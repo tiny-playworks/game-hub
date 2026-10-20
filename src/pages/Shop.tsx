@@ -8,7 +8,7 @@ import {
   Square,
   Zap,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CosmeticPreview } from '@/components/cosmetics/CosmeticPreview';
 import { Button } from '@/components/ui/button';
@@ -78,19 +78,24 @@ export default function Shop() {
   const [confirm, setConfirm] = useState(false);
   const [acquired, setAcquired] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [busy, setBusy] = useState<'equip' | 'purchase' | null>(null);
+  const mutationPending = useRef(false);
   const selected =
     COSMETIC_DEFS.find(({ id }) => id === selectedId) ?? COSMETIC_DEFS[0];
   const owned = cosmetics.owned.includes(selected.id);
   const equipped = cosmetics.equipped[selected.category] === selected.id;
   const price = selected.price;
   const equip = async (itemId: string) => {
+    if (mutationPending.current) return;
+    mutationPending.current = true;
+    setBusy('equip');
     try {
       if (mode !== 'guest-local') await onlineEquipCosmetic(itemId);
       else equipCosmetic(itemId);
       setError('');
     } catch (err) {
       setError(err instanceof HouseholdApiError ? t(err.messageKey) : t('shop.failed'));
-    }
+    } finally { mutationPending.current = false; setBusy(null); }
   };
   return (
     <div className="venue-shop lobby-page min-h-screen bg-background text-foreground">
@@ -228,13 +233,13 @@ export default function Shop() {
             </p>
             <div className="mt-5 border-t pt-4">
               {owned ? (
-                <Button className="w-full" disabled={equipped} onClick={() => void equip(selected.id)}>
+                <Button className="w-full" disabled={equipped || !!busy} aria-busy={busy === 'equip'} onClick={() => void equip(selected.id)}>
                   {equipped ? (
                     <Check className="size-4" />
                   ) : (
                     <Sparkles className="size-4" />
                   )}
-                  {t(equipped ? 'shop.equipped' : 'shop.equip')}
+                  {t(busy === 'equip' ? 'play.saving' : equipped ? 'shop.equipped' : 'shop.equip')}
                 </Button>
               ) : price === null ? (
                 <p className="flex items-center gap-2 rounded-xl bg-muted p-3 text-sm">
@@ -245,7 +250,7 @@ export default function Shop() {
                 <>
                   <Button
                     className="w-full"
-                    disabled={coins < price}
+                    disabled={coins < price || !!busy}
                     onClick={() => {
                       setConfirm(true);
                       setError('');
@@ -270,7 +275,7 @@ export default function Shop() {
           </aside>
         </div>
       </main>
-      <Dialog open={confirm} onOpenChange={setConfirm}>
+      <Dialog open={confirm} onOpenChange={(open) => { if (!busy) setConfirm(open); }}>
         <DialogContent className="shop-dialog paper-texture rounded-3xl">
           <DialogTitle>{t('shop.confirmTitle')}</DialogTitle>
           <DialogDescription>
@@ -280,36 +285,33 @@ export default function Shop() {
               balance: coins - (price ?? 0),
             })}
           </DialogDescription>
+          {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirm(false)}>
+            <Button variant="outline" disabled={!!busy} onClick={() => setConfirm(false)}>
               {t('save.cancel')}
             </Button>
-            <Button
-              onClick={async () => {
-                setConfirm(false);
-                if (mode !== 'guest-local') {
-                  try {
-                    await onlinePurchaseCosmetic(selected.id);
-                    setAcquired(selected.id);
-                    setError('');
-                  } catch (err) {
-                    if (err instanceof HouseholdApiError) {
-                      setError(t(err.messageKey));
-                    } else {
-                      setError(t('shop.failed'));
-                    }
+            <Button disabled={!!busy} aria-busy={busy === 'purchase'} onClick={async () => {
+              if (mutationPending.current) return;
+              mutationPending.current = true;
+              setBusy('purchase');
+              setError('');
+              const itemId = selected.id;
+              try {
+                if (mode !== 'guest-local') await onlinePurchaseCosmetic(itemId);
+                else {
+                  const result = purchaseCosmetic(itemId);
+                  if (result !== 'purchased' && result !== 'owned') {
+                    setError(t(`shop.${result === 'locked' ? 'failed' : result}`));
+                    return;
                   }
-                } else {
-                  const result = purchaseCosmetic(selected.id);
-                  if (result === 'purchased') setAcquired(selected.id);
-                  else if (result !== 'owned')
-                    setError(
-                      t(`shop.${result === 'locked' ? 'failed' : result}`),
-                    );
                 }
-              }}
-            >
-              {t('shop.confirmBuy')}
+                setConfirm(false);
+                setAcquired(itemId);
+              } catch (err) {
+                setError(err instanceof HouseholdApiError ? t(err.messageKey) : t('shop.failed'));
+              } finally { mutationPending.current = false; setBusy(null); }
+            }}>
+              {t(busy === 'purchase' ? 'play.saving' : 'shop.confirmBuy')}
             </Button>
           </DialogFooter>
         </DialogContent>

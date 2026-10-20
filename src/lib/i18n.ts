@@ -1,4 +1,5 @@
 import { gameStorage } from '@/lib/storage';
+import { playMessages } from './playMessages';
 import { arcadeMessages } from './arcadeMessages';
 import { aoiMessages } from './aoiMessages';
 import { tsubakiMessages } from './tsubakiMessages';
@@ -4589,6 +4590,7 @@ const warnedMissingKeys = new Set<string>();
 
 export function getMessage(locale: Locale, key: string): string {
   const translated =
+    playMessages[locale]?.[key] ??
     gameRoomMessages[locale]?.[key] ??
     (leaderboardMessages[locale] as Record<string, string> | undefined)?.[key] ??
     curatedMessages[locale]?.[key] ??

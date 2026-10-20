@@ -42,7 +42,7 @@ const GameShooter = () => {
   const elapsed = useRef(0);
   const sparks = useRef<Spark[]>([]);
   const drag = useRef<number | null>(null);
-  const wave = Math.min(8, Math.floor(hud.score / 100) + 1);
+  const wave = Math.floor(hud.score / 100) + 1;
   const start = useCallback(() => {
     if (pausedRef.current || statusRef.current !== 'idle') return;
     statusRef.current = 'playing';

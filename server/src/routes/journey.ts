@@ -4,6 +4,7 @@ import type { FastifyInstance } from 'fastify';
 import {
   isJourneyAttemptId,
   isJourneyStageId,
+  isJourneyVariation,
   JOURNEY_CONTENT_VERSION,
   recordJourneyEvaluation,
   type JourneyAttemptInput,
@@ -21,9 +22,10 @@ function readAttempt(body: unknown): { baseRevision: number; input: JourneyAttem
   if (!Number.isSafeInteger(value.baseRevision) || Number(value.baseRevision) < 0 ||
     !isJourneyAttemptId(value.attemptId) || !isJourneyStageId(value.stageId) ||
     value.contentVersion !== JOURNEY_CONTENT_VERSION ||
+    (value.variation !== undefined && !isJourneyVariation(value.variation)) ||
     !value.replay || typeof value.replay !== 'object' || Array.isArray(value.replay) ||
     Object.keys(value).some((key) =>
-      !['baseRevision', 'attemptId', 'stageId', 'contentVersion', 'replay'].includes(key)))
+      !['baseRevision', 'attemptId', 'stageId', 'contentVersion', 'replay', 'variation'].includes(key)))
     throw apiError(400, 'BAD_REQUEST');
   return {
     baseRevision: value.baseRevision as number,
@@ -32,6 +34,7 @@ function readAttempt(body: unknown): { baseRevision: number; input: JourneyAttem
       stageId: value.stageId,
       contentVersion: value.contentVersion,
       replay: value.replay as JourneyAttemptInput['replay'],
+      ...(isJourneyVariation(value.variation) ? { variation: value.variation } : {}),
     },
   };
 }
@@ -79,13 +82,15 @@ export function registerJourneyRoutes(app: FastifyInstance, db: DatabaseSync): v
 
       let evaluation: JourneyEvaluation;
       try {
+        if (input.variation && !snapshot.journey.stages[input.stageId].completed)
+          throw new Error('Main stage is not complete');
         evaluation = validateJourneyAttempt(input);
       } catch {
         throw apiError(400, 'BAD_REQUEST');
       }
       const now = Date.now();
       const journey = recordJourneyEvaluation(snapshot.journey,
-        input.attemptId, input.stageId, evaluation, now);
+        input.attemptId, input.stageId, evaluation, now, input.variation);
       const stage = getJourneyStage(input.stageId);
       const unlockedByJourney = CHARACTER_DEFS.filter(
         (character) =>

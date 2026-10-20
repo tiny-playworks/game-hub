@@ -19,6 +19,7 @@ import Home from '@/pages/Home';
 import './App.css';
 import './cosmetics.css';
 import './styles/venue.css';
+import './styles/play-experience.css';
 import './styles/riichi-venue.css';
 
 const Achievements = lazyPage(() => import('@/pages/Achievements'));

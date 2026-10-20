@@ -371,6 +371,39 @@ export class RoomManager {
     return room.summary;
   }
 
+  reopenForRematch(roomId: string, memberId: string, expectedRevision: number): RoomSummary {
+    const room = this.rooms.get(roomId);
+    if (!room) throw new Error('ROOM_NOT_FOUND');
+    if (room.summary.hostMemberId !== memberId) throw new Error('ONLY_HOST_CAN_START');
+    // A repeated request may observe ready-state changes; never reset them again.
+    if (room.summary.status === 'waiting' && !room.summary.currentMatchId) return room.summary;
+    if (room.summary.revision !== expectedRevision) throw new Error('ROOM_REVISION_CONFLICT');
+    if (room.summary.status !== 'finished') throw new Error('ALREADY_PLAYING');
+    if (room.turnTimeoutTimer) clearTimeout(room.turnTimeoutTimer);
+    room.turnTimeoutTimer = null;
+    room.serverDeadline = null;
+    room.match = null;
+    room.executedCommandIds.clear();
+    room.summary.status = 'waiting';
+    room.summary.isPaused = false;
+    delete room.summary.currentMatchId;
+    for (const seat of room.summary.seats) if (seat.type === 'human') {
+      seat.isReady = false;
+      seat.isAutoplay = false;
+    }
+    if (room.summary.cup) {
+      const now = Date.now();
+      const participants = extractHumanParticipants(room.summary.seats);
+      room.summary.cup = { ...room.summary.cup, cupId: createUuid(), status: 'waiting', completedMatches: 0,
+        participants, matches: [], standings: computeCupStandings(participants, []), createdAt: now, updatedAt: now, completedAt: null };
+    }
+    room.summary.revision++;
+    room.summary.updatedAt = Date.now();
+    saveRoomState(this.db, room.summary, null, null, false);
+    this.broadcastRoom(room);
+    return room.summary;
+  }
+
   startGame(roomId: string, memberId: string): { room: RoomSummary; match: RiichiMatchState } {
     const room = this.rooms.get(roomId);
     if (!room) throw new Error('ROOM_NOT_FOUND');

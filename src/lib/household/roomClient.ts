@@ -17,6 +17,7 @@ import {
   sendRoomCommand,
   setRoomReady,
   startRoomGame,
+  reopenRoomForRematch,
 } from './api';
 
 export function useRoomClient(roomId?: string, memberId?: string) {
@@ -191,6 +192,15 @@ export function useRoomClient(roomId?: string, memberId?: string) {
     const pView = await getRoomPlayerView(roomId).catch(() => null);
     if (pView) setView(pView);
   }, [roomId]);
+  const rematch = useCallback(async () => {
+    if (!roomId || !room) return;
+    setError(null);
+    try {
+      const updated = await reopenRoomForRematch(roomId, room.revision);
+      setRoom(updated);
+      setView(null);
+    } catch (error) { setError(error instanceof Error ? error.message : 'BAD_REQUEST'); }
+  }, [roomId, room]);
 
   const discardTile = useCallback(
     (tile: number) => sendCommand('discard', { tile }),
@@ -267,6 +277,7 @@ export function useRoomClient(roomId?: string, memberId?: string) {
     removeAi,
     setReady,
     startGame,
+    rematch,
     discardTile,
     declareRiichi,
     declareTsumo,

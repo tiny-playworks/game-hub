@@ -107,6 +107,15 @@ const Home = () => {
             {t('lobby.welcome')}
           </p>
         </div>
+        <section className="play-focus-banner" aria-labelledby="play-focus-title">
+          <div><p className="play-eyebrow">RIICHI · ARCADE · FAMILY</p><h2 id="play-focus-title">{t('play.focus')}</h2><p>{t('play.focusDescription')}</p></div>
+          <div className="play-focus-actions">
+            <Button asChild size="lg"><Link to={canResume ? (isActive ? '/game/mahjong-japanese' : '/game/mahjong-japanese?resume=1') : '/journey'}><Play className="size-4" />{t(canResume ? 'play.continue' : 'journey.start')}</Link></Button>
+            <Link to="/game/mahjong-japanese">{t('play.quickStart')}<ArrowRight className="size-3.5" /></Link>
+            <a href="#arcade-corner">{t('play.arcade')}</a><Link to="/family">{t('play.family')}</Link>
+          </div>
+        </section>
+        <CuratedRotationPanel />
         <section
           className="lobby-main-grid grid gap-5"
           aria-label={t('lobby.title')}
@@ -395,8 +404,8 @@ const Home = () => {
             <FamilyFeedLobbyPanel />
           </aside>
         </section>
-        <CuratedRotationPanel />
-        <section className="venue-arcade mt-8" aria-labelledby="arcade-heading">
+
+        <section id="arcade-corner" className="venue-arcade mt-8" aria-labelledby="arcade-heading">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <Gamepad2 className="size-5 text-wood" />

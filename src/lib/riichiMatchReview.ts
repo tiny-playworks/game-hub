@@ -122,6 +122,7 @@ export async function buildMatchReview(
   file: RiichiReplayFile,
   options: {
     viewerSeat?: number;
+    practiceRound?: boolean;
     signal?: AbortSignal;
     onProgress?: (progress: number) => void;
   } = {},
@@ -272,7 +273,8 @@ export async function buildMatchReview(
   }
   if (options.signal?.aborted)
     throw new DOMException('Review cancelled', 'AbortError');
-  if (match.status !== 'matchEnd') throw new Error('Match is not complete');
+  if (match.status !== 'matchEnd' && !(options.practiceRound && match.status === 'roundEnd'))
+    throw new Error('Match is not complete');
   stats.averageWin = stats.wins ? Math.round(totalWin / stats.wins) : 0;
   options.onProgress?.(1);
   return {

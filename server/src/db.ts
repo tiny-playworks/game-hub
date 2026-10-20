@@ -6,6 +6,8 @@ import { getBestValue, type GameStats } from '@/lib/arcadeStats';
 import type { MemberSnapshot } from '../../shared/contracts/member';
 import { normalizeThemeChallengeState } from '../../shared/contracts/challenge';
 import { normalizeJourneyProgress } from '../../shared/contracts/journey';
+import { normalizeArcadeChallenges } from '../../shared/contracts/arcadeChallenge';
+
 import { migrateGameRooms } from './gameRooms/schema';
 import {
   computeCupMatchPoints,
@@ -243,6 +245,9 @@ function migrate(db: DatabaseSync): void {
     CREATE INDEX IF NOT EXISTS family_cups_updated
       ON family_cups(updated_at DESC);
   `);
+  const arcadeColumns = db.prepare('PRAGMA table_info(arcade_rounds)').all() as { name: string }[];
+  if (!arcadeColumns.some((column) => column.name === 'challenge_id'))
+    db.exec('ALTER TABLE arcade_rounds ADD COLUMN challenge_id TEXT');
   const hadLeaderboard = Boolean(db
     .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'leaderboard_entries'")
     .get());
@@ -394,6 +399,7 @@ export function readSnapshot(row: MemberRow): MemberSnapshot {
     ...snapshot,
     themeChallenges: normalizeThemeChallengeState(snapshot.themeChallenges),
     journey,
+    arcadeChallenges: normalizeArcadeChallenges(snapshot.arcadeChallenges),
     ...(unlockedByJourney.length > 0
       ? {
           characters: {

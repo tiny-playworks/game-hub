@@ -12,11 +12,13 @@ import { VirtualController } from '../components/common/VirtualController';
 import type { Dir } from '../hooks/use2048Engine';
 import { useEngine2048 } from '../hooks/use2048Engine';
 import { useScreenShake } from '../hooks/useScreenShake';
+import { arcadeChallengeGoal } from '../../shared/contracts/arcadeChallenge';
+import { formatMessage } from '@/lib/i18n';
 import './2048.css';
 
 const Game2048 = () => {
-  const { t } = useLocale();
-  const { difficulty, paused, result, finish, restart } = useArcade();
+  const { t, locale } = useLocale();
+  const { difficulty, paused, result, finish, restart, mode } = useArcade();
   const size = difficulty === 'normal' ? 5 : difficulty === 'hard' ? 3 : 4;
   const { state, maxCombo, move, undo, canUndo } = useEngine2048(size);
   const maxTile = Math.max(
@@ -25,34 +27,37 @@ const Game2048 = () => {
   );
   const shake = useScreenShake();
   const [gain, setGain] = useState({ value: 0, id: 0 });
+  const [moves, setMoves] = useState(0);
+  const [continuing, setContinuing] = useState(false);
+  const challengeGoal = arcadeChallengeGoal('2048', difficulty);
+  const milestone = mode === 'classic' && maxTile >= 2048 && !continuing && !result;
   const emptyCells =
     size * size -
     Object.values(state.tiles).filter((tile) => !tile.mergedInto).length;
-  const nextTarget = Math.min(
-    2048,
-    2 ** Math.ceil(Math.log2(Math.max(4, maxTile + 1))),
-  );
+  const nextTarget = mode === 'challenge' ? challengeGoal.target : 2 ** Math.ceil(Math.log2(Math.max(4, maxTile + 1)));
 
   useArcadeSnapshot(() => ({ ...state, maxTile, maxCombo, boardSize: size }));
   useEffect(() => {
-    if (state.gameOver || maxTile >= 2048)
+    if (state.gameOver || (mode === 'challenge' && (maxTile >= challengeGoal.target || moves >= challengeGoal.moves)))
       finish(maxTile >= 2048 ? 'win' : 'lose', state.score, {
         maxTile,
         maxCombo,
+        moves,
       });
-  }, [state.gameOver, state.score, maxTile, maxCombo, finish]);
+  }, [state.gameOver, state.score, maxTile, maxCombo, moves, mode, challengeGoal.target, challengeGoal.moves, finish]);
 
   const tryMove = useCallback(
     (dir: Dir) => {
-      if (paused || result) return;
-      const { addedScore } = move(dir);
+      if (paused || result || milestone) return;
+      const { addedScore, isMoved } = move(dir);
+      if (isMoved) setMoves((count) => count + 1);
       if (addedScore > 0)
         setGain((previous) => ({ value: addedScore, id: previous.id + 1 }));
       if (addedScore >= 512) {
         shake();
       }
     },
-    [move, shake, paused, result],
+    [move, shake, paused, result, milestone],
   );
   const swipe = useSwipeControls(tryMove);
 
@@ -111,7 +116,7 @@ const Game2048 = () => {
             variant="outline"
             size="sm"
             onClick={undo}
-            disabled={!canUndo || !!result || paused}
+            disabled={!canUndo || !!result || paused || mode === 'challenge'}
           >
             <Undo2 className="size-4" />
             {t('arcade.undo')}
@@ -124,6 +129,7 @@ const Game2048 = () => {
       }
     >
       <div className="puzzle-2048 w-full flex flex-col items-center">
+        {milestone ? <div className="game-milestone" role="status"><strong>{formatMessage(locale, 'play.tileMilestone', { target: 2048 })}</strong><div><Button onClick={() => setContinuing(true)}>{t('play.continue2048')}</Button><Button variant="outline" onClick={() => finish('win', state.score, { maxTile, maxCombo, moves })}>{t('play.finish2048')}</Button></div></div> : null}
         <GameProgress
           label={t('arcade.nextTarget')}
           value={nextTarget}
@@ -216,6 +222,7 @@ const Game2048 = () => {
           <span>
             {size}×{size} · {t('arcade.emptyCells')} {emptyCells}
           </span>
+          {mode === 'challenge' ? <span>{moves}/{challengeGoal.moves} {t('arcade.unit.moves')}</span> : null}
         </div>
       </div>
 

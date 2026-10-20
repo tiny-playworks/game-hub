@@ -229,10 +229,10 @@ function decideTrumpSuit(bottom: Card[], levelRank: number): number {
 }
 
 /** 创建一局：随机庄家，庄家拿底牌并扣底 2 张，定主 */
-export function createInitialState(): ShengjiState {
+export function createInitialState(options?: { dealer: number; levelRank: number }): ShengjiState {
   const [hands, bottom] = deal();
-  const dealer = Math.floor(Math.random() * 4) as 0 | 1 | 2 | 3;
-  const levelRank = 12;
+  const dealer = options?.dealer ?? Math.floor(Math.random() * 4);
+  const levelRank = options?.levelRank ?? 12;
   const trumpSuit = decideTrumpSuit(bottom, levelRank);
 
   // 庄家扣底：真人不会把分牌埋进底牌，优先扣掉无分的副牌小牌

@@ -37,7 +37,7 @@ export function recordLocalJourneyAttempt(input: JourneyAttemptInput): {
   const evaluation = validateJourneyAttempt(input);
   const previous = getJourneyProgress();
   const duplicate = previous.creditedAttemptIds.includes(input.attemptId);
-  const state = recordJourneyEvaluation(previous, input.attemptId, input.stageId, evaluation, Date.now());
+  const state = recordJourneyEvaluation(previous, input.attemptId, input.stageId, evaluation, Date.now(), input.variation);
   if (!duplicate) {
     commitStorageChanges({ [JOURNEY_PROGRESS_STORAGE_KEY]: JSON.stringify(state) });
     const stage = getJourneyStage(input.stageId);

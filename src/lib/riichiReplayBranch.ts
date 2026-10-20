@@ -43,8 +43,9 @@ export type ReplayBranchAvailability =
 export function getReplayBranchAvailability(
   file: RiichiReplayFile,
   review: MatchReview,
-  summary: ReplayArchiveSummary,
+  summary: Pick<ReplayArchiveSummary, 'source' | 'matchId' | 'viewerSeat'>,
   problem: TrainingProblem,
+  practiceRound = false,
 ): ReplayBranchAvailability {
   const unavailable = (reason: string): ReplayBranchAvailability => ({
     available: false,
@@ -61,7 +62,8 @@ export function getReplayBranchAvailability(
     seat !== review.viewerSeat || seat !== problem.viewerSeat ||
     !Number.isInteger(index) || index < 0 || index >= file.events.length ||
     review.frames.length !== file.events.length + 1 ||
-    review.frames[review.frames.length - 1]?.status !== 'matchEnd'
+    (review.frames[review.frames.length - 1]?.status !== 'matchEnd' &&
+      !(practiceRound && review.frames[review.frames.length - 1]?.status === 'roundEnd'))
   ) return unavailable('incomplete');
 
   const event = file.events[index];

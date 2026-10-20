@@ -71,7 +71,8 @@ export default function RiichiTraining() {
 
         let matchId = matchIdParam;
         if (!matchId) {
-          const list = await fetchReplayList({ limit: 1 }, isMember);
+          const lists = await Promise.all([fetchReplayList({ source: 'free', limit: 1 }, isMember), fetchReplayList({ source: 'ai-ranked', limit: 1 }, isMember)]);
+          const list = { items: lists.flatMap((item) => item.items).sort((a, b) => b.createdAt - a.createdAt) };
           if (list.items.length === 0) {
             if (!cancelled) {
               setError('riichi.archive.empty');

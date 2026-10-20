@@ -27,9 +27,12 @@ export function CuratedRotationPanel() {
 
     async function checkReplays() {
       try {
-        const list = await fetchReplayList({ limit: 1 }, memberMode);
+        const lists = await Promise.all([
+          fetchReplayList({ source: 'free', limit: 1 }, memberMode),
+          fetchReplayList({ source: 'ai-ranked', limit: 1 }, memberMode),
+        ]);
         if (!cancelled) {
-          const eligible = list.items.some(
+          const eligible = lists.flatMap((list) => list.items).some(
             (item) => item.source === 'free' || item.source === 'ai-ranked',
           );
           setHasEligibleReplay(eligible);

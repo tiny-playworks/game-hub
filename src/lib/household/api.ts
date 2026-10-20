@@ -375,6 +375,12 @@ export async function startRoomGame(
   );
 }
 
+export async function reopenRoomForRematch(roomId: string, expectedRevision: number) {
+  return request<import('../../../shared/contracts/room').RoomSummary>(`/api/v1/rooms/${encodeURIComponent(roomId)}/rematch`, {
+    method: 'POST', body: JSON.stringify({ expectedRevision }),
+  });
+}
+
 export async function getRoomPlayerView(
   roomId: string,
 ): Promise<import('../../../shared/contracts/room').PlayerViewSnapshot> {

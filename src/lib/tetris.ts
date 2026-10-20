@@ -877,7 +877,7 @@ function unchanged(state: TetrisState): TetrisStepResult {
 }
 
 function getLevel(lines: number, startingLevel = 1): number {
-  return Math.min(10, startingLevel + Math.floor(lines / 10));
+  return Math.min(20, startingLevel + Math.floor(lines / 10));
 }
 
 function getDropInterval(

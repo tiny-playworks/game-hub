@@ -16,6 +16,10 @@ export const JOURNEY_STAGE_IDS = [
 export const JOURNEY_RECENT_ATTEMPT_LIMIT = 500;
 
 export type JourneyStageId = typeof JOURNEY_STAGE_IDS[number];
+export type JourneyVariation = '1' | '2';
+export function isJourneyVariation(value: unknown): value is JourneyVariation {
+  return value === '1' || value === '2';
+}
 
 export interface JourneyEvaluation {
   completed: boolean;
@@ -34,6 +38,7 @@ export interface JourneyAttemptInput {
   stageId: JourneyStageId;
   contentVersion: typeof JOURNEY_CONTENT_VERSION;
   replay: RiichiReplayFile;
+  variation?: JourneyVariation;
 }
 
 export interface JourneyStageProgress {
@@ -49,6 +54,7 @@ export interface JourneyProgressState {
   schema: 1;
   contentVersion: typeof JOURNEY_CONTENT_VERSION;
   stages: Record<JourneyStageId, JourneyStageProgress>;
+  variations?: Record<string, JourneyStageProgress>;
   /** Bounded local retry protection. The member ledger retains every attempt id. */
   creditedAttemptIds: string[];
   updatedAt: number;
@@ -99,12 +105,30 @@ export function normalizeJourneyProgress(raw: unknown): JourneyProgressState {
     schema: 1,
     contentVersion: JOURNEY_CONTENT_VERSION,
     stages,
+    variations: Object.fromEntries(JOURNEY_STAGE_IDS.flatMap((id) =>
+      (['1', '2'] as const).map((variation) => {
+        const key = `${id}:${variation}`;
+        const raw = object(object(compatible?.variations)?.[key]);
+        const normalized = normalizeJourneyStage(raw);
+        return [key, normalized];
+      }))),
     creditedAttemptIds: Array.isArray(compatible?.creditedAttemptIds)
       ? [...new Set(compatible.creditedAttemptIds.filter(isJourneyAttemptId))]
           .slice(-JOURNEY_RECENT_ATTEMPT_LIMIT)
       : [],
     updatedAt: Math.max(timestamp(compatible?.updatedAt),
       ...JOURNEY_STAGE_IDS.map((id) => stages[id].updatedAt)),
+  };
+}
+
+function normalizeJourneyStage(raw: Record<string, unknown> | null): JourneyStageProgress {
+  return {
+    attempts: typeof raw?.attempts === 'number' && Number.isSafeInteger(raw.attempts) && raw.attempts > 0 ? raw.attempts : 0,
+    completed: raw?.completed === true,
+    bestPointsDelta: typeof raw?.bestPointsDelta === 'number' && Number.isSafeInteger(raw.bestPointsDelta) ? raw.bestPointsDelta : null,
+    lastAttemptId: isJourneyAttemptId(raw?.lastAttemptId) ? raw.lastAttemptId : null,
+    completedAt: raw?.completed === true ? timestamp(raw.completedAt) || null : null,
+    updatedAt: timestamp(raw?.updatedAt),
   };
 }
 
@@ -115,6 +139,7 @@ export function recordJourneyEvaluation(
   stageId: JourneyStageId,
   evaluation: JourneyEvaluation,
   now: number,
+  variation?: JourneyVariation,
 ): JourneyProgressState {
   if (!isJourneyAttemptId(attemptId) || !isJourneyStageId(stageId) ||
     !Number.isSafeInteger(now) || now < 0 ||
@@ -123,13 +148,16 @@ export function recordJourneyEvaluation(
     throw new Error('Invalid journey result');
   const current = normalizeJourneyProgress(state);
   if (current.creditedAttemptIds.includes(attemptId)) return current;
-  const previous = current.stages[stageId];
+  if (variation !== undefined && (!isJourneyVariation(variation) || !current.stages[stageId].completed))
+    throw new Error('Complete the main stage before its variations');
+  const key = variation ? `${stageId}:${variation}` : stageId;
+  const previous = variation ? current.variations![key] : current.stages[stageId];
   const updatedAt = Math.max(now, current.updatedAt, previous.updatedAt);
   return {
     ...current,
-    stages: {
-      ...current.stages,
-      [stageId]: {
+    [variation ? 'variations' : 'stages']: {
+      ...(variation ? current.variations : current.stages),
+      [key]: {
         attempts: Math.min(Number.MAX_SAFE_INTEGER, previous.attempts + 1),
         completed: previous.completed || evaluation.completed,
         bestPointsDelta: previous.bestPointsDelta === null

@@ -132,6 +132,24 @@ export function RulesView({
             </div>
           </fieldset>
 
+          <button
+            type="button"
+            className="riichi-lobby-start"
+            onClick={onStart}
+          >
+            <span>
+              <strong>{t('common.startGame')}</strong>
+              <small>
+                {t(`riichi.lobby.${matchLength}`)} ·{' '}
+                {t('riichi.lobby.fourPlayers')}
+              </small>
+            </span>
+            <Play aria-hidden="true" size={20} fill="currentColor" />
+          </button>
+          <p className="riichi-quick-hint">{t('play.quickHint')}</p>
+          {hasSaved ? <ButtonResume onResume={onResume} label={t('play.continue')} /> : null}
+          <details className="riichi-advanced"><summary>{t('play.advanced')}</summary>
+          <div className="riichi-advanced-body">
           <OpponentSelector
             mainCharacterId={mainCharacterId}
             value={opponents}
@@ -188,26 +206,14 @@ export function RulesView({
             </div>
           </fieldset>
 
+          </div></details>
           <div className="riichi-lobby-assurance">
             <ShieldCheck aria-hidden="true" size={19} />
             <span>{t('riichi.lobby.privacy')}</span>
           </div>
           {loadError && <p role="alert">{t('riichi.loadError')}</p>}
 
-          <button
-            type="button"
-            className="riichi-lobby-start"
-            onClick={onStart}
-          >
-            <span>
-              <strong>{t('common.startGame')}</strong>
-              <small>
-                {t(`riichi.lobby.${matchLength}`)} ·{' '}
-                {t('riichi.lobby.fourPlayers')}
-              </small>
-            </span>
-            <Play aria-hidden="true" size={20} fill="currentColor" />
-          </button>
+
         </section>
       </main>
 
@@ -230,4 +236,8 @@ export function RulesView({
       </Dialog>
     </div>
   );
+}
+
+function ButtonResume({ onResume, label }: { onResume: () => void; label: string }) {
+  return <button type="button" className="riichi-quick-resume" onClick={onResume}><Play size={16} />{label}</button>;
 }

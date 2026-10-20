@@ -4,6 +4,10 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useLocale } from '@/contexts/LocaleContext';
 import { formatMessage } from '@/lib/i18n';
 import { getTileLabel } from '@/lib/mahjongRiichi';
+import { extractTrainingProblems } from '@/lib/riichiTraining';
+import { createReplayBranch, getReplayBranchAvailability, type ReplayBranchNode, type ReplayBranchRun } from '@/lib/riichiReplayBranch';
+import { ReplayBranchPractice } from '@/components/riichi/ReplayBranchPractice';
+import type { ReplaySource } from '../../../../../shared/contracts/replay';
 import {
   buildMatchReview,
   type MatchReview,
@@ -49,9 +53,11 @@ export function MatchReviewButton({
 function DecisionCard({
   decision,
   onReplay,
+  onPractice,
 }: {
   decision: ReviewDecision;
   onReplay: () => void;
+  onPractice?: () => void;
 }) {
   const { t, locale } = useLocale();
   const label = formatMessage(locale, 'riichi.review.roundTurn', {
@@ -157,6 +163,7 @@ function DecisionCard({
       <Button variant="outline" size="sm" onClick={onReplay}>
         {t('riichi.review.viewReplay')}
       </Button>
+      {onPractice ? <Button size="sm" className="ml-2" onClick={onPractice}>{t('play.reviewPractice')}</Button> : null}
     </article>
   );
 }
@@ -165,9 +172,15 @@ export function MatchReviewDialog({
   file,
   viewerSeat,
   onClose,
+  source,
+  practiceRound = false,
+  practiceStartIndex = 0,
 }: {
   file: RiichiReplayFile;
   viewerSeat?: number;
+  source?: ReplaySource;
+  practiceRound?: boolean;
+  practiceStartIndex?: number;
   onClose: () => void;
 }) {
   const { t, locale } = useLocale();
@@ -178,13 +191,20 @@ export function MatchReviewDialog({
   const [review, setReview] = useState<MatchReview | null>(null);
   const [error, setError] = useState(false);
   const [replayIndex, setReplayIndex] = useState<number | null>(null);
+  const [practiceNode, setPracticeNode] = useState<ReplayBranchNode | null>(null);
+  const [choice, setChoice] = useState<number | null>(null);
+  const [riichi, setRiichi] = useState(false);
+  const [branch, setBranch] = useState<ReplayBranchRun | null>(null);
   useEffect(() => {
     const controller = new AbortController();
     setReview(null);
     setProgress(0);
     setError(false);
+    setPracticeNode(null);
+    setBranch(null);
     void buildMatchReview(file, {
       viewerSeat,
+      practiceRound,
       signal: controller.signal,
       onProgress: (value) => {
         if (!controller.signal.aborted) setProgress(value);
@@ -197,7 +217,7 @@ export function MatchReviewDialog({
         if (!controller.signal.aborted) setError(true);
       });
     return () => controller.abort();
-  }, [file, viewerSeat]);
+  }, [file, viewerSeat, practiceRound]);
   if (!container) return null;
   if (review && replayIndex !== null)
     return (
@@ -211,13 +231,24 @@ export function MatchReviewDialog({
     );
   const rate = (value: number) =>
     `${review?.stats.rounds ? ((value / review.stats.rounds) * 100).toFixed(1) : '0.0'}%`;
+  const practiceFor = (decision: ReviewDecision) => {
+    if (!review || decision.frameIndex < practiceStartIndex) return null;
+    const problem = extractTrainingProblems(review, file).find((item) => item.frameIndex === decision.frameIndex);
+    if (!problem) return null;
+    const available = getReplayBranchAvailability(file, review, {
+      source: source ?? (file.ranked ? 'ai-ranked' : 'free'),
+      matchId: file.ranked?.id ?? `practice:${file.seed}`,
+      viewerSeat: review.viewerSeat,
+    }, problem, practiceRound);
+    return available.available ? available.node : null;
+  };
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         container={container}
         data-riichi-theme={theme}
         onCloseAutoFocus={restoreFocus}
-        className="riichi-review-dialog"
+        className={branch ? 'riichi-review-dialog riichi-review-practice' : 'riichi-review-dialog'}
         showCloseButton={false}
         aria-describedby={undefined}
       >
@@ -230,6 +261,15 @@ export function MatchReviewDialog({
             {t('game.mahjong.close')}
           </Button>
         </header>
+        {branch ? <ReplayBranchPractice run={branch} onExit={() => setBranch(null)} onViewOriginal={() => { setReplayIndex(branch.node.sourceFrameIndex); setBranch(null); }} /> : null}
+        {!branch && practiceNode ? <section className="review-choice-panel">
+          <h3>{t('play.reviewPractice')}</h3>
+          <p>{t('play.reviewPick')}</p>
+          <div className="review-choice-hand">{toTileKeyedItems(practiceNode.before.round.hands[practiceNode.viewerSeat], 'practice-choice').map(({ tile, key }) => <RiichiTile key={key} tile={tile} variant="hand" selected={choice === tile} state={practiceNode.before.round.turnOptions?.discardable.includes(tile) ? 'normal' : 'disabled'} onClick={() => { setChoice(tile); setRiichi(false); }} />)}</div>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={riichi} disabled={choice === null || !practiceNode.before.round.turnOptions?.riichiDiscards.includes(choice)} onChange={(event) => setRiichi(event.target.checked)} />{t('riichi.state.riichi')}</label>
+          <div className="mt-3 flex flex-wrap gap-2"><Button disabled={choice === null} onClick={() => { if (choice !== null) setBranch(createReplayBranch(practiceNode, { tile: choice, riichi })); }}>{t('play.reviewStart')}</Button><Button variant="ghost" onClick={() => setPracticeNode(null)}>{t('play.reviewReturn')}</Button></div>
+          <p className="mt-3 text-xs text-muted-foreground">{t('play.practiceOnly')}</p>
+        </section> : null}
         {!review && !error && (
           <div className="riichi-review-loading" role="status">
             <p>{t('riichi.review.computing')}</p>
@@ -242,7 +282,7 @@ export function MatchReviewDialog({
           </div>
         )}
         {error && <p role="alert">{t('riichi.review.error')}</p>}
-        {review && (
+        {review && !branch && !practiceNode && (
           <>
             <div className="riichi-review-stats">
               {[
@@ -269,6 +309,7 @@ export function MatchReviewDialog({
                   key={decision.frameIndex}
                   decision={decision}
                   onReplay={() => setReplayIndex(decision.frameIndex)}
+                  onPractice={practiceFor(decision) ? () => { setPracticeNode(practiceFor(decision)); setChoice(null); setRiichi(false); } : undefined}
                 />
               ))}
             </div>

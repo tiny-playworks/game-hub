@@ -49,7 +49,7 @@ export default function ReplayArchive() {
   const [favoriteOnly, setFavoriteOnly] = useState(false);
 
   // 交互弹窗状态
-  const [reviewTarget, setReviewTarget] = useState<{ file: RiichiReplayFile; viewerSeat: number } | null>(null);
+  const [reviewTarget, setReviewTarget] = useState<{ file: RiichiReplayFile; viewerSeat: number; source: ReplaySource } | null>(null);
   const [replayTarget, setReplayTarget] = useState<{ file: RiichiReplayFile; review: MatchReview } | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -114,7 +114,7 @@ export default function ReplayArchive() {
     try {
       const detail = await fetchReplayDetail(matchId, isMember);
       if (!detail) throw new Error('REPLAY_NOT_FOUND');
-      setReviewTarget({ file: detail.file, viewerSeat });
+      setReviewTarget({ file: detail.file, viewerSeat, source: detail.summary.source });
       setActionError(null);
     } catch {
       setActionError(t('riichi.archive.detailError'));
@@ -387,6 +387,7 @@ export default function ReplayArchive() {
         <MatchReviewDialog
           file={reviewTarget.file}
           viewerSeat={reviewTarget.viewerSeat}
+          source={reviewTarget.source}
           onClose={() => setReviewTarget(null)}
         />
       )}
