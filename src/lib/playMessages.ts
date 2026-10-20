@@ -151,8 +151,7 @@ export const playMessages: Record<'zh' | 'en', Record<string, string>> = {
     'play.trial.goal.go': 'Finish and win a game against the AI',
     'play.trial.goal.chess': 'Beat the AI within {target} moves',
     'play.trial.goal.xiangqi': 'Beat the AI within {target} moves',
-    'play.trial.goal.doudizhu':
-      'Win this deal within {target} plays',
+    'play.trial.goal.doudizhu': 'Win this deal within {target} plays',
     'play.trial.goal.shengji':
       'Win this deal and advance at least {target} levels',
     'play.personalProgress': 'This challenge',
