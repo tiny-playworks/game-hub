@@ -100,17 +100,12 @@ export function ArcadeSession({
   const [query, setQuery] = useSearchParams();
   const [difficulty, setDifficulty] = useState(() =>
     query.has('difficulty')
-      ? normalizeArcadeDifficulty(
-          gameId,
-          query.get('difficulty'),
-        )
+      ? normalizeArcadeDifficulty(gameId, query.get('difficulty'))
       : getArcadeDifficulty(gameId),
   );
   const [round, setRound] = useState(0);
   const [mode, setMode] = useState<'classic' | 'challenge'>(() =>
-    query.get('mode') === 'challenge'
-      ? 'challenge'
-      : 'classic',
+    query.get('mode') === 'challenge' ? 'challenge' : 'classic',
   );
   const [paused, setPaused] = useState(false);
   const [result, setResult] = useState<ArcadeResult | null>(null);
@@ -125,6 +120,13 @@ export function ArcadeSession({
   const snapshotReader = useRef<(() => unknown) | null>(null);
   const pendingFinish = useRef<ArcadeMemberEvent | null>(null);
   const feedback = useRef({ token: '', at: 0 });
+  const active = useRef(true);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
   const start = useCallback(() => {
     if (receipt.current.started) return;
     receipt.current.started = true;
@@ -171,7 +173,14 @@ export function ArcadeSession({
       if (next === difficulty) return;
       const applyDifficulty = () => {
         setDifficulty(next);
-        setQuery((current) => { const changed = new URLSearchParams(current); changed.set('difficulty', next); return changed; }, { replace: true });
+        setQuery(
+          (current) => {
+            const changed = new URLSearchParams(current);
+            changed.set('difficulty', next);
+            return changed;
+          },
+          { replace: true },
+        );
         restart();
       };
       if (memberMode) {
@@ -193,7 +202,15 @@ export function ArcadeSession({
     (next: 'classic' | 'challenge') => {
       if (next === mode) return;
       setMode(next);
-      setQuery((current) => { const changed = new URLSearchParams(current); if (next === 'challenge') changed.set('mode', 'challenge'); else changed.delete('mode'); return changed; }, { replace: true });
+      setQuery(
+        (current) => {
+          const changed = new URLSearchParams(current);
+          if (next === 'challenge') changed.set('mode', 'challenge');
+          else changed.delete('mode');
+          return changed;
+        },
+        { replace: true },
+      );
       restart();
     },
     [mode, restart, setQuery],
@@ -316,16 +333,24 @@ export function ArcadeSession({
       return;
     setSettlementRetrying(true);
     void household!
-      .performArcadeEvent({
-        type: 'start',
-        roundId: event.roundId,
-        gameId: event.gameId,
-        difficulty: event.difficulty,
-        ...(event.challengeId ? { challengeId: event.challengeId } : {}),
+      .refreshMe()
+      .then(() => {
+        if (!active.current || receipt.current.id !== event.roundId) return;
+        return household!.performArcadeEvent({
+          type: 'start',
+          roundId: event.roundId,
+          gameId: event.gameId,
+          difficulty: event.difficulty,
+          ...(event.challengeId ? { challengeId: event.challengeId } : {}),
+        });
       })
-      .then(() => household!.performArcadeEvent(event))
+      .then(() => {
+        if (!active.current || receipt.current.id !== event.roundId) return;
+        return household!.performArcadeEvent(event);
+      })
       .then((settled) => {
-        if (receipt.current.id !== event.roundId) return;
+        if (!settled || !active.current || receipt.current.id !== event.roundId)
+          return;
         pendingFinish.current = null;
         setResult(
           settledResult(event.outcome ?? 'lose', event.score ?? 0, settled),
@@ -334,7 +359,9 @@ export function ArcadeSession({
       .catch(() => {
         // Keep the same round id and result available for another attempt.
       })
-      .finally(() => setSettlementRetrying(false));
+      .finally(() => {
+        if (active.current) setSettlementRetrying(false);
+      });
   }, [memberMode, household, settlementRetrying]);
   const snapshot = useCallback(
     (reader: () => unknown) => {

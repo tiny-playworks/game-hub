@@ -88,24 +88,26 @@ export function CuratedRotationPanel() {
   const getIcon = (type: ResolvedCuratedItem['type']) => {
     switch (type) {
       case 'journey':
-        return <Compass className="size-5 text-gold" />;
+        return <Compass className="size-5 text-amber-800 dark:text-gold" />;
       case 'replay_branch':
-        return <GitBranch className="size-5 text-emerald-400" />;
+        return (
+          <GitBranch className="size-5 text-emerald-700 dark:text-emerald-400" />
+        );
       case 'family_cup':
-        return <Trophy className="size-5 text-amber-400" />;
+        return <Trophy className="size-5 text-amber-700 dark:text-amber-400" />;
     }
   };
 
   const getTagBadgeClass = (badge: ResolvedCuratedItem['badge']) => {
     switch (badge) {
       case 'recommend':
-        return 'bg-gold/20 text-gold border-gold/40';
+        return 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-gold/20 dark:text-gold dark:border-gold/40';
       case 'revisit':
-        return 'bg-blue-500/20 text-blue-300 border-blue-500/40';
+        return 'bg-blue-100 text-blue-900 border-blue-300 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-500/40';
       case 'practice':
-        return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+        return 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/40';
       case 'cup':
-        return 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+        return 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/40';
     }
   };
 
@@ -148,7 +150,9 @@ export function CuratedRotationPanel() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
+      <div
+        className={`grid grid-cols-1 sm:grid-cols-2 ${recommendations.length > 2 ? 'md:grid-cols-3' : ''} gap-3.5`}
+      >
         {recommendations.map((item) => {
           const resolvedTitleParams: Record<string, string | number> = {};
           if (item.titleParams) {

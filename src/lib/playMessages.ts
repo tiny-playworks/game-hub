@@ -5,6 +5,8 @@ export const playMessages: Record<'zh' | 'en', Record<string, string>> = {
     'arcade.difficulty.2048.hard': '紧凑 3×3',
     'play.focus': '下一局，试试新解法',
     'play.growth': '成长、委托与家庭动态',
+    'play.memberFooter': '家庭成员模式 · 进度保存在家庭服务',
+    'play.memberOfflineFooter': '成员离线模式 · 新成绩等待连接后确认',
     'play.challengeHistory': '我的挑战足迹',
     'play.challengeEmpty':
       '在街机中选择挑战局，第一份个人挑战记录就从这里开始。',
@@ -79,6 +81,10 @@ export const playMessages: Record<'zh' | 'en', Record<string, string>> = {
     'arcade.difficulty.2048.hard': 'Compact 3×3',
     'play.focus': 'A new line for your next game',
     'play.growth': 'Growth, tasks & family activity',
+    'play.memberFooter':
+      'Family member · Progress saved to your household server',
+    'play.memberOfflineFooter':
+      'Member offline · New results await confirmation after reconnecting',
     'play.challengeHistory': 'My challenge trail',
     'play.challengeEmpty':
       'Choose Challenge in the arcade to start your personal challenge history.',

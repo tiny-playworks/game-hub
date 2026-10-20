@@ -525,7 +525,15 @@ const Home = () => {
           </aside>
         </details>
         <footer className="mt-8 flex flex-wrap items-center justify-between gap-2 border-t border-wood/20 pt-5 text-xs text-muted-foreground">
-          <span>{t('lobby.footer')}</span>
+          <span>
+            {t(
+              household?.mode === 'member-offline'
+                ? 'play.memberOfflineFooter'
+                : memberMode
+                  ? 'play.memberFooter'
+                  : 'lobby.footer',
+            )}
+          </span>
           <Link to="/profile">
             {t('save.title')}
             <ChevronRight className="ml-1 inline size-3" />
