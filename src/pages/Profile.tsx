@@ -391,7 +391,7 @@ const Profile = () => {
 
   return (
     <div className="venue-profile lobby-page min-h-screen bg-background text-foreground">
-      <div className="mx-auto max-w-6xl px-4 pt-8 sm:px-8">
+      <div className="venue-heading-contained">
         <section className="salon-page-banner salon-page-banner--profile">
           {GPT_BANNER_ASSETS.home ? (
             <img
