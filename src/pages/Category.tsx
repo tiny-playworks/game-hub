@@ -2,6 +2,7 @@ import { ArrowRight, Sparkles } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { FamilyStandingPill } from '@/components/game/FamilyStandingPill';
 import { PersonalBest } from '@/components/game/PersonalBest';
+import { VenueGameGlyph } from '@/components/home/VenueGameGlyph';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { categories } from '@/data/categories';
@@ -125,13 +126,16 @@ const Category = () => {
                   )}
                 >
                   <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-3">
-                      <span className="inline-flex rounded-full border border-border/70 bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
-                        0{index + 1}
-                      </span>
-                      <h2 className="text-xl font-semibold text-foreground">
-                        {t(`game.${game.id}.name`) || game.name}
-                      </h2>
+                    <div className="flex items-center gap-3.5">
+                      <VenueGameGlyph gameId={game.id} />
+                      <div className="space-y-1.5">
+                        <span className="inline-flex rounded-full border border-border/70 bg-background px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                          0{index + 1}
+                        </span>
+                        <h2 className="text-xl font-semibold text-foreground">
+                          {t(`game.${game.id}.name`) || game.name}
+                        </h2>
+                      </div>
                     </div>
 
                     {!game.comingSoon && (

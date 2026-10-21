@@ -22,6 +22,7 @@ import './styles/venue.css';
 import './styles/play-experience.css';
 import './styles/riichi-venue.css';
 import './styles/cosmetic-finish.css';
+import './styles/salon-tokens.css';
 
 const Achievements = lazyPage(() => import('@/pages/Achievements'));
 const Category = lazyPage(() => import('@/pages/Category'));

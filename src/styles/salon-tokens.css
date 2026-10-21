@@ -1,0 +1,193 @@
+/**
+ * Phase 1: Neo-Traditional Japanese Salon (现代日式竞技馆 · 新和风沙龙) Design System
+ * Unifies surface tokens, washi paper grain, urushi lacquer framing, maki-e gold hairlines,
+ * and illustrated arcade gallery cards across the application.
+ */
+
+:root {
+  --salon-ink: #172a3a;
+  --salon-ink-deep: #0f1e2b;
+  --salon-washi: #f5f2e9;
+  --salon-washi-card: #fbf9f3;
+  --salon-vermilion: #c54838;
+  --salon-gold: #cbb391;
+  --salon-gold-bright: #d3af66;
+  --salon-gold-hairline: rgba(211, 175, 102, 0.34);
+  --salon-kaya: #d8b37c;
+  --salon-card-border: rgba(23, 42, 58, 0.14);
+  --salon-card-shadow:
+    0 10px 28px -12px rgba(15, 30, 43, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  --salon-lacquer-shadow:
+    0 18px 42px -14px rgba(10, 22, 33, 0.36),
+    inset 0 1px 0 rgba(211, 175, 102, 0.24);
+}
+
+.dark {
+  --salon-washi: #101d28;
+  --salon-washi-card: #182937;
+  --salon-card-border: rgba(203, 179, 145, 0.22);
+  --salon-card-shadow:
+    0 14px 32px -12px rgba(4, 10, 16, 0.48),
+    inset 0 1px 0 rgba(211, 175, 102, 0.12);
+}
+
+/* 1. Washi paper ambient canvas */
+.lobby-page,
+.venue-category {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(
+      circle at 12% 0%,
+      rgba(211, 175, 102, 0.09) 0%,
+      transparent 48%
+    ),
+    radial-gradient(
+      circle at 88% 12%,
+      rgba(197, 72, 56, 0.05) 0%,
+      transparent 42%
+    );
+}
+
+/* 2. Urushi Lacquer & Gold Top Navigation Beam */
+.venue-navigation {
+  background: linear-gradient(180deg, #132432 0%, #172a3a 100%);
+  border-bottom: 1px solid rgba(211, 175, 102, 0.36);
+  box-shadow: 0 4px 20px rgba(10, 20, 30, 0.22);
+}
+
+.venue-brand > span {
+  border: 1px solid rgba(211, 175, 102, 0.65);
+  box-shadow:
+    0 2px 0 #b89c67,
+    inset 0 0 0 2px rgba(197, 72, 56, 0.16);
+}
+
+.venue-nav-links a {
+  position: relative;
+  letter-spacing: 0.04em;
+  transition:
+    color 180ms ease,
+    border-color 180ms ease;
+}
+
+.venue-nav-links a.active {
+  color: #f3c878;
+  border-bottom-color: var(--salon-vermilion);
+  font-weight: 600;
+}
+
+/* 3. Salon Hero Banner & Companion Stage */
+.play-focus-banner {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(211, 175, 102, 0.42);
+  background:
+    radial-gradient(
+      ellipse at 88% 12%,
+      rgba(211, 175, 102, 0.18) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse at 12% 90%,
+      rgba(197, 72, 56, 0.14) 0%,
+      transparent 50%
+    ),
+    linear-gradient(135deg, #122331 0%, #172a3a 58%, #1e3548 100%);
+  box-shadow: var(--salon-lacquer-shadow);
+}
+
+.venue-companion {
+  border: 1px solid rgba(211, 175, 102, 0.38);
+  background:
+    radial-gradient(
+      circle at 50% 24%,
+      rgba(211, 175, 102, 0.15) 0%,
+      transparent 62%
+    ),
+    linear-gradient(180deg, #152736 0%, #101e2b 100%);
+  box-shadow: var(--salon-lacquer-shadow);
+}
+
+.venue-companion-copy {
+  border: 1px solid rgba(211, 175, 102, 0.28);
+  border-radius: 10px;
+  background: rgba(15, 30, 43, 0.88);
+  backdrop-filter: blur(8px);
+}
+
+/* 4. Salon Mode Cards (Ranked / Free / Journey) */
+.venue-ranked,
+.venue-free,
+.venue-tasks,
+.venue-task-panel {
+  border: 1px solid var(--salon-card-border);
+  border-radius: 14px;
+  background: var(--salon-washi-card);
+  box-shadow: var(--salon-card-shadow);
+}
+
+.venue-mode-tile {
+  border: 1.5px solid var(--salon-ink);
+  box-shadow:
+    0 3px 0 var(--salon-gold),
+    0 5px 10px rgba(23, 42, 58, 0.12);
+}
+
+/* 5. Illustrated Arcade Medallion & Card Gallery */
+.venue-arcade-entry {
+  border: 1px solid var(--salon-card-border);
+  border-radius: 14px;
+  background: var(--salon-washi-card);
+  box-shadow: var(--salon-card-shadow);
+  transition:
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.venue-arcade-entry:hover {
+  transform: translateY(-3px);
+  border-color: var(--salon-gold-bright);
+  box-shadow:
+    0 16px 32px -12px rgba(15, 30, 43, 0.2),
+    inset 0 0 0 1px rgba(211, 175, 102, 0.35);
+}
+
+.venue-game-glyph--medallion,
+.venue-game-glyph--cover {
+  width: 68px;
+  height: 68px;
+  border-radius: 14px;
+  flex-shrink: 0;
+  object-fit: cover;
+  box-shadow:
+    0 4px 12px rgba(15, 30, 43, 0.22),
+    inset 0 0 0 1px rgba(211, 175, 102, 0.45);
+}
+
+/* 6. Board Game Kaya Wood & Clamshell/Slate Stone Polish */
+.stone-black {
+  background: radial-gradient(
+    circle at 32% 28%,
+    #4c5c68 0%,
+    #1b2630 52%,
+    #0b1116 100%
+  );
+  box-shadow:
+    0 3px 6px rgba(10, 18, 26, 0.42),
+    inset 0 1px 1px rgba(255, 255, 255, 0.22);
+}
+
+.stone-white {
+  background: radial-gradient(
+    circle at 32% 28%,
+    #ffffff 0%,
+    #f5f2e9 65%,
+    #d9d2c3 100%
+  );
+  border: 1px solid rgba(23, 42, 58, 0.18);
+  box-shadow:
+    0 3px 6px rgba(10, 18, 26, 0.26),
+    inset 0 1px 2px rgba(255, 255, 255, 0.9);
+}

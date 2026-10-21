@@ -10,6 +10,7 @@ import rinStory from '@/assets/stories/rin.webp';
 import soraStory from '@/assets/stories/sora.webp';
 import yoruStory from '@/assets/stories/yoru.webp';
 import tsubakiStory from '@/assets/characters/tsubaki/happy.webp';
+import { GPT_STORY_ASSETS } from '@/assets/gptAssets';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -32,7 +33,7 @@ const challengeStoryArt: Record<string, string> = {
   aya: ayaStory,
   mahiru: mahiruStory,
   yoru: yoruStory,
-  tsubaki: tsubakiStory,
+  tsubaki: GPT_STORY_ASSETS.tsubaki ?? tsubakiStory,
 };
 
 export function CharacterStoryPlayer({

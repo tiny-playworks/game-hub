@@ -22,6 +22,7 @@
     "mini-games"
   ],
   "scripts": {
+    "assets:gpt": "node scripts/process-gpt-assets.mjs",
     "build": "rs build",
     "build:analyze": "RSDOCTOR=true rs build",
     "check": "rs check --type-check --fix",
