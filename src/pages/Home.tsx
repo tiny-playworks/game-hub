@@ -35,7 +35,6 @@ import { getGrowthOverview } from '@/lib/growth';
 import { getRecentGrowthFeed } from '@/lib/growthFeed';
 import {
   type CharacterExpression,
-  getCharacterAffinityStage,
   getCharacterById,
   syncPlayerCharacterUnlocks,
 } from '@/lib/playerCharacters';
@@ -155,62 +154,43 @@ const Home = () => {
           className="lobby-main-grid grid gap-5"
           aria-label={t('lobby.title')}
         >
-          <article className="venue-companion felt-surface relative flex min-h-100 flex-col overflow-hidden rounded-[28px] border border-gold/40 p-6 text-paper">
-            <div className="flex items-center justify-between text-xs text-paper/70">
-              <span>{t('lobby.companion')}</span>
-              <span className="rounded-full border border-gold/40 px-2.5 py-1 text-gold">
-                {t('home.characters.currentStage')}{' '}
-                {getCharacterAffinityStage(
-                  characters.affinityByCharacter[character.id] ?? 0,
-                )}
-              </span>
-            </div>
+          <article className="venue-companion felt-surface relative flex flex-col overflow-hidden text-paper">
             <Link
               to={`/characters/${character.id}`}
               aria-label={t('home.characters.viewProfile')}
-              className="venue-companion-portrait relative my-7 flex flex-1 items-center justify-center"
+              className="venue-companion-art"
             >
-              <span
-                className="lobby-portrait-ring absolute size-56 rounded-full border border-gold/20"
-                aria-hidden="true"
-              />
               <CharacterPortraitSlot
                 character={character}
                 size="xl"
                 expression={expression}
                 label={t(character.nameKey)}
-                className="max-w-full"
+                fit="contain"
               />
             </Link>
-            {(characters.rewardStageByCharacter[character.id] ?? 0) >= 2 && (
-              <button
-                type="button"
-                className="mx-auto -mt-4 mb-4 rounded-full border border-paper/20 px-3 py-1.5 text-xs text-paper/70"
-                onClick={() => {
-                  const values: CharacterExpression[] = [
-                    'normal',
-                    'happy',
-                    'frustrated',
-                  ];
-                  setExpression(
-                    values[(values.indexOf(expression) + 1) % values.length],
-                  );
-                }}
-              >
-                {t('characters.cycleExpression')}
-              </button>
-            )}
-            <div className="venue-companion-copy relative">
-              <p className="text-xs tracking-[0.2em] text-gold">
-                {t('lobby.yourCompanion')}
-              </p>
-              <h2 className="mt-2 text-3xl">{t(character.nameKey)}</h2>
-              <p className="mt-3 border-l-2 border-gold/60 pl-3 text-sm leading-7 text-paper/85">
-                {t(character.taglineKey)}
-              </p>
+            <div className="venue-companion-footer">
+              <h2>{t(character.nameKey)}</h2>
+              {(characters.rewardStageByCharacter[character.id] ?? 0) >= 2 && (
+                <button
+                  type="button"
+                  className="rounded-full border border-paper/20 px-3 py-1.5 text-xs text-paper/70"
+                  onClick={() => {
+                    const values: CharacterExpression[] = [
+                      'normal',
+                      'happy',
+                      'frustrated',
+                    ];
+                    setExpression(
+                      values[(values.indexOf(expression) + 1) % values.length],
+                    );
+                  }}
+                >
+                  {t('characters.cycleExpression')}
+                </button>
+              )}
               <Link
                 to={`/characters/${character.id}`}
-                className="mt-5 inline-flex items-center gap-2 text-xs text-paper/70 hover:text-gold"
+                className="inline-flex items-center gap-2 text-xs text-paper/70 hover:text-gold"
               >
                 {t('home.characters.viewProfile')}
                 <ChevronRight className="size-3.5" />
@@ -296,7 +276,7 @@ const Home = () => {
           aria-labelledby="arcade-heading"
         >
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <Gamepad2 className="size-5 text-wood" />
               <h2 id="arcade-heading" className="text-xl font-semibold">
                 {t('lobby.arcade')}
