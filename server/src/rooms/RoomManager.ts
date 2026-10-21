@@ -892,13 +892,20 @@ export class RoomManager {
   /** Only public sound names and seats leave the engine; never raw events or progress data. */
   private recordPresentation(room: RoomInstance, effects: RiichiEffect[]): void {
     const stream = room.presentation ??= { epoch: createUuid(), cursor: 0, events: [] };
+    // The engine announces a multi-ron once, but emits a moment for each winner.
+    const hasWinningMoments = effects.some((effect) => effect.type === 'moment' &&
+      (effect.kind === 'ron' || effect.kind === 'tsumo'));
     for (const effect of effects) {
-      if (effect.type !== 'sound' || !Number.isInteger(effect.seat) || effect.seat < 0 || effect.seat > 3) continue;
+      if (effect.type !== 'sound' && effect.type !== 'moment') continue;
+      const sound = effect.type === 'sound' ? effect.sound
+        : effect.kind === 'ron' || effect.kind === 'tsumo' ? effect.kind : null;
+      if (!sound || !Number.isInteger(effect.seat) || effect.seat < 0 || effect.seat > 3) continue;
+      if (effect.type === 'sound' && hasWinningMoments && (sound === 'ron' || sound === 'tsumo')) continue;
       stream.cursor++;
       stream.events.push({
         id: `${stream.epoch}:${stream.cursor}`,
         sequence: stream.cursor,
-        sound: effect.sound,
+        sound,
         seat: effect.seat,
       });
     }

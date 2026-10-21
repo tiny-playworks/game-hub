@@ -9,9 +9,13 @@ import { recordRoomCommand } from '../server/src/rooms/recovery';
 import { createEmptySnapshot } from '../server/src/snapshot';
 import { preloadRiichiRules } from '../src/lib/riichiRules';
 import type { RoomCommand } from '../shared/contracts/room';
+import { applyEvent, getPendingSeats, type RiichiEffect } from '../src/pages/mahjong/japanese/engine';
+import { createTestRound, matchWithRound } from './helpers/riichiState';
+import { tile, tiles } from './helpers/riichiTiles';
 
 interface TestRoomManagerHooks {
   settleMatchEnd: (room: RoomInstance) => void;
+  recordPresentation: (room: RoomInstance, effects: RiichiEffect[]) => void;
 }
 
 afterEach(() => {
@@ -392,6 +396,41 @@ describe('P12 家庭真人牌桌服务端测试', () => {
     });
     expect(dupRes.statusCode).toBe(200);
     expect(dupRes.json().accepted).toBe(true);
+  });
+
+  it('多家荣和按赢家顺序发布两个公开演出事件，省略重复宣告和暗牌', () => {
+    const { roomManager, memberA, deviceA } = createTestContext();
+    const room = roomManager.createRoom(memberA, 'Host', 'avatar-1', deviceA);
+    roomManager.startGame(room.id, memberA);
+    const instance = roomManager.getRoomInstance(room.id)!;
+    const round = createTestRound();
+    round.hands[0] = tiles('147m147p147s12345z');
+    round.hands[1] = tiles('123456m123p789s5z');
+    round.hands[2] = tiles('123456m123p789s5z');
+    round.riichiDeclared[1] = true;
+    round.riichiDeclared[2] = true;
+    let step = applyEvent(matchWithRound(round), { type: 'discard', seat: 0, tile: tile('5z') });
+    if (!step) throw new Error('Invalid multi-ron fixture');
+    const effects = [...step.effects];
+    while (step.match.round.phase === 'claim') {
+      const [seat] = getPendingSeats(step.match.round);
+      const next = applyEvent(step.match, { type: 'claim', seat,
+        response: { type: seat === 1 || seat === 2 ? 'ron' : 'pass' } });
+      if (!next) throw new Error('Invalid multi-ron claim');
+      effects.push(...next.effects);
+      step = next;
+    }
+    instance.match = step.match;
+    instance.presentation = { epoch: 'multi-ron', cursor: 0, events: [] };
+    (roomManager as unknown as TestRoomManagerHooks).recordPresentation(instance, effects);
+    const stream = roomManager.getPlayerView(room.id, 0, deviceA)!.presentation!;
+    expect(stream.events.filter((event) => event.sound === 'ron')).toEqual([
+      { id: 'multi-ron:2', sequence: 2, sound: 'ron', seat: 1 },
+      { id: 'multi-ron:3', sequence: 3, sound: 'ron', seat: 2 },
+    ]);
+    expect(stream.cursor).toBe(3);
+    expect(stream.events.every((event) => Object.keys(event).sort().join(',') === 'id,seat,sequence,sound')).toBe(true);
+    if (instance.turnTimeoutTimer) clearTimeout(instance.turnTimeoutTimer);
   });
 
   it('2 名真人对局终局结算时正确发放家庭金库雀币', async () => {

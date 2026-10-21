@@ -18,8 +18,9 @@
 }
 .riichi-event-art[data-layout='table'] .riichi-event-copy strong { font-size: 28px; color: #fff0ca; }
 .riichi-event-art[data-layout='result'] .riichi-event-copy strong { font-size: 18px; color: #fff0ca; }
+.family-table-status { position: relative; }
 .family-event-toast {
-  position: fixed; top: max(82px, env(safe-area-inset-top)); right: 12px;
+  position: absolute; top: calc(100% + 8px); right: 0;
   z-index: 45; pointer-events: none;
 }
 .family-event-toast .family-event-skip { position: absolute; right: 8px; bottom: 8px; pointer-events: auto; }
@@ -48,7 +49,6 @@
 .family-player-actions .riichi-self-hand .riichi-tile--hand { --riichi-tile-width: var(--hand-tile); --riichi-tile-height: max(44px, calc(var(--hand-tile) * 1.4)); min-height: 44px; }
 .family-action-buttons > button:focus-visible, .family-event-skip:focus-visible { outline: 2px solid #f2d79d; outline-offset: 3px; }
 @media (max-width: 700px) {
-  .family-event-toast { top: 94px; right: 8px; }
   .riichi-event-art[data-layout='table'] { width: min(260px, calc(100vw - 20px)); height: 154px; }
   .riichi-event-art[data-layout='table'] .riichi-event-portrait { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
   .family-player-actions { padding: 8px; }
