@@ -20,9 +20,13 @@ import {
   JOURNEY_STAGE_IDS,
   getJourneyStageForCharacter,
   createJourneyMatch,
+  validateJourneyAttempt,
   resolveFailureReasonKey,
   normalizeJourneyProgress,
 } from '../src/lib/riichiJourney';
+import { JOURNEY_CONTENT_VERSION } from '../shared/contracts/journey';
+import { getPracticeAiEvent } from '../src/lib/riichiPractice';
+import { applyEvent, toReplayFile } from '../src/pages/mahjong/japanese/engine/match';
 import { journeyMessages } from '../src/lib/journeyMessages';
 import { familyMessages } from '../src/lib/familyMessages';
 import { curatedMessages } from '../src/lib/curatedMessages';
@@ -72,14 +76,37 @@ test('P19: every playable character in CHARACTER_DEFS maps to an active Journey 
   }
 });
 
-test('P19: createJourneyMatch generates deterministic started matches for all 10 stages', () => {
+test('P19: all 10 main stages and 20 variations have deterministic playable openings', () => {
   for (const stage of JOURNEY_STAGES) {
-    const match = createJourneyMatch(stage.id);
-    expect(match.status).toBe('playing');
-    expect(match.seatCharacters[0]).toBeNull();
-    expect(match.seatCharacters.slice(1)).toEqual(stage.opponents);
-    expect(match.events.length).toBeGreaterThanOrEqual(stage.prefixEventCount);
+    for (const variation of [undefined, '1', '2'] as const) {
+      const match = createJourneyMatch(stage.id, variation);
+      expect(match.status).toBe('playing');
+      expect(match.seatCharacters[0]).toBeNull();
+      expect(match.seatCharacters.slice(1)).toEqual(stage.opponents);
+      expect(match).toEqual(createJourneyMatch(stage.id, variation));
+    }
   }
+});
+
+test('P19: Yoru preserves its fixed pon opening and can clear by making no new calls', () => {
+  let match = createJourneyMatch('yoru-reading');
+  expect(match.seed).toBe(91);
+  expect(match.round.melds[0]).toHaveLength(1);
+  for (let index = 0; index < 512 && match.status === 'playing'; index++) {
+    let event = getPracticeAiEvent(match, null);
+    if (event?.type === 'claim' && event.seat === 0)
+      event = { type: 'claim', seat: 0, response: { type: 'pass' }, elapsed: 0 };
+    if (!event) throw new Error('Journey fixture has no next action');
+    const step = applyEvent(match, event);
+    if (!step) throw new Error('Journey fixture rejected a legal action');
+    match = step.match;
+  }
+  expect(validateJourneyAttempt({
+    attemptId: 'yoru-no-new-calls',
+    stageId: 'yoru-reading',
+    contentVersion: JOURNEY_CONTENT_VERSION,
+    replay: toReplayFile(match),
+  })).toMatchObject({ completed: true, openMelds: 1, failureReasonKey: null });
 });
 
 test('P19: resolveFailureReasonKey evaluates distinct stage failure reasons', () => {

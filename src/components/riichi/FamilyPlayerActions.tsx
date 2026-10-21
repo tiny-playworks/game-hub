@@ -83,6 +83,8 @@ export function FamilyPlayerActions({ view, client, secondsRemaining, name, wind
 
   const choose = (choice: Choice) => {
     if (!enabled) return;
+    cancelSelection();
+    setRiichiKey(null);
     const key = `${decisionKey}:${choice.id}`;
     if ((riichiSettings.callConfirm || choice.confirm) && confirmedChoice !== key) {
       setConfirmedChoice(key);
@@ -148,7 +150,7 @@ export function FamilyPlayerActions({ view, client, secondsRemaining, name, wind
         <Button disabled={selectedTile === null} onClick={confirmDiscard}>
           {t(riichiSelecting ? 'riichi.action.riichiConfirm' : 'riichi.action.discardConfirm')}
         </Button>
-        {(selectedTile !== null || riichiSelecting || confirmedChoice) && <Button variant="outline" onClick={() => {
+        {(selectedTile !== null || riichiSelecting) && <Button variant="outline" onClick={() => {
           cancelSelection(); setRiichiKey(null); setConfirmedChoice(null);
         }}>{t('riichi.action.cancelSelection')}</Button>}
       </div>}

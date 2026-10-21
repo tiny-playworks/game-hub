@@ -68,6 +68,7 @@ export function useRoomClient(roomId?: string, memberId?: string) {
     viewRef.current = next;
     viewScope.current = scope;
     setView(next);
+    setLeaseLost(!next.isSpectator && !next.seats[next.viewerSeat].hasControlLease);
     if (baseline) setPresentationBaseline((previous) => next.presentation ? {
       version: (previous?.version ?? 0) + 1,
       matchId: next.matchId,

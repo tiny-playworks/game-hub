@@ -15,15 +15,16 @@ test('createBricks 生成 60 块砖且全部存活', () => {
   expect(bricks.every((b) => b.alive)).toBe(true);
 });
 
-test('bounceOffPaddle 左/中/右击中给出预期 vx 符号与大小', () => {
+test('bounceOffPaddle 左/中/右控制反弹方向并保持球速', () => {
   const { paddleW, paddleY } = BREAKOUT;
   const paddleX = 100;
   const ballY = paddleY;
   const ballVy = 6;
 
   const left = bounceOffPaddle(paddleX, ballY, 0, ballVy, paddleX);
-  expect(left.ballVy).toBe(-6);
-  expect(left.ballVx).toBeCloseTo(-5);
+  expect(left.ballVy).toBeLessThan(0);
+  expect(left.ballVx).toBeLessThan(0);
+  expect(Math.hypot(left.ballVx, left.ballVy)).toBeCloseTo(ballVy);
 
   const center = bounceOffPaddle(
     paddleX + paddleW / 2,
@@ -36,8 +37,9 @@ test('bounceOffPaddle 左/中/右击中给出预期 vx 符号与大小', () => {
   expect(center.ballVx).toBeCloseTo(0);
 
   const right = bounceOffPaddle(paddleX + paddleW, ballY, 0, ballVy, paddleX);
-  expect(right.ballVy).toBe(-6);
-  expect(right.ballVx).toBeCloseTo(5);
+  expect(right.ballVy).toBeCloseTo(left.ballVy);
+  expect(right.ballVx).toBeCloseTo(-left.ballVx);
+  expect(Math.hypot(right.ballVx, right.ballVy)).toBeCloseTo(ballVy);
 });
 
 test('resolveCircleRectBounce 从下方击中翻转 vy', () => {

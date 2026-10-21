@@ -76,7 +76,7 @@ test('井字棋：渲染棋盘与重开按钮', () => {
     screen.getByRole('button', { name: /重开|Restart/ }),
   ).toBeInTheDocument();
   expect(
-    screen.getByText(/下一位|赢家|平局|Next|Winner|Draw/),
+    screen.getByText(/^(下一位|Next) · X$/),
   ).toBeInTheDocument();
 });
 
@@ -144,7 +144,7 @@ test('记忆翻牌：渲染步数统计', () => {
       </ArcadeSession>,
     ),
   );
-  expect(screen.getByText(/^步$|^moves$/)).toBeInTheDocument();
+  expect(screen.getByText(/^配对次数$|^Attempts$/)).toBeInTheDocument();
 });
 
 test('2048：渲染分数与操作说明', () => {
@@ -155,7 +155,7 @@ test('2048：渲染分数与操作说明', () => {
       </ArcadeSession>,
     ),
   );
-  expect(screen.getByText(/^分数$|^分$|^Score$|^points$/)).toBeInTheDocument();
+  expect(screen.getByText(/^当前得分$|^Score$/)).toBeInTheDocument();
   expect(
     screen.getByText(/方向键移动方块|Slide and merge/),
   ).toBeInTheDocument();
@@ -169,10 +169,8 @@ test('贪吃蛇：渲染开始提示或分数', () => {
       </ArcadeSession>,
     ),
   );
-  const scoreOrStart = screen.getAllByText(
-    /分数:|按方向键开始|Score:|Press arrow/,
-  );
-  expect(scoreOrStart.length).toBeGreaterThanOrEqual(1);
+  expect(screen.getByText(/^当前得分$|^Score$/)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /^开始$|^Start$/ })).toBeInTheDocument();
 });
 
 test('打砖块：渲染生命或开始按钮', () => {
@@ -194,7 +192,7 @@ test('飞机大战：渲染得分与操作说明', () => {
       </ArcadeSession>,
     ),
   );
-  expect(screen.getByText(/^分数$|^分$|^Score$|^points$/)).toBeInTheDocument();
+  expect(screen.getByText(/^当前得分$|^Score$/)).toBeInTheDocument();
   expect(
     screen.getAllByText(/击落敌机得分|Shoot down/).length,
   ).toBeGreaterThanOrEqual(1);
@@ -221,7 +219,7 @@ test('俄罗斯方块：渲染得分/等级/消行', () => {
       </ArcadeSession>,
     ),
   );
-  expect(screen.getByText(/消行:|Lines:/)).toBeInTheDocument();
+  expect(screen.getByText(/^已消行$|^Lines cleared$/)).toBeInTheDocument();
 });
 
 test('日本立直麻将：渲染标题与开始游戏', () => {

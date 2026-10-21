@@ -138,7 +138,7 @@ export function useTileInteraction({
     const onKey = (event: KeyboardEvent) => {
       try {
         if (event.altKey || event.ctrlKey || event.metaKey) return;
-        const target = event.target as HTMLElement | null;
+        const target = event.target instanceof HTMLElement ? event.target : null;
         if (
           target?.closest?.(
             'input,select,textarea,[contenteditable="true"],[role="dialog"]',

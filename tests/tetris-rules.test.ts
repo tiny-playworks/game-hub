@@ -97,11 +97,14 @@ test('消除四行使用经典计分并更新等级和下落间隔', () => {
   });
 });
 
-test('等级每 10 行提升且上限为 10', () => {
+test.each([
+  { lines: 98, level: 10, nextLines: 102, nextLevel: 11, score: 8000 },
+  { lines: 198, level: 20, nextLines: 202, nextLevel: 20, score: 8000 },
+])('等级每 10 行提升，$lines 行消行后为 $nextLevel 级，最高 20 级', ({ lines, level, nextLines, nextLevel, score }) => {
   const state = createInitialTetrisState(rngSequence(0, 1, 2));
   state.status = 'playing';
-  state.lines = 98;
-  state.level = 10;
+  state.lines = lines;
+  state.level = level;
   state.dropInterval = 8;
   state.px = 3;
   state.rot = 1;
@@ -113,10 +116,10 @@ test('等级每 10 行提升且上限为 10', () => {
 
   const result = applyTetrisAction(state, { type: 'hardDrop' });
 
-  expect(result.state.lines).toBe(102);
-  expect(result.state.level).toBe(10);
+  expect(result.state.lines).toBe(nextLines);
+  expect(result.state.level).toBe(nextLevel);
   expect(result.state.dropInterval).toBe(8);
-  expect(result.state.score).toBe(8000);
+  expect(result.state.score).toBe(score);
 });
 
 test('幽灵落点返回当前方块的最终整数行', () => {

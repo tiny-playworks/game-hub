@@ -71,6 +71,8 @@ test('stepShooter 子弹命中敌机得分并移除双方', () => {
   expect(next.events).toContainEqual({
     type: 'enemy_destroyed',
     scoreDelta: 10,
+    x: 64,
+    y: 114,
   });
 });
 
@@ -83,7 +85,14 @@ test('stepShooter 敌机撞玩家触发 player_hit', () => {
   });
   const next = stepShooter(state, idleInput, 0, () => 0);
   expect(next.events).toContainEqual({ type: 'player_hit' });
-  expect(next.state.status).toBe('over');
+  expect(next.state.shields).toBe(2);
+  expect(next.state.status).toBe('playing');
+  const lastShield = stepShooter({ ...state, shields: 1 }, idleInput, 0, () => 0);
+  expect(lastShield.state.shields).toBe(0);
+  expect(lastShield.state.status).toBe('over');
+  const protectedState = stepShooter({ ...state, invulnerableFrames: 1 }, idleInput, 0, () => 0);
+  expect(protectedState.state.shields).toBe(3);
+  expect(protectedState.events).toEqual([]);
 });
 
 test('stepShooter 用固定 rng 在冷却累计后刷敌', () => {

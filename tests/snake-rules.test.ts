@@ -81,11 +81,10 @@ test('stepSnake 吃普通食物加长并按固定 rng 放置新食物', () => {
     cols: 4,
     rows: 4,
   };
-  // placeFood: first two rng for x,y → floor(0.75*4)=3, floor(0*4)=0 → (3,0)
-  // third rng for golden: 0.5 → normal
+  // Select the fourth of 13 free cells, then choose a normal food.
   let calls = 0;
   const rng = () => {
-    const values = [0.75, 0, 0.5];
+    const values = [3 / 13, 0.5];
     return values[calls++] ?? 0;
   };
 
@@ -173,23 +172,18 @@ test('stepSnake 未生长时移入即将离开的尾巴格合法', () => {
   ]);
 });
 
-test('placeFood 不会落在蛇身上（固定 rng 首次会撞身体）', () => {
+test('placeFood 直接从空位选取，不依赖随机重试', () => {
   const snake = [
     { x: 0, y: 0 },
     { x: 1, y: 0 },
   ];
-  // 4x1 board conceptually cols=2 rows=1: cells (0,0)(1,0) occupied
-  // Use 3x1: empty is (2,0)
-  // First attempt: x=floor(0*3)=0, y=0 → occupied
-  // Second: x=floor((2/3)*3)=2? wait floor(0.9*3)=2, y=0
-  // golden: 0.5 → normal
   let calls = 0;
   const rng = () => {
-    const values = [0, 0, 0.9, 0, 0.5];
+    const values = [0, 0.5];
     return values[calls++] ?? 0;
   };
 
   const food = placeFood(snake, 3, 1, rng);
   expect(food).toEqual({ x: 2, y: 0, type: 'normal', timer: 0 });
-  expect(calls).toBe(5);
+  expect(calls).toBe(2);
 });

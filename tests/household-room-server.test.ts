@@ -416,7 +416,7 @@ describe('P12 家庭真人牌桌服务端测试', () => {
 
     // 触发结算
     for (const [memberId, deviceId] of [[memberA, deviceA], [memberB, deviceB]]) {
-      recordRoomCommand(db, room.id, { protocol: 1, roomId: room.id, commandId: `played-${memberId}`,
+      recordRoomCommand(db, room.id, { protocol: 1, roomId: room.id, matchId: instance.summary.currentMatchId, commandId: `played-${memberId}`,
         expectedRevision: 1, type: 'discard', payload: { tile: 0 } }, memberId, deviceId);
     }
     (roomManager as unknown as TestRoomManagerHooks).settleMatchEnd(instance);

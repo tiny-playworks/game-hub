@@ -262,7 +262,7 @@ function generateStageStart(stage: JourneyStageDefinition): RiichiMatchState {
     throw new Error('Journey defense stage must begin under riichi threat');
   if (stage.id === 'aya-riichi' && (match.round.turnOptions?.riichiDiscards.length ?? 0) === 0)
     throw new Error('Journey riichi stage must begin with a riichi discard available');
-  if ((stage.id === 'yoru-reading' || stage.id === 'chitose-closed') &&
+  if (stage.id === 'chitose-closed' &&
     match.round.melds[0].some((meld) => meld.type !== 'angang'))
     throw new Error('Closed-hand journey stages must begin with a closed hand');
   if (stage.id === 'mahiru-flush' && computeSuitFocusCount(match, 0) < 9)
@@ -381,6 +381,10 @@ export function validateJourneyAttempt(input: JourneyAttemptInput): JourneyEvalu
   const wasThreatened = initial.round.riichiDeclared.some((value, seat) => seat !== 0 && value);
   let reachedTenpai = false;
   let openedMeld = false;
+  // Yoru's fixed opening already contains a pon made before the riichi threat.
+  // Judge new calls in the playable part, without changing the versioned preset.
+  const initialOpenMelds = initial.round.melds[0].filter((meld) => meld.type !== 'angang').length;
+  let openedAfterStart = false;
   let declaredRiichi = Boolean(initial.round.riichiDeclared[0]);
   let playerDiscards = 0;
 
@@ -413,6 +417,8 @@ export function validateJourneyAttempt(input: JourneyAttemptInput): JourneyEvalu
     if (match.round.phase !== 'end' && isTenpai(match.round.hands[0], match.round.melds[0]))
       reachedTenpai = true;
     if (match.round.melds[0].some((meld) => meld.type !== 'angang')) openedMeld = true;
+    if (match.round.melds[0].filter((meld) => meld.type !== 'angang').length > initialOpenMelds)
+      openedAfterStart = true;
     if (match.round.riichiDeclared[0]) declaredRiichi = true;
   }
 
@@ -452,7 +458,7 @@ export function validateJourneyAttempt(input: JourneyAttemptInput): JourneyEvalu
       completed = suitFocusCount >= 9 && safeFinish;
       break;
     case 'yoru-reading':
-      completed = survivedThreat && !openedMeld;
+      completed = survivedThreat && !openedAfterStart;
       break;
     case 'tsubaki-finale':
       completed = reachedTenpai && pointsDelta > 0 && safeFinish;
@@ -473,7 +479,7 @@ export function validateJourneyAttempt(input: JourneyAttemptInput): JourneyEvalu
       : resolveFailureReasonKey(stage.id, {
           safeFinish,
           reachedTenpai,
-          openedMeld,
+          openedMeld: stage.id === 'yoru-reading' ? openedAfterStart : openedMeld,
           pointsDelta,
           declaredRiichi,
           suitFocusCount,
