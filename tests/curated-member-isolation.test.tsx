@@ -57,9 +57,11 @@ it('rechecks personal replay recommendations when switching between two members'
     ).not.toBeNull(),
   );
   const calls = rs.mocked(fetchReplayList).mock.calls.length;
-  rs.mocked(fetchReplayList).mockResolvedValue({ total: 0, favoritesCount: 0, items: [] } as Awaited<
-    ReturnType<typeof fetchReplayList>
-  >);
+  rs.mocked(fetchReplayList).mockResolvedValue({
+    total: 0,
+    favoritesCount: 0,
+    items: [],
+  } as Awaited<ReturnType<typeof fetchReplayList>>);
   rs.mocked(useOptionalHousehold).mockReturnValue(member('B'));
   await act(async () =>
     page.rerender(

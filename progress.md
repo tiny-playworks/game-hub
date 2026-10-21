@@ -154,3 +154,15 @@ Original prompt: 可以 提交然后 p6吧
   2. 前端界面：`src/pages/Leaderboard.tsx`（按分类/游戏/难度切换、历史/本周标签、成员成绩榜与 100 条家庭动态流、游客/离线模式安全提示）、`src/components/game/FamilyStandingPill.tsx`（GameShell 与分类页实时显示家庭 #N / 本周 #N 与距上一名分差）、`src/components/game/GameResultOverlay.tsx`（结算遮罩显示家庭名次、周名次、距上一名分差与刷新家庭纪录金标提示）、`src/components/home/FamilyFeedLobbyPanel.tsx`（大厅家庭动态卡片）、`src/components/profile/WeeklyChampionsCard.tsx`（个人资料页周冠军徽记与荣誉头衔展示）及 `tests/p23-leaderboard-ui.test.tsx`（5 项 UI 测试全部通过）。
 - **验证**：`pnpm typecheck`、`pnpm lint`、`pnpm test`（87 个测试文件、614 项测试全部通过）、`pnpm build` 与 `cd server && pnpm build` 全部通过。
 
+## 2026-10-21 NAS 全项目补齐与正式发布
+
+- 本轮用户范围：把整个项目 NAS 端未完成的软件开发、部署和验收补齐。复核实际基线后覆盖 P19–P26 与最新全站玩法/UI；P27 继续作为需另行决定的可选重构，实体双机/三机体验与自动化客户端明确分开。
+- 修复在线迁移演练的 WAL 一致性复制、精选复盘推荐的成员/离线隔离；Compose 增加固定 API 镜像与构建版本。补齐 14 项房间边界回归和 2 项精选身份隔离回归。
+- 最终程序源码归档 520 个文件与现场提交 `f3aaafa` 一致；最后补充的未操作真人席回归及本轮文档留在工作区，不由本会话额外提交/推送。
+- NAS 正式版本 `nas-full-20261021b`，API revision `951010b-nas-20261021b`，镜像 `7a5614c39876…`；242 个实际 HTTP 资源散列、深链、WASM/缓存及旧资源保留通过。正式站另完成桌面/手机共 16 个场景；QA 40 个路由场景、9 个真人结果页与 3 个真实榜单交互场景通过。
+- 两名正式成员快照、revision（10 / 172）和 PIN 散列保持一致。最新一致性备份 `data/backups/pre-nas-20261021c.sqlite`；静态回退点 `nas-closeout-20261015d`、旧 API `game-hub-api:pre-full-20261021a`。首尝试因 Nginx 新容器尚无 PID 而重载失败，自动回退成功；增加主进程就绪等待后，21:54 正式切换成功，未恢复旧库覆盖进度。
+- 实际 NAS 完成十主线/二十变化权限、跨设备同步，511 指令两场杯赛/场间 SIGKILL/再战/删牌谱不改积分，三类榜单/周冠/CLI，五子棋整局、象棋 43 步棋盘终局/认输/提和/停钟/观战，斗地主 3 真人/2 真人+AI/1 真人、春天、炸弹、暗牌、61916ms 托管接回与 SIGKILL 恢复。共享家庭上限实际达到 200；10 分钟/24 小时边界使用隔离持久时间夹具。
+- 精选配置 V1→V2→V1 在真实 NAS 浏览器通过，成员快照、本人牌谱及杯赛保持不变；实际原地成员切换清除另一人的复盘推荐。
+- 最终类型、静态检查、89 套件 633 项测试和前后端构建通过。完整身份、保留数据、证据与设备边界见 `docs/roadmap/NAS-ACCEPTANCE-2026-10-21.md`。
+- 收尾：QA 容器及网络已移除、18089 已关闭，数据与证据保留；正式两容器 healthy，生产挂载/Compose 指向不可变正式构建目录，Jellyfin/FreshRSS/家庭首页正常。
+

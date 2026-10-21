@@ -507,4 +507,36 @@ describe('family arcade room release gates', () => {
     ).toHaveLength(2);
     expect(f.view().board).toMatchObject({ currentSeat: 1, ply: 0 });
   });
+
+  it('records an unoperated human result without awarding that seat coins', () => {
+    let now = Date.now();
+    rs.spyOn(Date, 'now').mockImplementation(() => now);
+    const f = fixture('doudizhu', 2, { turnSeconds: 10 });
+    for (
+      let actions = 0;
+      actions < 400 && f.view().room.status === 'playing';
+      actions++
+    ) {
+      const state = f.row().state;
+      const actor = doudizhuAdapter.currentActors(state)[0];
+      if (actor === 0) {
+        f.send(0, 'action', {
+          action: doudizhuAdapter.aiAction(
+            state,
+            actor,
+            f.view().room.settings,
+          ),
+        });
+      } else {
+        now += actor === 1 ? 10_001 : 601;
+        f.tick();
+      }
+    }
+    expect(f.view().room.status).toBe('finished');
+    expect(f.view().room.result?.counted).toBe(true);
+    expect(f.view().room.result?.coinsByMember[f.members[1]]).toBe(0);
+    expect(listHeadToHead(f.db, f.members[1])).toHaveLength(1);
+    expect(readSnapshot(getMember(f.db, f.members[1])!).wallet.coins).toBe(0);
+    expect(f.onError).not.toHaveBeenCalled();
+  });
 });
