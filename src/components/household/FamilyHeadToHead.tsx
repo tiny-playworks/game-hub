@@ -38,8 +38,8 @@ export function FamilyHeadToHead({ revision = 0 }: { revision?: number }) {
   }, [memberId, revision, retry]);
   if (!memberId) return null;
   return (
-    <section className="mt-6 rounded-2xl border border-border bg-card p-4 sm:p-5">
-      <h2 className="mb-3 font-semibold">{t('gameRoom.headToHead')}</h2>
+    <section className="salon-section-card paper-texture mt-6 rounded-2xl border border-gold/30 bg-card p-4 sm:p-5">
+      <h2 className="mb-3 font-semibold font-serif">{t('gameRoom.headToHead')}</h2>
       {failed ? (
         <div className="flex items-center justify-between gap-2 text-sm">
           <p>{t('gameRoom.error.NETWORK')}</p>

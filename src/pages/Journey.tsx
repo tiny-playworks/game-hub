@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2, RotateCcw, Sparkles } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { GPT_BANNER_ASSETS } from '@/assets/gptAssets';
+import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
 import { RiichiPracticeTable } from '@/components/riichi/RiichiPracticeTable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -180,19 +182,68 @@ export default function Journey() {
   }
 
   return (
-    <main className="venue-home min-h-screen bg-background text-foreground">
+    <main className="venue-home lobby-page min-h-screen bg-background text-foreground">
       <div className="mx-auto max-w-6xl space-y-6 px-4 py-7 sm:px-8 sm:py-10">
-        <header className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <Button asChild variant="ghost" size="sm" className="mb-3 -ml-3">
-              <Link to="/"><ArrowLeft className="mr-1.5 size-4" />{t('journey.back')}</Link>
-            </Button>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">{t('journey.choose')}</p>
-            <h1 className="mt-1 text-3xl font-semibold sm:text-4xl">{t('journey.title')}</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{t('journey.subtitle')}</p>
+        <section className="salon-page-banner salon-page-banner--journey">
+          {GPT_BANNER_ASSETS.journey && (
+            <img
+              src={GPT_BANNER_ASSETS.journey}
+              alt=""
+              aria-hidden="true"
+              fetchPriority="high"
+              decoding="async"
+              className="salon-banner-media"
+            />
+          )}
+          <div className="salon-banner-inner">
+            <header className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className="salon-banner-back mb-3 -ml-2"
+                >
+                  <Link to="/">
+                    <ArrowLeft className="mr-1.5 size-4" />
+                    {t('journey.back')}
+                  </Link>
+                </Button>
+                <p className="play-eyebrow">{t('journey.choose')}</p>
+                <h1 className="mt-1 text-3xl font-semibold sm:text-4xl">
+                  {t('journey.title')}
+                </h1>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-[#e8e3d5]">
+                  {t('journey.subtitle')}
+                </p>
+              </div>
+              <p className="salon-banner-pill">{t('journey.noReward')}</p>
+            </header>
+
+            <div className="journey-season-progress salon-kaya-strip mt-5">
+              <span>
+                {formatMessage(locale, 'play.journeyProgress', {
+                  completed: Object.values(progress?.stages ?? {}).filter(
+                    (item) => item.completed,
+                  ).length,
+                  total: JOURNEY_STAGES.length,
+                  variations: Object.values(progress?.variations ?? {}).filter(
+                    (item) => item.completed,
+                  ).length,
+                })}
+              </span>
+              <progress
+                max={JOURNEY_STAGES.length}
+                value={
+                  Object.values(progress?.stages ?? {}).filter(
+                    (item) => item.completed,
+                  ).length
+                }
+                aria-label={t('play.mainStage')}
+              />
+            </div>
           </div>
-          <p className="rounded-full border bg-card px-3 py-2 text-xs text-muted-foreground">{t('journey.noReward')}</p>
-        </header>
+        </section>
 
         {loadFailed ? (
           <Card>
@@ -203,37 +254,50 @@ export default function Journey() {
           </Card>
         ) : null}
 
-        <div className="journey-season-progress">
-          <span>{formatMessage(locale, 'play.journeyProgress', {
-            completed: Object.values(progress?.stages ?? {}).filter((item) => item.completed).length,
-            total: JOURNEY_STAGES.length,
-            variations: Object.values(progress?.variations ?? {}).filter((item) => item.completed).length,
-          })}</span>
-          <progress max={JOURNEY_STAGES.length} value={Object.values(progress?.stages ?? {}).filter((item) => item.completed).length} aria-label={t('play.mainStage')} />
-        </div>
-
         {!selectedStage ? (
-          <section className="grid gap-4 md:grid-cols-3" aria-label={t('journey.choose')}>
+          <section className="grid gap-5 md:grid-cols-2 lg:grid-cols-3" aria-label={t('journey.choose')}>
             {JOURNEY_STAGES.map((stage, index) => {
               const item = progress?.stages[stage.id];
               const character = getCharacterById(stage.characterId);
               return (
-                <Card className="flex min-h-64 flex-col overflow-hidden border-gold/25" key={stage.id}>
-                  <CardHeader className="bg-[linear-gradient(130deg,hsl(var(--primary)/.12),transparent_70%)]">
+                <Card
+                  className={cn(
+                    'salon-journey-card paper-texture flex min-h-64 flex-col overflow-hidden border-gold/30',
+                    item?.completed && 'is-completed',
+                  )}
+                  key={stage.id}
+                >
+                  <CardHeader className="salon-journey-card-header">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">{t(stage.venueKey)}</p>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#d3af66]">
+                        {t(stage.venueKey)}
+                      </p>
                       {item?.completed ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-medium text-emerald-600">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/35 bg-emerald-500/20 px-2.5 py-0.5 text-[11px] font-medium text-emerald-200">
                           <CheckCircle2 className="size-3" />
                           {t('journey.completed')}
                         </span>
                       ) : null}
                     </div>
-                    <CardTitle className="mt-1 flex items-center gap-2 text-xl">
-                      <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm tabular-nums text-primary">{String(index + 1).padStart(2, '0')}</span>
-                      {t(stage.titleKey)}
-                    </CardTitle>
-                    <p className="text-sm font-medium">{t(character.nameKey)}</p>
+                    <div className="mt-2 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <CardTitle className="flex items-center gap-2.5 text-xl text-[#f5f2e9]">
+                          <span className="salon-stage-seal">
+                            {String(index + 1).padStart(2, '0')}
+                          </span>
+                          <span className="truncate">{t(stage.titleKey)}</span>
+                        </CardTitle>
+                        <p className="mt-1.5 text-xs font-medium tracking-wider text-[#d3af66]">
+                          {t(character.nameKey)}
+                        </p>
+                      </div>
+                      <CharacterPortraitSlot
+                        character={character}
+                        size="sm"
+                        label={t(character.nameKey)}
+                        className="salon-journey-avatar shrink-0"
+                      />
+                    </div>
                   </CardHeader>
                   <CardContent className="flex flex-1 flex-col justify-between gap-5 pt-4">
                     <div className="space-y-3">

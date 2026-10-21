@@ -9,6 +9,7 @@ import {
   Trophy,
   Users,
 } from 'lucide-react';
+import { GPT_BANNER_ASSETS } from '@/assets/gptAssets';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useOptionalHousehold } from '@/contexts/HouseholdContext';
@@ -123,52 +124,75 @@ export default function FamilyLobby() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-12 pt-6 px-4 md:px-8 max-w-5xl mx-auto">
-      {/* 头部标题与操作 */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-border">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight">{t('gameRoom.title')}</h1>
-            {household?.isServerAvailable && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                <ShieldCheck className="h-3.5 w-3.5" /> {t('family.lobby.connected')}
-              </span>
-            )}
+    <div className="venue-family lobby-page min-h-screen bg-background text-foreground pb-12 pt-6 px-4 md:px-8 max-w-6xl mx-auto">
+      {/* 头部标题与操作（新和风沙龙家庭俱乐部横幅） */}
+      <section className="salon-page-banner salon-page-banner--family">
+        {GPT_BANNER_ASSETS.family && (
+          <img
+            src={GPT_BANNER_ASSETS.family}
+            alt=""
+            aria-hidden="true"
+            fetchPriority="high"
+            decoding="async"
+            className="salon-banner-media"
+          />
+        )}
+        <div className="salon-banner-inner flex flex-col md:flex-row md:items-end justify-between gap-5">
+          <div>
+            <p className="play-eyebrow">FAMILY SALON · 家庭茶席与雀庄杯</p>
+            <div className="flex flex-wrap items-center gap-2.5 mt-1">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-[#f5f2e9]">
+                {t('gameRoom.title')}
+              </h1>
+              {household?.isServerAvailable && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/35 bg-emerald-500/20 px-2.5 py-0.5 text-xs font-medium text-emerald-200">
+                  <ShieldCheck className="h-3.5 w-3.5" />{' '}
+                  {t('family.lobby.connected')}
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-[#e8e3d5] mt-2 max-w-2xl leading-6">
+              {t('gameRoom.intro')}
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t('gameRoom.intro')}
-          </p>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchRooms}
-            disabled={loading || !isMember}
-            className="flex items-center gap-1.5"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            {t('family.lobby.refresh')}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchRooms}
+              disabled={loading || !isMember}
+              className="salon-banner-outline-btn flex items-center gap-1.5 min-h-10"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`}
+              />
+              {t('family.lobby.refresh')}
+            </Button>
 
-          <Button
-            onClick={() => { setCreateError(null); setShowCreateModal(true); }}
-            disabled={!isMember}
-            className="flex items-center gap-1.5 bg-primary text-primary-foreground font-semibold shadow"
-          >
-            <Plus className="h-4 w-4" />
-            {t('family.lobby.createRoom')}
-          </Button>
+            <Button
+              onClick={() => {
+                setCreateError(null);
+                setShowCreateModal(true);
+              }}
+              disabled={!isMember}
+              className="salon-banner-primary-btn flex items-center gap-1.5 min-h-10 font-semibold shadow"
+            >
+              <Plus className="h-4 w-4" />
+              {t('family.lobby.createRoom')}
+            </Button>
+          </div>
         </div>
-      </div>
+      </section>
 
       {/* 访客模式提示 */}
       {!member && (
-        <div className="my-6 p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-center justify-between text-sm">
+        <div className="salon-guest-notice my-6 p-4 rounded-2xl border border-amber-500/35 bg-amber-500/10 flex items-center justify-between text-sm">
           <div>
-            <span className="font-semibold text-amber-700 dark:text-amber-400">{t('family.lobby.guestTitle')}</span>
-            <span className="text-muted-foreground ml-1">
+            <span className="font-semibold text-amber-800 dark:text-amber-300">
+              {t('family.lobby.guestTitle')}
+            </span>
+            <span className="text-muted-foreground ml-1.5">
               {t('family.lobby.guestHint')}
             </span>
           </div>
@@ -177,12 +201,31 @@ export default function FamilyLobby() {
 
       {/* 房间列表 */}
       <div className="mt-6">
-        <div className="mb-5 flex flex-wrap gap-2" aria-label={t('gameRoom.game')}>
-          {(['all', 'riichi', ...FAMILY_GAME_IDS] as const).map((game) => <Button key={game} variant={filter === game ? 'default' : 'outline'} className="min-h-11" onClick={() => { setFilter(game); if (game !== 'all') setCreateGame(game); }}>
-            {t(game === 'all' ? 'gameRoom.all' : game === 'riichi' ? 'gameRoom.riichi' : `game.${game}.name`)}
-          </Button>)}
+        <div
+          className="salon-filter-bar mb-5 flex flex-wrap gap-2"
+          aria-label={t('gameRoom.game')}
+        >
+          {(['all', 'riichi', ...FAMILY_GAME_IDS] as const).map((game) => (
+            <Button
+              key={game}
+              variant={filter === game ? 'default' : 'outline'}
+              className="min-h-11 rounded-xl"
+              onClick={() => {
+                setFilter(game);
+                if (game !== 'all') setCreateGame(game);
+              }}
+            >
+              {t(
+                game === 'all'
+                  ? 'gameRoom.all'
+                  : game === 'riichi'
+                    ? 'gameRoom.riichi'
+                    : `game.${game}.name`,
+              )}
+            </Button>
+          ))}
         </div>
-        <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
+        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 font-serif">
           <Users className="h-4 w-4 text-primary" />
           {formatMessage(locale, 'family.lobby.rooms', { count: roomCount })}
         </h2>
@@ -197,7 +240,7 @@ export default function FamilyLobby() {
         )}
 
         {!listError && roomCount === 0 ? (
-          <div className="text-center py-16 border border-dashed border-border rounded-2xl bg-card/50">
+          <div className="salon-empty-card paper-texture text-center py-16 border border-dashed border-gold/40 rounded-2xl bg-card/70">
             <Users className="h-10 w-10 mx-auto text-muted-foreground mb-3 opacity-40" />
             <p className="text-base font-medium text-foreground">{t(isMember ? 'family.lobby.noRooms' : 'family.lobby.signInToSee')}</p>
             <p className="text-sm text-muted-foreground mt-1">
@@ -223,7 +266,7 @@ export default function FamilyLobby() {
               return (
                 <div
                   key={room.id}
-                  className="rounded-2xl border border-border bg-card p-5 hover:border-primary/50 transition-all shadow-sm flex flex-col justify-between"
+                  className="salon-room-card paper-texture rounded-2xl border border-gold/30 bg-card p-5 hover:border-primary/50 transition-all shadow-sm flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-3">

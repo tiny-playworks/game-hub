@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { GPT_BANNER_ASSETS } from '@/assets/gptAssets';
 import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
 import { PersonalBest } from '@/components/game/PersonalBest';
 import { VenueGameGlyph } from '@/components/home/VenueGameGlyph';
@@ -108,15 +109,25 @@ const Home = () => {
           </p>
         </div>
         <section
-          className="play-focus-banner"
+          className="play-focus-banner salon-hero-banner"
           aria-labelledby="play-focus-title"
         >
-          <div>
+          {GPT_BANNER_ASSETS.home && (
+            <img
+              src={GPT_BANNER_ASSETS.home}
+              alt=""
+              aria-hidden="true"
+              fetchPriority="high"
+              decoding="async"
+              className="salon-banner-media"
+            />
+          )}
+          <div className="salon-banner-copy">
             <p className="play-eyebrow">RIICHI · ARCADE · FAMILY</p>
             <h2 id="play-focus-title">{t('play.focus')}</h2>
             <p>{t('play.focusDescription')}</p>
           </div>
-          <div className="play-focus-actions">
+          <div className="play-focus-actions salon-banner-actions">
             <Button asChild size="lg">
               <Link
                 to={
@@ -331,7 +342,7 @@ const Home = () => {
             id="arcade-panel"
             role="tabpanel"
             aria-labelledby={`arcade-tab-${categoryId}`}
-            className="mt-4 flex gap-4 overflow-x-auto pb-3"
+            className="salon-arcade-wall mt-4 grid gap-4 pb-3"
           >
             {games
               .filter((game) => game.categoryId === categoryId)
@@ -339,19 +350,21 @@ const Home = () => {
                 <Link
                   key={game.id}
                   to={game.path}
-                  className="venue-arcade-entry paper-texture group flex w-57.5 shrink-0 flex-col rounded-[22px] border border-wood/20 bg-card p-5 transition hover:-translate-y-1 hover:border-primary/40 hover:shadow-md"
+                  className="venue-arcade-entry salon-arcade-card paper-texture group flex flex-col rounded-[22px] border border-wood/20 bg-card p-4 transition hover:-translate-y-1 hover:border-primary/40 hover:shadow-md"
                 >
-                  <VenueGameGlyph gameId={game.id} />
+                  <div className="salon-arcade-cover-frame">
+                    <VenueGameGlyph gameId={game.id} />
+                    <span
+                      role="img"
+                      aria-label={`${t('lobby.difficulty')} ${game.difficulty}`}
+                      className="venue-game-difficulty salon-arcade-stars"
+                    >
+                      {'★'.repeat(game.difficulty)}
+                    </span>
+                  </div>
                   <div className="venue-arcade-copy">
                     <div className="flex items-center justify-between gap-2">
                       <h3>{t(`game.${game.id}.name`)}</h3>
-                      <span
-                        role="img"
-                        aria-label={`${t('lobby.difficulty')} ${game.difficulty}`}
-                        className="venue-game-difficulty"
-                      >
-                        {'★'.repeat(game.difficulty)}
-                      </span>
                     </div>
                     <p>{t(`game.${game.id}.description`)}</p>
                     <PersonalBest gameId={game.id} />

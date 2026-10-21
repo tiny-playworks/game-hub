@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { GPT_BANNER_ASSETS } from '@/assets/gptAssets';
 import { VenueGameGlyph } from '@/components/home/VenueGameGlyph';
 import { Button } from '@/components/ui/button';
 import { useOptionalHousehold } from '@/contexts/HouseholdContext';
@@ -199,58 +200,70 @@ export default function Leaderboard() {
   );
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="venue-leaderboard lobby-page min-h-screen bg-background text-foreground">
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-8">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-              <Trophy className="mr-1.5 inline size-3.5 text-gold" />
-              {t('venue.nav.leaderboard')}
-            </p>
-            <h1 className="mt-1 text-2xl font-semibold sm:text-3xl">
-              {t('leaderboard.title')}
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {t('leaderboard.subtitle')}
-            </p>
-          </div>
-          {canLoadLive && (
-            <div
-              role="tablist"
-              aria-label={t('leaderboard.title')}
-              className="flex rounded-full border bg-card p-1"
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={tab === 'rankings'}
-                onClick={() => selectTab('rankings')}
-                className={cn(
-                  'rounded-full px-4 py-1.5 text-xs font-medium transition',
-                  tab === 'rankings'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-muted',
-                )}
-              >
-                {t('leaderboard.tab.rankings')}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={tab === 'feed'}
-                onClick={() => selectTab('feed')}
-                className={cn(
-                  'rounded-full px-4 py-1.5 text-xs font-medium transition',
-                  tab === 'feed'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-muted',
-                )}
-              >
-                {t('leaderboard.tab.feed')}
-              </button>
-            </div>
+        <section className="salon-page-banner salon-page-banner--leaderboard">
+          {GPT_BANNER_ASSETS.leaderboard && (
+            <img
+              src={GPT_BANNER_ASSETS.leaderboard}
+              alt=""
+              aria-hidden="true"
+              fetchPriority="high"
+              decoding="async"
+              className="salon-banner-media"
+            />
           )}
-        </div>
+          <div className="salon-banner-inner flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="play-eyebrow">
+                <Trophy className="mr-1.5 inline size-3.5 text-[#d3af66]" />
+                {t('venue.nav.leaderboard')}
+              </p>
+              <h1 className="mt-1 text-3xl font-semibold sm:text-4xl text-[#f5f2e9]">
+                {t('leaderboard.title')}
+              </h1>
+              <p className="mt-1.5 text-sm text-[#e8e3d5] max-w-2xl">
+                {t('leaderboard.subtitle')}
+              </p>
+            </div>
+            {canLoadLive && (
+              <div
+                role="tablist"
+                aria-label={t('leaderboard.title')}
+                className="salon-banner-tablist flex rounded-full border border-[#d3af66]/40 bg-[#0f1e2b]/85 p-1 backdrop-blur"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === 'rankings'}
+                  onClick={() => selectTab('rankings')}
+                  className={cn(
+                    'rounded-full px-4 py-1.5 text-xs font-medium transition',
+                    tab === 'rankings'
+                      ? 'bg-[#d3af66] text-[#172a3a] font-semibold'
+                      : 'text-[#e8e3d5] hover:text-white',
+                  )}
+                >
+                  {t('leaderboard.tab.rankings')}
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === 'feed'}
+                  onClick={() => selectTab('feed')}
+                  className={cn(
+                    'rounded-full px-4 py-1.5 text-xs font-medium transition',
+                    tab === 'feed'
+                      ? 'bg-[#d3af66] text-[#172a3a] font-semibold'
+                      : 'text-[#e8e3d5] hover:text-white',
+                  )}
+                >
+                  {t('leaderboard.tab.feed')}
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
 
         {!memberMode ? (
           <section
@@ -336,12 +349,13 @@ export default function Leaderboard() {
                     data-testid={`leaderboard-game-${g.id}`}
                     onClick={() => selectGame(g.id)}
                     className={cn(
-                      'flex shrink-0 items-center gap-2 rounded-2xl border px-3.5 py-2 text-xs font-medium transition',
+                      'salon-leaderboard-game-pill flex shrink-0 items-center gap-2 rounded-2xl border px-3 py-1.5 text-xs font-medium transition',
                       gameId === g.id
-                        ? 'border-primary bg-primary/10 text-primary'
+                        ? 'border-primary bg-primary/10 text-primary shadow-xs'
                         : 'border-border bg-background text-foreground hover:border-primary/40',
                     )}
                   >
+                    <VenueGameGlyph gameId={g.id} />
                     <span>{t(`game.${g.id}.name`)}</span>
                   </button>
                 ))}
