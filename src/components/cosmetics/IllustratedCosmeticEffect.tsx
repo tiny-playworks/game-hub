@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   type CosmeticMotionAsset,
+  type CosmeticMotionCue,
   loadCosmeticAtlas,
 } from '@/lib/cosmeticMedia';
 
@@ -11,22 +12,30 @@ export function IllustratedCosmeticEffect({
   kind,
   still,
   onComplete,
+  onCue,
+  onPlaybackStop,
 }: {
   asset: CosmeticMotionAsset;
   id: string;
   kind: 'riichi' | 'win';
   still: boolean;
   onComplete?: () => void;
+  onCue?: (cue: CosmeticMotionCue) => void;
+  onPlaybackStop?: () => void;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const completion = useRef(onComplete);
+  const cue = useRef(onCue);
+  const playbackStop = useRef(onPlaybackStop);
   const [status, setStatus] = useState<'loading' | 'playing' | 'ended' | 'failed'>(
     'loading',
   );
 
   useEffect(() => {
     completion.current = onComplete;
-  }, [onComplete]);
+    cue.current = onCue;
+    playbackStop.current = onPlaybackStop;
+  }, [onComplete, onCue, onPlaybackStop]);
 
   useEffect(() => {
     if (still) return;
@@ -34,13 +43,29 @@ export function IllustratedCosmeticEffect({
     let cancelled = false;
     let frameRequest = 0;
     let fallbackTimer = 0;
+    let completed = false;
     setStatus('loading');
+    const complete = () => {
+      if (cancelled || completed) return;
+      completed = true;
+      playbackStop.current?.();
+      completion.current?.();
+    };
+    const visibility = () => {
+      if (!document.hidden) return;
+      cancelAnimationFrame(frameRequest);
+      window.clearTimeout(fallbackTimer);
+      complete();
+      cancelled = true;
+    };
+    document.addEventListener('visibilitychange', visibility);
 
     const fallback = () => {
       if (cancelled) return;
       setStatus('failed');
+      playbackStop.current?.();
       fallbackTimer = window.setTimeout(() => {
-        if (!cancelled) completion.current?.();
+        complete();
       }, 350);
     };
 
@@ -53,6 +78,7 @@ export function IllustratedCosmeticEffect({
           setStatus('playing');
           const startedAt = performance.now();
           let previousFrame = -1;
+          let markerIndex = 0;
           const step = (now: number) => {
             if (cancelled) return;
             const elapsed = now - startedAt;
@@ -74,12 +100,18 @@ export function IllustratedCosmeticEffect({
                 asset.frameSize,
               );
               previousFrame = index;
+              let reached: CosmeticMotionCue | undefined;
+              while (markerIndex < asset.cues.length && asset.cues[markerIndex].frame <= index) {
+                reached = asset.cues[markerIndex++];
+              }
+              // A delayed frame consumes old markers rather than playing a burst of stale sounds.
+              if (reached) cue.current?.(reached);
             }
             if (elapsed < asset.durationMs) {
               frameRequest = requestAnimationFrame(step);
             } else {
               setStatus('ended');
-              completion.current?.();
+              complete();
             }
           };
           step(startedAt);
@@ -91,6 +123,8 @@ export function IllustratedCosmeticEffect({
       cancelled = true;
       cancelAnimationFrame(frameRequest);
       window.clearTimeout(fallbackTimer);
+      document.removeEventListener('visibilitychange', visibility);
+      playbackStop.current?.();
     };
   }, [asset, still]);
 

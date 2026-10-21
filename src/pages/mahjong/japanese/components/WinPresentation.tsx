@@ -1,5 +1,7 @@
 import { type CSSProperties, useEffect, useRef, useState } from 'react';
-import { CosmeticEffect } from '@/components/cosmetics/CosmeticEffect';
+import { RiichiEventArtwork } from '@/components/riichi/RiichiEventArtwork';
+import { characterRoomAppearance } from '../../../../../shared/contracts/roomAppearance';
+import { useRiichiStore } from '../store/riichiMatchStore';
 import { Button } from '@/components/ui/button';
 import { DialogTitle } from '@/components/ui/dialog';
 import { useLocale } from '@/contexts/LocaleContext';
@@ -48,6 +50,7 @@ export function WinPresentation({
 }: Props) {
   const { t, locale } = useLocale();
   const { equipped } = useCosmetics();
+  const seatCharacters = useRiichiStore((state) => state.match?.seatCharacters);
   const sounds = useRiichiSounds();
   const [reduced, setReduced] = useState(
     () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -102,9 +105,9 @@ export function WinPresentation({
   useEffect(() => {
     if (!final || played.current) return;
     played.current = true;
-    if (full && yakuman && navigator.userActivation?.hasBeenActive !== false)
-      sounds.playYakuman();
-  }, [final, full, yakuman, sounds]);
+    if (full && !skipped && yakuman && navigator.userActivation?.hasBeenActive !== false)
+      return sounds.playYakuman();
+  }, [final, full, skipped, yakuman, sounds]);
 
   return (
     <ResultDialog
@@ -169,9 +172,11 @@ export function WinPresentation({
         )}
         {full && final && !skipped && !illustrationEnded && (
           <div className="riichi-win-illustrated" aria-hidden="true">
-            <CosmeticEffect
-              id={equipped['win-effect']}
+            <RiichiEventArtwork
+              effectId={primary.winner === 0 ? equipped['win-effect'] : characterRoomAppearance(seatCharacters?.[primary.winner] ?? undefined).winEffect}
               kind="win"
+              mode={mode}
+              layout="result"
               onComplete={() => setIllustrationEnded(true)}
             />
           </div>

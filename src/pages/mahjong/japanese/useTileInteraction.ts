@@ -7,6 +7,7 @@ export type TileInteractionOptions = {
   riichiSelecting: boolean;
   isMyClaim: boolean;
   enabled: boolean;
+  decisionKey?: string | number | null;
   singleClickDiscard?: boolean;
   onDiscard: (tile: number) => void;
   onCancelRiichi: () => void;
@@ -27,27 +28,36 @@ export function useTileInteraction({
   riichiSelecting,
   isMyClaim,
   enabled,
+  decisionKey,
   singleClickDiscard = false,
   onDiscard,
   onCancelRiichi,
   onPassClaim,
   onActionShortcut,
 }: TileInteractionOptions) {
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
-  const [selectedTile, setSelectedTile] = useState<number | null>(null);
+  const [selection, setSelection] = useState<{
+    key: string;
+    tile: number;
+    decision: TileInteractionOptions['decisionKey'];
+  } | null>(null);
+  const currentSelection = enabled && selection?.decision === decisionKey ? selection : null;
+  const selectedKey = currentSelection?.key ?? null;
+  const selectedTile = currentSelection?.tile ?? null;
 
   // Auto-clear selection if no longer allowed to discard or tile is invalid
   useEffect(() => {
-    if (!canDiscard) {
-      setSelectedKey(null);
-      setSelectedTile(null);
+    if (!canDiscard || !enabled) {
+      setSelection(null);
       return;
     }
     if (selectedTile !== null && !discardable.includes(selectedTile)) {
-      setSelectedKey(null);
-      setSelectedTile(null);
+      setSelection(null);
     }
-  }, [canDiscard, discardable, selectedTile]);
+  }, [canDiscard, enabled, discardable, selectedTile]);
+
+  useEffect(() => {
+    setSelection(null);
+  }, [decisionKey]);
 
   // Touch gesture scroll safety: finger movement > 10px cancels tap
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);
@@ -59,38 +69,33 @@ export function useTileInteraction({
       if (source === 'click' && Date.now() - lastTouchTime.current < 650) {
         return;
       }
-      if (!canDiscard || !discardable.includes(tile)) return;
-      if (singleClickDiscard && source === 'click') {
+      if (!enabled || !canDiscard || !discardable.includes(tile)) return;
+      if (singleClickDiscard && !riichiSelecting && source === 'click') {
         onDiscard(tile);
-        setSelectedKey(null);
-        setSelectedTile(null);
+        setSelection(null);
         return;
       }
       if (selectedKey === key) {
         // Second tap/click on already selected tile -> confirm discard!
         onDiscard(tile);
-        setSelectedKey(null);
-        setSelectedTile(null);
+        setSelection(null);
       } else {
         // First tap/click -> select the tile
-        setSelectedKey(key);
-        setSelectedTile(tile);
+        setSelection({ key, tile, decision: decisionKey });
       }
     },
-    [canDiscard, discardable, selectedKey, singleClickDiscard, onDiscard],
+    [enabled, canDiscard, discardable, selectedKey, singleClickDiscard, riichiSelecting, decisionKey, onDiscard],
   );
 
   const confirmDiscard = useCallback(() => {
-    if (selectedTile !== null && canDiscard && discardable.includes(selectedTile)) {
+    if (enabled && selectedTile !== null && canDiscard && discardable.includes(selectedTile)) {
       onDiscard(selectedTile);
-      setSelectedKey(null);
-      setSelectedTile(null);
+      setSelection(null);
     }
-  }, [canDiscard, discardable, selectedTile, onDiscard]);
+  }, [enabled, canDiscard, discardable, selectedTile, onDiscard]);
 
   const cancelSelection = useCallback(() => {
-    setSelectedKey(null);
-    setSelectedTile(null);
+    setSelection(null);
   }, []);
 
   const onTouchStart = useCallback((e: React.TouchEvent) => {
@@ -144,6 +149,7 @@ export function useTileInteraction({
         }
 
         const key = event.key ? event.key.toLowerCase() : '';
+        if ((key === 'enter' || key === ' ') && target?.closest('button, a') && !target.closest('.riichi-self-hand')) return;
 
         // Arrow navigation
         if (key === 'arrowleft' || key === 'arrowright') {
@@ -167,8 +173,7 @@ export function useTileInteraction({
         }
 
         const nextItem = discardableItems[nextIndex];
-        setSelectedKey(nextItem.key);
-        setSelectedTile(nextItem.tile);
+        setSelection({ key: nextItem.key, tile: nextItem.tile, decision: decisionKey });
 
         // Also focus corresponding button if present
         const buttons = Array.from(
@@ -228,6 +233,7 @@ export function useTileInteraction({
     return () => document.removeEventListener('keydown', onKey);
   }, [
     enabled,
+    decisionKey,
     canDiscard,
     discardable,
     handItems,

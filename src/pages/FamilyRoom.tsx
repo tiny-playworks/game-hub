@@ -14,8 +14,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { useOptionalHousehold } from '@/contexts/HouseholdContext';
 import { ConnectionNotice } from '@/components/household/ConnectionNotice';
+import { FamilyPlayerActions } from '@/components/riichi/FamilyPlayerActions';
+import { FamilyRiichiToast, FamilyWinCelebration } from '@/components/riichi/FamilyTablePresentation';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useCosmetics } from '@/hooks/useCosmetics';
+import { useFamilyPresentation } from '@/hooks/useFamilyPresentation';
 import { useRoomClient } from '@/lib/household/roomClient';
 import { formatMessage } from '@/lib/i18n';
 import { getCharacterById } from '@/lib/playerCharacters';
@@ -52,6 +55,7 @@ export default function FamilyRoom() {
   const windName = (seat: number) =>
     t(`family.room.wind.${['east', 'south', 'west', 'north'][seat]}`);
 
+  const roomClient = useRoomClient(roomId, currentMember?.id);
   const {
     room,
     view,
@@ -67,17 +71,12 @@ export default function FamilyRoom() {
     setReady,
     startGame,
     rematch,
-    discardTile,
-    declareRiichi,
-    declareTsumo,
-    declareRon,
-    passClaim,
-    declareClaim,
     nextRound,
     takeoverControl,
     toggleAutoplay,
     resumeGame,
-  } = useRoomClient(roomId, currentMember?.id);
+  } = roomClient;
+  const presentation = useFamilyPresentation(view, connected, roomClient.presentationBaseline);
 
   const { selfSeat, rightSeat, topSeat, leftSeat } = usePlayerSeatView(view);
   const isSpectator = view?.isSpectator === true;
@@ -100,6 +99,12 @@ export default function FamilyRoom() {
         previous.focus({ preventScroll: true });
     };
   }, [resultOpen, view?.status]);
+
+  useEffect(() => {
+    if (resultOpen && document.activeElement === document.body) {
+      resultDialog.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus({ preventScroll: true });
+    }
+  }, [resultOpen, presentation.win?.id]);
 
   useEffect(() => {
     if (!view?.serverDeadline) {
@@ -269,6 +274,7 @@ export default function FamilyRoom() {
           connected={connected}
           isAutoplay={false}
           leaseLost={leaseLost}
+          pending={roomClient.commandPending}
           isPaused={room.isPaused}
           onTakeover={takeoverControl}
           onResumeGame={resumeGame}
@@ -429,13 +435,10 @@ export default function FamilyRoom() {
   // 2. 对局中 / 终局结算界面
   const round = view?.round;
   const isMyTurn = !isSpectator && (selfSeat?.isCurrentTurn ?? false);
-  const turnOptions = selfSeat?.seat.turnOptions;
-  const claimOptions = selfSeat?.seat.claimOptions;
-  const canDiscard =
-    isMyTurn && turnOptions !== null && round?.phase === 'discard';
 
   return (
     <div data-table-felt={equipped['table-felt']} className="family-riichi-table min-h-[calc(100dvh-6.25rem)] md:min-h-[calc(100dvh-4rem)] bg-[#0d1811] text-[#e8f2ea] flex flex-col justify-between p-2 md:p-6 select-none overflow-x-hidden">
+      {view && presentation.riichi && <FamilyRiichiToast view={view} event={presentation.riichi} onComplete={presentation.finishRiichi} />}
       {/* 顶部状态与倒计时 */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-2 py-2 md:px-3 rounded-xl bg-black/40 backdrop-blur border border-white/10 text-xs">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 md:gap-3">
@@ -509,6 +512,7 @@ export default function FamilyRoom() {
           connected={connected}
           isAutoplay={selfSeat?.seat.isAutoplay}
           leaseLost={leaseLost}
+          pending={roomClient.commandPending}
           isPaused={room.isPaused}
           onTakeover={takeoverControl}
           onCancelAutoplay={() => toggleAutoplay(false)}
@@ -647,128 +651,14 @@ export default function FamilyRoom() {
               ))}
             </div>
 
-            {/* 本人信息栏与动作按纽栏 */}
-            <div className="flex flex-wrap items-center justify-between gap-2 w-full max-w-2xl px-3 py-1.5 rounded-xl bg-black/60 border border-white/10">
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-amber-400 font-bold text-sm">
-                  {windName(selfSeat.absSeat)} {t(isSpectator ? 'family.room.spectatorView' : 'family.room.selfView')}
-                </span>
-                <span className="font-semibold">
-                  {seatName(selfSeat.seat.identity)}
-                </span>
-                <span className="font-mono text-emerald-400 text-sm">
-                  {formatMessage(locale, 'family.room.points', { points: selfSeat.seat.score })}
-                </span>
-                {selfSeat.seat.isRiichi && (
-                  <span className="bg-rose-500 text-white text-[10px] px-1.5 py-0.2 rounded font-bold">
-                    {t('family.room.riichi')}
-                  </span>
-                )}
-              </div>
+            {view && <FamilyPlayerActions
+              view={view}
+              client={roomClient}
+              secondsRemaining={secondsRemaining}
+              name={seatName(selfSeat.seat.identity)}
+              wind={windName(selfSeat.absSeat)}
+            />}
 
-              {/* 动作按钮：自摸 / 立直 / 荣 / 吃 / 碰 / 杠 / 过 */}
-              <div className="flex items-center gap-1.5">
-                {turnOptions?.tsumo && (
-                  <Button
-                    size="sm"
-                    onClick={declareTsumo}
-                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold h-7 px-3 text-xs"
-                  >
-                    {t('family.room.tsumo')}
-                  </Button>
-                )}
-                {turnOptions &&
-                  turnOptions.riichiDiscards.length > 0 &&
-                  !selfSeat.seat.isRiichi && (
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        const firstDiscard = turnOptions.riichiDiscards[0];
-                        if (firstDiscard !== undefined)
-                          declareRiichi(firstDiscard);
-                      }}
-                      className="bg-rose-600 hover:bg-rose-700 text-white font-bold h-7 px-3 text-xs"
-                    >
-                      {t('family.room.riichi')}
-                    </Button>
-                  )}
-                {claimOptions?.ron && (
-                  <Button
-                    size="sm"
-                    onClick={declareRon}
-                    className="bg-rose-600 hover:bg-rose-700 text-white font-bold h-7 px-3 text-xs animate-bounce"
-                  >
-                    {t('family.room.ron')}
-                  </Button>
-                )}
-                {claimOptions?.pon && (
-                  <Button
-                    size="sm"
-                    onClick={() => declareClaim('pon')}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-7 px-2.5 text-xs"
-                  >
-                    {t('family.room.pon')}
-                  </Button>
-                )}
-                {claimOptions?.minkan && (
-                  <Button
-                    size="sm"
-                    onClick={() => declareClaim('minkan')}
-                    className="bg-purple-600 hover:bg-purple-700 text-white font-bold h-7 px-2.5 text-xs"
-                  >
-                    {t('family.room.kan')}
-                  </Button>
-                )}
-                {claimOptions?.chi && claimOptions.chi.length > 0 && (
-                  <Button
-                    size="sm"
-                    onClick={() => declareClaim('chi', claimOptions.chi[0])}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-7 px-2.5 text-xs"
-                  >
-                    {t('family.room.chi')}
-                  </Button>
-                )}
-                {claimOptions && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={passClaim}
-                    className="h-7 px-2.5 text-xs border-white/20 text-white/80 hover:text-white"
-                  >
-                    {t('family.room.pass')}
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            {/* 观战时仅显示牌背，不发送任何暗手牌 */}
-            <div className="family-room-hand flex items-center gap-0.5 md:gap-1 justify-center py-2 px-2 md:px-3 rounded-2xl bg-black/40 border border-white/10 shadow-lg">
-              {isSpectator ? Array.from({ length: selfSeat.seat.tileCount }).map((_, i) => (
-                <TileBack key={i} className="scale-75 origin-center" />
-              )) : selfSeat.seat.hand.map((tile, i) => {
-                const isDiscardable = Boolean(
-                  canDiscard && turnOptions?.discardable.includes(tile),
-                );
-                return (
-                  <div
-                    key={`${tile}-${i}`}
-                    className={`transition-transform duration-100 ${
-                      isDiscardable
-                        ? 'hover:-translate-y-2 cursor-pointer'
-                        : 'opacity-90'
-                    }`}
-                  >
-                    <RiichiTile
-                      tile={tile}
-                      variant="hand"
-                      onClick={
-                        isDiscardable ? () => discardTile(tile) : undefined
-                      }
-                    />
-                  </div>
-                );
-              })}
-            </div>
           </div>
         )}
       </div>
@@ -818,6 +708,7 @@ export default function FamilyRoom() {
               </div>
             ) : null}
 
+            <FamilyWinCelebration view={view} event={presentation.win} liveResult={presentation.liveResult} onComplete={presentation.finishWin} />
             {view.result.type === 'win' ? (
               <div className="space-y-3">
                 {view.result.wins.map((win, idx) => (
@@ -912,7 +803,8 @@ export default function FamilyRoom() {
                 <p className="w-full text-center text-sm text-white/70">{t('family.room.waitNext')}</p>
               ) : (
                 <Button
-                  onClick={nextRound}
+                  onClick={() => void nextRound()}
+                  disabled={roomClient.commandPending || !connected || !selfSeat?.seat.hasControlLease}
                   className="w-full bg-primary text-primary-foreground font-semibold"
                 >
                   {t('family.room.next')}

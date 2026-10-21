@@ -20,12 +20,32 @@ import {
   reopenRoomForRematch,
 } from './api';
 
+export interface RoomPresentationBaseline {
+  version: number;
+  matchId: string;
+  epoch: string;
+  cursor: number;
+}
+
 export function useRoomClient(roomId?: string, memberId?: string) {
   const [room, setRoom] = useState<RoomSummary | null>(null);
   const [view, setView] = useState<PlayerViewSnapshot | null>(null);
   const [connected, setConnected] = useState(false);
   const [leaseLost, setLeaseLost] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [commandPending, setCommandPending] = useState(false);
+  const [presentationBaseline, setPresentationBaseline] = useState<RoomPresentationBaseline | null>(null);
+  const viewRef = useRef<PlayerViewSnapshot | null>(null);
+  const scope = `${roomId ?? ''}:${memberId ?? ''}`;
+  const scopeRef = useRef(scope);
+  scopeRef.current = scope;
+  const viewScope = useRef('');
+  const connectionScope = useRef('');
+  const pendingRef = useRef<{
+    id: string;
+    timer: ReturnType<typeof setTimeout>;
+    resolve: (accepted: boolean) => void;
+  } | null>(null);
 
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -33,55 +53,99 @@ export function useRoomClient(roomId?: string, memberId?: string) {
   );
   const isDestroyedRef = useRef(false);
 
+  const finishPending = useCallback((id: string, accepted: boolean) => {
+    const pending = pendingRef.current;
+    if (!pending || pending.id !== id) return;
+    clearTimeout(pending.timer);
+    pendingRef.current = null;
+    setCommandPending(false);
+    pending.resolve(accepted);
+  }, []);
+
+  const receiveView = useCallback((next: PlayerViewSnapshot, baseline = false) => {
+    if (next.roomId !== roomId || scopeRef.current !== scope) return;
+    if (viewRef.current?.roomId === next.roomId && viewRef.current.revision > next.revision) return;
+    viewRef.current = next;
+    viewScope.current = scope;
+    setView(next);
+    if (baseline) setPresentationBaseline((previous) => next.presentation ? {
+      version: (previous?.version ?? 0) + 1,
+      matchId: next.matchId,
+      epoch: next.presentation.epoch,
+      cursor: next.presentation.cursor,
+    } : null);
+  }, [roomId, scope]);
+
   const refresh = useCallback(async () => {
     if (!roomId) return;
     try {
       const summary = await getRoom(roomId);
-      setRoom(summary);
+      if (isDestroyedRef.current || scopeRef.current !== scope) return;
+      setRoom((previous) => previous?.id === summary.id && previous.revision > summary.revision ? previous : summary);
       if (summary.status === 'playing' || summary.status === 'finished') {
         const pView = await getRoomPlayerView(roomId).catch(() => null);
-        if (pView) setView(pView);
-      } else setView(null);
+        if (pView && !isDestroyedRef.current && scopeRef.current === scope) receiveView(pView, !viewRef.current);
+      } else if (!viewRef.current || summary.revision >= viewRef.current.revision) {
+        viewRef.current = null;
+        setView(null);
+      }
     } catch (err: unknown) {
-      if (err instanceof Error) setError(err.message);
+      if (!isDestroyedRef.current && scopeRef.current === scope && err instanceof Error) setError(err.message);
     }
-  }, [roomId]);
+  }, [roomId, scope, receiveView]);
 
   useEffect(() => {
     if (!roomId) return;
     isDestroyedRef.current = false;
+    viewRef.current = null;
+    setView(null);
+    setRoom(null);
+    setConnected(false);
+    setCommandPending(false);
+    setLeaseLost(false);
+    setError(null);
 
     let ws: WebSocket | null = null;
 
     function connect() {
-      if (isDestroyedRef.current) return;
+      if (isDestroyedRef.current || scopeRef.current !== scope) return;
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const url = `${protocol}//${window.location.host}/ws`;
 
       try {
+        let firstSnapshot = true;
         ws = new WebSocket(url);
         socketRef.current = ws;
+        const activeSocket = ws;
 
         ws.onopen = () => {
-          if (isDestroyedRef.current) {
-            ws?.close();
+          if (isDestroyedRef.current || socketRef.current !== activeSocket || scopeRef.current !== scope) {
+            activeSocket.close();
             return;
           }
+          connectionScope.current = scope;
           setConnected(true);
           setError(null);
           // 订阅房间
-          ws?.send(JSON.stringify({ type: 'subscribe_room', roomId }));
+          activeSocket.send(JSON.stringify({ type: 'subscribe_room', roomId }));
         };
 
         ws.onmessage = (event) => {
+          if (isDestroyedRef.current || socketRef.current !== activeSocket || scopeRef.current !== scope) return;
           try {
             const msg = JSON.parse(event.data) as ServerMessage;
             if (msg.type === 'room_update') {
-              setRoom(msg.room);
-              if (msg.room.status === 'waiting') setView(null);
+              setRoom((previous) => previous?.id === msg.room.id && previous.revision > msg.room.revision ? previous : msg.room);
+              if (msg.room.status === 'waiting' && (!viewRef.current || msg.room.revision >= viewRef.current.revision)) {
+                viewRef.current = null;
+                setView(null);
+              }
             } else if (msg.type === 'match_update') {
-              setView(msg.view);
+              receiveView(msg.view, firstSnapshot);
+              firstSnapshot = false;
             } else if (msg.type === 'ack') {
+              if (pendingRef.current?.id !== msg.commandId) return;
+              finishPending(msg.commandId, msg.accepted);
               if (msg.accepted) setError(null);
               else {
                 setError(
@@ -93,8 +157,10 @@ export function useRoomClient(roomId?: string, memberId?: string) {
               }
             } else if (msg.type === 'lease_lost') {
               setLeaseLost(true);
+              if (pendingRef.current) finishPending(pendingRef.current.id, false);
             } else if (msg.type === 'error') {
               setError(msg.code);
+              if (pendingRef.current) finishPending(pendingRef.current.id, false);
             }
           } catch {
             // ignore
@@ -102,15 +168,17 @@ export function useRoomClient(roomId?: string, memberId?: string) {
         };
 
         ws.onclose = () => {
+          if (isDestroyedRef.current || socketRef.current !== activeSocket) return;
           setConnected(false);
           socketRef.current = null;
+          if (pendingRef.current) finishPending(pendingRef.current.id, false);
           if (!isDestroyedRef.current) {
             reconnectTimeoutRef.current = setTimeout(connect, 2000);
           }
         };
 
         ws.onerror = () => {
-          ws?.close();
+          activeSocket.close();
         };
       } catch {
         if (!isDestroyedRef.current) {
@@ -130,12 +198,20 @@ export function useRoomClient(roomId?: string, memberId?: string) {
         socketRef.current.close();
         socketRef.current = null;
       }
+      const pending = pendingRef.current;
+      if (pending) {
+        clearTimeout(pending.timer);
+        pendingRef.current = null;
+        pending.resolve(false);
+      }
     };
-  }, [roomId, refresh]);
+  }, [roomId, refresh, receiveView, finishPending]);
 
   const sendCommand = useCallback(
     async (type: RoomCommandType, payload?: unknown) => {
       if (!roomId) throw new Error('NO_ROOM');
+      if (scopeRef.current !== scope || (viewRef.current && viewScope.current !== scope)) return false;
+      if (pendingRef.current) return false;
       const cmd: RoomCommand = {
         protocol: 1,
         commandId: createUuid(),
@@ -149,37 +225,46 @@ export function useRoomClient(roomId?: string, memberId?: string) {
         payload,
       };
 
-      try {
-        // 优先通过 WebSocket 发送
-        if (
-          socketRef.current &&
-          socketRef.current.readyState === WebSocket.OPEN
-        ) {
-          socketRef.current.send(
-            JSON.stringify({ type: 'command', command: cmd }),
-          );
-        } else {
-          const ack = await sendRoomCommand(roomId, cmd);
-          setError(
-            ack.accepted
-              ? null
-              : ack.code === 'ROOM_REVISION_CONFLICT'
-                ? 'play.roomStateChanged'
-                : 'play.roomActionFailed',
-          );
-          await refresh();
-        }
-      } catch {
-        setError('play.roomActionFailed');
-      }
+      setError(null);
+      setCommandPending(true);
+      return new Promise<boolean>((resolve) => {
+        const timer = setTimeout(() => {
+          if (pendingRef.current?.id !== cmd.commandId) return;
+          setError('play.roomActionFailed');
+          finishPending(cmd.commandId, false);
+          void refresh();
+        }, 8000);
+        pendingRef.current = { id: cmd.commandId, timer, resolve };
+        const send = async () => {
+          try {
+            if (socketRef.current?.readyState === WebSocket.OPEN) {
+              socketRef.current.send(JSON.stringify({ type: 'command', command: cmd }));
+            } else {
+              const ack = await sendRoomCommand(roomId, cmd);
+              if (pendingRef.current?.id !== cmd.commandId) return;
+              setError(ack.accepted ? null : ack.code === 'ROOM_REVISION_CONFLICT'
+                ? 'play.roomStateChanged' : 'play.roomActionFailed');
+              await refresh();
+              finishPending(cmd.commandId, ack.accepted);
+            }
+          } catch {
+            if (pendingRef.current?.id !== cmd.commandId) return;
+            setError('play.roomActionFailed');
+            finishPending(cmd.commandId, false);
+          }
+        };
+        void send();
+      });
     },
     [
       roomId,
+      scope,
       room?.currentMatchId,
       room?.revision,
       view?.matchId,
       view?.revision,
       refresh,
+      finishPending,
     ],
   );
 
@@ -264,6 +349,9 @@ export function useRoomClient(roomId?: string, memberId?: string) {
   );
 
   const declareTsumo = useCallback(() => sendCommand('tsumo'), [sendCommand]);
+  const declareAnkan = useCallback((tiles: number[]) => sendCommand('ankan', { tiles }), [sendCommand]);
+  const declareKakan = useCallback((meldIndex: number, tile: number) => sendCommand('kakan', { meldIndex, tile }), [sendCommand]);
+  const declareKyuushu = useCallback(() => sendCommand('kyuushu'), [sendCommand]);
 
   const declareRon = useCallback(() => sendCommand('ron'), [sendCommand]);
 
@@ -278,8 +366,7 @@ export function useRoomClient(roomId?: string, memberId?: string) {
   const nextRound = useCallback(() => sendCommand('next_round'), [sendCommand]);
 
   const takeoverControl = useCallback(async () => {
-    await sendCommand('takeover_control');
-    setLeaseLost(false);
+    if (await sendCommand('takeover_control')) setLeaseLost(false);
   }, [sendCommand]);
 
   const toggleAutoplay = useCallback(
@@ -305,10 +392,12 @@ export function useRoomClient(roomId?: string, memberId?: string) {
 
   return {
     room,
-    view,
-    connected,
+    view: viewScope.current === scope ? view : null,
+    connected: connected && connectionScope.current === scope,
     leaseLost,
     error,
+    commandPending,
+    presentationBaseline,
     mySeatIndex,
     isHost,
     refresh,
@@ -322,6 +411,9 @@ export function useRoomClient(roomId?: string, memberId?: string) {
     discardTile,
     declareRiichi,
     declareTsumo,
+    declareAnkan,
+    declareKakan,
+    declareKyuushu,
     declareRon,
     passClaim,
     declareClaim,

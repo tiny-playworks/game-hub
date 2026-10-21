@@ -9,6 +9,29 @@ export type RoomStatus = 'waiting' | 'playing' | 'finished';
 
 export type SeatType = 'human' | 'ai' | 'empty';
 
+/** Public equipment fixed for one match; inventories and unlocks stay private. */
+export interface RoomAppearance {
+  riichiEffect: string;
+  winEffect: string;
+}
+
+export type RoomPresentationSound =
+  | 'discard' | 'draw' | 'chi' | 'pon' | 'kan'
+  | 'riichi' | 'tsumo' | 'ron' | 'ryuukyoku';
+
+export interface RoomPresentationEvent {
+  id: string;
+  sequence: number;
+  sound: RoomPresentationSound;
+  seat: number;
+}
+
+export interface RoomPresentation {
+  epoch: string;
+  cursor: number;
+  events: RoomPresentationEvent[];
+}
+
 export interface HumanSeat {
   type: 'human';
   seatIndex: number; // 0..3 (东、南、西、北 绝对座次)
@@ -21,6 +44,7 @@ export interface HumanSeat {
   connected: boolean;
   disconnectedAt: number | null; // 最近离线时间戳
   isAutoplay: boolean; // 是否处于 AI 临时接手托管状态
+  appearance?: RoomAppearance;
 }
 
 export interface AiSeat {
@@ -213,6 +237,9 @@ export type RoomCommandType =
   | 'discard'
   | 'claim'
   | 'riichi'
+  | 'ankan'
+  | 'kakan'
+  | 'kyuushu'
   | 'tsumo'
   | 'ron'
   | 'pass'
@@ -229,6 +256,7 @@ export interface PlayerSeatPrivateState {
     avatarPresetId?: string;
     characterId?: string;
   };
+  appearance?: RoomAppearance;
   hand: number[]; // 仅本人暗手牌；他人隐藏为 []
   tileCount: number; // 所有席位均可见手牌张数
   melds: RiichiMeld[]; // 公开副露
@@ -249,6 +277,9 @@ export interface PlayerViewSnapshot {
   viewerSeat: number; // 0..3 本人绝对座次
   isSpectator?: boolean; // 观战时所有暗手牌与操作选项均隐藏
   revision: number;
+  /** Engine decision identity, independent of connection/lease revisions. */
+  decisionId?: string;
+  presentation?: RoomPresentation;
   status: 'playing' | 'roundEnd' | 'matchEnd';
   isPaused?: boolean;
   round: {

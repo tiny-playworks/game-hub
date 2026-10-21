@@ -9,7 +9,7 @@ function isSpeechSupported(): boolean {
 }
 
 let audioContext: AudioContext | null = null;
-const activeOscillators = new Set<OscillatorNode>();
+const activeOscillators = new Set<AudioScheduledSourceNode>();
 const activeGains = new Map<GainNode, number>();
 
 /** Keep the context unlocked by a user gesture for later game effects on mobile. */
@@ -35,7 +35,7 @@ export function unlockAudioContext(): void {
 }
 
 export function trackAudioOscillator(
-  oscillator: OscillatorNode,
+  oscillator: AudioScheduledSourceNode,
   gain: GainNode,
 ): void {
   activeOscillators.add(oscillator);
@@ -44,8 +44,12 @@ export function trackAudioOscillator(
     'ended',
     () => {
       activeOscillators.delete(oscillator);
+      oscillator.disconnect();
       const remaining = (activeGains.get(gain) ?? 1) - 1;
-      if (remaining <= 0) activeGains.delete(gain);
+      if (remaining <= 0) {
+        activeGains.delete(gain);
+        gain.disconnect();
+      }
       else activeGains.set(gain, remaining);
     },
     { once: true },

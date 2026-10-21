@@ -2,7 +2,9 @@ import type {
   PlayerSeatPrivateState,
   PlayerViewSnapshot,
   RoomSummary,
+  RoomPresentation,
 } from '../../../shared/contracts/room';
+import { characterRoomAppearance, normalizeRoomAppearance } from '../../../shared/contracts/roomAppearance';
 import type { RiichiMatchState } from '@/pages/mahjong/japanese/engine/match';
 import { getSeatClaimOptions, getSeatTurnOptions } from '@/pages/mahjong/japanese/engine';
 
@@ -16,6 +18,7 @@ export function createPlayerView(
   serverDeadline: number | null = null,
   viewerDeviceId?: string,
   spectator = false,
+  presentation?: RoomPresentation,
 ): PlayerViewSnapshot {
   const round = match.round;
 
@@ -55,6 +58,9 @@ export function createPlayerView(
     return {
       seatIndex,
       identity,
+      appearance: roomSeat.type === 'human'
+        ? normalizeRoomAppearance(roomSeat.appearance)
+        : characterRoomAppearance(roomSeat.type === 'ai' ? roomSeat.characterId : undefined),
       // 核心隐私安全保护：只有自家能看见暗手牌，其余席位全部下发为空数组
       hand: isSelf ? [...hand] : [],
       tileCount: hand.length,
@@ -84,6 +90,15 @@ export function createPlayerView(
     viewerSeat,
     isSpectator: spectator,
     revision,
+    // Public decision fingerprint: other players passing or reconnecting does not invalidate a selection.
+    decisionId: [round.roundWind, round.roundNumber, round.honba, round.phase, round.currentPlayer,
+      round.wall.length, round.discardPiles.reduce((count, pile) => count + pile.length, 0),
+      round.melds.reduce((count, melds) => count + melds.reduce((tiles, meld) => tiles + meld.tiles.length, 0), 0),
+    ].join(':'),
+    presentation: presentation ? {
+      ...presentation,
+      events: presentation.events.map((event) => ({ ...event })),
+    } : undefined,
     status: match.status,
     isPaused: room.isPaused ?? false,
     round: {

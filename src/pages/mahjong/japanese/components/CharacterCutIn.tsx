@@ -1,7 +1,6 @@
 import { useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
-import { CosmeticEffect } from '@/components/cosmetics/CosmeticEffect';
+import { RiichiEventArtwork } from '@/components/riichi/RiichiEventArtwork';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useCosmetics } from '@/hooks/useCosmetics';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -11,6 +10,7 @@ import {
   preloadCosmeticMotion,
 } from '@/lib/cosmeticMedia';
 import { getCharacterById } from '@/lib/playerCharacters';
+import { characterRoomAppearance } from '../../../../../shared/contracts/roomAppearance';
 import type { RiichiPlayerSettings } from '@/lib/playerProfile';
 import { cn } from '@/lib/utils';
 import { CUT_IN_DURATION_MS } from '../characterMoments';
@@ -27,9 +27,12 @@ export function CharacterCutIn({
   const moment = useRiichiStore((state) => state.cutIns[0]);
   const finish = useRiichiStore((state) => state.finishCutIn);
   const clear = useRiichiStore((state) => state.clearCutIns);
+  const seatCharacters = useRiichiStore((state) => state.match?.seatCharacters);
+  const opponentWinIds = (seatCharacters ?? []).slice(1).map((id) => characterRoomAppearance(id ?? undefined).winEffect).join('|');
+  const effectId = moment?.seat === 0 ? equipped['riichi-effect'] : 'riichi-default';
   const motion =
     mode === 'full' && moment?.kind === 'riichi'
-      ? getCosmeticMotion(equipped['riichi-effect'])
+      ? getCosmeticMotion(effectId)
       : undefined;
   const finishCurrent = useCallback(() => {
     if (moment) finish(moment.id);
@@ -39,7 +42,9 @@ export function CharacterCutIn({
     if (mode !== 'full' || reducedMotion) return;
     preloadCosmeticMotion(equipped['riichi-effect']);
     preloadCosmeticMotion(equipped['win-effect']);
-  }, [mode, reducedMotion, equipped]);
+    preloadCosmeticMotion('riichi-default');
+    for (const id of opponentWinIds.split('|')) if (id) preloadCosmeticMotion(id);
+  }, [mode, reducedMotion, equipped['riichi-effect'], equipped['win-effect'], opponentWinIds]);
 
   useEffect(() => {
     if (!moment) return;
@@ -85,41 +90,17 @@ export function CharacterCutIn({
       aria-label={t('riichi.cutin.skip')}
       onClick={finishCurrent}
     >
-      <span
+      <RiichiEventArtwork
         key={moment.id}
-        className={cn(
-          'riichi-character-cutin-band bg-linear-to-r',
-          character.accent,
-          mode === 'simple' && 'is-simple',
-        )}
-      >
-        {moment.kind === 'riichi' && mode === 'full' && (
-          <CosmeticEffect
-            key={moment.id}
-            id={equipped['riichi-effect']}
-            kind="riichi"
-            onComplete={finishCurrent}
-          />
-        )}
-        {mode === 'full' && (
-          <CharacterPortraitSlot
-            character={character}
-            expression="happy"
-            size="cutin"
-            label={t(character.nameKey)}
-            className="riichi-cutin-portrait"
-          />
-        )}
-        <span className="riichi-cutin-copy" aria-live="assertive">
-          {mode === 'full' && (
-            <span className="riichi-cutin-name">{t(character.nameKey)}</span>
-          )}
-          <strong>{t(`riichi.cutin.${moment.kind}`)}</strong>
-          {mode === 'full' && (
-            <span className="riichi-cutin-line">{t(moment.lineKey)}</span>
-          )}
-        </span>
-      </span>
+        className={cn('riichi-character-cutin-band bg-linear-to-r', character.accent, mode === 'simple' && 'is-simple')}
+        mode={mode}
+        layout="cutin"
+        kind="riichi"
+        effectId={moment.kind === 'riichi' && mode === 'full' ? effectId : undefined}
+        actor={{ name: t(character.nameKey), characterId: character.id, line: t(moment.lineKey) }}
+        title={t(`riichi.cutin.${moment.kind}`)}
+        onComplete={finishCurrent}
+      />
       <span className="riichi-cutin-skip">{t('riichi.cutin.skip')}</span>
     </button>,
     document.body,

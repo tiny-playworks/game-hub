@@ -12,7 +12,10 @@ import {
   type RoomSettings,
   type RoomSummary,
   type ServerMessage,
+  type RoomPresentation,
 } from '../../../shared/contracts/room';
+import { normalizeRoomAppearance } from '../../../shared/contracts/roomAppearance';
+import type { RiichiEffect } from '@/pages/mahjong/japanese/engine';
 import type { RiichiAiLevel } from '@/pages/mahjong/japanese/engine/rules';
 import {
   applyEvent,
@@ -60,6 +63,7 @@ export interface RoomInstance {
   turnTimeoutTimer: ReturnType<typeof setTimeout> | null;
   serverDeadline: number | null;
   subscribers: Set<(msg: ServerMessage) => void>;
+  presentation?: RoomPresentation;
 }
 
 const DEFAULT_SETTINGS: RoomSettings = {
@@ -475,6 +479,16 @@ export class RoomManager {
       RiichiAiLevel,
     ];
 
+    for (const seat of room.summary.seats) {
+      if (seat.type !== 'human') continue;
+      const member = getMember(this.db, seat.memberId);
+      const cosmetics = member ? readSnapshot(member).cosmetics.equipped : null;
+      seat.appearance = normalizeRoomAppearance({
+        riichiEffect: cosmetics?.['riichi-effect'],
+        winEffect: cosmetics?.['win-effect'],
+      });
+    }
+
     const matchId = createUuid();
     const created = createMatch({
       seed: Math.floor(Math.random() * 100_000_000),
@@ -484,6 +498,8 @@ export class RoomManager {
     });
 
     room.match = created.match;
+    room.presentation = { epoch: createUuid(), cursor: 0, events: [] };
+    this.recordPresentation(room, created.effects);
     room.summary.status = 'playing';
     room.summary.currentMatchId = matchId;
     room.summary.revision++;
@@ -542,6 +558,7 @@ export class RoomManager {
       tile?: number;
       claimType?: string;
       tiles?: number[];
+      meldIndex?: number;
       isAutoplay?: boolean;
     }
     const payload = (command.payload ?? {}) as CommandPayload;
@@ -628,6 +645,21 @@ export class RoomManager {
         if (typeof payload?.tile !== 'number') return { accepted: false, code: 'INVALID_TILE', revision: room.summary.revision };
         riichiEvent = { type: 'riichi', seat: seatIndex, tile: payload.tile };
         break;
+      case 'ankan':
+        if (!Array.isArray(payload.tiles) || payload.tiles.length !== 4 ||
+          !payload.tiles.every((tile) => Number.isInteger(tile) && tile >= 0 && tile <= 36))
+          return { accepted: false, code: 'INVALID_KAN_TILES', revision: room.summary.revision };
+        riichiEvent = { type: 'ankan', seat: seatIndex, tiles: payload.tiles };
+        break;
+      case 'kakan':
+        if (typeof payload.meldIndex !== 'number' || !Number.isInteger(payload.meldIndex) || payload.meldIndex < 0 ||
+          typeof payload.tile !== 'number' || !Number.isInteger(payload.tile) || payload.tile < 0 || payload.tile > 36)
+          return { accepted: false, code: 'INVALID_KAN_TILES', revision: room.summary.revision };
+        riichiEvent = { type: 'kakan', seat: seatIndex, meldIndex: payload.meldIndex, tile: payload.tile };
+        break;
+      case 'kyuushu':
+        riichiEvent = { type: 'kyuushu', seat: seatIndex };
+        break;
       case 'tsumo':
         riichiEvent = { type: 'tsumo', seat: seatIndex };
         break;
@@ -642,7 +674,8 @@ export class RoomManager {
           return { accepted: false, code: 'INVALID_CLAIM', revision: room.summary.revision };
         }
         if (payload.claimType === 'chi') {
-          if (!Array.isArray(payload.tiles) || payload.tiles.length !== 2) {
+          if (!Array.isArray(payload.tiles) || payload.tiles.length !== 2 ||
+            !payload.tiles.every((tile) => Number.isInteger(tile) && tile >= 0 && tile <= 36)) {
             return { accepted: false, code: 'INVALID_CHI_TILES', revision: room.summary.revision };
           }
           riichiEvent = {
@@ -675,6 +708,7 @@ export class RoomManager {
     }
 
     room.match = step.match;
+    this.recordPresentation(room, step.effects);
     room.executedCommandIds.add(command.commandId);
     room.summary.revision++;
     room.summary.updatedAt = Date.now();
@@ -784,6 +818,8 @@ export class RoomManager {
       room.summary,
       room.serverDeadline,
       viewerDeviceId,
+      false,
+      room.presentation,
     );
   }
 
@@ -800,6 +836,7 @@ export class RoomManager {
       room.serverDeadline,
       undefined,
       true,
+      room.presentation,
     );
   }
 
@@ -852,6 +889,22 @@ export class RoomManager {
     }
   }
 
+  /** Only public sound names and seats leave the engine; never raw events or progress data. */
+  private recordPresentation(room: RoomInstance, effects: RiichiEffect[]): void {
+    const stream = room.presentation ??= { epoch: createUuid(), cursor: 0, events: [] };
+    for (const effect of effects) {
+      if (effect.type !== 'sound' || !Number.isInteger(effect.seat) || effect.seat < 0 || effect.seat > 3) continue;
+      stream.cursor++;
+      stream.events.push({
+        id: `${stream.epoch}:${stream.cursor}`,
+        sequence: stream.cursor,
+        sound: effect.sound,
+        seat: effect.seat,
+      });
+    }
+    stream.events = stream.events.slice(-64);
+  }
+
   private broadcastMessage(room: RoomInstance, msg: ServerMessage): void {
     for (const sub of room.subscribers) {
       try {
@@ -891,6 +944,7 @@ export class RoomManager {
       const step = applyEvent(room.match, autoEvent);
       if (!step) break;
       room.match = step.match;
+      this.recordPresentation(room, step.effects);
       room.summary.revision++;
       room.summary.updatedAt = Date.now();
       saveRoomState(this.db, room.summary, room.match, room.serverDeadline, room.summary.isPaused);
@@ -929,6 +983,7 @@ export class RoomManager {
           const step = applyEvent(room.match, { type: 'discard', seat: currentSeat, tile });
           if (step) {
             room.match = step.match;
+            this.recordPresentation(room, step.effects);
             room.summary.revision++;
             room.summary.updatedAt = Date.now();
             saveRoomState(this.db, room.summary, room.match, room.serverDeadline, room.summary.isPaused);
@@ -949,6 +1004,7 @@ export class RoomManager {
             });
             if (step) {
               room.match = step.match;
+              this.recordPresentation(room, step.effects);
               room.summary.revision++;
               room.summary.updatedAt = Date.now();
             }
@@ -979,7 +1035,7 @@ export class RoomManager {
         // The same room can host several matches; participation belongs to this match only.
         const commands = this.db.prepare("SELECT command_json FROM room_commands WHERE room_id = ? AND member_id = ? AND json_extract(command_json, '$.matchId') = ?")
           .all(room.summary.id, seat.memberId, matchId) as Array<{ command_json: string }>;
-        const played = commands.some((row) => ['discard', 'riichi', 'tsumo', 'ron', 'pass', 'claim'].includes(JSON.parse(row.command_json).type));
+        const played = commands.some((row) => ['discard', 'riichi', 'ankan', 'kakan', 'kyuushu', 'tsumo', 'ron', 'pass', 'claim'].includes(JSON.parse(row.command_json).type));
         const previous = this.db.prepare('SELECT COALESCE(SUM(coins), 0) AS coins FROM family_results WHERE member_id = ? AND date_key = ?')
           .get(seat.memberId, dateKey) as { coins: number };
         const coins = room.summary.humanCount >= 2 && played
@@ -1085,6 +1141,7 @@ export class RoomManager {
         turnTimeoutTimer: null,
         serverDeadline: data.serverDeadline,
         subscribers: new Set(),
+        presentation: { epoch: createUuid(), cursor: 0, events: [] },
       };
 
       this.rooms.set(data.summary.id, instance);

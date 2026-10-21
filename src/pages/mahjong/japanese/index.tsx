@@ -999,6 +999,7 @@ const GameMahjongJapanese = () => {
       !replay &&
       !presenting &&
       !onlinePending,
+    decisionKey,
     onDiscard: (tile) => discard(0, tile),
     onCancelRiichi: () => setRiichiSelection(null),
     onPassClaim: actionHandlers.passClaim,

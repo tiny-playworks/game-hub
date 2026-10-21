@@ -7,6 +7,7 @@ export interface ConnectionNoticeProps {
   isAutoplay?: boolean;
   leaseLost?: boolean;
   isPaused?: boolean;
+  pending?: boolean;
   onTakeover?: () => void;
   onCancelAutoplay?: () => void;
   onResumeGame?: () => void;
@@ -17,6 +18,7 @@ export function ConnectionNotice({
   isAutoplay,
   leaseLost,
   isPaused,
+  pending = false,
   onTakeover,
   onCancelAutoplay,
   onResumeGame,
@@ -49,7 +51,8 @@ export function ConnectionNotice({
             <Button
               size="sm"
               onClick={onTakeover}
-              className="h-6 px-2.5 text-xs bg-purple-600 hover:bg-purple-700 text-white font-semibold"
+              disabled={pending || !connected}
+              className="min-h-11 px-3 text-xs bg-purple-600 hover:bg-purple-700 text-white font-semibold"
             >
               {t('family.notice.takeover')}
             </Button>
@@ -68,7 +71,8 @@ export function ConnectionNotice({
             <Button
               size="sm"
               onClick={onCancelAutoplay}
-              className="h-6 px-2.5 text-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+              disabled={pending || !connected}
+              className="min-h-11 px-3 text-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold"
             >
               {t('family.notice.manual')}
             </Button>
@@ -87,7 +91,8 @@ export function ConnectionNotice({
             <Button
               size="sm"
               onClick={onResumeGame}
-              className="h-6 px-2.5 text-xs bg-rose-600 hover:bg-rose-700 text-white font-semibold"
+              disabled={pending || !connected}
+              className="min-h-11 px-3 text-xs bg-rose-600 hover:bg-rose-700 text-white font-semibold"
             >
               {t('family.notice.resume')}
             </Button>

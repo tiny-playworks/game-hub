@@ -29,6 +29,9 @@ import winYoruPoster from '@/assets/cosmetics/motion/win-yoru-poster.webp';
 import winTsubakiAtlas from '@/assets/cosmetics/motion/win-tsubaki-atlas.webp';
 import winTsubakiPoster from '@/assets/cosmetics/motion/win-tsubaki-poster.webp';
 
+export type CosmeticMotionPhase = 'gather' | 'build' | 'impact' | 'settle';
+export interface CosmeticMotionCue { frame: number; phase: CosmeticMotionPhase }
+
 export interface CosmeticMotionAsset {
   atlas: string;
   poster: string;
@@ -36,6 +39,7 @@ export interface CosmeticMotionAsset {
   frameCount: number;
   frameSize: number;
   durationMs: number;
+  cues: readonly CosmeticMotionCue[];
 }
 
 function motionAsset(
@@ -50,6 +54,10 @@ function motionAsset(
     frameCount: kind === 'riichi' ? 18 : 30,
     frameSize: kind === 'riichi' ? 320 : 256,
     durationMs: kind === 'riichi' ? 1500 : 2500,
+    cues: (kind === 'riichi' ? [0, 5, 10, 15] : [0, 8, 18, 26]).map((frame, index) => ({
+      frame,
+      phase: (['gather', 'build', 'impact', 'settle'] as const)[index],
+    })),
   };
 }
 
@@ -115,7 +123,8 @@ export function loadCosmeticAtlas(url: string): Promise<HTMLImageElement> {
   });
 
   imageCache.set(url, pending);
-  if (imageCache.size > 4) {
+  // Four seated players can each equip a riichi and a winning effect.
+  if (imageCache.size > 8) {
     const oldest = imageCache.keys().next().value;
     if (oldest !== undefined) imageCache.delete(oldest);
   }
