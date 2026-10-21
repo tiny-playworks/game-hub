@@ -1,10 +1,15 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
 import { CosmeticEffect } from '@/components/cosmetics/CosmeticEffect';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useCosmetics } from '@/hooks/useCosmetics';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import {
+  COSMETIC_IMAGE_TIMEOUT_MS,
+  getCosmeticMotion,
+  preloadCosmeticMotion,
+} from '@/lib/cosmeticMedia';
 import { getCharacterById } from '@/lib/playerCharacters';
 import type { RiichiPlayerSettings } from '@/lib/playerProfile';
 import { cn } from '@/lib/utils';
@@ -22,6 +27,20 @@ export function CharacterCutIn({
   const moment = useRiichiStore((state) => state.cutIns[0]);
   const finish = useRiichiStore((state) => state.finishCutIn);
   const clear = useRiichiStore((state) => state.clearCutIns);
+  const motion =
+    mode === 'full' && moment?.kind === 'riichi'
+      ? getCosmeticMotion(equipped['riichi-effect'])
+      : undefined;
+  const finishCurrent = useCallback(() => {
+    if (moment) finish(moment.id);
+  }, [moment, finish]);
+
+  useEffect(() => {
+    if (mode !== 'full' || reducedMotion) return;
+    preloadCosmeticMotion(equipped['riichi-effect']);
+    preloadCosmeticMotion(equipped['win-effect']);
+  }, [mode, reducedMotion, equipped]);
+
   useEffect(() => {
     if (!moment) return;
     if (mode === 'off' || reducedMotion) {
@@ -30,7 +49,11 @@ export function CharacterCutIn({
     }
     const timer = window.setTimeout(
       () => finish(moment.id),
-      mode === 'simple' ? 350 : CUT_IN_DURATION_MS,
+      mode === 'simple'
+        ? 350
+        : motion
+          ? motion.durationMs + COSMETIC_IMAGE_TIMEOUT_MS + 400
+          : CUT_IN_DURATION_MS,
     );
     const skip = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
@@ -42,8 +65,14 @@ export function CharacterCutIn({
       window.clearTimeout(timer);
       document.removeEventListener('keydown', skip);
     };
-  }, [moment, mode, reducedMotion, finish, clear]);
-  if (!moment || mode === 'off' || reducedMotion || typeof document === 'undefined') return null;
+  }, [moment, mode, reducedMotion, finish, clear, motion]);
+  if (
+    !moment ||
+    mode === 'off' ||
+    reducedMotion ||
+    typeof document === 'undefined'
+  )
+    return null;
   const character = getCharacterById(moment.characterId);
   return createPortal(
     <button
@@ -52,19 +81,25 @@ export function CharacterCutIn({
       data-mode={mode}
       data-seat={moment.seat}
       data-kind={moment.kind}
+      data-illustrated={Boolean(motion)}
       aria-label={t('riichi.cutin.skip')}
-      onClick={() => finish(moment.id)}
+      onClick={finishCurrent}
     >
       <span
         key={moment.id}
         className={cn(
-          'riichi-character-cutin-band bg-gradient-to-r',
+          'riichi-character-cutin-band bg-linear-to-r',
           character.accent,
           mode === 'simple' && 'is-simple',
         )}
       >
         {moment.kind === 'riichi' && mode === 'full' && (
-          <CosmeticEffect id={equipped['riichi-effect']} kind="riichi" />
+          <CosmeticEffect
+            key={moment.id}
+            id={equipped['riichi-effect']}
+            kind="riichi"
+            onComplete={finishCurrent}
+          />
         )}
         {mode === 'full' && (
           <CharacterPortraitSlot

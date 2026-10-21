@@ -54,6 +54,7 @@ export function WinPresentation({
   );
   const [elapsed, setElapsed] = useState(0);
   const [skipped, setSkipped] = useState(false);
+  const [illustrationEnded, setIllustrationEnded] = useState(false);
   const played = useRef(false);
   const { wins, settlement } = result;
   const { bonusAt, scoreAt, finalAt } = winTimeline(wins);
@@ -166,8 +167,14 @@ export function WinPresentation({
             )}
           </div>
         )}
-        {full && final && (
-          <CosmeticEffect id={equipped['win-effect']} kind="win" />
+        {full && final && !skipped && !illustrationEnded && (
+          <div className="riichi-win-illustrated" aria-hidden="true">
+            <CosmeticEffect
+              id={equipped['win-effect']}
+              kind="win"
+              onComplete={() => setIllustrationEnded(true)}
+            />
+          </div>
         )}
         {mode !== 'off' && (
           <CharacterQuotes

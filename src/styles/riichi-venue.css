@@ -11,10 +11,6 @@
   --riichi-btn-primary-text: #fffaf2;
   --riichi-btn-primary-hover: #af3d2f;
 }
-[data-table-felt='felt-venue'] {
-  --cosmetic-felt: #172a3a;
-  --cosmetic-felt-pattern: none;
-}
 .riichi-desktop-shell,
 .riichi-desktop-stage,
 .riichi-stage-screen {
@@ -100,12 +96,6 @@
   border-radius: 8px;
   box-shadow: none;
   background: var(--cosmetic-felt);
-}
-[data-table-felt] .riichi-table-surface {
-  background: var(--cosmetic-felt-pattern), var(--cosmetic-felt);
-  background-size:
-    180px 180px,
-    auto;
 }
 .riichi-table-surface::before,
 .riichi-table-surface::after {
@@ -924,12 +914,6 @@
     font-size: 7px;
   }
 }
-[data-table-felt='felt-venue'] {
-  --cosmetic-felt-pattern: url('../assets/venue/ink-cloth.webp');
-}
-[data-table-felt='felt-venue'] .riichi-table-surface {
-  background-size: cover, auto;
-}
 .riichi-tile-back .riichi-tile-back-rotator {
   border: 1px solid #d1c6b4;
 }
@@ -1043,12 +1027,6 @@
     box-shadow:
       0 0 0 4px #172a3a38,
       inset 0 0 0 5px #172a3a38;
-  }
-  [data-table-felt='felt-venue'] .riichi-table-surface {
-    background-image:
-      linear-gradient(#0d243959, #0d243959),
-      url('../assets/venue/ink-cloth.webp');
-    background-size: cover;
   }
   .riichi-seat .riichi-character-avatar {
     width: 66px;

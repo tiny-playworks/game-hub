@@ -45,7 +45,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'theme.dark': '切换深色模式',
     'theme.light': '切换浅色模式',
     'cosmetic.felt-venue.name': '墨蓝',
-    'cosmetic.felt-venue.desc': '细织墨蓝与浅金收边，波纹隐在桌沿。',
+    'cosmetic.felt-venue.desc': '层叠墨蓝山峦与流金云气沿桌沿铺开，中央留出安静的山间夜色。',
     'recovery.title': '这个页面暂时出了点问题',
     'recovery.description':
       '可以重新尝试，或返回大厅。已有存档不会被清空；如果进度尚未保存，请先导出备份。',
@@ -399,35 +399,35 @@ const messages: Record<Locale, Record<string, string>> = {
     'cosmetic.back-gold.name': '金箔',
     'cosmetic.back-gold.desc': '雀圣的纪念牌背，斜光下浮起细碎金色。',
     'cosmetic.felt-green.name': '绿毡',
-    'cosmetic.felt-green.desc': '雀庄的经典绿毡，沉静而温暖。',
+    'cosmetic.felt-green.desc': '竹叶、苔石与斑驳光影围成深绿茶庭，细织桌面陪你专注这一手。',
     'cosmetic.felt-blue.name': '深蓝',
-    'cosmetic.felt-blue.desc': '深蓝桌布，像入夜后的雨窗。',
+    'cosmetic.felt-blue.desc': '月色照过层叠潮汐，银白浪花沿桌沿翻涌。',
     'cosmetic.felt-wine.name': '酒红',
-    'cosmetic.felt-wine.desc': '一抹沉稳酒红，给牌桌添上暖意。',
+    'cosmetic.felt-wine.desc': '酒红漆纹上铺开枫叶与金箔，暖色秋意围着牌桌。',
     'cosmetic.felt-tatami.name': '榻榻米',
-    'cosmetic.felt-tatami.desc': '细密蔺草编织与深色织边，留住和室的清静。',
+    'cosmetic.felt-tatami.desc': '蔺草织面、织锦收边与一角茶席，让牌桌像一间安静的和室。',
     'cosmetic.felt-night.name': '夜空',
-    'cosmetic.felt-night.desc': '曾达到雀豪的纪念，星点散落在深夜桌面。',
+    'cosmetic.felt-night.desc': '月色、星云与金色星轨织成夜空，银河环绕，牌桌中央留一片宁静。',
     'cosmetic.riichi-default.name': '落棒',
-    'cosmetic.riichi-default.desc': '立直棒轻落，下一张交给牌山。',
+    'cosmetic.riichi-default.desc': '落棒带起淡金气浪，轻弹回落后稳稳停住。',
     'cosmetic.riichi-sparks.name': '火花',
-    'cosmetic.riichi-sparks.desc': '宣言的一刻，细小金色火花向外散开。',
+    'cosmetic.riichi-sparks.desc': '立直棒落下，橙金火焰卷起，余烬逐渐散开。',
     'cosmetic.riichi-sakura.name': '樱花飘落',
-    'cosmetic.riichi-sakura.desc': '伴随立直棒，淡粉花瓣缓缓落下。',
+    'cosmetic.riichi-sakura.desc': '花枝随落棒舒展，樱花绽开，花瓣旋过宣言之后缓缓飘落。',
     'cosmetic.riichi-lightning.name': '雷光',
-    'cosmetic.riichi-lightning.desc': '短促的蓝白雷光，点亮立直宣言。',
+    'cosmetic.riichi-lightning.desc': '电光蓄起，落棒引出分叉雷击，蓝白电弧随宣言逐渐消散。',
     'cosmetic.riichi-ink.name': '水墨',
-    'cosmetic.riichi-ink.desc': '墨迹一瞬晕开，留白交给下一巡。',
+    'cosmetic.riichi-ink.desc': '笔锋引出层层墨浪，落棒时晕开金边墨迹，慢慢化成烟。',
     'cosmetic.win-default.name': '雀庄庆贺',
-    'cosmetic.win-default.desc': '细金纹与柔光展开，为打好的一手留下一刻庆贺。',
+    'cosmetic.win-default.desc': '金扇逐片展开，云纹与金箔随和牌浮起，再轻轻散去。',
     'cosmetic.win-fireworks.name': '烟花',
-    'cosmetic.win-fireworks.desc': '和牌结算时，一圈金色烟花绽开。',
+    'cosmetic.win-fireworks.desc': '升空光轨引出层层烟花，金、红与青玉色火星交错绽放。',
     'cosmetic.win-sakura.name': '樱吹雪',
-    'cosmetic.win-sakura.desc': '樱花随和牌轻落，像一场短暂的春雪。',
+    'cosmetic.win-sakura.desc': '花苞逐次绽放，花枝摇曳，一阵樱吹雪随风掠过。',
     'cosmetic.win-dragon.name': '金龙',
-    'cosmetic.win-dragon.desc': '金绘盘龙随光环展开，鳞纹与流金映亮和牌的一刻。',
+    'cosmetic.win-dragon.desc': '金龙游动盘旋，昂首庆贺，龙身与鬃须化作流金散入夜色。',
     'cosmetic.win-galaxy.name': '星河',
-    'cosmetic.win-galaxy.desc': '淡紫星轨绕过牌桌，留下片刻星光。',
+    'cosmetic.win-galaxy.desc': '星尘汇成紫蓝星河，流动星云卷过弧线，再散成远星。',
     'cosmetic.frame-wood.name': '木框',
     'cosmetic.frame-wood.desc': '温润的木色，是雀庄最初的问候。',
     'cosmetic.frame-gold.name': '金框',
@@ -442,7 +442,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'cosmetic.frame-koharu.desc':
       '小春与你满好感的纪念。每一局相伴，都在这一圈颜色里。',
     'cosmetic.win-mio.name': '静水和牌',
-    'cosmetic.win-mio.desc': '青绿色涟漪，像澪打好这一手之后的微笑。',
+    'cosmetic.win-mio.desc': '水纹生起，青绿水流卷成透明冠冕，水滴随涟漪回落。',
     'cosmetic.frame-mio.name': '澪 · 约定',
     'cosmetic.frame-mio.desc':
       '澪与你满好感的纪念。每一局相伴，都在这一圈颜色里。',
@@ -452,7 +452,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'cosmetic.frame-rin.desc':
       '凛与你满好感的纪念。每一局相伴，都在这一圈颜色里。',
     'cosmetic.win-chitose.name': '茶庭和牌',
-    'cosmetic.win-chitose.desc': '竹影与新叶轻拂，千岁的茶庭还留着暖意。',
+    'cosmetic.win-chitose.desc': '竹叶随风轻摆，茶烟绕过枝梢，庭间微光渐渐散去。',
     'cosmetic.frame-chitose.name': '千岁 · 约定',
     'cosmetic.frame-chitose.desc':
       '千岁与你满好感的纪念。每一局相伴，都在这一圈颜色里。',
@@ -462,7 +462,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'cosmetic.frame-sora.desc':
       '空与你满好感的纪念。每一局相伴，都在这一圈颜色里。',
     'cosmetic.win-aya.name': '赤电和牌',
-    'cosmetic.win-aya.desc': '赤红光芒一闪，绫把勇气留在这次和牌里。',
+    'cosmetic.win-aya.desc': '赤电蓄起，连续分叉雷击撕开红色光幕，最后化成余烬。',
     'cosmetic.frame-aya.name': '绫 · 约定',
     'cosmetic.frame-aya.desc':
       '绫与你满好感的纪念。每一局相伴，都在这一圈颜色里。',
@@ -472,7 +472,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'cosmetic.frame-mahiru.desc':
       '真昼与你满好感的纪念。每一局相伴，都在这一圈颜色里。',
     'cosmetic.win-yoru.name': '月下和牌',
-    'cosmetic.win-yoru.desc': '淡紫月影与星点，是夜不必说出口的祝贺。',
+    'cosmetic.win-yoru.desc': '银月从云间升起，紫色云带绕过星光，缓缓隐入夜色。',
     'cosmetic.frame-yoru.name': '夜 · 约定',
     'cosmetic.frame-yoru.desc':
       '夜与你满好感的纪念。每一局相伴，都在这一圈颜色里。',
@@ -2178,7 +2178,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'theme.dark': 'Switch to dark mode',
     'theme.light': 'Switch to light mode',
     'cosmetic.felt-venue.name': 'Ink Navy',
-    'cosmetic.felt-venue.desc': 'Fine navy weave, pale gold edging and quiet waves along the rim.',
+    'cosmetic.felt-venue.desc': 'Layered ink-blue mountains and flowing gold clouds frame a quiet playing field.',
     'recovery.title': 'This page ran into a problem',
     'recovery.description':
       'Try again or return to the lobby. Existing saves will not be cleared. Export a backup first if progress has not been saved.',
@@ -2648,44 +2648,38 @@ const messages: Record<Locale, Record<string, string>> = {
     'cosmetic.back-gold.name': 'Gold Leaf',
     'cosmetic.back-gold.desc': 'A Saint’s keepsake, glinting like gold leaf.',
     'cosmetic.felt-green.name': 'Parlor Green',
-    'cosmetic.felt-green.desc': 'The parlor’s classic, calm green felt.',
+    'cosmetic.felt-green.desc': 'Bamboo, mossy stones and dappled light frame a deep-green garden cloth.',
     'cosmetic.felt-blue.name': 'Deep Blue',
-    'cosmetic.felt-blue.desc': 'Deep blue, like a rainy window after dusk.',
+    'cosmetic.felt-blue.desc': 'Moonlit tides and finely painted silver foam roll along the table’s edges.',
     'cosmetic.felt-wine.name': 'Wine Red',
-    'cosmetic.felt-wine.desc': 'A warm wine red for an unhurried table.',
+    'cosmetic.felt-wine.desc': 'Crimson maple leaves and gold leaf frame a rich wine-red lacquer cloth.',
     'cosmetic.felt-tatami.name': 'Tatami',
-    'cosmetic.felt-tatami.desc':
-      'Woven rush and quiet seams evoke a Japanese room.',
+    'cosmetic.felt-tatami.desc': 'Woven rush, brocade edging and a corner tea setting evoke a quiet Japanese room.',
     'cosmetic.felt-night.name': 'Night Sky',
     'cosmetic.felt-night.desc':
-      'A Master’s keepsake: stars scattered over midnight felt.',
+      'Moonlight, nebulae and gold star trails frame a quiet midnight playing field.',
     'cosmetic.riichi-default.name': 'The Declaration',
-    'cosmetic.riichi-default.desc':
-      'A riichi stick lands. The next tile is up to the wall.',
+    'cosmetic.riichi-default.desc': 'The declaration stick lands with a pale-gold ripple, bounces gently and settles.',
     'cosmetic.riichi-sparks.name': 'Sparks',
-    'cosmetic.riichi-sparks.desc': 'Golden sparks scatter at your declaration.',
+    'cosmetic.riichi-sparks.desc': 'The landing stick raises curling amber flames that break into fading embers.',
     'cosmetic.riichi-sakura.name': 'Falling Sakura',
-    'cosmetic.riichi-sakura.desc': 'Pink petals drift with the riichi stick.',
+    'cosmetic.riichi-sakura.desc': 'A blossom branch unfurls with the landing stick, releasing a swirl of pink petals.',
     'cosmetic.riichi-lightning.name': 'Lightning',
     'cosmetic.riichi-lightning.desc':
-      'A sharp blue flash lights up the declaration.',
+      'A gathering charge, branching lightning on impact and fading blue-white arcs.',
     'cosmetic.riichi-ink.name': 'Ink Wash',
-    'cosmetic.riichi-ink.desc':
-      'An ink flourish leaves space for the next turn.',
+    'cosmetic.riichi-ink.desc': 'A brushstroke pours into layered ink, blooms on impact and softens into mist.',
     'cosmetic.win-default.name': 'Parlor Celebration',
-    'cosmetic.win-default.desc':
-      'Fine gold lines and a soft glow celebrate a well-played hand.',
+    'cosmetic.win-default.desc': 'A gold fan unfolds as cloud ribbons and gold leaf rise to celebrate the hand.',
     'cosmetic.win-fireworks.name': 'Fireworks',
-    'cosmetic.win-fireworks.desc': 'A golden burst celebrates the final score.',
+    'cosmetic.win-fireworks.desc': 'Rising trails bloom into layered gold, crimson and jade fireworks.',
     'cosmetic.win-sakura.name': 'Sakura Shower',
-    'cosmetic.win-sakura.desc':
-      'A brief spring snowfall of petals celebrates your win.',
+    'cosmetic.win-sakura.desc': 'Blossoms open along a swaying branch, sending a flurry of petals across the air.',
     'cosmetic.win-dragon.name': 'Golden Dragon',
     'cosmetic.win-dragon.desc':
-      'An engraved golden dragon unfurls in a ring of light.',
+      'A golden dragon swims, coils and raises its head before dissolving into drifting gold.',
     'cosmetic.win-galaxy.name': 'Galaxy',
-    'cosmetic.win-galaxy.desc':
-      'Violet stars trace a fleeting orbit over the table.',
+    'cosmetic.win-galaxy.desc': 'Stardust gathers into flowing violet-blue nebulae before scattering into distant stars.',
     'cosmetic.frame-wood.name': 'Wood Frame',
     'cosmetic.frame-wood.desc': 'Warm wood is the parlor’s first greeting.',
     'cosmetic.frame-gold.name': 'Gold Frame',
@@ -2701,8 +2695,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'cosmetic.frame-koharu.desc':
       'A keepsake of your lasting bond with Koharu, holding every game you shared.',
     'cosmetic.win-mio.name': 'Still Waters',
-    'cosmetic.win-mio.desc':
-      'Teal ripples mirror Mio’s quiet smile after a well-played hand.',
+    'cosmetic.win-mio.desc': 'Jade water curls into a translucent crown, then falls back into gentle ripples.',
     'cosmetic.frame-mio.name': 'Mio · Our Promise',
     'cosmetic.frame-mio.desc':
       'A keepsake of your lasting bond with Mio, holding every game you shared.',
@@ -2713,8 +2706,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'cosmetic.frame-rin.desc':
       'A keepsake of your lasting bond with Rin, holding every game you shared.',
     'cosmetic.win-chitose.name': 'Tea Garden',
-    'cosmetic.win-chitose.desc':
-      'Bamboo shadows and fresh leaves drift through Chitose’s warm tea garden.',
+    'cosmetic.win-chitose.desc': 'Bamboo sways as tea steam curls through the leaves and garden lights fade.',
     'cosmetic.frame-chitose.name': 'Chitose · Our Promise',
     'cosmetic.frame-chitose.desc':
       'A keepsake of your lasting bond with Chitose, holding every game you shared.',
@@ -2725,7 +2717,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'cosmetic.frame-sora.desc':
       'A keepsake of your lasting bond with Sora, holding every game you shared.',
     'cosmetic.win-aya.name': 'Scarlet Flash',
-    'cosmetic.win-aya.desc': 'Aya’s courage shines in a brief scarlet flash.',
+    'cosmetic.win-aya.desc': 'Scarlet energy builds into successive branching strikes before breaking into embers.',
     'cosmetic.frame-aya.name': 'Aya · Our Promise',
     'cosmetic.frame-aya.desc':
       'A keepsake of your lasting bond with Aya, holding every game you shared.',
@@ -2736,8 +2728,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'cosmetic.frame-mahiru.desc':
       'A keepsake of your lasting bond with Mahiru, holding every game you shared.',
     'cosmetic.win-yoru.name': 'Moonlit Win',
-    'cosmetic.win-yoru.desc':
-      'A violet moon and stars offer Yoru’s unspoken congratulations.',
+    'cosmetic.win-yoru.desc': 'A silver moon rises through drifting lavender clouds and trails of starlight.',
     'cosmetic.frame-yoru.name': 'Yoru · Our Promise',
     'cosmetic.frame-yoru.desc':
       'A keepsake of your lasting bond with Yoru, holding every game you shared.',
