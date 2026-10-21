@@ -1,12 +1,19 @@
 import type { ReactNode } from 'react';
 import { GPT_ARCADE_COVERS } from '@/assets/gptAssets';
+import { cn } from '@/lib/utils';
 
 /**
  * Renders each arcade game's visual emblem:
  * 1. Automatically uses the GPT-generated ukiyo-e/maki-e cover (`src/assets/arcade/covers/<gameId>.webp`) when available.
  * 2. Provides a complete 16-game bespoke Neo-Traditional Japanese Salon (Ink Navy / Ivory / Vermilion / Maki-e Gold) woodblock vector medallion baseline, eliminating generic wireframe icon fallbacks.
  */
-export function VenueGameGlyph({ gameId }: { gameId: string }) {
+export function VenueGameGlyph({
+  gameId,
+  className,
+}: {
+  gameId: string;
+  className?: string;
+}) {
   const gptCover = GPT_ARCADE_COVERS[gameId];
   if (gptCover) {
     return (
@@ -15,7 +22,7 @@ export function VenueGameGlyph({ gameId }: { gameId: string }) {
         alt=""
         aria-hidden="true"
         decoding="async"
-        className="venue-game-glyph venue-game-glyph--cover"
+        className={cn('venue-game-glyph venue-game-glyph--cover', className)}
       />
     );
   }
@@ -566,6 +573,41 @@ export function VenueGameGlyph({ gameId }: { gameId: string }) {
         </g>
       );
       break;
+    case 'mahjong-japanese':
+      art = (
+        <g>
+          <rect
+            x="19"
+            y="11"
+            width="34"
+            height="50"
+            rx="6"
+            fill="#f5f2e9"
+            stroke="#d3af66"
+            strokeWidth="2"
+          />
+          <rect
+            x="26"
+            y="24"
+            width="20"
+            height="16"
+            rx="2"
+            fill="none"
+            stroke="#c54838"
+            strokeWidth="3.2"
+          />
+          <line
+            x1="36"
+            y1="16"
+            x2="36"
+            y2="52"
+            stroke="#c54838"
+            strokeWidth="3.2"
+            strokeLinecap="round"
+          />
+        </g>
+      );
+      break;
     default:
       art = (
         <circle
@@ -581,7 +623,7 @@ export function VenueGameGlyph({ gameId }: { gameId: string }) {
 
   return (
     <svg
-      className="venue-game-glyph venue-game-glyph--medallion"
+      className={cn('venue-game-glyph venue-game-glyph--medallion', className)}
       viewBox="0 0 72 72"
       aria-hidden="true"
     >

@@ -83,8 +83,8 @@ export default function CharacterProfile() {
           </Link>
         </div>
       </header>
-      <main className="mx-auto grid max-w-6xl items-start gap-6 px-4 py-8 sm:px-8 lg:grid-cols-[340px_1fr]">
-        <section className="felt-surface rounded-3xl border border-gold/30 p-5 text-paper">
+      <main className="mx-auto grid max-w-6xl items-start gap-6 px-4 py-8 sm:px-8 lg:grid-cols-[360px_1fr]">
+        <section className="salon-character-showcase felt-surface rounded-3xl border border-gold/40 p-5 text-paper">
           <div className="flex justify-center">
             <CharacterPortraitSlot
               character={character}
@@ -103,8 +103,10 @@ export default function CharacterProfile() {
                 key={value}
                 type="button"
                 className={cn(
-                  'rounded-full border border-paper/20 px-3 py-1.5 text-xs',
-                  expression === value && 'bg-paper/15 text-gold',
+                  'rounded-full border border-paper/20 px-3.5 py-1.5 text-xs font-medium transition-colors',
+                  expression === value
+                    ? 'border-[#d3af66]/70 bg-[#d3af66]/20 text-[#f3c878]'
+                    : 'hover:bg-paper/10',
                 )}
                 aria-pressed={expression === value}
                 onClick={() => setExpression(value)}
@@ -113,23 +115,23 @@ export default function CharacterProfile() {
               </button>
             ))}
           </fieldset>
-          <p className="mt-5 text-center text-sm text-paper/70">
+          <p className="mt-5 text-center text-sm leading-6 text-paper/80">
             {t(character.taglineKey)}
           </p>
         </section>
         <div className="space-y-5">
           <CharacterOutfitPicker character={character} />
-          <section className="paper-texture rounded-3xl border bg-card p-6">
+          <section className="salon-panel-card paper-texture rounded-3xl border bg-card p-6">
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-3xl font-semibold">{t(character.nameKey)}</h1>
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
+              <span className="rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                 {t(`character.rank.${character.rankBand}`)}
               </span>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
               {character.styleTagKeys.map((key) => (
                 <span
-                  className="rounded-full border px-3 py-1 text-xs text-muted-foreground"
+                  className="rounded-full border border-[#cbb391]/55 bg-background/60 px-3 py-1 text-xs text-muted-foreground"
                   key={key}
                 >
                   {t(key)}
@@ -139,47 +141,48 @@ export default function CharacterProfile() {
             <p className="mt-4 text-sm leading-7 text-muted-foreground">
               {character.bioKey && t(character.bioKey)}
             </p>
-            <Button
-              className="mt-5"
-              disabled={!unlocked || active}
-              onClick={async () => {
-                try {
-                  if (household?.currentMember)
-                    await household.selectCharacter(character.id);
-                  else setActiveCharacter(character.id);
-                  setError('');
-                } catch {
-                  setError(t('shop.failed'));
-                }
-              }}
-            >
-              {active ? (
-                <Check className="size-4" />
-              ) : !unlocked ? (
-                <LockKeyhole className="size-4" />
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <Button
+                disabled={!unlocked || active}
+                onClick={async () => {
+                  try {
+                    if (household?.currentMember)
+                      await household.selectCharacter(character.id);
+                    else setActiveCharacter(character.id);
+                    setError('');
+                  } catch {
+                    setError(t('shop.failed'));
+                  }
+                }}
+              >
+                {active ? (
+                  <Check className="size-4" />
+                ) : !unlocked ? (
+                  <LockKeyhole className="size-4" />
+                ) : null}
+                {t(
+                  active
+                    ? 'profile.companion.active'
+                    : unlocked
+                      ? 'profile.companion.setActive'
+                      : 'profile.companion.locked',
+                )}
+              </Button>
+              {journeyStageId ? (
+                <Button asChild variant="outline">
+                  <Link to={`/journey?stage=${journeyStageId}`}>
+                    <Sparkles className="mr-1.5 size-4" />{t('journey.characterEntry')}
+                  </Link>
+                </Button>
               ) : null}
-              {t(
-                active
-                  ? 'profile.companion.active'
-                  : unlocked
-                    ? 'profile.companion.setActive'
-                    : 'profile.companion.locked',
-              )}
-            </Button>
+            </div>
             {error && (
               <p role="alert" className="mt-3 text-sm text-destructive">
                 {error}
               </p>
             )}
-            {journeyStageId ? (
-              <Button asChild variant="outline" className="mt-3">
-                <Link to={`/journey?stage=${journeyStageId}`}>
-                  <Sparkles className="mr-1.5 size-4" />{t('journey.characterEntry')}
-                </Link>
-              </Button>
-            ) : null}
           </section>
-          <section className="paper-texture rounded-3xl border bg-card p-6">
+          <section className="salon-panel-card paper-texture rounded-3xl border bg-card p-6">
             <div className="flex items-center justify-between">
               <h2 className="flex items-center gap-2 text-lg font-semibold">
                 <Heart className="size-4 text-rose-400" />
@@ -268,7 +271,7 @@ export default function CharacterProfile() {
               })}
             </div>
           </section>
-          <section className="paper-texture rounded-3xl border bg-card p-6">
+          <section className="salon-panel-card paper-texture rounded-3xl border bg-card p-6">
             <div className="flex items-center gap-2">
               <ScrollText className="size-4 text-primary" />
               <h2 className="text-lg font-semibold">
@@ -309,7 +312,7 @@ export default function CharacterProfile() {
               </div>
             )}
           </section>
-          <section className="paper-texture rounded-3xl border bg-card p-6">
+          <section className="salon-panel-card paper-texture rounded-3xl border bg-card p-6">
             <h2 className="text-lg font-semibold">
               {t('characters.encounters')}
             </h2>

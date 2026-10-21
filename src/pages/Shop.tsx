@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { GPT_BANNER_ASSETS } from '@/assets/gptAssets';
 import { CosmeticPreview } from '@/components/cosmetics/CosmeticPreview';
 import { Button } from '@/components/ui/button';
 import {
@@ -99,14 +100,40 @@ export default function Shop() {
   };
   return (
     <div className="venue-shop lobby-page min-h-screen bg-background text-foreground">
-      <main className="mx-auto max-w-360 px-4 py-7 sm:px-8">
-        <div className="venue-page-heading">
-          <h1 className="mt-2 text-3xl font-semibold">{t('shop.title')}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {t('shop.subtitle')}
-          </p>
-        </div>
-        <div className="shop-layout">
+      <main className="mx-auto max-w-360 space-y-6 px-4 py-7 sm:px-8">
+        <section className="salon-page-banner salon-page-banner--shop">
+          {GPT_BANNER_ASSETS.home ? (
+            <img
+              src={GPT_BANNER_ASSETS.home}
+              alt=""
+              aria-hidden="true"
+              className="salon-banner-art"
+              fetchPriority="high"
+              decoding="async"
+            />
+          ) : null}
+          <div className="salon-banner-inner flex flex-wrap items-end justify-between gap-4">
+            <div className="salon-banner-copy">
+              <p className="play-eyebrow flex items-center gap-1.5">
+                <Sparkles className="size-3.5" />
+                SALON CURIO ATELIER · 雀庄器物博古架
+              </p>
+              <h1 className="mt-1 text-3xl font-semibold sm:text-4xl">
+                {t('shop.title')}
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#e8e3d5]">
+                {t('shop.subtitle')}
+              </p>
+            </div>
+            <div className="salon-banner-actions flex items-center gap-2">
+              <span className="salon-banner-pill">
+                {cosmetics.owned.length} / {COSMETIC_DEFS.length}{' '}
+                {t('shop.owned')}
+              </span>
+            </div>
+          </div>
+        </section>
+        <div className="shop-layout salon-shop-layout">
           <nav className="shop-categories" aria-label={t('shop.categories')}>
             {COSMETIC_CATEGORIES.map((value) => (
               <button

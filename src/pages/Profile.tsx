@@ -1,4 +1,4 @@
-import { Check, LockKeyhole, Upload } from 'lucide-react';
+import { Check, LockKeyhole, Sparkles, Upload } from 'lucide-react';
 import {
   type ChangeEventHandler,
   useCallback,
@@ -7,6 +7,7 @@ import {
   useState,
 } from 'react';
 import { Link } from 'react-router-dom';
+import { GPT_BANNER_ASSETS } from '@/assets/gptAssets';
 import { CharacterPortraitSlot } from '@/components/characters/CharacterPortraitSlot';
 import { CharacterOutfitPicker } from '@/components/characters/CharacterOutfitPicker';
 import { PlayerAvatar } from '@/components/home/PlayerAvatar';
@@ -389,13 +390,42 @@ const Profile = () => {
     checkinState.totalDays >= monthMilestone && !monthClaimed;
 
   return (
-    <div className="venue-profile min-h-screen bg-background text-foreground">
-      <div className="venue-page-heading venue-heading-contained">
-        <h1>{t('profile.title')}</h1>
-        <p>{t('profile.heroSubtitle')}</p>
+    <div className="venue-profile lobby-page min-h-screen bg-background text-foreground">
+      <div className="mx-auto max-w-6xl px-4 pt-8 sm:px-8">
+        <section className="salon-page-banner salon-page-banner--profile">
+          {GPT_BANNER_ASSETS.home ? (
+            <img
+              src={GPT_BANNER_ASSETS.home}
+              alt=""
+              aria-hidden="true"
+              className="salon-banner-art"
+              fetchPriority="high"
+              decoding="async"
+            />
+          ) : null}
+          <div className="salon-banner-inner flex flex-wrap items-end justify-between gap-4">
+            <div className="salon-banner-copy">
+              <p className="play-eyebrow flex items-center gap-1.5">
+                <Sparkles className="size-3.5" />
+                MEMBER DOSSIER · 雀庄会员名帖
+              </p>
+              <h1 className="mt-1 text-3xl font-semibold sm:text-4xl">
+                {t('profile.title')}
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#e8e3d5]">
+                {t('profile.heroSubtitle')}
+              </p>
+            </div>
+            <div className="salon-banner-actions flex items-center gap-2">
+              <span className="salon-banner-pill">
+                {activeTitle ? t(activeTitle.nameKey) : t('profile.titles.none')}
+              </span>
+            </div>
+          </div>
+        </section>
       </div>
 
-      <main className="venue-profile-grid mx-auto grid max-w-6xl gap-4 px-4 py-8 md:grid-cols-[0.92fr_1.08fr] md:py-10">
+      <main className="venue-profile-grid mx-auto grid max-w-6xl gap-4 px-4 py-8 md:grid-cols-[0.92fr_1.08fr] md:py-8">
         <div className="venue-profile-sections space-y-4">
           <section className="venue-identity rounded-3xl border border-border paper-texture bg-card p-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)]">
             <p className="text-xs font-medium tracking-[0.2em] text-primary/80 uppercase">

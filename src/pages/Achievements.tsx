@@ -1,5 +1,8 @@
+import { Award } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { GPT_BANNER_ASSETS } from '@/assets/gptAssets';
+import { VenueGameGlyph } from '@/components/home/VenueGameGlyph';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { games } from '@/data/games';
@@ -29,41 +32,62 @@ const Achievements = () => {
   const growth = getGrowthOverview();
 
   return (
-    <div className="venue-achievements min-h-screen bg-background">
-      <header className="venue-heading-contained">
-        <div className="mx-auto max-w-4xl">
-          <h1 className="mt-2 text-2xl font-bold text-foreground">
-            {t('achievements.title')}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t('achievements.subtitle')}
-          </p>
-        </div>
-      </header>
+    <div className="venue-achievements lobby-page min-h-screen bg-background">
+      <main className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-8">
+        <section className="salon-page-banner salon-page-banner--achievements">
+          {GPT_BANNER_ASSETS.leaderboard ? (
+            <img
+              src={GPT_BANNER_ASSETS.leaderboard}
+              alt=""
+              aria-hidden="true"
+              className="salon-banner-art"
+              fetchPriority="high"
+              decoding="async"
+            />
+          ) : null}
+          <div className="salon-banner-inner flex flex-wrap items-end justify-between gap-4">
+            <div className="salon-banner-copy">
+              <p className="play-eyebrow flex items-center gap-1.5">
+                <Award className="size-3.5" />
+                SALON HALL OF HONORS · 馆藏印鉴录
+              </p>
+              <h1 className="mt-1 text-3xl font-semibold sm:text-4xl">
+                {t('achievements.title')}
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#e8e3d5]">
+                {t('achievements.subtitle')}
+              </p>
+            </div>
+            <div className="salon-banner-actions flex items-center gap-2">
+              <span className="salon-banner-pill">
+                {growth.unlockedAchievements} / {growth.totalAchievements}
+              </span>
+            </div>
+          </div>
+        </section>
 
-      <main className="mx-auto max-w-4xl px-4 py-8">
-        <section className="mb-6 grid gap-3 md:grid-cols-3">
-          <div className="rounded-lg border border-border bg-card p-4">
+        <section className="grid gap-3 md:grid-cols-3">
+          <div className="salon-panel-card paper-texture rounded-2xl border border-border bg-card p-5">
             <p className="text-xs text-muted-foreground">
               {t('achievements.totalPoints')}
             </p>
-            <p className="mt-1 text-2xl font-semibold text-foreground">
+            <p className="mt-1.5 font-serif text-3xl font-semibold text-foreground tabular-nums">
               {growth.achievementPoints}
             </p>
           </div>
-          <div className="rounded-lg border border-border bg-card p-4">
+          <div className="salon-panel-card paper-texture rounded-2xl border border-border bg-card p-5">
             <p className="text-xs text-muted-foreground">
               {t('achievements.taskPoints')}
             </p>
-            <p className="mt-1 text-2xl font-semibold text-foreground">
+            <p className="mt-1.5 font-serif text-3xl font-semibold text-foreground tabular-nums">
               {growth.taskPoints}
             </p>
           </div>
-          <div className="rounded-lg border border-border bg-card p-4">
+          <div className="salon-panel-card paper-texture rounded-2xl border border-border bg-card p-5">
             <p className="text-xs text-muted-foreground">
               {t('achievements.unlockedCount')}
             </p>
-            <p className="mt-1 text-2xl font-semibold text-foreground">
+            <p className="mt-1.5 font-serif text-3xl font-semibold text-foreground tabular-nums">
               {growth.unlockedAchievements}/{growth.totalAchievements}
             </p>
           </div>
@@ -101,11 +125,19 @@ const Achievements = () => {
                     return (
                       <details
                         key={game.id}
-                        className="paper-texture rounded-2xl border bg-card p-4"
+                        className="salon-panel-card paper-texture rounded-2xl border bg-card p-4"
                       >
                         <summary className="flex cursor-pointer items-center justify-between gap-3 font-semibold">
-                          <span>{t(`game.${game.id}.name`)}</span>
-                          <span className="text-xs font-normal text-muted-foreground">
+                          <span className="flex items-center gap-3 min-w-0">
+                            <VenueGameGlyph
+                              gameId={game.id}
+                              className="salon-achievement-game-glyph"
+                            />
+                            <span className="truncate">
+                              {t(`game.${game.id}.name`)}
+                            </span>
+                          </span>
+                          <span className="shrink-0 rounded-full border border-[#cbb391]/55 bg-background/60 px-2.5 py-0.5 text-xs font-medium text-muted-foreground tabular-nums">
                             {
                               own.filter((achievement) => achievement.unlocked)
                                 .length
