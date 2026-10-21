@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { useOptionalHousehold } from '@/contexts/HouseholdContext';
 import { ConnectionNotice } from '@/components/household/ConnectionNotice';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useCosmetics } from '@/hooks/useCosmetics';
 import { useRoomClient } from '@/lib/household/roomClient';
 import { formatMessage } from '@/lib/i18n';
 import { getCharacterById } from '@/lib/playerCharacters';
@@ -42,6 +43,7 @@ export default function FamilyRoom() {
   const navigate = useNavigate();
   const { t, locale } = useLocale();
   const household = useOptionalHousehold();
+  const { equipped } = useCosmetics();
   const currentMember = household?.currentMember;
   const seatName = (identity: PlayerSeatPrivateState['identity']) =>
     identity.type === 'ai' && identity.characterId
@@ -433,7 +435,7 @@ export default function FamilyRoom() {
     isMyTurn && turnOptions !== null && round?.phase === 'discard';
 
   return (
-    <div className="min-h-[calc(100dvh-6.25rem)] md:min-h-[calc(100dvh-4rem)] bg-[#0d1811] text-[#e8f2ea] flex flex-col justify-between p-2 md:p-6 select-none overflow-x-hidden">
+    <div data-table-felt={equipped['table-felt']} className="family-riichi-table min-h-[calc(100dvh-6.25rem)] md:min-h-[calc(100dvh-4rem)] bg-[#0d1811] text-[#e8f2ea] flex flex-col justify-between p-2 md:p-6 select-none overflow-x-hidden">
       {/* 顶部状态与倒计时 */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-2 py-2 md:px-3 rounded-xl bg-black/40 backdrop-blur border border-white/10 text-xs">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 md:gap-3">

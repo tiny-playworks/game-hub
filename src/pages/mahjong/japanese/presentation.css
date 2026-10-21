@@ -10,14 +10,14 @@
   margin-bottom: 18px;
 }
 .riichi-win-tier {
-  padding: 9px 20px;
-  border: 1px solid #cba751;
-  border-radius: 8px;
-  background: linear-gradient(120deg, #7b5419, #e3bf68, #8d661e);
-  color: #fff9e5;
-  font-size: 24px;
+  padding: 8px 18px;
+  border: 1px solid #cba75188;
+  border-radius: 999px;
+  background: linear-gradient(120deg, #cbb07623, #cbb0760a);
+  color: #f4dba5;
+  font-size: 20px;
   letter-spacing: 0.12em;
-  text-shadow: 0 1px 3px #422904;
+  box-shadow: inset 0 1px 0 #fff1c91a;
 }
 .riichi-win-hands {
   display: grid;
@@ -211,45 +211,19 @@
   overflow: hidden;
   border-radius: 16px;
 }
-.riichi-win-sweep {
-  position: absolute;
-  inset: -20%;
-  background: linear-gradient(
-    105deg,
-    transparent 42%,
-    #e8c66a66 49%,
-    #fff3bb88 50%,
-    transparent 58%
-  );
-  animation: riichi-gold-sweep 800ms both;
-}
-.riichi-win-effects i {
-  position: absolute;
-  top: 25%;
-  left: 50%;
-  width: 5px;
-  height: 9px;
-  border-radius: 3px;
-  background: #fbd373;
-  box-shadow: 0 0 9px #fbdb8b;
-  animation: riichi-gold-particle 1000ms both;
-  animation-delay: var(--delay);
-}
 .riichi-win-presentation[data-effects='true'][data-tier='haneman'] {
-  animation: riichi-win-shake-light 300ms;
+  animation: cosmetic-win-arrive 450ms ease-out;
 }
 .riichi-win-presentation[data-effects='true'][data-tier='baiman'],
 .riichi-win-presentation[data-effects='true'][data-tier='sanbaiman'] {
-  animation: riichi-win-shake 400ms;
+  animation: cosmetic-win-arrive 550ms ease-out;
 }
 .riichi-result-modal.riichi-yakuman-dialog {
-  outline: 3px solid #dfc963;
+  outline: 1px solid #dfc963b3;
   box-shadow:
     0 0 0 100vmax #0008,
-    0 0 36px #9d81da88;
-  animation:
-    riichi-yakuman-border 1800ms linear 2,
-    riichi-win-shake-strong 550ms;
+    0 0 48px #b9974b4d;
+  animation: cosmetic-win-arrive 650ms ease-out;
 }
 .riichi-yakuman-title {
   position: absolute;
@@ -319,27 +293,6 @@
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-@keyframes riichi-gold-sweep {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(100%);
-  }
-}
-@keyframes riichi-gold-particle {
-  0% {
-    opacity: 0;
-    transform: rotate(var(--angle)) translateX(0);
-  }
-  15% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: rotate(var(--angle)) translateX(var(--distance)) rotate(160deg);
   }
 }
 @keyframes riichi-win-shake-light {

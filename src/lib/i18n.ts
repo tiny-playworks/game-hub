@@ -45,7 +45,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'theme.dark': '切换深色模式',
     'theme.light': '切换浅色模式',
     'cosmetic.felt-venue.name': '墨蓝',
-    'cosmetic.felt-venue.desc': '竞技馆默认桌布，清晰而沉静。',
+    'cosmetic.felt-venue.desc': '细织墨蓝与浅金收边，波纹隐在桌沿。',
     'recovery.title': '这个页面暂时出了点问题',
     'recovery.description':
       '可以重新尝试，或返回大厅。已有存档不会被清空；如果进度尚未保存，请先导出备份。',
@@ -405,7 +405,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'cosmetic.felt-wine.name': '酒红',
     'cosmetic.felt-wine.desc': '一抹沉稳酒红，给牌桌添上暖意。',
     'cosmetic.felt-tatami.name': '榻榻米',
-    'cosmetic.felt-tatami.desc': '草席细纹与格线，带一点和室的清静。',
+    'cosmetic.felt-tatami.desc': '细密蔺草编织与深色织边，留住和室的清静。',
     'cosmetic.felt-night.name': '夜空',
     'cosmetic.felt-night.desc': '曾达到雀豪的纪念，星点散落在深夜桌面。',
     'cosmetic.riichi-default.name': '落棒',
@@ -419,13 +419,13 @@ const messages: Record<Locale, Record<string, string>> = {
     'cosmetic.riichi-ink.name': '水墨',
     'cosmetic.riichi-ink.desc': '墨迹一瞬晕开，留白交给下一巡。',
     'cosmetic.win-default.name': '雀庄庆贺',
-    'cosmetic.win-default.desc': '沿用和牌分档演出，为好手牌喝彩。',
+    'cosmetic.win-default.desc': '细金纹与柔光展开，为打好的一手留下一刻庆贺。',
     'cosmetic.win-fireworks.name': '烟花',
     'cosmetic.win-fireworks.desc': '和牌结算时，一圈金色烟花绽开。',
     'cosmetic.win-sakura.name': '樱吹雪',
     'cosmetic.win-sakura.desc': '樱花随和牌轻落，像一场短暂的春雪。',
     'cosmetic.win-dragon.name': '金龙',
-    'cosmetic.win-dragon.desc': '金色龙印浮现，光点从牌桌中心散开。',
+    'cosmetic.win-dragon.desc': '金绘盘龙随光环展开，鳞纹与流金映亮和牌的一刻。',
     'cosmetic.win-galaxy.name': '星河',
     'cosmetic.win-galaxy.desc': '淡紫星轨绕过牌桌，留下片刻星光。',
     'cosmetic.frame-wood.name': '木框',
@@ -452,7 +452,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'cosmetic.frame-rin.desc':
       '凛与你满好感的纪念。每一局相伴，都在这一圈颜色里。',
     'cosmetic.win-chitose.name': '茶庭和牌',
-    'cosmetic.win-chitose.desc': '嫩绿茶叶轻落，千岁的茶还温着。',
+    'cosmetic.win-chitose.desc': '竹影与新叶轻拂，千岁的茶庭还留着暖意。',
     'cosmetic.frame-chitose.name': '千岁 · 约定',
     'cosmetic.frame-chitose.desc':
       '千岁与你满好感的纪念。每一局相伴，都在这一圈颜色里。',
@@ -2178,7 +2178,7 @@ const messages: Record<Locale, Record<string, string>> = {
     'theme.dark': 'Switch to dark mode',
     'theme.light': 'Switch to light mode',
     'cosmetic.felt-venue.name': 'Ink Navy',
-    'cosmetic.felt-venue.desc': 'The venue’s default cloth: clear and calm.',
+    'cosmetic.felt-venue.desc': 'Fine navy weave, pale gold edging and quiet waves along the rim.',
     'recovery.title': 'This page ran into a problem',
     'recovery.description':
       'Try again or return to the lobby. Existing saves will not be cleared. Export a backup first if progress has not been saved.',
@@ -2674,7 +2674,7 @@ const messages: Record<Locale, Record<string, string>> = {
       'An ink flourish leaves space for the next turn.',
     'cosmetic.win-default.name': 'Parlor Celebration',
     'cosmetic.win-default.desc':
-      'The familiar score-tier celebration for a good hand.',
+      'Fine gold lines and a soft glow celebrate a well-played hand.',
     'cosmetic.win-fireworks.name': 'Fireworks',
     'cosmetic.win-fireworks.desc': 'A golden burst celebrates the final score.',
     'cosmetic.win-sakura.name': 'Sakura Shower',
@@ -2682,7 +2682,7 @@ const messages: Record<Locale, Record<string, string>> = {
       'A brief spring snowfall of petals celebrates your win.',
     'cosmetic.win-dragon.name': 'Golden Dragon',
     'cosmetic.win-dragon.desc':
-      'A golden dragon seal rises in a circle of light.',
+      'An engraved golden dragon unfurls in a ring of light.',
     'cosmetic.win-galaxy.name': 'Galaxy',
     'cosmetic.win-galaxy.desc':
       'Violet stars trace a fleeting orbit over the table.',
@@ -2714,7 +2714,7 @@ const messages: Record<Locale, Record<string, string>> = {
       'A keepsake of your lasting bond with Rin, holding every game you shared.',
     'cosmetic.win-chitose.name': 'Tea Garden',
     'cosmetic.win-chitose.desc':
-      'Tender leaves drift while Chitose’s tea stays warm.',
+      'Bamboo shadows and fresh leaves drift through Chitose’s warm tea garden.',
     'cosmetic.frame-chitose.name': 'Chitose · Our Promise',
     'cosmetic.frame-chitose.desc':
       'A keepsake of your lasting bond with Chitose, holding every game you shared.',

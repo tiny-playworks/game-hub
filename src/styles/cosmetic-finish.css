@@ -1,0 +1,522 @@
+/* Shared tabletop materials. Static WebP grain + native geometry avoid animation files. */
+:root,
+[data-table-felt] {
+  --cosmetic-felt: #1c3541;
+  --felt-grain: url('../assets/cosmetics/felt-weave.webp');
+  --felt-grain-size: 420px;
+  --felt-thread: #c5b286;
+  --felt-light: radial-gradient(ellipse at 48% 36%, #d3e4e41a, transparent 70%);
+  --felt-ornament: repeating-radial-gradient(
+    circle at 50% 100%,
+    transparent 0 18px,
+    #a5c2c125 19px 20px,
+    transparent 21px 36px
+  );
+}
+[data-table-felt='felt-green'] {
+  --cosmetic-felt: #245a4d;
+  --felt-thread: #b7c5a4;
+  --felt-ornament: none;
+}
+[data-table-felt='felt-blue'] {
+  --cosmetic-felt: #274b65;
+  --felt-thread: #b4ccd4;
+  --felt-ornament: repeating-linear-gradient(
+    135deg,
+    transparent 0 20px,
+    #b9d8e016 20px 21px,
+    transparent 21px 40px
+  );
+}
+[data-table-felt='felt-wine'] {
+  --cosmetic-felt: #693c4c;
+  --felt-thread: #e0bd9a;
+  --felt-light: radial-gradient(ellipse at 46% 32%, #edbea317, transparent 70%);
+  --felt-ornament: repeating-radial-gradient(
+    ellipse at 50% 0,
+    transparent 0 24px,
+    #e6bdaf22 25px 26px,
+    transparent 27px 48px
+  );
+}
+[data-table-felt='felt-tatami'] {
+  --cosmetic-felt: #777b53;
+  --felt-thread: #343f35;
+  --felt-grain: url('../assets/cosmetics/tatami-weave.webp');
+  --felt-grain-size: 300px;
+  --felt-light: linear-gradient(#d7cd9a12, #1e30232b);
+  --felt-ornament: repeating-linear-gradient(
+    0deg,
+    #23382c24 0 2px,
+    transparent 2px 6px
+  );
+}
+[data-table-felt='felt-night'] {
+  --cosmetic-felt: #242e4e;
+  --felt-thread: #a8b7d6;
+  --felt-light: radial-gradient(ellipse at 84% 8%, #7c83b940, transparent 58%);
+  --felt-ornament:
+    radial-gradient(circle at 18% 27%, #dce5ff9c 0 1px, transparent 1.5px),
+    radial-gradient(circle at 71% 62%, #e6d2a980 0 0.8px, transparent 1.4px),
+    radial-gradient(circle at 88% 12%, #b7c9f480 0 0.8px, transparent 1.2px);
+}
+.cosmetic-preview[data-table-felt] .cosmetic-mini-table,
+.family-riichi-table[data-table-felt],
+[data-table-felt] .riichi-table-surface,
+[data-table-felt] .riichi-seat--self {
+  background-color: var(--cosmetic-felt);
+  background-image: var(--felt-light), var(--felt-grain);
+  background-size:
+    cover,
+    var(--felt-grain-size) var(--felt-grain-size);
+  background-blend-mode: normal, soft-light;
+}
+[data-riichi-theme][data-table-felt] {
+  --riichi-table: var(--cosmetic-felt);
+  --riichi-table-inner: color-mix(in srgb, var(--cosmetic-felt) 84%, #101a22);
+}
+.cosmetic-preview[data-table-felt] .cosmetic-mini-table,
+[data-table-felt] .riichi-table-surface {
+  border: 5px solid #20303a;
+  box-shadow:
+    inset 0 0 0 1px #c3b59188,
+    inset 0 0 35px #07151e80,
+    0 1px 0 #e6d8b94d;
+}
+.cosmetic-preview .cosmetic-mini-table::before,
+[data-table-felt] .riichi-table-surface::before {
+  content: '';
+  display: block;
+  position: absolute;
+  z-index: 0;
+  inset: 12px;
+  border: 1px solid color-mix(in srgb, var(--felt-thread) 36%, transparent);
+  border-radius: 12px;
+  box-shadow: 0 0 0 3px #0c1d2624;
+  pointer-events: none;
+}
+.cosmetic-preview .cosmetic-mini-table::after,
+[data-table-felt] .riichi-table-surface::after {
+  content: '';
+  display: block;
+  position: absolute;
+  z-index: 0;
+  inset: 8px;
+  border-radius: inherit;
+  background-image: var(--felt-ornament);
+  background-size: 110px 110px;
+  mask-image: radial-gradient(ellipse at center, transparent 42%, #0009 100%);
+  pointer-events: none;
+}
+[data-table-felt='felt-tatami'] .cosmetic-mini-table,
+[data-table-felt='felt-tatami'] .riichi-table-surface {
+  border-color: #354336;
+}
+[data-table-felt] .riichi-seat--self {
+  background-color: color-mix(in srgb, var(--cosmetic-felt) 85%, #0a1922);
+}
+.cosmetic-mini-center {
+  border-radius: 8px;
+  border-color: #d5c29777;
+  background: #12232b94;
+  box-shadow:
+    0 4px 10px #05131c60,
+    inset 0 1px 0 #f8e6bb22;
+  font-family: 'Noto Serif SC', serif;
+}
+.is-compact .cosmetic-mini-table::before {
+  inset: 6px;
+  border-radius: 6px;
+}
+.is-compact .cosmetic-mini-table::after {
+  inset: 3px;
+}
+
+/* An effect has a material glow, a theme-specific motif and a short attack/release. */
+.cosmetic-effect[data-motif] {
+  --effect-x: 50%;
+  --effect-y: 44%;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  overflow: hidden;
+  isolation: isolate;
+  pointer-events: none;
+  color: var(--effect-color);
+  border-radius: inherit;
+}
+.cosmetic-mini-table > .cosmetic-effect {
+  z-index: 2;
+}
+.cosmetic-effect-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at var(--effect-x) var(--effect-y),
+    color-mix(in srgb, var(--effect-color) 17%, transparent),
+    transparent 62%
+  );
+}
+.cosmetic-effect-orbit {
+  position: absolute;
+  width: min(78%, 270px);
+  aspect-ratio: 1;
+  left: var(--effect-x);
+  top: var(--effect-y);
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(
+    0 0 7px color-mix(in srgb, var(--effect-color) 25%, transparent)
+  );
+}
+.cosmetic-effect-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.cosmetic-effect:not(.is-still) .cosmetic-effect-orbit {
+  animation: cosmetic-reveal 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.cosmetic-effect:not(.is-still) .cosmetic-drawn {
+  stroke-dasharray: 1;
+  animation: cosmetic-trace 700ms ease-out both;
+}
+.cosmetic-effect-sweep {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 39%,
+    color-mix(in srgb, var(--effect-color) 8%, transparent) 46%,
+    color-mix(in srgb, var(--effect-accent) 44%, transparent) 50%,
+    transparent 55%
+  );
+  animation: cosmetic-sheen 680ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+.cosmetic-effect-wave {
+  position: absolute;
+  top: var(--effect-y);
+  left: var(--effect-x);
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  animation: cosmetic-ripple 1000ms ease-out both;
+}
+.cosmetic-effect[data-motif] .cosmetic-particle {
+  position: absolute;
+  top: var(--effect-y);
+  left: var(--effect-x);
+  width: 2px;
+  height: var(--size);
+  opacity: 0;
+  border-radius: 50%;
+  background: var(--effect-accent);
+  box-shadow: 0 0 6px currentColor;
+  animation: cosmetic-scatter 1050ms var(--delay)
+    cubic-bezier(0.1, 0.55, 0.3, 1) both;
+}
+.cosmetic-effect[data-motif='petals'] .cosmetic-particle,
+.cosmetic-effect[data-motif='camellia'] .cosmetic-particle,
+.cosmetic-effect[data-motif='bamboo'] .cosmetic-particle {
+  top: -5%;
+  left: var(--x);
+  width: var(--size);
+  height: calc(var(--size) * 1.5);
+  border-radius: 80% 0 80% 25%;
+  background: linear-gradient(
+    130deg,
+    var(--effect-accent),
+    var(--effect-color) 65%
+  );
+  box-shadow:
+    inset 1px 0 1px #fff7,
+    0 1px 3px #0002;
+  animation: cosmetic-petal 1700ms var(--delay) ease-out both;
+}
+.cosmetic-effect[data-motif='bamboo'] .cosmetic-particle {
+  width: 4px;
+  height: 17px;
+  border-radius: 100% 0;
+}
+.cosmetic-effect[data-motif='ink'] .cosmetic-particle {
+  width: var(--size);
+  height: calc(var(--size) * 0.7);
+  background: currentColor;
+  box-shadow: none;
+  border-radius: 48% 35% 60% 40%;
+}
+.cosmetic-effect[data-motif='water'] .cosmetic-particle {
+  width: 5px;
+  height: 8px;
+  border-radius: 50% 50% 60% 60%;
+  background: transparent;
+  border: 1px solid currentColor;
+  box-shadow: inset 1px 1px 2px #d9fff855;
+}
+.cosmetic-effect[data-motif='galaxy'] .cosmetic-particle,
+.cosmetic-effect[data-motif='moon'] .cosmetic-particle {
+  width: 4px;
+  height: 4px;
+  animation-name: cosmetic-stardust;
+}
+.cosmetic-effect[data-motif='lightning'] .cosmetic-particle {
+  width: 1px;
+  height: 16px;
+  animation-duration: 650ms;
+}
+.cosmetic-lightning-aura {
+  filter: blur(6px);
+}
+.cosmetic-effect[data-motif='lightning'] .cosmetic-drawn {
+  animation-duration: 340ms;
+}
+.cosmetic-effect[data-motif='ink'] .cosmetic-effect-sweep {
+  display: none;
+}
+.cosmetic-riichi-stick {
+  position: absolute;
+  z-index: 2;
+  top: 60%;
+  left: 50%;
+  display: block;
+  width: 156px;
+  height: 18px;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 7px 4px #00111b9c);
+  animation: cosmetic-land 650ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.riichi-riichi-stick[data-riichi-design],
+.cosmetic-riichi-stick[data-riichi-design] {
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.cosmetic-riichi-stick-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.cosmetic-effect.is-still .cosmetic-riichi-stick {
+  animation: none;
+}
+.is-compact .cosmetic-effect-orbit {
+  width: 77%;
+  max-width: 120px;
+}
+.is-compact .cosmetic-riichi-stick {
+  width: 92px;
+  height: 12px;
+  top: 63%;
+}
+.cosmetic-effect.is-still .cosmetic-effect-glow {
+  opacity: 0.75;
+}
+
+/* Live effects stay behind the hand, score and character copy. */
+.riichi-character-cutin[data-mode='full'] .riichi-character-cutin-band {
+  position: relative;
+  isolation: isolate;
+  height: 280px;
+  border-block: 1px solid #cbb27d;
+  background: linear-gradient(110deg, #142832f5, #253f4bf2 58%, #142631f2);
+  color: #f7f0df;
+  box-shadow: 0 20px 80px #07121c80;
+}
+.riichi-character-cutin-band > .cosmetic-effect {
+  --effect-x: 70%;
+  --effect-y: 46%;
+  z-index: 0;
+  opacity: 0.85;
+}
+.riichi-cutin-portrait,
+.riichi-cutin-copy {
+  position: relative;
+  z-index: 2;
+}
+.riichi-character-cutin-band .cosmetic-effect-orbit {
+  width: 310px;
+  max-width: 45%;
+}
+.riichi-character-cutin-band .cosmetic-riichi-stick {
+  left: 72%;
+  top: 80%;
+  width: 170px;
+}
+.riichi-character-cutin[data-mode='full'] .riichi-cutin-copy strong {
+  color: #fff3d5;
+  font-family: 'Noto Serif SC', serif;
+  text-shadow: 0 3px 18px #071722;
+  letter-spacing: 0.1em;
+}
+.riichi-character-cutin[data-mode='full'] .riichi-cutin-name {
+  color: #d6bf91;
+  font-weight: 500;
+}
+.riichi-character-cutin[data-mode='full'] .riichi-cutin-line {
+  color: #dfebebc9;
+  font-size: 16px;
+}
+.riichi-win-presentation > .cosmetic-effect {
+  --effect-x: 86%;
+  --effect-y: 13%;
+  z-index: -1;
+  opacity: 0.5;
+}
+.riichi-win-presentation > .cosmetic-effect .cosmetic-effect-orbit {
+  width: 285px;
+  opacity: 0.65;
+}
+.riichi-win-presentation > .cosmetic-effect .cosmetic-effect-glow {
+  background: radial-gradient(
+    ellipse at 85% 12%,
+    color-mix(in srgb, var(--effect-color) 24%, transparent),
+    transparent 56%
+  );
+}
+.riichi-win-presentation > .cosmetic-effect .cosmetic-particle {
+  --effect-y: 8%;
+}
+
+@keyframes cosmetic-reveal {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.78) rotate(-9deg);
+  }
+  55% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1) rotate(0);
+  }
+}
+@keyframes cosmetic-trace {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes cosmetic-sheen {
+  from {
+    opacity: 0;
+    transform: translateX(-80%);
+  }
+  25% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(80%);
+  }
+}
+@keyframes cosmetic-ripple {
+  from {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0.6;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(4);
+    opacity: 0;
+  }
+}
+@keyframes cosmetic-scatter {
+  from {
+    transform: rotate(var(--angle)) translateY(0) scale(0.4);
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  to {
+    transform: rotate(var(--angle)) translateY(var(--distance)) scale(0.5);
+    opacity: 0;
+  }
+}
+@keyframes cosmetic-petal {
+  from {
+    transform: translate(0, 0) rotate(-25deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.9;
+  }
+  to {
+    transform: translate(var(--drift), 275px) rotate(160deg);
+    opacity: 0;
+  }
+}
+@keyframes cosmetic-stardust {
+  from {
+    transform: rotate(var(--angle)) translateX(50px);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  to {
+    transform: rotate(calc(var(--angle) + 55deg)) translateX(var(--distance));
+    opacity: 0;
+  }
+}
+@keyframes cosmetic-land {
+  from {
+    opacity: 0;
+    transform: translate(-105%, -55px) rotate(-12deg) scale(1.15);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(-50%, 2px) rotate(1deg);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) rotate(0);
+  }
+}
+@keyframes cosmetic-win-arrive {
+  from {
+    opacity: 0.65;
+    transform: translateY(5px) scale(0.992);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (max-width: 700px) {
+  .riichi-character-cutin[data-mode='full'] .riichi-character-cutin-band {
+    height: 220px;
+    gap: 12px;
+  }
+  .riichi-character-cutin[data-mode='full'] .riichi-cutin-copy strong {
+    font-size: 48px;
+  }
+  .riichi-character-cutin[data-mode='full'] .riichi-cutin-line {
+    font-size: 12px;
+    max-width: 190px;
+  }
+  .riichi-character-cutin-band .cosmetic-riichi-stick {
+    width: 100px;
+    top: 83%;
+  }
+  .riichi-win-presentation > .cosmetic-effect .cosmetic-effect-orbit {
+    width: 200px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cosmetic-effect[data-motif] *,
+  .riichi-character-cutin[data-mode] .riichi-character-cutin-band {
+    animation: none !important;
+  }
+  .cosmetic-effect .cosmetic-particle,
+  .cosmetic-effect-sweep,
+  .cosmetic-effect-wave {
+    display: none;
+  }
+}

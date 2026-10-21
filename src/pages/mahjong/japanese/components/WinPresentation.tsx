@@ -159,22 +159,6 @@ export function WinPresentation({
         </header>
         {full && final && tier && (
           <div className="riichi-win-effects" aria-hidden="true">
-            <span className="riichi-win-sweep" />
-            {['baiman', 'sanbaiman', 'yakuman', 'doubleYakuman'].includes(
-              tier,
-            ) &&
-              Array.from({ length: 24 }, (_, index) => (
-                <i
-                  key={index}
-                  style={
-                    {
-                      '--angle': `${index * 15}deg`,
-                      '--distance': `${100 + (index % 5) * 25}px`,
-                      '--delay': `${(index % 4) * 35}ms`,
-                    } as CSSProperties
-                  }
-                />
-              ))}
             {yakuman && (
               <b className="riichi-yakuman-title">
                 {t(`riichi.presentation.tier.${tier}`)}
@@ -182,7 +166,7 @@ export function WinPresentation({
             )}
           </div>
         )}
-        {full && final && equipped['win-effect'] !== 'win-default' && (
+        {full && final && (
           <CosmeticEffect id={equipped['win-effect']} kind="win" />
         )}
         {mode !== 'off' && (

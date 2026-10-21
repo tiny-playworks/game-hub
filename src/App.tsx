@@ -21,6 +21,7 @@ import './cosmetics.css';
 import './styles/venue.css';
 import './styles/play-experience.css';
 import './styles/riichi-venue.css';
+import './styles/cosmetic-finish.css';
 
 const Achievements = lazyPage(() => import('@/pages/Achievements'));
 const Category = lazyPage(() => import('@/pages/Category'));
