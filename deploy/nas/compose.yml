@@ -18,9 +18,12 @@ services:
       retries: 3
 
   game-hub-api:
+    image: '${GAME_HUB_API_IMAGE:-game-hub-live-game-hub-api}'
     build:
       context: ../..
       dockerfile: server/Dockerfile
+      args:
+        GAME_HUB_REVISION: '${GAME_HUB_REVISION:-unknown}'
     restart: unless-stopped
     environment:
       GAME_HUB_DB_PATH: /data/household.sqlite

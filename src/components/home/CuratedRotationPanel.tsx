@@ -18,14 +18,22 @@ export function CuratedRotationPanel() {
   const characters = useCharacters();
   const memberMode = Boolean(household?.currentMember);
   const isServerAvailable = household?.isServerAvailable ?? false;
+  const replayOwner = household?.currentMember?.id ?? 'guest-local';
+  const canLoadReplays =
+    !memberMode || (household?.mode === 'member-online' && isServerAvailable);
 
-  const [hasEligibleReplay, setHasEligibleReplay] = useState(false);
-  const [recommendations, setRecommendations] = useState<ResolvedCuratedItem[]>(
-    [],
-  );
+  const [replayEligibility, setReplayEligibility] = useState({
+    owner: '',
+    eligible: false,
+  });
+  const hasEligibleReplay =
+    canLoadReplays &&
+    replayEligibility.owner === replayOwner &&
+    replayEligibility.eligible;
 
   useEffect(() => {
     let cancelled = false;
+    if (!canLoadReplays) return;
 
     async function checkReplays() {
       try {
@@ -39,10 +47,11 @@ export function CuratedRotationPanel() {
             .some(
               (item) => item.source === 'free' || item.source === 'ai-ranked',
             );
-          setHasEligibleReplay(eligible);
+          setReplayEligibility({ owner: replayOwner, eligible });
         }
       } catch {
-        if (!cancelled) setHasEligibleReplay(false);
+        if (!cancelled)
+          setReplayEligibility({ owner: replayOwner, eligible: false });
       }
     }
 
@@ -50,38 +59,28 @@ export function CuratedRotationPanel() {
     return () => {
       cancelled = true;
     };
-  }, [memberMode]);
+  }, [memberMode, replayOwner, canLoadReplays, household?.snapshot?.revision]);
 
-  useEffect(() => {
-    const progress = memberMode
-      ? household?.snapshot?.journey
-      : getJourneyProgress();
+  const progress = memberMode
+    ? household?.snapshot?.journey
+    : getJourneyProgress();
 
-    const completedJourneyStageIds = progress?.stages
-      ? Object.entries(progress.stages)
-          .filter(([, s]) => s.completed)
-          .map(([id]) => id)
-      : [];
+  const completedJourneyStageIds = progress?.stages
+    ? Object.entries(progress.stages)
+        .filter(([, s]) => s.completed)
+        .map(([id]) => id)
+    : [];
 
-    const resolved = resolveCuratedRecommendations({
-      memberMode,
-      isServerAvailable,
-      completedJourneyStageIds,
-      completedJourneyVariationIds: Object.entries(progress?.variations ?? {})
-        .filter(([, item]) => item.completed)
-        .map(([id]) => id),
-      companionCharacterId: characters.activeCharacterId,
-      hasEligibleReplay,
-    });
-
-    setRecommendations(resolved);
-  }, [
+  const recommendations = resolveCuratedRecommendations({
     memberMode,
     isServerAvailable,
-    household?.snapshot?.journey?.updatedAt,
-    characters.activeCharacterId,
+    completedJourneyStageIds,
+    completedJourneyVariationIds: Object.entries(progress?.variations ?? {})
+      .filter(([, item]) => item.completed)
+      .map(([id]) => id),
+    companionCharacterId: characters.activeCharacterId,
     hasEligibleReplay,
-  ]);
+  });
 
   if (recommendations.length === 0) return null;
 
