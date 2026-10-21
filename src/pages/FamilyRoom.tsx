@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -83,6 +83,21 @@ export default function FamilyRoom() {
   // 倒计时剩余秒数状态
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
   const [rematching, setRematching] = useState(false);
+  const resultDialog = useRef<HTMLDivElement>(null);
+  const resultOpen = Boolean(view?.result);
+  const errorMessage = error
+    ? t(error.startsWith('play.') ? error : 'play.roomActionFailed')
+    : null;
+
+  useEffect(() => {
+    if (!resultOpen) return;
+    const previous = document.activeElement;
+    resultDialog.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus({ preventScroll: true });
+    return () => {
+      if (previous instanceof HTMLElement && previous.isConnected)
+        previous.focus({ preventScroll: true });
+    };
+  }, [resultOpen, view?.status]);
 
   useEffect(() => {
     if (!view?.serverDeadline) {
@@ -107,7 +122,7 @@ export default function FamilyRoom() {
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4" />
         <p className="text-muted-foreground text-sm">{t('family.room.connecting')}</p>
-        {error && <p className="text-destructive text-xs mt-2">{error}</p>}
+        {errorMessage && <p role="alert" className="text-destructive text-xs mt-2">{errorMessage}</p>}
       </div>
     );
   }
@@ -256,6 +271,7 @@ export default function FamilyRoom() {
           onTakeover={takeoverControl}
           onResumeGame={resumeGame}
         />
+        {errorMessage ? <p role="alert" className="mt-2 text-center text-sm text-destructive">{errorMessage}</p> : null}
 
         {/* 4 个席位布局 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -452,7 +468,7 @@ export default function FamilyRoom() {
           )}
           <span className="hidden sm:inline text-white/60">{formatMessage(locale, 'family.room.honba', { count: round?.honba ?? 0 })}</span>
           <span className="hidden sm:inline text-amber-300">
-            {formatMessage(locale, 'family.room.riichiPot', { points: (round?.riichiPot ?? 0) * 1000 })}
+            {formatMessage(locale, 'family.room.riichiPot', { points: round?.riichiPot ?? 0 })}
           </span>
           <span className="text-white/60">
             {formatMessage(locale, 'family.room.wall', { count: round?.wallRemaining ?? 0 })}
@@ -496,6 +512,7 @@ export default function FamilyRoom() {
           onCancelAutoplay={() => toggleAutoplay(false)}
           onResumeGame={resumeGame}
         />
+        {errorMessage ? <p role="alert" className="mt-2 text-center text-sm text-amber-200">{errorMessage}</p> : null}
       </div>
 
       {/* 牌桌核心对战场区 */}
@@ -757,10 +774,47 @@ export default function FamilyRoom() {
       {/* 局结算或终局结算弹窗 */}
       {view?.result && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#142319] border border-white/20 rounded-2xl w-full max-w-md p-6 text-white shadow-2xl space-y-4">
-            <h3 className="text-xl font-bold text-center text-emerald-400">
+          <div
+            ref={resultDialog}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="family-result-title"
+            onKeyDown={(event) => {
+              if (event.key !== 'Tab') return;
+              const controls = resultDialog.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)');
+              if (!controls?.length) return;
+              const first = controls[0];
+              const last = controls[controls.length - 1];
+              if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+              } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+              }
+            }}
+            className="bg-[#172a3a] border border-white/20 rounded-2xl w-full max-w-md max-h-[90dvh] overflow-y-auto p-6 text-white shadow-2xl space-y-4"
+          >
+            <h3 id="family-result-title" className="text-xl font-bold text-center text-amber-200">
               {t(isFinished && room.cup ? 'family.cup.finalTitle' : isFinished ? 'family.room.finalResult' : 'family.room.roundResult')}
             </h3>
+
+            {isFinished && view.matchEnd ? (
+              <div>
+                <p className="mb-2 text-xs text-white/65">{t('play.finalStandings')}</p>
+                <ol className="space-y-1.5">
+                  {view.matchEnd.ranking.map((seatIndex, index) => (
+                    <li key={seatIndex} className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm ${seatIndex === view.viewerSeat ? 'bg-amber-200/15 ring-1 ring-amber-200/50' : 'bg-white/5'}`}>
+                      <span className="flex items-center gap-2">
+                        <span className="w-5 font-mono text-amber-200">{index + 1}</span>
+                        <span>{seatName(view.seats[seatIndex].identity)}{seatIndex === view.viewerSeat ? ` · ${t('family.room.you')}` : ''}</span>
+                      </span>
+                      <strong className="font-mono">{formatMessage(locale, 'family.room.points', { points: view.matchEnd?.finalScores[seatIndex] ?? view.seats[seatIndex].score })}</strong>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ) : null}
 
             {view.result.type === 'win' ? (
               <div className="space-y-3">
@@ -842,7 +896,7 @@ export default function FamilyRoom() {
               {isFinished ? (
                 <div className="w-full space-y-3">
                 <p className="text-xs text-white/60">{t('play.rematchHint')}</p>
-                {error ? <p role="alert" className="text-xs text-amber-300">{error}</p> : null}
+                {errorMessage ? <p role="alert" className="text-xs text-amber-300">{errorMessage}</p> : null}
                 <div className="family-rematch-actions">
                 {isHost ? <Button disabled={rematching || !connected} onClick={async () => { setRematching(true); try { await rematch(); } finally { setRematching(false); } }}>{t(rematching ? 'play.saving' : 'play.rematch')}</Button> : null}
                 <Button

@@ -291,6 +291,9 @@
   gap: 8px;
   width: 100%;
 }
+.family-rematch-actions > button {
+  min-height: 44px;
+}
 @keyframes play-arrive {
   from {
     opacity: 0;

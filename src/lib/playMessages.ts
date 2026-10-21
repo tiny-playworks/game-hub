@@ -53,7 +53,10 @@ export const playMessages: Record<'zh' | 'en', Record<string, string>> = {
     'play.finish2048': '收下成绩',
     'play.boardSize': '{size}×{size} 棋盘',
     'play.rematch': '同桌再战',
+    'play.finalStandings': '终局排名',
     'play.rematchHint': '房主可重新开放这张桌，大家准备后继续。',
+    'play.roomStateChanged': '牌桌已更新，请按当前手牌重新操作。',
+    'play.roomActionFailed': '这次操作未成功，请查看当前牌桌后重试。',
     'play.nextDeal': '升级，下一副',
     'play.level': '我方 / 对方等级',
     'play.levelResult': '本副晋升 {levels} 级 · 下一副继续',
@@ -135,8 +138,13 @@ export const playMessages: Record<'zh' | 'en', Record<string, string>> = {
     'play.finish2048': 'Bank this score',
     'play.boardSize': '{size}×{size} board',
     'play.rematch': 'Play another match',
+    'play.finalStandings': 'Final standings',
     'play.rematchHint':
       'The host can reopen this table. Ready up to play again.',
+    'play.roomStateChanged':
+      'The table has updated. Please choose again from your current hand.',
+    'play.roomActionFailed':
+      'That action could not be completed. Check the current table and try again.',
     'play.nextDeal': 'Level up · Next deal',
     'play.level': 'Our level / Their level',
     'play.levelResult':

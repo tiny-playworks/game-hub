@@ -28,7 +28,9 @@ export function useRoomClient(roomId?: string, memberId?: string) {
   const [error, setError] = useState<string | null>(null);
 
   const socketRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const isDestroyedRef = useRef(false);
 
   const refresh = useCallback(async () => {
@@ -76,8 +78,19 @@ export function useRoomClient(roomId?: string, memberId?: string) {
             const msg = JSON.parse(event.data) as ServerMessage;
             if (msg.type === 'room_update') {
               setRoom(msg.room);
+              if (msg.room.status === 'waiting') setView(null);
             } else if (msg.type === 'match_update') {
               setView(msg.view);
+            } else if (msg.type === 'ack') {
+              if (msg.accepted) setError(null);
+              else {
+                setError(
+                  msg.code === 'ROOM_REVISION_CONFLICT'
+                    ? 'play.roomStateChanged'
+                    : 'play.roomActionFailed',
+                );
+                if (msg.code === 'ROOM_REVISION_CONFLICT') void refresh();
+              }
             } else if (msg.type === 'lease_lost') {
               setLeaseLost(true);
             } else if (msg.type === 'error') {
@@ -111,7 +124,8 @@ export function useRoomClient(roomId?: string, memberId?: string) {
 
     return () => {
       isDestroyedRef.current = true;
-      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      if (reconnectTimeoutRef.current)
+        clearTimeout(reconnectTimeoutRef.current);
       if (socketRef.current) {
         socketRef.current.close();
         socketRef.current = null;
@@ -127,26 +141,57 @@ export function useRoomClient(roomId?: string, memberId?: string) {
         commandId: createUuid(),
         roomId,
         matchId: room?.currentMatchId,
-        expectedRevision: room?.revision ?? 0,
+        expectedRevision: Math.max(
+          room?.revision ?? 0,
+          view?.matchId === room?.currentMatchId ? (view?.revision ?? 0) : 0,
+        ),
         type,
         payload,
       };
 
-      // 优先通过 WebSocket 发送
-      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-        socketRef.current.send(JSON.stringify({ type: 'command', command: cmd }));
-      } else {
-        // HTTP 降级备份通道
-        await sendRoomCommand(roomId, cmd);
+      try {
+        // 优先通过 WebSocket 发送
+        if (
+          socketRef.current &&
+          socketRef.current.readyState === WebSocket.OPEN
+        ) {
+          socketRef.current.send(
+            JSON.stringify({ type: 'command', command: cmd }),
+          );
+        } else {
+          const ack = await sendRoomCommand(roomId, cmd);
+          setError(
+            ack.accepted
+              ? null
+              : ack.code === 'ROOM_REVISION_CONFLICT'
+                ? 'play.roomStateChanged'
+                : 'play.roomActionFailed',
+          );
+          await refresh();
+        }
+      } catch {
+        setError('play.roomActionFailed');
       }
     },
-    [roomId, room?.currentMatchId, room?.revision],
+    [
+      roomId,
+      room?.currentMatchId,
+      room?.revision,
+      view?.matchId,
+      view?.revision,
+      refresh,
+    ],
   );
 
   const joinSeat = useCallback(
     async (seatIndex: number, nickname?: string, avatarPresetId?: string) => {
       if (!roomId) return;
-      const updated = await joinRoomSeat(roomId, seatIndex, nickname, avatarPresetId);
+      const updated = await joinRoomSeat(
+        roomId,
+        seatIndex,
+        nickname,
+        avatarPresetId,
+      );
       setRoom(updated);
     },
     [roomId],
@@ -159,7 +204,11 @@ export function useRoomClient(roomId?: string, memberId?: string) {
   }, [roomId]);
 
   const fillAi = useCallback(
-    async (seatIndex: number, characterId: string, aiLevel: string = 'standard') => {
+    async (
+      seatIndex: number,
+      characterId: string,
+      aiLevel: string = 'standard',
+    ) => {
       if (!roomId) return;
       const updated = await fillRoomAi(roomId, seatIndex, characterId, aiLevel);
       setRoom(updated);
@@ -199,7 +248,9 @@ export function useRoomClient(roomId?: string, memberId?: string) {
       const updated = await reopenRoomForRematch(roomId, room.revision);
       setRoom(updated);
       setView(null);
-    } catch (error) { setError(error instanceof Error ? error.message : 'BAD_REQUEST'); }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'BAD_REQUEST');
+    }
   }, [roomId, room]);
 
   const discardTile = useCallback(
@@ -212,20 +263,11 @@ export function useRoomClient(roomId?: string, memberId?: string) {
     [sendCommand],
   );
 
-  const declareTsumo = useCallback(
-    () => sendCommand('tsumo'),
-    [sendCommand],
-  );
+  const declareTsumo = useCallback(() => sendCommand('tsumo'), [sendCommand]);
 
-  const declareRon = useCallback(
-    () => sendCommand('ron'),
-    [sendCommand],
-  );
+  const declareRon = useCallback(() => sendCommand('ron'), [sendCommand]);
 
-  const passClaim = useCallback(
-    () => sendCommand('pass'),
-    [sendCommand],
-  );
+  const passClaim = useCallback(() => sendCommand('pass'), [sendCommand]);
 
   const declareClaim = useCallback(
     (claimType: 'chi' | 'pon' | 'minkan', tiles?: [number, number]) =>
@@ -233,10 +275,7 @@ export function useRoomClient(roomId?: string, memberId?: string) {
     [sendCommand],
   );
 
-  const nextRound = useCallback(
-    () => sendCommand('next_round'),
-    [sendCommand],
-  );
+  const nextRound = useCallback(() => sendCommand('next_round'), [sendCommand]);
 
   const takeoverControl = useCallback(async () => {
     await sendCommand('takeover_control');
@@ -257,7 +296,9 @@ export function useRoomClient(roomId?: string, memberId?: string) {
   // 计算本人坐在第几号席位 (0..3)，未入座则为 -1
   const mySeatIndex =
     room && memberId
-      ? room.seats.findIndex((s) => s.type === 'human' && s.memberId === memberId)
+      ? room.seats.findIndex(
+          (s) => s.type === 'human' && s.memberId === memberId,
+        )
       : -1;
 
   const isHost = room && memberId ? room.hostMemberId === memberId : false;

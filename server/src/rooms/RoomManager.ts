@@ -976,8 +976,9 @@ export class RoomManager {
         if (seat.type !== 'human') continue;
         if (this.db.prepare('SELECT 1 FROM family_results WHERE member_id = ? AND match_id = ?').get(seat.memberId, matchId)) continue;
         const placement = ranking.indexOf(seat.seatIndex) + 1;
-        const commands = this.db.prepare('SELECT command_json FROM room_commands WHERE room_id = ? AND member_id = ?')
-          .all(room.summary.id, seat.memberId) as Array<{ command_json: string }>;
+        // The same room can host several matches; participation belongs to this match only.
+        const commands = this.db.prepare("SELECT command_json FROM room_commands WHERE room_id = ? AND member_id = ? AND json_extract(command_json, '$.matchId') = ?")
+          .all(room.summary.id, seat.memberId, matchId) as Array<{ command_json: string }>;
         const played = commands.some((row) => ['discard', 'riichi', 'tsumo', 'ron', 'pass', 'claim'].includes(JSON.parse(row.command_json).type));
         const previous = this.db.prepare('SELECT COALESCE(SUM(coins), 0) AS coins FROM family_results WHERE member_id = ? AND date_key = ?')
           .get(seat.memberId, dateKey) as { coins: number };
