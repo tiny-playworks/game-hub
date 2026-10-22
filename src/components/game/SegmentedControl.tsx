@@ -32,7 +32,7 @@ export const SegmentedControl = <T extends string>({
   return (
     <fieldset
       className={cn(
-        'inline-flex rounded-full border border-border/70 bg-white/70 p-0.5',
+        'inline-flex rounded-full border border-border/70 bg-background p-0.5',
         disabled && 'pointer-events-none opacity-50',
         className,
       )}

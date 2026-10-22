@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import './board-surfaces.css';
 
 interface IntersectionBoardProps {
   cols: number;
@@ -49,7 +50,7 @@ export const IntersectionBoard = ({
   className,
 }: IntersectionBoardProps) => {
   const boardStyle = {
-    '--cell': cell,
+    '--cell': `min(${cell}, calc((100cqw - 2px) / ${cols - 1 + 1.24}))`,
     '--line-color': lineColor,
     padding: 'calc(var(--cell) * 0.62)',
   } as CSSProperties;

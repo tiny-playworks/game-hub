@@ -16,6 +16,7 @@ import {
   useState,
 } from 'react';
 import { Link } from 'react-router-dom';
+import { GPT_ARCADE_COVERS } from '@/assets/gptAssets';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -180,6 +181,15 @@ export const GameShell = ({
           </Link>
 
           <div className="game-shell-heading">
+            {id && GPT_ARCADE_COVERS[id] && (
+              <img
+                className="game-shell-crest"
+                src={GPT_ARCADE_COVERS[id]}
+                alt=""
+                aria-hidden="true"
+                decoding="async"
+              />
+            )}
             <h1>{title}</h1>
           </div>
 
@@ -294,7 +304,7 @@ export const GameShell = ({
         onOpenChange={(open) => pause(open)}
       >
         <DialogContent
-          className="paper-texture rounded-3xl"
+          className="paper-texture game-shell-dialog rounded-3xl"
           showCloseButton={false}
         >
           <DialogTitle>{t('arcade.paused')}</DialogTitle>
@@ -311,7 +321,7 @@ export const GameShell = ({
         </DialogContent>
       </Dialog>
       <Dialog open={settingsOpen} onOpenChange={openSettings}>
-        <DialogContent className="paper-texture rounded-3xl">
+        <DialogContent className="paper-texture game-shell-dialog rounded-3xl">
           <DialogTitle>{t('arcade.settings')}</DialogTitle>
           <DialogDescription>{t('arcade.difficultyRestart')}</DialogDescription>
           <p className="text-xs text-muted-foreground">{t('play.trialHint')}</p>

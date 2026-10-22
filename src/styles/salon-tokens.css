@@ -561,32 +561,6 @@
   box-shadow: var(--salon-card-shadow);
 }
 
-/* 8. Board Game Kaya Wood & Clamshell/Slate Stone Polish */
-.stone-black {
-  background: radial-gradient(
-    circle at 32% 28%,
-    #4c5c68 0%,
-    #1b2630 52%,
-    #0b1116 100%
-  );
-  box-shadow:
-    0 3px 6px rgba(10, 18, 26, 0.42),
-    inset 0 1px 1px rgba(255, 255, 255, 0.22);
-}
-
-.stone-white {
-  background: radial-gradient(
-    circle at 32% 28%,
-    #ffffff 0%,
-    #f5f2e9 65%,
-    #d9d2c3 100%
-  );
-  border: 1px solid rgba(23, 42, 58, 0.18);
-  box-shadow:
-    0 3px 6px rgba(10, 18, 26, 0.26),
-    inset 0 1px 2px rgba(255, 255, 255, 0.9);
-}
-
 /* Responsive Breakpoints for Desktop (1440x900) and Mobile (390x844) */
 @media (max-width: 1024px) {
   .venue-home .salon-arcade-wall {

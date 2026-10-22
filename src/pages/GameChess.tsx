@@ -8,6 +8,7 @@ import {
   useState,
 } from 'react';
 import { GameResultOverlay } from '@/components/game/GameResultOverlay';
+import { ChessPiece } from '@/components/game/ChessPiece';
 import { GameShell, StatPill } from '@/components/game/GameShell';
 import { SegmentedControl } from '@/components/game/SegmentedControl';
 import { Button } from '@/components/ui/button';
@@ -220,7 +221,8 @@ const GameChess = () => {
   );
 
   const squareSize = {
-    '--sq': 'clamp(34px, min(10.6vw, 7.6vh), 58px)',
+    '--sq':
+      'min(clamp(30px, min(10.6vw, 7.6vh), 58px), calc((100cqw - 24px) / 8))',
   } as CSSProperties;
 
   useArcadeSnapshot(() => ({
@@ -312,9 +314,9 @@ const GameChess = () => {
         label={t('game.chess.black')}
       />
 
-      <div className="relative my-2 rounded-xl bg-amber-950/85 p-2 shadow-xl sm:rounded-2xl sm:p-3">
+      <div className="chess-frame relative my-2 p-2 sm:p-3">
         <div
-          className="grid overflow-hidden rounded-md"
+          className="chess-board grid overflow-hidden rounded-md"
           style={{
             ...squareSize,
             gridTemplateColumns: `repeat(${CHESS_COLS}, var(--sq))`,
@@ -342,14 +344,16 @@ const GameChess = () => {
                   disabled={finished || thinking || !isHumanTurn}
                   onClick={() => handleSquare(rowIndex, colIndex)}
                   aria-label={`${FILES[colIndex]}${CHESS_ROWS - rowIndex}${
-                    piece ? ` ${sideLabel(piece.side)}` : ''
+                    piece
+                      ? ` ${sideLabel(piece.side)} ${getPieceLabel(piece)}`
+                      : ''
                   }`}
+                  data-square-color={light ? 'light' : 'dark'}
+                  data-selected={isSelected}
+                  data-last-move={isLast}
+                  data-check={isCheckedKing}
                   className={cn(
-                    'relative flex items-center justify-center outline-none transition-colors',
-                    light ? 'bg-[#eddcc0]' : 'bg-[#b07d51]',
-                    isLast && (light ? 'bg-[#e4dc94]' : 'bg-[#b5a95a]'),
-                    isSelected && 'bg-sky-400/70',
-                    isCheckedKing && 'bg-rose-500/70',
+                    'chess-square relative flex items-center justify-center outline-none transition-colors',
                     'focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500',
                   )}
                 >
@@ -378,18 +382,10 @@ const GameChess = () => {
                   )}
 
                   {piece && (
-                    <span
-                      className={cn(
-                        'pointer-events-none leading-none transition-transform',
-                        piece.side === 'white'
-                          ? 'text-white [text-shadow:0_0_1px_#1f2937,0_1px_2px_rgba(0,0,0,0.55)]'
-                          : 'text-[#20242b] [text-shadow:0_1px_2px_rgba(255,255,255,0.35)]',
-                        isSelected && 'scale-110',
-                      )}
-                      style={{ fontSize: 'calc(var(--sq) * 0.78)' }}
-                    >
-                      {getPieceLabel({ type: piece.type, side: 'black' })}
-                    </span>
+                    <ChessPiece
+                      piece={piece}
+                      className={cn(isSelected && 'scale-110')}
+                    />
                   )}
 
                   {isTarget && !piece && (
@@ -436,19 +432,15 @@ const CapturedRow = ({
   advantage: number;
   label: string;
 }) => (
-  <div className="flex min-h-7 w-full max-w-[460px] items-center gap-2 px-1">
+  <div className="flex min-h-7 w-full max-w-115 items-center gap-2 px-1">
     <span className="shrink-0 text-[11px] text-muted-foreground">{label}</span>
     <div className="flex flex-wrap items-center gap-px">
       {pieces.map((piece, index) => (
-        <span
+        <ChessPiece
           key={`${piece.type}-${index}`}
-          className={cn(
-            'text-base leading-none',
-            piece.side === 'white' ? 'text-slate-400' : 'text-slate-700',
-          )}
-        >
-          {getPieceLabel({ type: piece.type, side: 'black' })}
-        </span>
+          piece={piece}
+          className="chess-piece-captured"
+        />
       ))}
     </div>
     {advantage > 0 && (

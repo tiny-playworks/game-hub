@@ -1,5 +1,11 @@
 import { Flag, Trophy } from 'lucide-react';
-import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  type ReactNode,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -62,7 +68,11 @@ export const GameResultOverlay = ({
   const anchor = useRef<HTMLSpanElement>(null);
   const [host, setHost] = useState<HTMLElement | null>(null);
   const card = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => { setHost(anchor.current?.closest<HTMLElement>('.game-shell') ?? document.body); }, []);
+  useLayoutEffect(() => {
+    setHost(
+      anchor.current?.closest<HTMLElement>('.game-shell') ?? document.body,
+    );
+  }, []);
   useEffect(() => {
     if (!open) return;
     const previous = document.activeElement;
@@ -103,6 +113,8 @@ export const GameResultOverlay = ({
       role="alertdialog"
       aria-modal="true"
       aria-label={effectiveTitle}
+      data-result-tone={effectiveTone}
+      data-result-mode={arcade?.mode}
       onKeyDown={(event) => {
         if (event.key !== 'Tab') return;
         const controls = card.current?.querySelectorAll<HTMLElement>(
@@ -119,12 +131,12 @@ export const GameResultOverlay = ({
           first.focus();
         }
       }}
-      className="game-result-overlay animate-overlay-in absolute inset-0 z-40 flex items-center justify-center rounded-[inherit] bg-slate-950/45 p-4 backdrop-blur-[3px]"
+      className="game-result-overlay animate-overlay-in"
     >
       <div
         ref={card}
         className={cn(
-          'game-result-card animate-overlay-card-in w-full max-w-sm max-h-[85dvh] overflow-y-auto rounded-2xl bg-card p-6 text-center shadow-2xl ring-1',
+          'game-result-card animate-overlay-card-in ring-1',
           style.ring,
         )}
       >
@@ -133,7 +145,7 @@ export const GameResultOverlay = ({
         </div>
         <p
           className={cn(
-            'mx-auto mb-3 inline-flex rounded-full px-3 py-1 text-xs font-medium',
+            'game-result-label mx-auto mb-3 inline-flex rounded-full px-3 py-1 text-xs font-medium',
             style.badge,
           )}
         >
@@ -232,7 +244,7 @@ export const GameResultOverlay = ({
           <p className="mt-1.5 text-sm text-muted-foreground">{description}</p>
         )}
         {detail && (
-          <div className="mt-4 rounded-xl bg-muted/40 p-3 text-left text-sm text-muted-foreground">
+          <div className="game-result-detail mt-4 rounded-xl bg-muted/40 p-3 text-left text-sm text-muted-foreground">
             {detail}
           </div>
         )}
@@ -241,7 +253,11 @@ export const GameResultOverlay = ({
         )}
         {arcade?.result?.settlementFailed && (
           <p role="alert" className="mt-3 text-sm text-destructive">
-            {t(arcade.mode === 'challenge' ? 'play.trialSaveFailed' : 'arcade.settlementFailed')}
+            {t(
+              arcade.mode === 'challenge'
+                ? 'play.trialSaveFailed'
+                : 'arcade.settlementFailed',
+            )}
           </p>
         )}
         {arcade?.result?.settlementPending && (
@@ -262,7 +278,7 @@ export const GameResultOverlay = ({
               )}
             </p>
           ))}
-        <div className="mt-5 flex flex-col gap-2">
+        <div className="game-result-actions mt-5 flex flex-col gap-2">
           {arcade?.result?.settlementFailed && (
             <Button
               onClick={arcade.retrySettlement}
@@ -292,5 +308,10 @@ export const GameResultOverlay = ({
       </div>
     </div>
   );
-  return <><span ref={anchor} hidden />{host ? createPortal(content, host) : content}</>;
+  return (
+    <>
+      <span ref={anchor} hidden />
+      {host ? createPortal(content, host) : content}
+    </>
+  );
 };

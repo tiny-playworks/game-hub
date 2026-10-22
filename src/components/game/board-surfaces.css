@@ -1,0 +1,143 @@
+.intersection-board-surface {
+  width: 100%;
+  min-width: 0;
+  container-type: inline-size;
+}
+
+.board-wood {
+  background-color: #d8b37c;
+  background-image:
+    linear-gradient(120deg, #fff0d333, #c18b3c18 72%), var(--salon-tex-kaya);
+  background-size:
+    100% 100%,
+    320px 320px;
+  border: 1px solid #9d733e;
+  box-shadow:
+    inset 0 0 0 3px #f8dfac66,
+    inset 0 -5px 10px #6d451c25,
+    0 5px 0 #80572f,
+    0 16px 28px -10px #32251550;
+}
+
+.board-grid-lines {
+  position: absolute;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(
+      to right,
+      var(--line-color, #57340f9e) 0 1px,
+      transparent 1px var(--cell)
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      var(--line-color, #57340f9e) 0 1px,
+      transparent 1px var(--cell)
+    );
+}
+
+.stone-black {
+  background:
+    radial-gradient(ellipse at 30% 22%, #82939d99, transparent 44%),
+    radial-gradient(ellipse at 44% 40%, #26323a 24%, #0a1118 86%);
+  box-shadow:
+    var(--tw-ring-offset-shadow, 0 0 #0000),
+    var(--tw-ring-shadow, 0 0 #0000),
+    0 3px 5px #09121d73,
+    inset 0 1px 1px #ffffff33,
+    inset 0 -2px 3px #0008;
+}
+
+.stone-white {
+  background:
+    radial-gradient(ellipse at 30% 22%, #fff 12%, transparent 54%),
+    repeating-linear-gradient(125deg, #a897740a 0 1px, transparent 1px 4px),
+    radial-gradient(ellipse at 44% 40%, #faf6e9 28%, #d3cbb5 88%);
+  border: 1px solid #6c604b40;
+  box-shadow:
+    var(--tw-ring-offset-shadow, 0 0 #0000),
+    var(--tw-ring-shadow, 0 0 #0000),
+    0 3px 5px #291c1640,
+    inset 0 1px 2px #fff,
+    inset 0 -2px 3px #9d8f6c40;
+}
+
+.xq-piece {
+  background-color: #eed7a5;
+  background-image:
+    radial-gradient(ellipse at 32% 22%, #fff5dbb8, #efd39c77 56%, #c69b5f80),
+    var(--salon-tex-kaya);
+  background-size:
+    100% 100%,
+    150px 150px;
+  box-shadow:
+    var(--tw-ring-offset-shadow, 0 0 #0000),
+    var(--tw-ring-shadow, 0 0 #0000),
+    0 3px 0 #926032,
+    0 5px 5px #39261550,
+    inset 0 0 0 2px #fae7bd,
+    inset 0 0 0 3px #a57d4566;
+  font-family: 'Noto Serif SC', 'Songti SC', serif;
+  text-shadow: 0 1px #fff7df;
+}
+
+.chess-frame {
+  border: 1px solid #d3af6699;
+  border-radius: 16px;
+  background-color: #172a3a;
+  background-image:
+    linear-gradient(#172a3a40, #0f1e2b60), var(--salon-tex-lacquer);
+  background-size:
+    100% 100%,
+    280px 280px;
+  box-shadow:
+    inset 0 0 0 4px #d3af662e,
+    0 5px 0 #0d1b26,
+    0 18px 30px -12px #101e2b70;
+}
+
+.chess-board {
+  border: 1px solid #d3af6680;
+}
+
+.chess-square {
+  background-color: #e8cda2;
+  background-image:
+    linear-gradient(#f5e3c980, #efd0a380), var(--salon-tex-kaya);
+  background-size:
+    100% 100%,
+    250px 250px;
+}
+
+.chess-square[data-square-color='dark'] {
+  background-color: #75533a;
+  background-image:
+    linear-gradient(#543e2cbf, #543e2ca8), var(--salon-tex-kaya);
+}
+
+.chess-square[data-last-move='true'] {
+  box-shadow: inset 0 0 0 3px #e6b74fc9;
+}
+
+.chess-square[data-selected='true'] {
+  box-shadow: inset 0 0 0 3px #c54838;
+}
+
+.chess-square[data-check='true'] {
+  background: #ce6c54;
+  box-shadow: inset 0 0 0 3px #922f27;
+}
+
+.chess-piece {
+  position: relative;
+  width: 84%;
+  height: 94%;
+  overflow: visible;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 1px #211b1673);
+  transition: transform 150ms ease;
+}
+
+.chess-piece-captured {
+  width: 19px;
+  height: 23px;
+}

@@ -64,7 +64,7 @@ export function FamilyChessBoard({
       setMove({ type: 'move', from: selected, to: [r, c] });
   };
   return (
-    <div className="flex min-w-0 flex-col items-center gap-3">
+    <div className="intersection-board-surface flex min-w-0 flex-col items-center gap-3">
       <IntersectionBoard
         cols={gomoku ? 15 : 9}
         rows={gomoku ? 15 : 10}
@@ -156,7 +156,7 @@ export function FamilyChessBoard({
           return piece ? (
             <span
               className={cn(
-                'flex size-[88%] items-center justify-center rounded-full border-2 border-amber-800/60 bg-[#f4deb0] font-serif text-[clamp(17px,4.6vw,28px)] font-bold shadow-md',
+                'xq-piece flex size-[88%] items-center justify-center rounded-full border-2 border-amber-800/60 text-[clamp(17px,4.6vw,28px)] font-bold',
                 piece.side === 'red' ? 'text-red-700' : 'text-slate-900',
                 (picked || pending) && 'ring-2 ring-sky-500',
               )}

@@ -123,15 +123,19 @@ export const PlayingCard = ({
     <>
       <span
         className={cn(
-          'absolute left-[0.15rem] top-[0.15rem] flex flex-col items-center font-bold',
+          'playing-card-index absolute left-[0.18rem] top-[0.2rem] flex flex-col items-center font-bold',
           INDEX_CLASS[size],
         )}
       >
         <span>{face.rank}</span>
         <span className={face.isJoker ? '' : 'text-[0.9em]'}>{face.suit}</span>
       </span>
-      <span className={cn('opacity-25', PIP_CLASS[size])} aria-hidden>
+      <span className={cn('playing-card-mark', PIP_CLASS[size])} aria-hidden>
         {face.isJoker ? '★' : face.suit}
+      </span>
+      <span className="playing-card-mirror" aria-hidden="true">
+        <span>{face.rank}</span>
+        <span>{face.suit}</span>
       </span>
     </>
   );
@@ -147,7 +151,14 @@ export const PlayingCard = ({
 
   if (!onClick) {
     return (
-      <div role="img" aria-label={face.name} style={style} className={shared}>
+      <div
+        role="img"
+        aria-label={face.name}
+        data-red={face.red}
+        data-joker={face.isJoker}
+        style={style}
+        className={shared}
+      >
         {content}
       </div>
     );
@@ -158,6 +169,8 @@ export const PlayingCard = ({
       type="button"
       aria-label={face.name}
       aria-pressed={selected}
+      data-red={face.red}
+      data-joker={face.isJoker}
       disabled={disabled}
       onClick={onClick}
       style={style}

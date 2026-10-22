@@ -42,7 +42,7 @@ export function FamilyDoudizhuTable({
     });
   };
   return (
-    <div className="min-w-0 space-y-5 rounded-2xl bg-emerald-950 p-3 text-emerald-50 sm:p-6">
+    <div className="table-felt min-w-0 space-y-5 rounded-2xl p-3 text-stone-100 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-emerald-100">
         <span>
           {formatMessage(locale, 'gameRoom.deal', { count: board.dealNumber })}

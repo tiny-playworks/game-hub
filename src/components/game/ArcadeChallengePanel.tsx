@@ -49,7 +49,9 @@ export function ArcadeChallengePanel() {
       </div>
       {arcade.mode === 'challenge' ? (
         <div className="arcade-challenge-objective">
-          <Target className="size-5 shrink-0" />
+          <span className="arcade-challenge-seal" aria-hidden="true">
+            <Target className="size-5" />
+          </span>
           <div>
             <strong>
               {formatMessage(
