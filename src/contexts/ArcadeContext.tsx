@@ -112,6 +112,10 @@ export function ArcadeSession({
   gameId: string;
   children: ReactNode;
 }) {
+  const [query] = useSearchParams();
+  return <ArcadeSessionState key={`${gameId}:${query.get('mode') === 'challenge' ? 'challenge' : 'classic'}`} gameId={gameId}>{children}</ArcadeSessionState>;
+}
+function ArcadeSessionState({ gameId, children }: { gameId: string; children: ReactNode }) {
   const household = useOptionalHousehold();
   const memberMode = Boolean(household?.currentMember);
   const owner = resumeOwner(household?.currentMember?.id);
@@ -128,6 +132,7 @@ export function ArcadeSession({
   const [resumePosition, setResumePosition] = useState(restored?.position ?? null);
   const [resuming, setResuming] = useState(Boolean(restored));
   const [resumeSaveFailed, setResumeSaveFailed] = useState(false);
+  const [saveEpoch, setSaveEpoch] = useState(0);
   const [practiceOnly, setPracticeOnly] = useState(Boolean(restored &&
     (restored.practiceOnly || (memberMode && restored.receipt.started && !restored.receipt.finished &&
       Date.now() - restored.receipt.startedAt > MEMBER_ARCADE_MAX_AGE))));
@@ -138,7 +143,7 @@ export function ArcadeSession({
       : restored?.difficulty ?? getArcadeDifficulty(gameId),
   );
   const [round, setRound] = useState(0);
-  const [mode, setMode] = useState<'classic' | 'challenge'>(() =>
+  const [mode] = useState<'classic' | 'challenge'>(() =>
     query.get('mode') === 'challenge' ? 'challenge' : 'classic',
   );
   const [paused, setPausedState] = useState(Boolean(restored && !restored.receipt.finished));
@@ -196,7 +201,8 @@ export function ArcadeSession({
   const savePosition = useCallback((value: ArcadePositions[ResumableArcadeId]) => {
     position.current = value;
     persist();
-  }, [persist]);
+  // A new round must save even when its initial board equals the previous one.
+  }, [persist, saveEpoch]);
   const setResult = useCallback((value: ArcadeResult | null) => {
     resultRef.current = value;
     setResultState(value);
@@ -255,6 +261,7 @@ export function ArcadeSession({
   const newRound = useCallback(() => {
     if (supportsResume) removeLocalResume(owner, arcadeResumeSlot(gameId, mode));
     position.current = null;
+    setSaveEpoch((value) => value + 1);
     setResumePosition(null);
     setResuming(false);
     setPracticeOnly(false);
@@ -311,19 +318,21 @@ export function ArcadeSession({
   const changeMode = useCallback(
     (next: 'classic' | 'challenge') => {
       if (next === mode) return;
-      setMode(next);
+      persist();
+      setPaused(true);
+      const nextSave = supportsResume ? readLocalResume(owner, arcadeResumeSlot(gameId, next))?.data : null;
       setQuery(
         (current) => {
           const changed = new URLSearchParams(current);
           if (next === 'challenge') changed.set('mode', 'challenge');
           else changed.delete('mode');
+          changed.set('difficulty', isArcadeResume(nextSave) ? nextSave.difficulty : difficulty);
           return changed;
         },
         { replace: true },
       );
-      restart();
     },
-    [mode, restart, setQuery],
+    [mode, persist, supportsResume, owner, gameId, difficulty, setQuery, setPaused],
   );
   const finish = useCallback(
     (outcome: ArcadeOutcome, score = 0, meta: Record<string, unknown> = {}) => {
@@ -342,7 +351,10 @@ export function ArcadeSession({
         score,
         meta: { ...meta, outcome, roundId: receipt.current.id },
       };
-      if (practiceOnlyRef.current) {
+      if (practiceOnlyRef.current || (supportsResume && memberMode &&
+        Date.now() - receipt.current.startedAt > MEMBER_ARCADE_MAX_AGE)) {
+        practiceOnlyRef.current = true;
+        setPracticeOnly(true);
         setPaused(false);
         setResult({ isNewBest: false, previousBest: null, currentBest: null,
           outcome, score, coinsEarned: 0, capReached: false });
@@ -365,13 +377,13 @@ export function ArcadeSession({
         void household!
           .performArcadeEvent(finishEvent)
           .then((settled) => {
-            if (receipt.current.id !== roundId) return;
+            if (!active.current || receipt.current.id !== roundId) return;
             setPaused(false);
             pendingFinish.current = null;
             setResult(settledResult(outcome, score, settled));
           })
           .catch(() => {
-            if (receipt.current.id !== roundId) return;
+            if (!active.current || receipt.current.id !== roundId) return;
             setPaused(false);
             setResult({
               isNewBest: false,
@@ -444,7 +456,7 @@ export function ArcadeSession({
           best?.arcadeCapReached === true,
       });
     },
-    [gameId, difficulty, start, memberMode, household, mode, elapsed, persist, setResult, setPaused],
+    [gameId, difficulty, start, memberMode, household, mode, elapsed, persist, setResult, setPaused, supportsResume],
   );
   const retrySettlement = useCallback(() => {
     const event = pendingFinish.current;

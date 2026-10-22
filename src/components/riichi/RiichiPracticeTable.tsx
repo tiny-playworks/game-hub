@@ -141,7 +141,7 @@ export function RiichiPracticeTable({
       ))}
     </div>
   );
-  const turnStatus = ended ? t('practice.ended')
+  const turnStatus = paused ? t('arcade.paused') : ended ? t('practice.ended')
     : aiPending ? t('practice.waiting')
       : claim && humanReady ? t('practice.chooseClaim')
         : turn && humanReady ? t(riichiSelecting ? 'practice.chooseRiichi' : 'practice.chooseDiscard')

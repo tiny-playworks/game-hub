@@ -1,3 +1,5 @@
+import { LOCAL_RESUME_PREFIX } from './localResume';
+
 /** 普通进度允许会话内暂存；购买/导入等必须使用 commitStorageChanges。 */
 export interface StorageStatus {
   pendingCount: number;
@@ -136,7 +138,7 @@ export const gameStorage: Storage = {
   },
   clear() {
     for (const key of keys()) {
-      if (key.startsWith('game-hub-')) gameStorage.removeItem(key);
+      if (key.startsWith('game-hub-') && !key.startsWith(LOCAL_RESUME_PREFIX)) gameStorage.removeItem(key);
     }
   },
 };
@@ -151,7 +153,7 @@ export function subscribeStorageStatus(listener: () => void): () => void {
 export function readGameSaveData(): Record<string, string> {
   const data: Record<string, string> = {};
   for (const key of keys()) {
-    if (!key.startsWith('game-hub-')) continue;
+    if (!key.startsWith('game-hub-') || key.startsWith(LOCAL_RESUME_PREFIX)) continue;
     const value = gameStorage.getItem(key);
     if (value !== null) data[key] = value;
   }

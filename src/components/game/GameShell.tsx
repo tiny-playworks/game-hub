@@ -40,6 +40,7 @@ import { ArcadeChallengePanel } from './ArcadeChallengePanel';
 import { stopSoundEffects, unlockAudioContext } from '@/lib/speech';
 import { FamilyStandingPill } from './FamilyStandingPill';
 import { SegmentedControl } from './SegmentedControl';
+import { LocalResumeNotice } from './LocalResumeNotice';
 import './game-shell.css';
 
 interface GameShellProps {
@@ -254,6 +255,8 @@ export const GameShell = ({
             {toolbar && <div className="game-session-actions">{toolbar}</div>}
           </div>
           {arcade ? <ArcadeChallengePanel /> : null}
+          {arcade?.supportsResume ? <LocalResumeNotice failed={arcade.resumeSaveFailed} onRetry={arcade.retrySave} /> : null}
+          {arcade?.practiceOnly ? <p className="px-3 py-2 text-xs leading-5 text-muted-foreground">{t('resume.expired')}</p> : null}
           <div className="game-stage">{children}</div>
           {footer && <div className="game-shell-footer">{footer}</div>}
         </section>
@@ -307,8 +310,10 @@ export const GameShell = ({
           className="paper-texture game-shell-dialog rounded-3xl"
           showCloseButton={false}
         >
-          <DialogTitle>{t('arcade.paused')}</DialogTitle>
-          <DialogDescription>{t('arcade.pauseHint')}</DialogDescription>
+          <DialogTitle>{t(arcade?.resuming ? 'resume.restored' : 'arcade.paused')}</DialogTitle>
+          <DialogDescription>{t(arcade?.resuming ? 'resume.restoredHint' : 'arcade.pauseHint')}</DialogDescription>
+          {arcade?.practiceOnly ? <p className="text-sm leading-6 text-muted-foreground">{t('resume.expired')}</p> : null}
+          {arcade?.resumeSaveFailed ? <LocalResumeNotice failed onRetry={arcade.retrySave} /> : null}
           <Button onClick={() => pause(false)}>{t('arcade.resume')}</Button>
           {restart && (
             <Button variant="outline" onClick={restart}>

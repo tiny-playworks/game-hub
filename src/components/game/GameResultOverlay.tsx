@@ -265,7 +265,8 @@ export const GameResultOverlay = ({
             {t('arcade.settlementPending')}
           </p>
         )}
-        {arcade?.result &&
+        {arcade?.practiceOnly ? <p className="mt-3 text-sm text-muted-foreground">{t('resume.practiceOnly')}</p> : null}
+        {arcade?.result && !arcade.practiceOnly &&
           !arcade.result.settlementFailed &&
           !arcade.result.settlementPending &&
           (arcade.mode === 'challenge' ? null : (

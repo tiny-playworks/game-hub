@@ -5,6 +5,7 @@ import {
   readGameSaveData,
 } from './storage';
 import type { MemberSnapshot } from '../../shared/contracts/member';
+import { LOCAL_RESUME_PREFIX, localResumeRemovalChanges } from './localResume';
 
 export interface SaveFile {
   app: 'game-hub';
@@ -57,7 +58,7 @@ export function createGuestSaveFile(now = new Date()): SaveFile {
     if (!source) throw new PartialSaveError('Guest storage is unavailable');
     for (let index = 0; index < source.length; index++) {
       const key = source.key(index);
-      if (!key?.startsWith('game-hub-') || key === 'game-hub-device-id')
+      if (!key?.startsWith('game-hub-') || key === 'game-hub-device-id' || key.startsWith(LOCAL_RESUME_PREFIX))
         continue;
       const value = source.getItem(key);
       if (value !== null) data[key] = value;
@@ -100,7 +101,7 @@ export function parseSaveFile(text: string): SaveFile {
     Array.isArray(raw.data) ||
     Object.entries(raw.data).some(
       ([key, value]) =>
-        !key.startsWith('game-hub-') || typeof value !== 'string',
+        !key.startsWith('game-hub-') || key.startsWith(LOCAL_RESUME_PREFIX) || typeof value !== 'string',
     )
   ) {
     throw new Error('Invalid Game Hub save');
@@ -114,9 +115,10 @@ export function parseSaveFile(text: string): SaveFile {
 }
 
 export function resetSaveData(): void {
-  commitStorageChanges(
-    Object.fromEntries(Object.keys(readSaveData()).map((key) => [key, null])),
-  );
+  commitStorageChanges({
+    ...Object.fromEntries(Object.keys(readSaveData()).map((key) => [key, null])),
+    ...(getStorageDriver() === null ? localResumeRemovalChanges('guest') : {}),
+  });
 }
 
 export function importSaveFile(save: SaveFile): void {
@@ -124,7 +126,9 @@ export function importSaveFile(save: SaveFile): void {
   const removed = Object.fromEntries(
     Object.keys(readSaveData()).map((key) => [key, null]),
   );
-  commitStorageChanges({ ...removed, ...validated.data });
+  commitStorageChanges({ ...removed, ...validated.data,
+    ...(getStorageDriver() === null ? localResumeRemovalChanges('guest') : {}),
+  });
 }
 
 function downloadJsonFile(value: unknown, filename: string): void {

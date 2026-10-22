@@ -15,6 +15,7 @@ import { CharacterPortraitSlot } from '@/components/characters/CharacterPortrait
 import { PersonalBest } from '@/components/game/PersonalBest';
 import { VenueGameGlyph } from '@/components/home/VenueGameGlyph';
 import { CuratedRotationPanel } from '@/components/home/CuratedRotationPanel';
+import { ContinueSavedGames } from '@/components/home/ContinueSavedGames';
 import { FamilyFeedLobbyPanel } from '@/components/home/FamilyFeedLobbyPanel';
 import { ThemeChallengePanel } from '@/components/home/ThemeChallengePanel';
 import { RankedLobbyCard } from '@/components/ranked/RankedLobbyCard';
@@ -149,6 +150,7 @@ const Home = () => {
             <Link to="/family">{t('play.family')}</Link>
           </div>
         </section>
+        <ContinueSavedGames />
         <CuratedRotationPanel />
         <section
           className="lobby-main-grid grid gap-5"

@@ -127,7 +127,7 @@ function JourneyPage() {
       if (isJourneyResume(saved) && saved.input.stageId === selectedStage.id && saved.input.variation === variation) {
         try { restoredMatch = restoreJourneyPosition(saved.input); }
         catch { setResumeInvalid(true); }
-      }
+      } else if (saved) setResumeInvalid(true);
       const attemptId = restoredMatch && isJourneyResume(saved) ? saved.input.attemptId : createUuid();
       setGame({
         stageId: selectedStage.id,
