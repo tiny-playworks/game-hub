@@ -3,7 +3,7 @@ import { GameResultOverlay } from '@/components/game/GameResultOverlay';
 import { GameShell, StatPill } from '@/components/game/GameShell';
 import { CardBack, PlayingCard } from '@/components/game/PlayingCard';
 import { Button } from '@/components/ui/button';
-import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
+import { useArcade, useArcadeSnapshot, useArcadeAutosave, useArcadeResumePosition } from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import { formatMessage } from '@/lib/i18n';
 import {
@@ -40,9 +40,10 @@ const GameShengji = () => {
   const { locale, t } = useLocale();
   const arcade = useArcade();
   const { difficulty, paused, finish, newRound, start } = arcade;
-  const [state, setState] = useState<ShengjiState>(createInitialState);
+  const saved = useArcadeResumePosition('shengji');
+  const [state, setState] = useState<ShengjiState>(() => saved?.state ?? createInitialState());
   const [holding, setHolding] = useState(false);
-  const [teamLevels, setTeamLevels] = useState<[number, number]>([0, 0]);
+  const [teamLevels, setTeamLevels] = useState<[number, number]>(() => saved?.teamLevels ?? [0, 0]);
   const levelLabels = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
   const myHand = state.hands[0];
@@ -162,6 +163,7 @@ const GameShengji = () => {
     ),
     holding,
   }));
+  useArcadeAutosave({ state, teamLevels });
   useEffect(() => {
     if (state.roundOver)
       finish(iWon ? 'win' : 'lose', 0, {

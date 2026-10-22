@@ -4,7 +4,7 @@ import { GameProgress } from '@/components/game/GameProgress';
 import { GameResultOverlay } from '@/components/game/GameResultOverlay';
 import { GameShell, StatPill } from '@/components/game/GameShell';
 import { Button } from '@/components/ui/button';
-import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
+import { useArcade, useArcadeSnapshot, useArcadeAutosave, useArcadeResumePosition } from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import { cn } from '@/lib/utils';
 import { useSwipeControls } from '@/hooks/useSwipeControls';
@@ -19,16 +19,17 @@ import './2048.css';
 const Game2048 = () => {
   const { t, locale } = useLocale();
   const { difficulty, paused, result, finish, restart, mode } = useArcade();
+  const saved = useArcadeResumePosition('2048');
   const size = difficulty === 'normal' ? 5 : difficulty === 'hard' ? 3 : 4;
-  const { state, maxCombo, move, undo, canUndo } = useEngine2048(size);
+  const { state, history, maxCombo, move, undo, canUndo } = useEngine2048(size, saved);
   const maxTile = Math.max(
     0,
     ...Object.values(state.tiles).map((tile) => tile.value),
   );
   const shake = useScreenShake();
   const [gain, setGain] = useState({ value: 0, id: 0 });
-  const [moves, setMoves] = useState(0);
-  const [continuing, setContinuing] = useState(false);
+  const [moves, setMoves] = useState(saved?.moves ?? 0);
+  const [continuing, setContinuing] = useState(saved?.continuing ?? false);
   const [banking, setBanking] = useState(false);
   const challengeGoal = arcadeChallengeGoal('2048', difficulty);
   const challengeOver =
@@ -45,6 +46,7 @@ const Game2048 = () => {
       : 2 ** Math.ceil(Math.log2(Math.max(4, maxTile + 1)));
 
   useArcadeSnapshot(() => ({ ...state, maxTile, maxCombo, boardSize: size }));
+  useArcadeAutosave({ state, history, maxCombo, moves, continuing });
   useEffect(() => {
     if (state.gameOver || challengeOver)
       finish(maxTile >= 2048 ? 'win' : 'lose', state.score, {

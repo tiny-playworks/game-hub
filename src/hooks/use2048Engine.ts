@@ -7,6 +7,7 @@ import {
   SIZE,
   type Tile,
 } from '@/lib/game2048';
+import type { ArcadePositions } from '@/lib/arcadeResume';
 
 export type { Dir, Tile };
 export { SIZE };
@@ -14,13 +15,14 @@ export { SIZE };
 let tileIdCounter = 0;
 const defaultNextId = () => `tile-${Date.now()}-${tileIdCounter++}`;
 
-export function useEngine2048(size = 4) {
+export function useEngine2048(size = 4, saved: ArcadePositions['2048'] | null = null) {
   const nextIdRef = useRef(defaultNextId);
-  const [history, setHistory] = useState<Game2048State[]>([]);
+  const [history, setHistory] = useState<Game2048State[]>(() => saved?.history ?? []);
   const [state, setState] = useState<Game2048State>(() =>
-    createInitialState(Math.random, nextIdRef.current, size),
+    saved?.state ?? createInitialState(Math.random, nextIdRef.current, size),
   );
-  const [maxCombo, setMaxCombo] = useState(0);
+  const [maxCombo, setMaxCombo] = useState(saved?.maxCombo ?? 0);
+  const previousSize = useRef(size);
   const stateRef = useRef(state);
   stateRef.current = state;
 
@@ -33,8 +35,10 @@ export function useEngine2048(size = 4) {
   }, [size]);
 
   useEffect(() => {
+    if (previousSize.current === size) return;
+    previousSize.current = size;
     initGame();
-  }, [initGame]);
+  }, [initGame, size]);
 
   const undo = useCallback(() => {
     if (history.length === 0) return;
@@ -71,6 +75,7 @@ export function useEngine2048(size = 4) {
 
   return {
     state,
+    history,
     maxCombo,
     move,
     undo,

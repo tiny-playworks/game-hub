@@ -33,9 +33,19 @@ import type {
   ArcadeMemberResult,
 } from '../../shared/contracts/member';
 import type { LeaderboardStanding } from '../../shared/contracts/leaderboard';
+import {
+  arcadeResumeSlot,
+  isArcadeResume,
+  MEMBER_ARCADE_MAX_AGE,
+  RESUMABLE_ARCADE_IDS,
+  type ArcadePositions,
+  type ArcadeResume,
+  type ResumableArcadeId,
+} from '@/lib/arcadeResume';
+import { readLocalResume, removeLocalResume, resumeOwner, writeLocalResume } from '@/lib/localResume';
 
 export type ArcadeOutcome = 'win' | 'lose' | 'draw';
-type ArcadeResult = ArcadeRecord & {
+export type ArcadeResult = ArcadeRecord & {
   challenge?: ChallengeResult;
   coinsEarned: number;
   capReached: boolean;
@@ -66,6 +76,13 @@ function settledResult(
   };
 }
 type Session = {
+  resumePosition: ArcadePositions[ResumableArcadeId] | null;
+  resuming: boolean;
+  resumeSaveFailed: boolean;
+  practiceOnly: boolean;
+  supportsResume: boolean;
+  savePosition: (position: ArcadePositions[ResumableArcadeId]) => void;
+  retrySave: () => void;
   mode: 'classic' | 'challenge';
   changeMode: (mode: 'classic' | 'challenge') => void;
   gameId: string;
@@ -97,28 +114,57 @@ export function ArcadeSession({
 }) {
   const household = useOptionalHousehold();
   const memberMode = Boolean(household?.currentMember);
+  const owner = resumeOwner(household?.currentMember?.id);
+  const supportsResume = RESUMABLE_ARCADE_IDS.includes(gameId);
   const [query, setQuery] = useSearchParams();
+  const [restored] = useState(() => {
+    if (!supportsResume) return null;
+    const mode = query.get('mode') === 'challenge' ? 'challenge' : 'classic';
+    const saved = readLocalResume(owner, arcadeResumeSlot(gameId, mode))?.data;
+    return isArcadeResume(saved) && saved.gameId === gameId && saved.mode === mode &&
+      (!query.has('difficulty') || saved.difficulty === normalizeArcadeDifficulty(gameId, query.get('difficulty')))
+      ? saved : null;
+  });
+  const [resumePosition, setResumePosition] = useState(restored?.position ?? null);
+  const [resuming, setResuming] = useState(Boolean(restored));
+  const [resumeSaveFailed, setResumeSaveFailed] = useState(false);
+  const [practiceOnly, setPracticeOnly] = useState(Boolean(restored &&
+    (restored.practiceOnly || (memberMode && restored.receipt.started && !restored.receipt.finished &&
+      Date.now() - restored.receipt.startedAt > MEMBER_ARCADE_MAX_AGE))));
+  const practiceOnlyRef = useRef(practiceOnly);
   const [difficulty, setDifficulty] = useState(() =>
     query.has('difficulty')
       ? normalizeArcadeDifficulty(gameId, query.get('difficulty'))
-      : getArcadeDifficulty(gameId),
+      : restored?.difficulty ?? getArcadeDifficulty(gameId),
   );
   const [round, setRound] = useState(0);
   const [mode, setMode] = useState<'classic' | 'challenge'>(() =>
     query.get('mode') === 'challenge' ? 'challenge' : 'classic',
   );
-  const [paused, setPaused] = useState(false);
-  const [result, setResult] = useState<ArcadeResult | null>(null);
+  const [paused, setPausedState] = useState(Boolean(restored && !restored.receipt.finished));
+  const setPaused = useCallback((value: boolean) => {
+    setPausedState(value);
+    if (!value) setResuming(false);
+  }, []);
+  const [result, setResultState] = useState<ArcadeResult | null>(() => restored?.pendingFinish
+    ? { isNewBest: false, previousBest: null, currentBest: null,
+      outcome: restored.pendingFinish.outcome!, score: restored.pendingFinish.score!,
+      coinsEarned: 0, capReached: false, settlementFailed: true }
+    : restored?.result ?? null);
   const [settlementRetrying, setSettlementRetrying] = useState(false);
   const [settingsError, setSettingsError] = useState(false);
-  const receipt = useRef({
+  const receipt = useRef(restored?.receipt ?? {
     id: `arcade:${createUuid()}`,
     started: false,
     finished: false,
     startedAt: 0,
+    elapsedMs: 0,
   });
+  const clockStarted = useRef(restored?.receipt.finished ? 0 : Date.now());
+  const position = useRef(restored?.position ?? null);
+  const resultRef = useRef(result);
   const snapshotReader = useRef<(() => unknown) | null>(null);
-  const pendingFinish = useRef<ArcadeMemberEvent | null>(null);
+  const pendingFinish = useRef<ArcadeMemberEvent | null>(restored?.pendingFinish ?? null);
   const feedback = useRef({ token: '', at: 0 });
   const active = useRef(true);
   useEffect(() => {
@@ -127,10 +173,66 @@ export function ArcadeSession({
       active.current = false;
     };
   }, []);
+  const elapsed = useCallback(() => receipt.current.elapsedMs +
+    (receipt.current.started && !receipt.current.finished && clockStarted.current
+      ? Math.max(0, Date.now() - clockStarted.current) : 0), []);
+  const persist = useCallback(() => {
+    if (!supportsResume || !position.current || !receipt.current.started) return;
+    const slot = arcadeResumeSlot(gameId, mode);
+    if (receipt.current.finished && gameId !== 'shengji' && !pendingFinish.current) {
+      setResumeSaveFailed(!removeLocalResume(owner, slot));
+      return;
+    }
+    const data: ArcadeResume = {
+      kind: 'arcade', gameId: gameId as ResumableArcadeId, mode, difficulty,
+      position: position.current,
+      receipt: { ...receipt.current, elapsedMs: elapsed() },
+      result: resultRef.current,
+      pendingFinish: pendingFinish.current,
+      practiceOnly: practiceOnlyRef.current,
+    };
+    setResumeSaveFailed(!writeLocalResume(owner, slot, data));
+  }, [owner, gameId, mode, difficulty, supportsResume, elapsed]);
+  const savePosition = useCallback((value: ArcadePositions[ResumableArcadeId]) => {
+    position.current = value;
+    persist();
+  }, [persist]);
+  const setResult = useCallback((value: ArcadeResult | null) => {
+    resultRef.current = value;
+    setResultState(value);
+    persist();
+  }, [persist]);
+  useEffect(() => {
+    const wasRunning = clockStarted.current !== 0;
+    if (paused && wasRunning) {
+      receipt.current.elapsedMs = elapsed();
+      clockStarted.current = 0;
+    } else if (!paused && !wasRunning && !receipt.current.finished) {
+      clockStarted.current = Date.now();
+    }
+    persist();
+  }, [paused, elapsed, persist]);
+  useEffect(() => {
+    const visibility = () => { if (document.hidden) persist(); };
+    const leave = (event: BeforeUnloadEvent) => {
+      if (!resumeSaveFailed) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('pagehide', persist);
+    document.addEventListener('visibilitychange', visibility);
+    window.addEventListener('beforeunload', leave);
+    return () => {
+      window.removeEventListener('pagehide', persist);
+      document.removeEventListener('visibilitychange', visibility);
+      window.removeEventListener('beforeunload', leave);
+    };
+  }, [persist, resumeSaveFailed]);
   const start = useCallback(() => {
     if (receipt.current.started) return;
     receipt.current.started = true;
     receipt.current.startedAt = Date.now();
+    clockStarted.current = Date.now();
     const event = {
       gameId,
       difficulty,
@@ -151,19 +253,27 @@ export function ArcadeSession({
     }
   }, [gameId, difficulty, memberMode, household, mode]);
   const newRound = useCallback(() => {
+    if (supportsResume) removeLocalResume(owner, arcadeResumeSlot(gameId, mode));
+    position.current = null;
+    setResumePosition(null);
+    setResuming(false);
+    setPracticeOnly(false);
+    practiceOnlyRef.current = false;
+    clockStarted.current = Date.now();
     feedback.current = { token: '', at: 0 };
     receipt.current = {
       id: `arcade:${createUuid()}`,
       started: false,
       finished: false,
       startedAt: 0,
+      elapsedMs: 0,
     };
     setResult(null);
     pendingFinish.current = null;
     setSettlementRetrying(false);
     setSettingsError(false);
     setPaused(false);
-  }, []);
+  }, [owner, gameId, mode, supportsResume, setPaused, setResult]);
   const restart = useCallback(() => {
     newRound();
     setRound((value) => value + 1);
@@ -219,10 +329,12 @@ export function ArcadeSession({
     (outcome: ArcadeOutcome, score = 0, meta: Record<string, unknown> = {}) => {
       if (receipt.current.finished) return;
       start();
+      receipt.current.elapsedMs = elapsed();
       receipt.current.finished = true;
+      clockStarted.current = 0;
       meta = {
         ...meta,
-        durationMs: Math.max(0, Date.now() - receipt.current.startedAt),
+        durationMs: receipt.current.elapsedMs,
       };
       const event = {
         gameId,
@@ -230,6 +342,12 @@ export function ArcadeSession({
         score,
         meta: { ...meta, outcome, roundId: receipt.current.id },
       };
+      if (practiceOnlyRef.current) {
+        setPaused(false);
+        setResult({ isNewBest: false, previousBest: null, currentBest: null,
+          outcome, score, coinsEarned: 0, capReached: false });
+        return;
+      }
       if (memberMode) {
         const roundId = receipt.current.id;
         const finishEvent: ArcadeMemberEvent = {
@@ -243,6 +361,7 @@ export function ArcadeSession({
           meta,
         };
         pendingFinish.current = finishEvent;
+        persist();
         void household!
           .performArcadeEvent(finishEvent)
           .then((settled) => {
@@ -325,7 +444,7 @@ export function ArcadeSession({
           best?.arcadeCapReached === true,
       });
     },
-    [gameId, difficulty, start, memberMode, household, mode],
+    [gameId, difficulty, start, memberMode, household, mode, elapsed, persist, setResult, setPaused],
   );
   const retrySettlement = useCallback(() => {
     const event = pendingFinish.current;
@@ -362,7 +481,7 @@ export function ArcadeSession({
       .finally(() => {
         if (active.current) setSettlementRetrying(false);
       });
-  }, [memberMode, household, settlementRetrying]);
+  }, [memberMode, household, settlementRetrying, setResult]);
   const snapshot = useCallback(
     (reader: () => unknown) => {
       snapshotReader.current = reader;
@@ -421,6 +540,13 @@ export function ArcadeSession({
   return (
     <ArcadeContext.Provider
       value={{
+        resumePosition,
+        resuming,
+        resumeSaveFailed,
+        practiceOnly,
+        supportsResume,
+        savePosition,
+        retrySave: persist,
         mode,
         changeMode,
         gameId,
@@ -454,4 +580,15 @@ export function useArcade() {
 export function useArcadeSnapshot(reader: () => unknown) {
   const session = useOptionalArcade();
   useEffect(() => session?.snapshot(reader));
+}
+
+export function useArcadeResumePosition<T extends ResumableArcadeId>(gameId: T): ArcadePositions[T] | null {
+  const session = useArcade();
+  return session.gameId === gameId ? session.resumePosition as ArcadePositions[T] | null : null;
+}
+
+export function useArcadeAutosave(position: ArcadePositions[ResumableArcadeId]): void {
+  const { savePosition } = useArcade();
+  const serialized = JSON.stringify(position);
+  useEffect(() => { savePosition(JSON.parse(serialized)); }, [serialized, savePosition]);
 }

@@ -12,7 +12,7 @@ import { ChessPiece } from '@/components/game/ChessPiece';
 import { GameShell, StatPill } from '@/components/game/GameShell';
 import { SegmentedControl } from '@/components/game/SegmentedControl';
 import { Button } from '@/components/ui/button';
-import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
+import { useArcade, useArcadeSnapshot, useArcadeAutosave, useArcadeResumePosition } from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import {
   type Board,
@@ -62,15 +62,16 @@ const GameChess = () => {
     newRound,
     start,
   } = arcade;
-  const [board, setBoard] = useState<Board>(createInitialBoard);
-  const [whiteTurn, setWhiteTurn] = useState(true);
+  const saved = useArcadeResumePosition('chess');
+  const [board, setBoard] = useState<Board>(() => saved?.board ?? createInitialBoard());
+  const [whiteTurn, setWhiteTurn] = useState(saved?.whiteTurn ?? true);
   const [selected, setSelected] = useState<[number, number] | null>(null);
   const [lastMove, setLastMove] = useState<
     [number, number, number, number] | null
-  >(null);
-  const [captured, setCaptured] = useState<Piece[]>([]);
-  const [past, setPast] = useState<Snapshot[]>([]);
-  const [opponent, setOpponent] = useState<Opponent>('ai');
+  >(saved?.lastMove ?? null);
+  const [captured, setCaptured] = useState<Piece[]>(() => saved?.captured ?? []);
+  const [past, setPast] = useState<Snapshot[]>(() => saved?.past ?? []);
+  const [opponent, setOpponent] = useState<Opponent>(saved?.opponent ?? 'ai');
   const [thinking, setThinking] = useState(false);
   const aiTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -233,6 +234,7 @@ const GameChess = () => {
     opponent,
     moves: past.length,
   }));
+  useArcadeAutosave({ board, whiteTurn, lastMove, captured, past, opponent });
   useEffect(() => {
     if (finished) finish(resultTone, 0, { moves: past.length, opponent });
   }, [finished, resultTone, past.length, finish, opponent]);

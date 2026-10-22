@@ -23,6 +23,7 @@ import {
 } from '@/lib/journeyProgress';
 import {
   createJourneyMatch,
+  restoreJourneyPosition,
   getJourneyOpening,
   getJourneyStage,
   JOURNEY_STAGES,
@@ -31,8 +32,17 @@ import { preloadRiichiRules } from '@/lib/riichiRules';
 import { toReplayFile, type RiichiMatchState } from '@/pages/mahjong/japanese/engine/match';
 import { cn } from '@/lib/utils';
 import { MatchReviewDialog } from '@/pages/mahjong/japanese/components/MatchReview';
+import { isJourneyResume, journeyResumeSlot, readLocalResume, removeLocalResume, resumeOwner, writeLocalResume, type JourneyResume } from '@/lib/localResume';
+import { LocalResumeNotice } from '@/components/game/LocalResumeNotice';
 
 export default function Journey() {
+  const household = useHousehold();
+  const { t } = useLocale();
+  if (household.isLoading) return <main className="container p-8">{t('journey.loading')}</main>;
+  return <JourneyPage key={resumeOwner(household.currentMember?.id)} />;
+}
+
+function JourneyPage() {
   const { t, locale } = useLocale();
   const household = useHousehold();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -49,6 +59,7 @@ export default function Journey() {
   const [game, setGame] = useState<{
     stageId: string;
     attemptKey: number;
+    attemptId: string;
     variation?: JourneyVariation;
     match: RiichiMatchState;
   } | null>(null);
@@ -66,13 +77,17 @@ export default function Journey() {
   const [pendingInput, setPendingInput] = useState<JourneyAttemptInput | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(false);
+  const [resumePending, setResumePending] = useState(false);
+  const [resumeSaveFailed, setResumeSaveFailed] = useState(false);
+  const [resumeInvalid, setResumeInvalid] = useState(false);
+  const latestPosition = useRef<JourneyResume | null>(null);
 
   const memberProgress = household.snapshot?.journey;
   const progress = household.mode !== 'guest-local'
     ? memberProgress
     : guestProgress;
   const isMember = household.mode !== 'guest-local';
-  const owner = household.currentMember?.id ?? 'guest';
+  const owner = resumeOwner(household.currentMember?.id);
   const attemptEpoch = useRef(0);
   const variationUnlocked = !variation || Boolean(selectedStage && progress?.stages[selectedStage.id]?.completed);
 
@@ -98,17 +113,30 @@ export default function Journey() {
     setSubmitting(false);
     setFinishedMatch(null);
     setReviewOpen(false);
+    setResumeInvalid(false);
+    setResumePending(false);
+    setResumeSaveFailed(false);
+    latestPosition.current = null;
     if (!selectedStage || !rulesReady || !variationUnlocked) {
       setGame(null);
       return;
     }
     try {
+      const saved = readLocalResume(owner, journeyResumeSlot(selectedStage.id, variation))?.data;
+      let restoredMatch: RiichiMatchState | null = null;
+      if (isJourneyResume(saved) && saved.input.stageId === selectedStage.id && saved.input.variation === variation) {
+        try { restoredMatch = restoreJourneyPosition(saved.input); }
+        catch { setResumeInvalid(true); }
+      }
+      const attemptId = restoredMatch && isJourneyResume(saved) ? saved.input.attemptId : createUuid();
       setGame({
         stageId: selectedStage.id,
         attemptKey,
+        attemptId,
         variation,
-        match: createJourneyMatch(selectedStage.id, variation),
+        match: restoredMatch ?? createJourneyMatch(selectedStage.id, variation),
       });
+      setResumePending(Boolean(restoredMatch));
       if (!isMember) markCharactersEncountered(selectedStage.opponents);
       setEvaluation(null);
       setPendingInput(null);
@@ -120,6 +148,29 @@ export default function Journey() {
       setLoadFailed(true);
     }
   }, [selectedStage, attemptKey, rulesReady, variation, variationUnlocked, owner]);
+
+  const savePosition = useCallback((match: RiichiMatchState) => {
+    if (!selectedStage || !game || game.stageId !== selectedStage.id || game.variation !== variation) return;
+    const data: JourneyResume = { kind: 'journey', input: {
+      attemptId: game.attemptId, stageId: selectedStage.id, contentVersion: JOURNEY_CONTENT_VERSION,
+      replay: toReplayFile(match), ...(variation ? { variation } : {}),
+    } };
+    latestPosition.current = data;
+    setResumeSaveFailed(!writeLocalResume(owner, journeyResumeSlot(selectedStage.id, variation), data));
+  }, [owner, selectedStage, variation, game]);
+  const retryLocalSave = useCallback(() => {
+    const saved = latestPosition.current;
+    if (saved) setResumeSaveFailed(!writeLocalResume(owner, journeyResumeSlot(saved.input.stageId, saved.input.variation), saved));
+  }, [owner]);
+  useEffect(() => {
+    const leave = (event: BeforeUnloadEvent) => {
+      if (!resumeSaveFailed) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', leave);
+    return () => window.removeEventListener('beforeunload', leave);
+  }, [resumeSaveFailed]);
 
   const openStage = useCallback((stageId: string | null, nextVariation?: JourneyVariation) => {
     setEvaluation(null);
@@ -144,18 +195,20 @@ export default function Journey() {
         setGuestProgress(result.state);
         setEvaluation(result.evaluation);
       }
+      removeLocalResume(owner, journeyResumeSlot(input.stageId, input.variation));
+      latestPosition.current = null;
       setPendingInput(null);
     } catch {
       if (epoch === attemptEpoch.current) setSubmitError(true);
     } finally {
       if (epoch === attemptEpoch.current) setSubmitting(false);
     }
-  }, [household, isMember]);
+  }, [household, isMember, owner]);
 
   const handleRoundEnd = useCallback((match: RiichiMatchState) => {
-    if (!selectedStage || pendingInput || evaluation || submitting) return;
+    if (!selectedStage || !game || pendingInput || evaluation || submitting) return;
     const input: JourneyAttemptInput = {
-      attemptId: createUuid(),
+      attemptId: game.attemptId,
       stageId: selectedStage.id,
       contentVersion: JOURNEY_CONTENT_VERSION,
       replay: toReplayFile(match),
@@ -164,14 +217,15 @@ export default function Journey() {
     setFinishedMatch(match);
     setPendingInput(input);
     void saveAttempt(input);
-  }, [selectedStage, variation, pendingInput, evaluation, submitting, saveAttempt]);
+  }, [selectedStage, variation, game, pendingInput, evaluation, submitting, saveAttempt]);
 
   const retryRound = useCallback(() => {
+    if (selectedStage) removeLocalResume(owner, journeyResumeSlot(selectedStage.id, variation));
     setEvaluation(null);
     setPendingInput(null);
     setSubmitError(false);
     setAttemptKey((key) => key + 1);
-  }, []);
+  }, [owner, selectedStage, variation]);
 
   const selectedStageProgress = selectedStage ? (variation ? progress?.variations?.[`${selectedStage.id}:${variation}`] : progress?.stages[selectedStage.id]) : null;
   const nextStage = selectedStage?.nextStageId ? getJourneyStage(selectedStage.nextStageId) : null;
@@ -353,13 +407,26 @@ export default function Journey() {
             </section>
 
             {!variationUnlocked ? <Card><CardContent className="p-6"><p>{t('play.variationLocked')}</p><Button className="mt-3" onClick={() => openStage(selectedStage.id)}>{t('play.mainStage')}</Button></CardContent></Card> : null}
-            {gameReady && !evaluation ? (
+            {resumeInvalid ? <p role="status" className="text-sm text-muted-foreground">{t('resume.invalid')}</p> : null}
+            {gameReady && !evaluation ? <LocalResumeNotice failed={resumeSaveFailed} onRetry={retryLocalSave} /> : null}
+            {gameReady && !evaluation && resumePending ? (
+              <Card><CardContent className="space-y-4 p-6">
+                <h2 className="text-xl font-semibold">{t('resume.restored')}</h2>
+                <p className="text-sm text-muted-foreground">{t('resume.restoredHint')}</p>
+                <div className="flex flex-wrap gap-3">
+                  <Button onClick={() => setResumePending(false)}>{t('play.continue')}</Button>
+                  <Button variant="outline" onClick={retryRound}>{t('common.restart')}</Button>
+                </div>
+              </CardContent></Card>
+            ) : null}
+            {gameReady && !evaluation && !resumePending ? (
               <RiichiPracticeTable
                 key={`${selectedStage.id}-${variation ?? 'main'}-${attemptKey}`}
                 initialMatch={game.match}
                 title={t(selectedStage.titleKey)}
                 objective={t(selectedStage.goalKey)}
                 onRoundEnd={handleRoundEnd}
+                onMatchChange={savePosition}
                 onExit={() => openStage(null)}
               />
             ) : null}

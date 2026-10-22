@@ -5,7 +5,7 @@ import { GameShell, StatPill } from '@/components/game/GameShell';
 import { IntersectionBoard } from '@/components/game/IntersectionBoard';
 import { SegmentedControl } from '@/components/game/SegmentedControl';
 import { Button } from '@/components/ui/button';
-import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
+import { useArcade, useArcadeSnapshot, useArcadeAutosave, useArcadeResumePosition } from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import { cn } from '@/lib/utils';
 import { InviteFamilyButton } from '@/components/household/InviteFamilyButton';
@@ -84,16 +84,17 @@ const GameXiangqi = () => {
     newRound,
     start,
   } = arcade;
-  const [board, setBoard] = useState<Board>(createInitialBoard);
-  const [redTurn, setRedTurn] = useState(true);
+  const saved = useArcadeResumePosition('xiangqi');
+  const [board, setBoard] = useState<Board>(() => saved?.board ?? createInitialBoard());
+  const [redTurn, setRedTurn] = useState(saved?.redTurn ?? true);
   const [selected, setSelected] = useState<[number, number] | null>(null);
   const [lastMove, setLastMove] = useState<
     [number, number, number, number] | null
-  >(null);
-  const [captured, setCaptured] = useState<Piece[]>([]);
-  const [notation, setNotation] = useState<string[]>([]);
-  const [past, setPast] = useState<Snapshot[]>([]);
-  const [opponent, setOpponent] = useState<Opponent>('ai');
+  >(saved?.lastMove ?? null);
+  const [captured, setCaptured] = useState<Piece[]>(() => saved?.captured ?? []);
+  const [notation, setNotation] = useState<string[]>(() => saved?.notation ?? []);
+  const [past, setPast] = useState<Snapshot[]>(() => saved?.past ?? []);
+  const [opponent, setOpponent] = useState<Opponent>(saved?.opponent ?? 'ai');
   const [thinking, setThinking] = useState(false);
   const aiTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -249,6 +250,7 @@ const GameXiangqi = () => {
     opponent,
     moves: past.length,
   }));
+  useArcadeAutosave({ board, redTurn, lastMove, captured, notation, past, opponent });
   useEffect(() => {
     if (result) finish(resultTone, 0, { moves: past.length, opponent });
   }, [result, resultTone, past.length, finish, opponent]);

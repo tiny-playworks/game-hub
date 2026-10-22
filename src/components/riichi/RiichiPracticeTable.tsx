@@ -28,6 +28,7 @@ export interface RiichiPracticeTableProps {
   title: string;
   objective?: string;
   onRoundEnd: (match: RiichiMatchState) => void;
+  onMatchChange?: (match: RiichiMatchState) => void;
   onExit: () => void;
 }
 
@@ -41,6 +42,7 @@ export function RiichiPracticeTable({
   title,
   objective,
   onRoundEnd,
+  onMatchChange,
   onExit,
 }: RiichiPracticeTableProps) {
   const { locale, t } = useLocale();
@@ -52,18 +54,19 @@ export function RiichiPracticeTable({
   const stoppedRef = useRef(false);
   const [riichiSelecting, setRiichiSelecting] = useState(false);
   const [error, setError] = useState(false);
+  const [paused, setPaused] = useState(false);
   const round = match.round;
   const ended = match.status !== 'playing' || round.phase === 'end';
   const pending = getPendingSeats(round);
   const aiPending = !ended && pending.some((seat) => seat !== humanSeat);
-  const humanReady = !ended && !aiPending && pending.includes(humanSeat);
+  const humanReady = !paused && !ended && !aiPending && pending.includes(humanSeat);
   const turn = getSeatTurnOptions(round, humanSeat);
   const claim = getSeatClaimOptions(round, humanSeat);
   const scores = round.result?.settlement.newScores ?? round.scores;
 
   const commitHuman = (event: RiichiEvent) => {
     const latest = latestRef.current;
-    if (stoppedRef.current || getPracticeAiEvent(latest, humanSeat)) return;
+    if (paused || stoppedRef.current || getPracticeAiEvent(latest, humanSeat)) return;
     const next = applyPracticeEvent(latest, event);
     if (!next) {
       setError(true);
@@ -75,6 +78,14 @@ export function RiichiPracticeTable({
     setError(false);
   };
 
+  useEffect(() => { onMatchChange?.(match); }, [match, onMatchChange]);
+  useEffect(() => {
+    if (!onMatchChange) return;
+    const hide = () => { if (document.hidden) setPaused(true); };
+    document.addEventListener('visibilitychange', hide);
+    return () => document.removeEventListener('visibilitychange', hide);
+  }, [onMatchChange]);
+
   useEffect(() => {
     if (ended && !endedRef.current && !stoppedRef.current) {
       endedRef.current = true;
@@ -83,7 +94,7 @@ export function RiichiPracticeTable({
   }, [ended, match, onRoundEnd]);
 
   useEffect(() => {
-    if (ended || !aiPending) return;
+    if (paused || ended || !aiPending) return;
     const token = match.turn;
     const timer = window.setTimeout(() => {
       const latest = latestRef.current;
@@ -98,7 +109,7 @@ export function RiichiPracticeTable({
       setError(false);
     }, AI_DELAY_MS);
     return () => window.clearTimeout(timer);
-  }, [aiPending, ended, humanSeat, match.turn]);
+  }, [aiPending, ended, humanSeat, match.turn, paused]);
 
   const seatName = (seat: number) => {
     if (seat === humanSeat) return t('practice.you');
@@ -144,11 +155,17 @@ export function RiichiPracticeTable({
           <h1>{title}</h1>
           <p>{t('practice.isolated')}</p>
         </div>
+        <div className="flex flex-wrap gap-2">
+        {onMatchChange && !ended ? <button type="button" className="practice-button" onClick={() => setPaused((value) => !value)}>{t(paused ? 'arcade.resume' : 'arcade.pause')}</button> : null}
         <button type="button" className="practice-button practice-button-quiet" onClick={() => {
           stoppedRef.current = true;
+          onMatchChange?.(latestRef.current);
           onExit();
         }}>{t('practice.exit')}</button>
+        </div>
       </header>
+
+      {paused ? <aside className="practice-objective" role="status"><strong>{t('arcade.paused')}</strong><span>{t('resume.saved')}</span></aside> : null}
 
       {objective && <aside className="practice-objective">
         <strong>{t('practice.objective')}</strong>

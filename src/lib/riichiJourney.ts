@@ -276,6 +276,34 @@ export function createJourneyMatch(stageId: JourneyStageId, variation?: JourneyV
   return structuredClone(generateStageStart(stage));
 }
 
+/** Restore only a legal prefix of this exact versioned challenge, without settlement. */
+export function restoreJourneyPosition(input: JourneyAttemptInput): RiichiMatchState {
+  if (!inputIsValid(input)) throw new Error('Invalid journey position');
+  let match = createJourneyMatch(input.stageId, input.variation);
+  const file = input.replay;
+  const prefixLength = match.events.length;
+  if (file.ranked || file.seed !== match.seed || file.matchLength !== 'east' ||
+    file.events.length < prefixLength || file.events.length > MAX_JOURNEY_EVENTS ||
+    !sameJson(file.rules, match.rules) || !sameJson(file.seatCharacters, match.seatCharacters) ||
+    !sameJson(file.seatAiLevels, match.seatAiLevels)) throw new Error('Journey position belongs to another opening');
+  for (let index = 0; index < prefixLength; index++) {
+    if (!isRecordedTimingSafe(file.events[index]) ||
+      !sameJson(canonicalEvent(file.events[index]), canonicalEvent(match.events[index])))
+      throw new Error('Journey opening was changed');
+  }
+  for (const event of file.events.slice(prefixLength)) {
+    if (match.status !== 'playing' || event.type === 'nextRound' || !isRecordedTimingSafe(event))
+      throw new Error('Journey position contains an invalid continuation');
+    const expectedAi = getPracticeAiEvent(match, 0);
+    if (expectedAi ? !sameJson(canonicalEvent(event), canonicalEvent(expectedAi)) : event.seat !== 0)
+      throw new Error('Journey position contains an invalid turn');
+    const step = applyEvent(match, event);
+    if (!step) throw new Error('Journey position contains an illegal action');
+    match = step.match;
+  }
+  return match;
+}
+
 function hasDealIn(match: RiichiMatchState): boolean {
   return match.round.result?.type === 'win' &&
     match.round.result.wins.some((win) => win.ronFrom === 0);
