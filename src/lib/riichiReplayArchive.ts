@@ -13,6 +13,11 @@ import {
 import { loadLastReplay } from '@/pages/mahjong/japanese/store/persistence';
 
 export const GUEST_REPLAY_ARCHIVE_STORAGE_KEY = 'game-hub-riichi-replays-v1';
+export const REPLAY_ARCHIVE_CHANGED_EVENT = 'game-hub:replay-archive-changed';
+
+function notifyReplayArchiveChanged(): void {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(REPLAY_ARCHIVE_CHANGED_EVENT));
+}
 
 interface StoredGuestReplay {
   summary: ReplayArchiveSummary;
@@ -52,6 +57,7 @@ function loadGuestArchive(): StoredGuestReplay[] {
 function saveGuestArchive(items: StoredGuestReplay[]): void {
   try {
     storage()?.setItem(GUEST_REPLAY_ARCHIVE_STORAGE_KEY, JSON.stringify(items));
+    notifyReplayArchiveChanged();
   } catch {
     // ignore quota error
   }
@@ -142,6 +148,7 @@ export function archiveGuestReplay(
 export async function fetchReplayList(
   query: ReplayListQuery = {},
   isHouseholdMember = false,
+  signal?: AbortSignal,
 ): Promise<ReplayListResponse> {
   if (isHouseholdMember) {
     const params = new URLSearchParams();
@@ -153,6 +160,7 @@ export async function fetchReplayList(
 
     const res = await fetch(`/api/v1/replays?${params.toString()}`, {
       credentials: 'include',
+      signal,
     });
     if (!res.ok) throw new Error('Failed to fetch replays from server');
     return (await res.json()) as ReplayListResponse;
@@ -185,10 +193,12 @@ export async function fetchReplayList(
 export async function fetchReplayDetail(
   matchId: string,
   isHouseholdMember = false,
+  signal?: AbortSignal,
 ): Promise<ReplayArchiveDetail | null> {
   if (isHouseholdMember) {
-    const res = await fetch(`/api/v1/replays/${matchId}`, {
+    const res = await fetch(`/api/v1/replays/${encodeURIComponent(matchId)}`, {
       credentials: 'include',
+      signal,
     });
     if (!res.ok) {
       if (res.status === 404) return null;
@@ -208,7 +218,7 @@ export async function setReplayFavorite(
   isHouseholdMember = false,
 ): Promise<{ success: boolean; error?: string }> {
   if (isHouseholdMember) {
-    const res = await fetch(`/api/v1/replays/${matchId}/favorite`, {
+    const res = await fetch(`/api/v1/replays/${encodeURIComponent(matchId)}/favorite`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -242,10 +252,11 @@ export async function removeReplay(
   isHouseholdMember = false,
 ): Promise<boolean> {
   if (isHouseholdMember) {
-    const res = await fetch(`/api/v1/replays/${matchId}`, {
+    const res = await fetch(`/api/v1/replays/${encodeURIComponent(matchId)}`, {
       method: 'DELETE',
       credentials: 'include',
     });
+    if (res.ok) notifyReplayArchiveChanged();
     return res.ok;
   }
 

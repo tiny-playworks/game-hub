@@ -32,6 +32,13 @@ import { formatPoints } from '@/pages/mahjong/japanese/helpers';
 import { buildMatchReview, type MatchReview } from '@/lib/riichiMatchReview';
 
 export default function ReplayArchive() {
+  const { t } = useLocale();
+  const { mode, currentMember, isLoading } = useHousehold();
+  if (isLoading) return <div className="container p-8 text-sm text-muted-foreground">{t('riichi.review.computing')}</div>;
+  return <ReplayArchivePage key={`${mode}:${currentMember?.id ?? 'guest'}`} />;
+}
+
+function ReplayArchivePage() {
   const { t, locale } = useLocale();
   const { mode } = useHousehold();
   const isMember = mode !== 'guest-local';

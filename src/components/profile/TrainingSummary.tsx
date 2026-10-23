@@ -1,198 +1,412 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertCircle, ArrowUpRight, BookOpen, TrendingUp } from 'lucide-react';
+import { AlertCircle, ArrowRight, BookOpen, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/contexts/LocaleContext';
 import { useHousehold } from '@/contexts/HouseholdContext';
 import { formatMessage } from '@/lib/i18n';
-import type { ReplayArchiveSummary, TrainingCategory, TrainingWeaknessSummary } from '../../../shared/contracts/replay';
-import { fetchReplayDetail, fetchReplayList } from '@/lib/riichiReplayArchive';
-import { buildMatchReview } from '@/lib/riichiMatchReview';
-import { computeWeaknessSummary } from '@/lib/riichiTraining';
+import {
+  GUEST_REPLAY_ARCHIVE_STORAGE_KEY,
+  REPLAY_ARCHIVE_CHANGED_EVENT,
+} from '@/lib/riichiReplayArchive';
+import {
+  TRAINING_CATEGORIES,
+  trainingPracticePath,
+} from '@/lib/riichiTraining';
+import {
+  loadTrainingOverview,
+  type TrainingOverview,
+} from '@/lib/riichiTrainingOverview';
 
-const CACHE_PREFIX = 'game-hub-weakness-v1';
-const CATEGORIES = new Set<TrainingCategory>(['shanten', 'ukeire', 'dealIn', 'riichi', 'dama']);
-
-function cacheKey(owner: string, item: ReplayArchiveSummary): string {
-  return `${CACHE_PREFIX}:${owner}:${item.matchId}:${item.createdAt}:${item.viewerSeat}`;
-}
-
-function readCachedReasons(key: string): TrainingCategory[] | null {
-  try {
-    const value = JSON.parse(sessionStorage.getItem(key) ?? 'null');
-    return Array.isArray(value) && value.every((reason) => CATEGORIES.has(reason))
-      ? value as TrainingCategory[]
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveCachedReasons(key: string, reasons: TrainingCategory[]): void {
-  try {
-    sessionStorage.setItem(key, JSON.stringify(reasons));
-  } catch {
-    // Private browsing or quota limits should not block the analysis.
-  }
-}
-
-export function TrainingSummary({
-  onNavigateToReplays,
-}: {
+interface TrainingSummaryProps {
   onNavigateToReplays?: () => void;
-}) {
-  const { t, locale } = useLocale();
-  const { mode, currentMember } = useHousehold();
-  const isMember = mode !== 'guest-local';
-  const owner = isMember ? currentMember?.id ?? 'loading' : 'guest';
-  const [loading, setLoading] = useState(true);
-  const [summary, setSummary] = useState<TrainingWeaknessSummary | null>(null);
-  const [progress, setProgress] = useState({ done: 0, total: 0 });
+  expanded?: boolean;
+}
 
-  useEffect(() => {
-    let cancelled = false;
-    const controller = new AbortController();
-
-    async function loadData() {
-      try {
-        setLoading(true);
-        setSummary(null);
-        setProgress({ done: 0, total: 0 });
-        const list = await fetchReplayList({ limit: 20 }, isMember);
-        if (cancelled) return;
-
-        const items = list.items.slice(0, 20);
-        setProgress({ done: 0, total: items.length });
-        const reviews: Array<{ decisions: Array<{ reason: TrainingCategory }> }> = [];
-        for (const item of items) {
-          if (cancelled) break;
-          const key = cacheKey(owner, item);
-          let reasons = readCachedReasons(key);
-          if (!reasons) {
-            const detail = await fetchReplayDetail(item.matchId, isMember);
-            if (detail) {
-              try {
-                const review = await buildMatchReview(detail.file, {
-                  viewerSeat: detail.summary.viewerSeat,
-                  signal: controller.signal,
-                });
-                reasons = review.decisions.map((decision) => decision.reason);
-                saveCachedReasons(key, reasons);
-              } catch {
-                if (controller.signal.aborted) return;
-                // An incomplete replay should not hide valid older matches.
-              }
-            }
-          }
-          if (reasons) reviews.push({ decisions: reasons.map((reason) => ({ reason })) });
-          if (!cancelled) setProgress({ done: reviews.length, total: items.length });
-        }
-
-        if (!cancelled) {
-          setSummary(computeWeaknessSummary(reviews));
-        }
-      } catch {
-        // ignore load error
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    void loadData();
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [isMember, owner]);
-
-  if (loading) {
+export function TrainingSummary(props: TrainingSummaryProps) {
+  const { t } = useLocale();
+  const { mode, currentMember, isLoading } = useHousehold();
+  if (isLoading || mode === 'member-offline') {
     return (
-      <Card className="riichi-training-summary-card">
-        <CardContent className="pt-6 text-sm text-muted-foreground flex items-center justify-center py-8">
-          <BookOpen className="mr-2 h-4 w-4 animate-spin" />
-          {progress.total > 0
-            ? formatMessage(locale, 'riichi.training.weakness.progress', progress)
-            : t('riichi.review.computing')}
+      <Card>
+        <CardContent className="p-6 text-sm text-muted-foreground">
+          {t(
+            isLoading
+              ? 'riichi.review.computing'
+              : 'riichi.training.center.offline',
+          )}
         </CardContent>
       </Card>
     );
   }
+  return (
+    <TrainingSummaryContent
+      key={`${mode}:${currentMember?.id ?? 'guest'}`}
+      {...props}
+    />
+  );
+}
 
-  if (!summary) return null;
+function TrainingSummaryContent({
+  onNavigateToReplays,
+  expanded = false,
+}: TrainingSummaryProps) {
+  const { t, locale } = useLocale();
+  const { mode, currentMember, snapshot } = useHousehold();
+  const isMember = mode !== 'guest-local';
+  const owner = isMember ? (currentMember?.id ?? 'loading') : 'guest';
+  const [status, setStatus] = useState<
+    'loading' | 'ready' | 'error' | 'cancelled'
+  >('loading');
+  const [data, setData] = useState<TrainingOverview | null>(null);
+  const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [refresh, setRefresh] = useState(0);
+  const controllerRef = useRef<AbortController | null>(null);
 
-  const categories = [
-    { key: 'shanten', label: t('riichi.review.kind.shanten'), count: summary.countsByCategory.shanten },
-    { key: 'ukeire', label: t('riichi.review.kind.ukeire'), count: summary.countsByCategory.ukeire },
-    { key: 'dealIn', label: t('riichi.review.kind.dealIn'), count: summary.countsByCategory.dealIn },
-    { key: 'riichi', label: t('riichi.review.kind.riichi'), count: summary.countsByCategory.riichi },
-    { key: 'dama', label: t('riichi.review.kind.dama'), count: summary.countsByCategory.dama },
-  ];
+  useEffect(() => {
+    const changed = () => setRefresh((value) => value + 1);
+    const storageChanged = (event: StorageEvent) => {
+      if (event.key === null || event.key === GUEST_REPLAY_ARCHIVE_STORAGE_KEY)
+        changed();
+    };
+    window.addEventListener(REPLAY_ARCHIVE_CHANGED_EVENT, changed);
+    window.addEventListener('storage', storageChanged);
+    return () => {
+      window.removeEventListener(REPLAY_ARCHIVE_CHANGED_EVENT, changed);
+      window.removeEventListener('storage', storageChanged);
+    };
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    setStatus('loading');
+    setData(null);
+    setProgress({ done: 0, total: 0 });
+    void loadTrainingOverview({
+      owner,
+      isMember,
+      signal: controller.signal,
+      onProgress: (value) => {
+        if (!controller.signal.aborted) setProgress(value);
+      },
+    })
+      .then((result) => {
+        if (!controller.signal.aborted) {
+          setData(result);
+          setStatus('ready');
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setStatus('error');
+      });
+    return () => controller.abort();
+  }, [owner, isMember, refresh, snapshot?.revision]);
+
+  const summary = data?.summary;
+  const categories = TRAINING_CATEGORIES.map((key) => ({
+    key,
+    count: summary?.countsByCategory[key] ?? 0,
+    target: data?.replays.find((replay) => replay.reasons.includes(key)),
+    comparison: summary?.comparison?.categories[key],
+  })).sort((a, b) => b.count - a.count);
+  const recommended = categories.find((category) => category.target);
+  const rate = (value: number) =>
+    value.toLocaleString(locale === 'zh' ? 'zh-CN' : 'en-US', {
+      maximumFractionDigits: 1,
+    });
 
   return (
     <Card className="riichi-training-summary-card">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-base">
             <BookOpen className="h-4 w-4 text-primary" />
             {t('riichi.training.weakness.title')}
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            {t('riichi.archive.eyebrow')} · {formatMessage(locale, 'riichi.training.weakness.analyzed', { count: summary.totalMatchesAnalyzed })}
+            {t('riichi.training.center.scope')}
           </p>
         </div>
         {onNavigateToReplays ? (
-          <Button variant="ghost" size="sm" onClick={onNavigateToReplays} className="text-xs">
+          <Button variant="ghost" size="sm" onClick={onNavigateToReplays}>
             {t('riichi.archive.title')}
-            <ArrowUpRight className="ml-1 h-3 w-3" />
           </Button>
         ) : (
-          <Button variant="ghost" size="sm" asChild className="text-xs">
-            <Link to="/replays">
-              {t('riichi.archive.title')}
-              <ArrowUpRight className="ml-1 h-3 w-3" />
+          <Button asChild variant="ghost" size="sm">
+            <Link to={expanded ? '/replays' : '/replays/training'}>
+              {t(
+                expanded
+                  ? 'riichi.archive.title'
+                  : 'riichi.training.center.title',
+              )}
+              <ArrowRight className="ml-1 h-4 w-4" />
             </Link>
           </Button>
         )}
       </CardHeader>
-      <CardContent className="space-y-3">
-        {summary.totalMatchesAnalyzed === 0 ? (
-          <div className="rounded-xl border border-dashed bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
-            <BookOpen className="mx-auto mb-2 h-6 w-6 opacity-50" />
-            {t('riichi.training.weakness.noMatches')}
-          </div>
-        ) : (
-          <>
-        {!summary.hasEnoughSamples && (
-          <div className="rounded-md bg-amber-500/10 p-2.5 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>{t('riichi.training.weakness.sampleWarning')}</span>
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-          {categories.map((cat) => (
-            <div
-              key={cat.key}
-              className="rounded-lg border bg-card p-2.5 text-center flex flex-col justify-between"
+      <CardContent className="space-y-4">
+        {status === 'loading' && (
+          <div className="flex flex-wrap items-center justify-between gap-3 py-4 text-sm text-muted-foreground">
+            <p className="flex items-center gap-2" role="status">
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              {progress.total > 0
+                ? formatMessage(
+                    locale,
+                    'riichi.training.weakness.progress',
+                    progress,
+                  )
+                : t('riichi.review.computing')}
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                controllerRef.current?.abort();
+                setStatus('cancelled');
+              }}
             >
-              <span className="text-xs text-muted-foreground truncate">{cat.label}</span>
-              <span className="text-lg font-bold mt-1">{cat.count}</span>
-            </div>
-          ))}
-        </div>
-
-        {summary.hasEnoughSamples && (
-          <div className="flex items-center justify-between pt-1 text-xs text-muted-foreground border-t">
-            <span className="flex items-center gap-1.5">
-              <TrendingUp className="h-3.5 w-3.5 text-primary" />
-              {t(`riichi.training.weakness.trend.${summary.trend}`)}
-            </span>
-            <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-              {summary.trend === 'improving' ? '提升中' : summary.trend === 'stable' ? '平稳' : '需重点复盘'}
-            </span>
+              {t('riichi.training.center.cancel')}
+            </Button>
           </div>
         )}
+        {(status === 'error' || status === 'cancelled') && (
+          <div className="space-y-3 py-2">
+            <p
+              role={status === 'error' ? 'alert' : 'status'}
+              className="text-sm text-muted-foreground"
+            >
+              {t(`riichi.training.center.${status}`)}
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setRefresh((value) => value + 1)}
+            >
+              {t('recovery.retry')}
+            </Button>
+          </div>
+        )}
+        {status === 'ready' && summary && data && (
+          <>
+            {data.skipped > 0 && (
+              <p role="status" className="text-xs text-muted-foreground">
+                {formatMessage(locale, 'riichi.training.center.skipped', {
+                  count: data.skipped,
+                })}
+              </p>
+            )}
+            {summary.totalMatchesAnalyzed === 0 ? (
+              <div className="space-y-4 rounded-xl border border-dashed p-6 text-center">
+                <p className="text-sm text-muted-foreground">
+                  {t('riichi.training.weakness.noMatches')}
+                </p>
+                <Button asChild>
+                  <Link to="/game/mahjong-japanese">
+                    {t('challenge.startMatch')}
+                  </Link>
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                  <span>
+                    {formatMessage(
+                      locale,
+                      'riichi.training.weakness.analyzed',
+                      { count: summary.totalMatchesAnalyzed },
+                    )}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setRefresh((value) => value + 1)}
+                  >
+                    <RefreshCw className="mr-1 h-3.5 w-3.5" />
+                    {t('riichi.training.center.refresh')}
+                  </Button>
+                </div>
+                {!summary.hasEnoughSamples && (
+                  <p className="flex items-start gap-2 rounded-lg bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    {t('riichi.training.weakness.sampleWarning')}
+                  </p>
+                )}
+                {recommended?.target ? (
+                  <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-xs text-muted-foreground">
+                        {t('riichi.training.center.recommended')}
+                      </p>
+                      <h3 className="font-semibold">
+                        {t(`riichi.review.kind.${recommended.key}`)}
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        {formatMessage(
+                          locale,
+                          'riichi.training.center.reason',
+                          { count: recommended.count },
+                        )}
+                      </p>
+                    </div>
+                    <Button asChild>
+                      <Link
+                        to={trainingPracticePath(
+                          recommended.target.summary.matchId,
+                          recommended.key,
+                        )}
+                      >
+                        {t('riichi.training.center.practice')}
+                        <ArrowRight className="ml-1 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="rounded-xl bg-muted/40 p-4 text-sm">
+                    {t('riichi.training.empty')}
+                  </p>
+                )}
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                  {categories.map((category) => {
+                    const content = (
+                      <>
+                        <span className="text-xs text-muted-foreground">
+                          {t(`riichi.review.kind.${category.key}`)}
+                        </span>
+                        <strong className="text-2xl tabular-nums">
+                          {category.count}
+                        </strong>
+                        {category.comparison && (
+                          <span className="text-xs text-muted-foreground">
+                            {t(
+                              `riichi.training.center.trend.${category.comparison.trend}`,
+                            )}
+                          </span>
+                        )}
+                        <span
+                          className={`text-xs ${category.target ? 'text-primary' : 'text-muted-foreground'}`}
+                        >
+                          {t(
+                            category.target
+                              ? 'riichi.training.center.practice'
+                              : 'riichi.training.center.noQuestions',
+                          )}
+                        </span>
+                      </>
+                    );
+                    const className =
+                      'flex min-w-0 flex-col gap-1 rounded-xl border p-3';
+                    return category.target ? (
+                      <Link
+                        key={category.key}
+                        className={`${className} transition-colors hover:bg-muted/60 focus-visible:outline-2 focus-visible:outline-primary`}
+                        aria-label={`${t(`riichi.review.kind.${category.key}`)} · ${t('riichi.training.center.practice')}`}
+                        to={trainingPracticePath(
+                          category.target.summary.matchId,
+                          category.key,
+                        )}
+                      >
+                        {content}
+                      </Link>
+                    ) : (
+                      <div
+                        key={category.key}
+                        className={`${className} bg-muted/20`}
+                      >
+                        {content}
+                      </div>
+                    );
+                  })}
+                </div>
+                {summary.comparison ? (
+                  <section className="space-y-2 rounded-xl bg-muted/40 p-4 text-sm">
+                    <h3 className="font-medium">
+                      {t('riichi.training.center.comparison')}
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          {formatMessage(
+                            locale,
+                            'riichi.training.center.older',
+                            { count: summary.comparison.olderMatches },
+                          )}
+                        </p>
+                        <p className="mt-1 font-semibold">
+                          {formatMessage(
+                            locale,
+                            'riichi.training.center.rate',
+                            { count: rate(summary.comparison.olderPerMatch) },
+                          )}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          {formatMessage(
+                            locale,
+                            'riichi.training.center.recent',
+                            { count: summary.comparison.recentMatches },
+                          )}
+                        </p>
+                        <p className="mt-1 font-semibold">
+                          {formatMessage(
+                            locale,
+                            'riichi.training.center.rate',
+                            { count: rate(summary.comparison.recentPerMatch) },
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {t(`riichi.training.weakness.trend.${summary.trend}`)}
+                    </p>
+                  </section>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    {t('riichi.training.center.moreSamples')}
+                  </p>
+                )}
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {t('riichi.training.center.method')}
+                </p>
+                {expanded &&
+                  data.replays.some((item) => item.reasons.length > 0) && (
+                    <section className="space-y-3 border-t pt-4">
+                      <h3 className="text-sm font-semibold">
+                        {t('riichi.training.center.recentReplays')}
+                      </h3>
+                      {data.replays
+                        .filter((item) => item.reasons.length > 0)
+                        .slice(0, 5)
+                        .map(({ summary: item, reasons }) => (
+                          <Link
+                            key={item.matchId}
+                            to={trainingPracticePath(item.matchId)}
+                            className="flex items-center justify-between gap-3 rounded-lg border p-3 text-sm hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-primary"
+                          >
+                            <div className="min-w-0 space-y-1">
+                              <p>
+                                {t(`riichi.archive.source.${item.source}`)} ·{' '}
+                                {new Date(item.createdAt).toLocaleDateString(
+                                  locale === 'zh' ? 'zh-CN' : 'en-US',
+                                )}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatMessage(
+                                  locale,
+                                  'riichi.training.center.questions',
+                                  { count: reasons.length },
+                                )}
+                              </p>
+                            </div>
+                            <ArrowRight className="h-4 w-4 shrink-0" />
+                          </Link>
+                        ))}
+                    </section>
+                  )}
+              </>
+            )}
           </>
         )}
       </CardContent>
