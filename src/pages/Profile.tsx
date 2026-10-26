@@ -12,6 +12,7 @@ import { CharacterPortraitSlot } from '@/components/characters/CharacterPortrait
 import { CharacterOutfitPicker } from '@/components/characters/CharacterOutfitPicker';
 import { PlayerAvatar } from '@/components/home/PlayerAvatar';
 import { FamilyHeadToHead } from '@/components/household/FamilyHeadToHead';
+import { OfflinePlayCard } from '@/components/profile/OfflinePlayCard';
 import { DataManagementCard } from '@/components/profile/DataManagementCard';
 import { TrainingSummary } from '@/components/profile/TrainingSummary';
 import { WalletCard } from '@/components/profile/WalletCard';
@@ -1140,7 +1141,8 @@ const Profile = () => {
           <RankedProfilePanel />
           <WeeklyChampionsCard />
           <FamilyHeadToHead />
-          <DataManagementCard />
+          <OfflinePlayCard />
+            <DataManagementCard />
         </div>
         <ChallengeProgress />
       </main>

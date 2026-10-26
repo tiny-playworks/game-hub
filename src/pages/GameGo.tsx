@@ -8,7 +8,12 @@ import {
 } from '@/components/game/IntersectionBoard';
 import { SegmentedControl } from '@/components/game/SegmentedControl';
 import { Button } from '@/components/ui/button';
-import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
+import {
+  useArcade,
+  useArcadeSnapshot,
+  useArcadeAutosave,
+  useArcadeResumePosition,
+} from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import {
   canPlace,
@@ -52,6 +57,7 @@ const Stone = ({
 const GameGo = () => {
   const { locale, t } = useLocale();
   const arcade = useArcade();
+  const saved = useArcadeResumePosition('go');
   const {
     difficulty,
     changeDifficulty: setDifficulty,
@@ -60,10 +66,14 @@ const GameGo = () => {
     newRound,
     start,
   } = arcade;
-  const [state, setState] = useState<GoState>(createInitialState);
-  const [past, setPast] = useState<GoState[]>([]);
-  const [lastMove, setLastMove] = useState<[number, number] | null>(null);
-  const [opponent, setOpponent] = useState<Opponent>('ai');
+  const [state, setState] = useState<GoState>(
+    () => saved?.state ?? createInitialState(),
+  );
+  const [past, setPast] = useState<GoState[]>(saved?.past ?? []);
+  const [lastMove, setLastMove] = useState<[number, number] | null>(
+    saved?.lastMove ?? null,
+  );
+  const [opponent, setOpponent] = useState<Opponent>(saved?.opponent ?? 'ai');
   const [thinking, setThinking] = useState(false);
   const aiTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -177,6 +187,7 @@ const GameGo = () => {
           ? t('common.youWin')
           : t('common.youLose');
 
+  useArcadeAutosave({ state, past, lastMove, opponent });
   useArcadeSnapshot(() => ({ ...state, thinking, opponent, score }));
   useEffect(() => {
     if (state.gameOver) finish(resultTone, 0, { moves: past.length, opponent });
@@ -299,7 +310,7 @@ const GameGo = () => {
             <span
               key={`star-${row}-${col}`}
               aria-hidden
-              className="pointer-events-none size-[6px] rounded-full bg-amber-950/60"
+              className="pointer-events-none size-1.5 rounded-full bg-amber-950/60"
               style={pointStyle(row, col)}
             />
           ))}

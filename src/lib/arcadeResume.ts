@@ -3,6 +3,9 @@ import type { Game2048State } from './game2048';
 import type { Board as ChessBoard, Piece as ChessPiece } from './chess';
 import type { Board as XiangqiBoard, Piece as XiangqiPiece } from './xiangqi';
 import type { ShengjiState } from './shengji';
+import type { GoState } from './go';
+import type { GomokuStone } from './gomoku';
+import { parseHand, type DoudizhuState } from './doudizhu';
 import type { ArcadeMemberEvent } from '../../shared/contracts/member';
 import type { ArcadeResult } from '@/contexts/ArcadeContext';
 
@@ -21,6 +24,14 @@ export interface XiangqiPosition {
   notation: string[];
 }
 export interface ArcadePositions {
+  go: {
+    state: GoState;
+    past: GoState[];
+    lastMove: [number, number] | null;
+    opponent: 'ai' | 'human';
+  };
+  gomoku: { board: GomokuStone[]; history: number[]; opponent: 'ai' | 'human' };
+  doudizhu: { state: DoudizhuState; biddingEnabled: boolean };
   '2048': {
     state: Game2048State;
     history: Game2048State[];
@@ -41,6 +52,9 @@ export const RESUMABLE_ARCADE_IDS: readonly string[] = [
   'chess',
   'xiangqi',
   'shengji',
+  'go',
+  'gomoku',
+  'doudizhu',
 ];
 export const MEMBER_ARCADE_MAX_AGE = 24 * 60 * 60 * 1000;
 export interface ArcadeResume {
@@ -203,6 +217,84 @@ function validShengji(value: unknown): boolean {
   );
 }
 
+function point(value: unknown, size: number): boolean {
+  return value === null || numbers(value, 2, size - 1);
+}
+function validGo(value: unknown): boolean {
+  return (
+    object(value) &&
+    Array.isArray(value.board) &&
+    value.board.length === 9 &&
+    value.board.every(
+      (row) =>
+        Array.isArray(row) &&
+        row.length === 9 &&
+        row.every((c) => c === null || c === 'B' || c === 'W'),
+    ) &&
+    typeof value.blackTurn === 'boolean' &&
+    typeof value.lastPass === 'boolean' &&
+    typeof value.gameOver === 'boolean' &&
+    integer(value.blackCaptured) &&
+    integer(value.whiteCaptured) &&
+    point(value.koPoint, 9)
+  );
+}
+function validDoudizhu(value: unknown): boolean {
+  if (
+    !object(value) ||
+    !object(value.state) ||
+    typeof value.biddingEnabled !== 'boolean'
+  )
+    return false;
+  const s = value.state;
+  const cards = (v: unknown): v is number[] =>
+    Array.isArray(v) && v.length <= 54 && v.every((c) => integer(c, 0, 53));
+  if (
+    !Array.isArray(s.hands) ||
+    s.hands.length !== 3 ||
+    !s.hands.every((h) => cards(h) && h.length <= 20) ||
+    !integer(s.landlord, -1, 2) ||
+    !integer(s.currentPlayer, 0, 2) ||
+    !integer(s.passCount, 0, 2) ||
+    typeof s.gameOver !== 'boolean' ||
+    ![null, 0, 1].includes(s.winner as null | number) ||
+    !cards(s.playedCards ?? []) ||
+    !cards(s.bottomCards ?? []) ||
+    (s.phase !== undefined && s.phase !== 'bidding' && s.phase !== 'playing') ||
+    (s.playCounts !== undefined && !numbers(s.playCounts, 3, 54)) ||
+    (s.bids !== undefined &&
+      (!Array.isArray(s.bids) ||
+        s.bids.length > 3 ||
+        !s.bids.every(
+          (b) => object(b) && integer(b.seat, 0, 2) && integer(b.score, 0, 3),
+        ))) ||
+    (s.highestBid !== undefined && !integer(s.highestBid, 0, 3)) ||
+    (s.firstBidder !== undefined && !integer(s.firstBidder, 0, 2)) ||
+    (s.dealNumber !== undefined && !integer(s.dealNumber, 1))
+  )
+    return false;
+  const all = [
+    ...s.hands.flat(),
+    ...((s.playedCards as number[]) ?? []),
+    ...(s.phase === 'bidding' ? ((s.bottomCards as number[]) ?? []) : []),
+  ];
+  if (all.length !== 54 || new Set(all).size !== 54) return false;
+  if (s.lastPlay === null) return true;
+  if (
+    !object(s.lastPlay) ||
+    !integer(s.lastPlay.player, 0, 2) ||
+    !object(s.lastPlay.hand) ||
+    !cards(s.lastPlay.hand.cards)
+  )
+    return false;
+  const hand = parseHand(s.lastPlay.hand.cards);
+  return (
+    !!hand &&
+    hand.type === s.lastPlay.hand.type &&
+    hand.rank === s.lastPlay.hand.rank
+  );
+}
+
 export function isArcadeResume(value: unknown): value is ArcadeResume {
   if (
     !object(value) ||
@@ -245,6 +337,33 @@ export function isArcadeResume(value: unknown): value is ArcadeResume {
   )
     return false;
   const p = value.position;
+  if (value.gameId === 'go')
+    return (
+      validGo(p.state) &&
+      Array.isArray(p.past) &&
+      p.past.length <= 2000 &&
+      p.past.every(validGo) &&
+      point(p.lastMove, 9) &&
+      ['ai', 'human'].includes(String(p.opponent))
+    );
+  if (value.gameId === 'gomoku') {
+    if (
+      !Array.isArray(p.board) ||
+      p.board.length !== 225 ||
+      !Array.isArray(p.history) ||
+      p.history.length > 225 ||
+      !p.history.every((n) => integer(n, 0, 224)) ||
+      new Set(p.history).size !== p.history.length ||
+      !['ai', 'human'].includes(String(p.opponent))
+    )
+      return false;
+    const board = Array<unknown>(225).fill(null);
+    p.history.forEach((n, i) => {
+      board[n] = i % 2 ? 'W' : 'B';
+    });
+    return p.board.every((stone, i) => stone === board[i]);
+  }
+  if (value.gameId === 'doudizhu') return validDoudizhu(p);
   if (value.gameId === '2048') {
     const size =
       value.difficulty === 'normal' ? 5 : value.difficulty === 'hard' ? 3 : 4;

@@ -8,7 +8,12 @@ import {
 } from '@/components/game/IntersectionBoard';
 import { SegmentedControl } from '@/components/game/SegmentedControl';
 import { Button } from '@/components/ui/button';
-import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
+import {
+  useArcade,
+  useArcadeSnapshot,
+  useArcadeAutosave,
+  useArcadeResumePosition,
+} from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import { GOMOKU_SIZE, type GomokuStone, getGomokuWin } from '@/lib/gomoku';
 import { chooseGomokuMove } from '@/lib/gomokuAi';
@@ -48,6 +53,7 @@ const Stone = ({
 const GameGomoku = () => {
   const { t } = useLocale();
   const arcade = useArcade();
+  const saved = useArcadeResumePosition('gomoku');
   const {
     difficulty,
     changeDifficulty: setDifficulty,
@@ -56,9 +62,11 @@ const GameGomoku = () => {
     newRound,
     start,
   } = arcade;
-  const [board, setBoard] = useState<GomokuStone[]>(emptyBoard);
-  const [history, setHistory] = useState<number[]>([]);
-  const [opponent, setOpponent] = useState<Opponent>('ai');
+  const [board, setBoard] = useState<GomokuStone[]>(
+    () => saved?.board ?? emptyBoard(),
+  );
+  const [history, setHistory] = useState<number[]>(saved?.history ?? []);
+  const [opponent, setOpponent] = useState<Opponent>(saved?.opponent ?? 'ai');
   const [thinking, setThinking] = useState(false);
   const aiTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -161,6 +169,7 @@ const GameGomoku = () => {
         ? t('common.youWin')
         : t('common.youLose');
 
+  useArcadeAutosave({ board, history, opponent });
   useArcadeSnapshot(() => ({
     board,
     blackNext,
@@ -284,7 +293,7 @@ const GameGomoku = () => {
             <span
               key={`star-${row}-${col}`}
               aria-hidden
-              className="pointer-events-none size-[5px] rounded-full bg-amber-950/55"
+              className="pointer-events-none size-1.25 rounded-full bg-amber-950/55"
               style={pointStyle(row, col)}
             />
           ))}

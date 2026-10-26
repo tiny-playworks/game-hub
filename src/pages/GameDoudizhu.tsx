@@ -4,7 +4,12 @@ import { GameResultOverlay } from '@/components/game/GameResultOverlay';
 import { GameShell, StatPill } from '@/components/game/GameShell';
 import { CardBack, CardFan } from '@/components/game/PlayingCard';
 import { Button } from '@/components/ui/button';
-import { useArcade, useArcadeSnapshot } from '@/contexts/ArcadeContext';
+import {
+  useArcade,
+  useArcadeSnapshot,
+  useArcadeAutosave,
+  useArcadeResumePosition,
+} from '@/contexts/ArcadeContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import {
   applyAITurn,
@@ -40,9 +45,14 @@ type SeatAction = { kind: 'play'; cards: Card[] } | { kind: 'pass' } | null;
 const GameDoudizhu = () => {
   const { t, locale } = useLocale();
   const arcade = useArcade();
+  const saved = useArcadeResumePosition('doudizhu');
   const { difficulty, paused, finish, newRound, start } = arcade;
-  const [state, setState] = useState<DoudizhuState>(() => createInitialState());
-  const [biddingEnabled, setBiddingEnabled] = useState(false);
+  const [state, setState] = useState<DoudizhuState>(
+    () => saved?.state ?? createInitialState(),
+  );
+  const [biddingEnabled, setBiddingEnabled] = useState(
+    saved?.biddingEnabled ?? false,
+  );
   const [selected, setSelected] = useState<Card[]>([]);
   const [actions, setActions] = useState<Record<number, SeatAction>>({
     0: null,
@@ -161,6 +171,7 @@ const GameDoudizhu = () => {
           ? t('game.doudizhu.status.yourTurn')
           : t('game.doudizhu.status.otherTurn');
 
+  useArcadeAutosave({ state, biddingEnabled });
   useArcadeSnapshot(() => ({
     ...state,
     hands: state.hands.map((hand, seat) =>

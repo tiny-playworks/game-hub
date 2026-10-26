@@ -37,7 +37,7 @@ export function DataManagementCard() {
     setStep(1);
   };
   return (
-    <section className="paper-texture rounded-3xl border bg-card p-5 text-foreground">
+    <section id="data-management" className="paper-texture rounded-3xl border bg-card p-5 text-foreground">
       <h2 className="text-lg font-semibold">{t('save.title')}</h2>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
         {t(mode !== 'guest-local' ? 'household.save.memberDescription' : 'save.description')}

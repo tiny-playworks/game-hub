@@ -22,6 +22,7 @@ export function VenueGameGlyph({
         alt=""
         aria-hidden="true"
         decoding="async"
+        loading="lazy"
         className={cn('venue-game-glyph venue-game-glyph--cover', className)}
       />
     );

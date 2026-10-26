@@ -35,6 +35,17 @@ import {
   isTrainingCategory,
   trainingPracticePath,
 } from '@/lib/riichiTraining';
+import {
+  TrainingNotebook,
+  StarterPractice,
+} from '@/components/profile/TrainingNotebook';
+import {
+  readTrainingNotebook,
+  updatePracticeNote,
+  type PracticeQuestion,
+} from '@/lib/trainingNotebook';
+import { resumeOwner } from '@/lib/localResume';
+import { createUuid } from '@/lib/uuid';
 import { TrainingSummary } from '@/components/profile/TrainingSummary';
 import {
   createReplayBranch,
@@ -61,6 +72,15 @@ export default function RiichiTraining() {
         {t('riichi.review.computing')}
       </div>
     );
+  const owner = resumeOwner(currentMember?.id);
+  if (params.get('practice') === 'starter')
+    return (
+      <StarterPractice
+        key={`${owner}:${params.get('lesson')}`}
+        owner={owner}
+        lessonId={params.get('lesson')}
+      />
+    );
   if (!matchId || mode === 'member-offline') {
     return (
       <div className="container mx-auto max-w-4xl space-y-6 px-4 py-8">
@@ -72,15 +92,17 @@ export default function RiichiTraining() {
             {t('riichi.training.center.intro')}
           </p>
         </div>
+        <TrainingNotebook key={owner} owner={owner} />
         <TrainingSummary expanded />
       </div>
     );
   }
   return (
     <RiichiTrainingSession
-      key={`${mode}:${currentMember?.id ?? 'guest'}:${matchId}:${category ?? 'all'}`}
+      key={`${mode}:${currentMember?.id ?? 'guest'}:${matchId}:${category ?? 'all'}:${params.get('question') ?? ''}`}
       matchId={matchId}
       category={category}
+      questionId={params.get('question')}
     />
   );
 }
@@ -88,12 +110,18 @@ export default function RiichiTraining() {
 function RiichiTrainingSession({
   matchId,
   category,
+  questionId,
 }: {
   matchId: string;
   category?: TrainingCategory;
+  questionId: string | null;
 }) {
   const { t, locale } = useLocale();
-  const { mode } = useHousehold();
+  const { mode, currentMember } = useHousehold();
+  const owner = resumeOwner(currentMember?.id);
+  const [attemptId, setAttemptId] = useState(createUuid);
+  const [saveFailed, setSaveFailed] = useState(false);
+  const [notebook, setNotebook] = useState(() => readTrainingNotebook(owner));
   const isMember = mode !== 'guest-local';
   const navigate = useNavigate();
 
@@ -172,7 +200,9 @@ function RiichiTrainingSession({
         setReview(r);
 
         const extracted = extractTrainingProblems(r, detail.file).filter(
-          (problem) => !category || problem.category === category,
+          (problem) =>
+            (!category || problem.category === category) &&
+            (!questionId || problem.id === questionId),
         );
         setProblems(extracted);
         setAllProblems(extracted);
@@ -192,7 +222,7 @@ function RiichiTrainingSession({
       cancelled = true;
       controller.abort();
     };
-  }, [matchId, category, isMember, loadAttempt]);
+  }, [matchId, category, questionId, isMember, loadAttempt]);
 
   if (loading) {
     return (
@@ -299,6 +329,8 @@ function RiichiTrainingSession({
 
   const restartQuestions = (questions: TrainingProblem[]) => {
     setProblems(questions);
+    setAttemptId(createUuid());
+    setSaveFailed(false);
     setCurrentIndex(0);
     setAnswers({});
     setSelectedTile(null);
@@ -341,7 +373,7 @@ function RiichiTrainingSession({
               {t('riichi.training.session.reference')}
             </p>
             <p className="text-xs text-muted-foreground">
-              {t('riichi.training.session.local')}
+              {t('notebook.scope')}
             </p>
             <div className="flex flex-wrap gap-2">
               {retry.length > 0 && (
@@ -370,6 +402,25 @@ function RiichiTrainingSession({
   }
 
   const problem = problems[currentIndex];
+  const noteQuestion: PracticeQuestion = {
+    id: `replay:${matchId}:${problem.id}`,
+    source: 'replay',
+    sourceId: matchId,
+    problemId: problem.id,
+    category: problem.category,
+  };
+  const favorite =
+    notebook.notes.find((n) => n.id === noteQuestion.id)?.favorite ?? false;
+  const saveAnswer = () => {
+    if (selectedTile === null) return;
+    setSaveFailed(
+      !updatePracticeNote(owner, noteQuestion, {
+        attemptId: `${attemptId}:${problem.id}`,
+        matched: evaluateTrainingChoice(problem, selectedTile, declaredRiichi)
+          .isRecommended,
+      }),
+    );
+  };
   const evalResult =
     submitted && selectedTile !== null
       ? evaluateTrainingChoice(problem, selectedTile, declaredRiichi)
@@ -411,6 +462,7 @@ function RiichiTrainingSession({
         ? previous
         : { ...previous, [problem.id]: result.isRecommended },
     );
+    saveAnswer();
     setSubmitted(true);
   };
 
@@ -470,6 +522,26 @@ function RiichiTrainingSession({
         {t('riichi.training.session.reference')}
       </p>
 
+      <Button
+        variant="outline"
+        onClick={() => {
+          const ok = updatePracticeNote(owner, noteQuestion, {
+            favorite: !favorite,
+          });
+          setSaveFailed(!ok);
+          if (ok) setNotebook(readTrainingNotebook(owner));
+        }}
+      >
+        {t(favorite ? 'notebook.unfavorite' : 'notebook.save')}
+      </Button>
+      {saveFailed && (
+        <p role="alert" className="text-sm text-destructive">
+          {t('notebook.failed')}{' '}
+          <button className="underline" onClick={saveAnswer}>
+            {t('recovery.retry')}
+          </button>
+        </p>
+      )}
       {/* 练习卡片 */}
       <Card className="riichi-training-card">
         <CardHeader>
@@ -662,7 +734,7 @@ function RiichiTrainingSession({
                 {t('riichi.training.submit')}
               </Button>
             ) : (
-              <Button size="sm" onClick={handleNext}>
+              <Button size="sm" disabled={saveFailed} onClick={handleNext}>
                 {currentIndex < problems.length - 1 ? (
                   <>
                     {t('riichi.training.next')}

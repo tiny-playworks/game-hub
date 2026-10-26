@@ -1,4 +1,5 @@
 import { gameStorage } from '@/lib/storage';
+import { localPlayMessages } from './localPlayMessages';
 import { playMessages } from './playMessages';
 import { arcadeMessages } from './arcadeMessages';
 import { aoiMessages } from './aoiMessages';
@@ -4653,6 +4654,7 @@ const warnedMissingKeys = new Set<string>();
 
 export function getMessage(locale: Locale, key: string): string {
   const translated =
+    localPlayMessages[locale]?.[key] ??
     playMessages[locale]?.[key] ??
     gameRoomMessages[locale]?.[key] ??
     (leaderboardMessages[locale] as Record<string, string> | undefined)?.[key] ??

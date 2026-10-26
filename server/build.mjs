@@ -6,6 +6,7 @@ const root = fileURLToPath(new URL('.', import.meta.url));
 await build({
   entryPoints: {
     index: `${root}/src/index.ts`,
+    demo: `${root}/src/cli/demo.ts`,
     member: `${root}/src/cli/member.ts`,
     'migrate-check': `${root}/src/cli/migrate-check.ts`,
     leaderboard: `${root}/src/cli/leaderboard.ts`,

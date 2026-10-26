@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import AchievementUnlockToast from '@/components/AchievementUnlockToast';
 import CoinsToast from '@/components/CoinsToast';
 import { AffinityNotice } from '@/components/characters/AffinityNotice';
+import { DemoNotice } from '@/components/household/DemoNotice';
 import { HouseholdNotice } from '@/components/household/HouseholdNotice';
 import GrowthPointToast from '@/components/GrowthPointToast';
 import { VenueNavigation } from '@/components/layout/VenueNavigation';
@@ -16,6 +17,7 @@ import { CosmeticsProvider } from '@/hooks/useCosmetics';
 import { migrateLegacyArcadeStats } from '@/lib/achievements';
 import { lazyPage } from '@/lib/lazyPage';
 import Home from '@/pages/Home';
+import { PlayHistoryTracker } from '@/components/home/GameLibrary';
 import './App.css';
 import './cosmetics.css';
 import './styles/venue.css';
@@ -52,6 +54,7 @@ const FamilyRoom = lazyPage(() => import('@/pages/FamilyRoom'));
 const FamilyGameRoom = lazyPage(() => import('@/pages/FamilyGameRoom'));
 const ReplayArchive = lazyPage(() => import('@/pages/ReplayArchive'));
 const RiichiTraining = lazyPage(() => import('@/pages/RiichiTraining'));
+const ShortChallenges = lazyPage(() => import('@/pages/ShortChallenges'));
 const Journey = lazyPage(() => import('@/pages/Journey'));
 const Leaderboard = lazyPage(() => import('@/pages/Leaderboard'));
 
@@ -97,8 +100,10 @@ const App = () => {
         <LocaleProvider>
           <StorageNotice />
           <HouseholdNotice />
+          <DemoNotice />
           <CosmeticsProvider>
             <VenueNavigation />
+            <PlayHistoryTracker />
             <RankedNavigationGuard />
             <AchievementUnlockToast />
             <GrowthPointToast />
@@ -146,6 +151,7 @@ const App = () => {
                     path="/replays/training"
                     element={<RiichiTraining />}
                   />
+                  <Route path="/short-challenges" element={<ShortChallenges />} />
                   <Route path="/journey" element={<Journey />} />
                   <Route path="/shop" element={<Shop />} />
                   <Route path="/characters" element={<Characters />} />

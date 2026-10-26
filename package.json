@@ -23,7 +23,7 @@
   ],
   "scripts": {
     "assets:gpt": "node scripts/process-gpt-assets.mjs",
-    "build": "rs build",
+    "build": "rs build && node scripts/prepare-offline.mjs",
     "build:analyze": "RSDOCTOR=true rs build",
     "check": "rs check --type-check --fix",
     "deploy:nas": "powershell -ExecutionPolicy Bypass -File ./scripts/deploy-to-nas.ps1",
@@ -38,7 +38,9 @@
     "test:watch": "rs test --watch",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tests/tsconfig.json && tsc --noEmit -p server/tsconfig.json",
     "typecheck:tests": "tsc --noEmit -p tests/tsconfig.json",
-    "typecheck:server": "tsc --noEmit -p server/tsconfig.json"
+    "typecheck:server": "tsc --noEmit -p server/tsconfig.json",
+    "demo": "node scripts/local-demo.mjs",
+    "demo:reset": "node scripts/local-demo.mjs --reset"
   },
   "dependencies": {
     "@tweenjs/tween.js": "^25.0.0",

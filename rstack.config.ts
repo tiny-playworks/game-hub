@@ -21,28 +21,6 @@ define.app(async () => {
       tags: [
         {
           tag: 'link',
-          attrs: { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-          publicPath: false,
-        },
-        {
-          tag: 'link',
-          attrs: {
-            rel: 'preconnect',
-            href: 'https://fonts.gstatic.com',
-            crossorigin: 'anonymous',
-          },
-          publicPath: false,
-        },
-        {
-          tag: 'link',
-          attrs: {
-            rel: 'stylesheet',
-            href: 'https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;600;700&display=swap',
-          },
-          publicPath: false,
-        },
-        {
-          tag: 'link',
           attrs: { rel: 'manifest', href: '/manifest.json' },
           publicPath: false,
         },
