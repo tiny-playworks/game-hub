@@ -6,12 +6,14 @@ import {
   mkdir,
   open,
   readFile,
+  readdir,
   writeFile,
   unlink,
   stat,
 } from 'node:fs/promises';
-import { extname, join, resolve, sep } from 'node:path';
+import { delimiter, dirname, extname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { homedir } from 'node:os';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const DATA = join(ROOT, 'server/data/demo');
@@ -22,10 +24,68 @@ const PORT = 18792;
 const API_PORT = 18793;
 const args = process.argv.slice(2);
 if (args.some((arg) => !['--reset', '--no-build'].includes(arg)))
-  throw new Error('Usage: pnpm demo [--no-build] | pnpm demo:reset');
+  throw new Error('Usage: node scripts/local-demo.mjs [--no-build | --reset]');
 const [major, minor] = process.versions.node.split('.').map(Number);
-if (major < 24 || (major === 24 && minor < 15))
-  throw new Error('本机家庭演示需要 Node 24.15 或更高版本。');
+if (major < 24 || (major === 24 && minor < 15)) {
+  // Reuse an already installed nvm runtime when the current shell is older.
+  // Do not install Node or change the user's shell configuration.
+  const roots = [
+    ...new Set(
+      [
+        process.env.NVM_DIR && join(process.env.NVM_DIR, 'versions/node'),
+        join(homedir(), '.nvm/versions/node'),
+      ].filter(Boolean),
+    ),
+  ];
+  let runtime;
+  for (const root of roots) {
+    const entries = await readdir(root).catch(() => []);
+    const versions = entries
+      .map((name) => {
+        const match = /^v(\d+)\.(\d+)\.(\d+)$/.exec(name);
+        return match ? { name, parts: match.slice(1).map(Number) } : null;
+      })
+      .filter(Boolean)
+      .filter(
+        ({ parts }) => parts[0] > 24 || (parts[0] === 24 && parts[1] >= 15),
+      );
+    versions.sort(
+      (a, b) =>
+        b.parts[0] - a.parts[0] ||
+        b.parts[1] - a.parts[1] ||
+        b.parts[2] - a.parts[2],
+    );
+    for (const version of versions) {
+      const candidate = join(root, version.name, 'bin', 'node');
+      if ((await stat(candidate).catch(() => null))?.isFile()) {
+        runtime = candidate;
+        break;
+      }
+    }
+    if (runtime) break;
+  }
+  if (!runtime)
+    throw new Error(
+      '本机家庭演示需要 Node 24.15 或更高版本。请切换 Node 后重试。',
+    );
+  console.log(`当前 Node 版本较旧，使用已安装的 ${runtime} 启动演示。`);
+  const command = spawn(runtime, [fileURLToPath(import.meta.url), ...args], {
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      PATH: [dirname(runtime), process.env.PATH ?? ''].join(delimiter),
+    },
+  });
+  for (const signal of ['SIGINT', 'SIGTERM'])
+    process.once(signal, () => command.kill(signal));
+  const code = await new Promise((resolveRun, reject) => {
+    command.once('error', reject);
+    command.once('exit', (status, signal) =>
+      resolveRun(status ?? (signal ? 1 : 0)),
+    );
+  });
+  process.exit(code);
+}
 await mkdir(DATA, { recursive: true });
 try {
   if ((await readFile(MARKER, 'utf8')) !== 'game-hub-local-demo-v1')
@@ -34,7 +94,9 @@ try {
   if (error.code !== 'ENOENT') throw error;
   try {
     await stat(DB);
-    throw new Error('Refusing to adopt an existing unmarked database', { cause: error });
+    throw new Error('Refusing to adopt an existing unmarked database', {
+      cause: error,
+    });
   } catch (existing) {
     if (existing.code !== 'ENOENT') throw existing;
   }
@@ -132,13 +194,14 @@ try {
         if (error.code !== 'ENOENT') throw error;
       });
     console.log(
-      '只重置了 server/data/demo 中的演示库。运行 pnpm demo 会重新创建示例数据。',
+      '只重置了 server/data/demo 中的演示库。再次运行 node scripts/local-demo.mjs 会重新创建示例数据。',
     );
     await stop();
   } else {
     if (!args.includes('--no-build')) {
-      await run('pnpm', ['build']);
-      await run('pnpm', ['build'], join(ROOT, 'server'));
+      // Run the existing build scripts without installing or changing dependencies.
+      await run('npm', ['run', 'build']);
+      await run('npm', ['run', 'build'], join(ROOT, 'server'));
     }
     await run(process.execPath, ['server/dist/demo.mjs']);
     const api = child(process.execPath, ['server/dist/index.mjs']);
@@ -249,7 +312,7 @@ try {
       server.listen(PORT, '127.0.0.1', resolveListen);
     });
     console.log(
-      `\n本机家庭演示：http://127.0.0.1:${PORT}/family\n四名演示成员的 PIN 均为 1234。甲乙的五子棋接管后可一步结束；棋友和牌友有等待中的象棋／斗地主桌。\n只使用 ${DB}，Ctrl+C 关闭。`,
+      `\n本机家庭演示：http://127.0.0.1:${PORT}/family\n四名演示成员的 PIN 均为 1234。首次创建或重置后，甲乙分别在独立浏览器或无痕窗口登录并接管，五子棋可一步结束；棋友和牌友有等待中的象棋／斗地主桌。重复启动会保留已有演示进度。\n只使用 ${DB}，Ctrl+C 关闭。`,
     );
   }
 } catch (error) {

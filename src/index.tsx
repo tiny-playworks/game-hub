@@ -20,6 +20,27 @@ if (rootEl) {
 
 if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    // Both workers use the root scope. Keep the explicitly installed offline
+    // worker when it is active or being installed instead of replacing it on
+    // every page load with the legacy navigation-only worker.
+    void navigator.serviceWorker
+      .getRegistration('/')
+      .then((registration) => {
+        const workers = [
+          registration?.active,
+          registration?.waiting,
+          registration?.installing,
+        ];
+        if (
+          workers.some(
+            (worker) =>
+              worker &&
+              new URL(worker.scriptURL).pathname === '/offline-worker.js',
+          )
+        )
+          return;
+        return navigator.serviceWorker.register('/sw.js');
+      })
+      .catch(() => {});
   });
 }

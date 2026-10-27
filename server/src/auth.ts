@@ -9,7 +9,10 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { ApiErrorBody } from '../../shared/contracts/api';
 import { getMember, type MemberRow, type SessionRow } from './db';
 
-const COOKIE = 'gh_session';
+// Cookies are shared across ports. Demo authentication must not replace a
+// real local household session in the same browser.
+export const SESSION_COOKIE_NAME =
+  process.env.GAME_HUB_DEMO === '1' ? 'gh_demo_session' : 'gh_session';
 const SESSION_SECONDS = 30 * 24 * 60 * 60;
 const LOCK_SECONDS = 5 * 60;
 
@@ -63,8 +66,8 @@ function tokenHash(token: string): string {
 
 function cookieToken(request: FastifyRequest): string | null {
   const header = request.headers.cookie ?? '';
-  const part = header.split(';').map((item) => item.trim()).find((item) => item.startsWith(`${COOKIE}=`));
-  return part ? part.slice(COOKIE.length + 1) : null;
+  const part = header.split(';').map((item) => item.trim()).find((item) => item.startsWith(`${SESSION_COOKIE_NAME}=`));
+  return part ? part.slice(SESSION_COOKIE_NAME.length + 1) : null;
 }
 
 export function assertSameOrigin(request: FastifyRequest): void {
@@ -113,7 +116,7 @@ export function requireSession(
 function setCookie(reply: FastifyReply, token: string, maxAge: number, secure: boolean): void {
   reply.header(
     'Set-Cookie',
-    `${COOKIE}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure ? '; Secure' : ''}`,
+    `${SESSION_COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure ? '; Secure' : ''}`,
   );
 }
 

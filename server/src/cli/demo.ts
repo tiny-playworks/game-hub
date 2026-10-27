@@ -22,7 +22,7 @@ if (
   readFileSync(marker, 'utf8') !== 'game-hub-local-demo-v1'
 ) {
   throw new Error(
-    'Demo CLI only accepts the marked, isolated demo database. Use pnpm demo.',
+    'Demo CLI only accepts the marked, isolated demo database. Use node scripts/local-demo.mjs.',
   );
 }
 const db = openDatabase();
@@ -34,8 +34,8 @@ try {
   db.exec('CREATE TABLE IF NOT EXISTS demo_metadata (ready INTEGER NOT NULL)');
   if (count.count) {
     if (!db.prepare('SELECT ready FROM demo_metadata WHERE ready = 1').get())
-      throw new Error('演示初始化未完成，请运行 pnpm demo:reset 后重试。');
-    console.log('保留已有演示数据。使用 pnpm demo:reset 可重置演示库。');
+      throw new Error('演示初始化未完成，请运行 node scripts/local-demo.mjs --reset 后重试。');
+    console.log('保留已有演示数据。使用 node scripts/local-demo.mjs --reset 可重置演示库。');
   } else {
     {
       const members = ['演示甲', '演示乙', '演示棋友', '演示牌友'].map(

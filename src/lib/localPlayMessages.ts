@@ -92,6 +92,10 @@ const entries: Record<string, [string, string]> = {
   ],
   'offline.clear': ['移除离线资源', 'Remove offline assets'],
   'offline.backup': ['存档导出与导入', 'Export / import saves'],
+  'offline.backupDeviceExcluded': [
+    '本机续玩、练习笔记、常玩收藏和短挑战进度不包含在导出存档中，也不会随成员数据同步。',
+    'Device-local resumes, practice notes, game favorites and short-challenge progress are not included in exported saves or member sync.',
+  ],
   'offline.working': ['正在处理', 'Working'],
   'offline.secure': [
     '此浏览器环境不支持离线缓存；需要 HTTPS 或本机 localhost，普通局域网 HTTP 地址暂不支持。',

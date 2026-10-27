@@ -54,10 +54,15 @@ const GameDoudizhu = () => {
     saved?.biddingEnabled ?? false,
   );
   const [selected, setSelected] = useState<Card[]>([]);
-  const [actions, setActions] = useState<Record<number, SeatAction>>({
-    0: null,
-    1: null,
-    2: null,
+  const [actions, setActions] = useState<Record<number, SeatAction>>(() => {
+    const visible: Record<number, SeatAction> = { 0: null, 1: null, 2: null };
+    const last = saved?.state.lastPlay;
+    if (last) {
+      visible[last.player] = { kind: 'play', cards: [...last.hand.cards] };
+      if (saved.state.passCount === 1)
+        visible[(last.player + 1) % 3] = { kind: 'pass' };
+    }
+    return visible;
   });
   const [noHint, setNoHint] = useState(false);
   const triedHints = useRef<Card[][]>([]);

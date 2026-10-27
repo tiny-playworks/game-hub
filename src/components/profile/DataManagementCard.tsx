@@ -42,6 +42,9 @@ export function DataManagementCard() {
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
         {t(mode !== 'guest-local' ? 'household.save.memberDescription' : 'save.description')}
       </p>
+      <p className="mt-2 text-xs leading-5 text-muted-foreground">
+        {t('offline.backupDeviceExcluded')}
+      </p>
 
       {mode !== 'guest-local' && currentMember && (
         <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-4">

@@ -9,12 +9,11 @@ import type {
   ServerMessage,
 } from '../../../shared/contracts/room';
 import { getMember, type MemberRow, type SessionRow } from '../db';
+import { SESSION_COOKIE_NAME } from '../auth';
 import { createHash } from 'node:crypto';
 import type { RoomManager } from './RoomManager';
 import type { GameRoomManager } from '../gameRooms/GameRoomManager';
 import { gameSocketSession } from '../gameRooms/socket';
-
-const COOKIE = 'gh_session';
 
 function tokenHash(token: string): string {
   return createHash('sha256').update(token).digest('hex');
@@ -25,8 +24,8 @@ function parseCookieToken(cookieHeader?: string): string | null {
   const part = cookieHeader
     .split(';')
     .map((item) => item.trim())
-    .find((item) => item.startsWith(`${COOKIE}=`));
-  return part ? part.slice(COOKIE.length + 1) : null;
+    .find((item) => item.startsWith(`${SESSION_COOKIE_NAME}=`));
+  return part ? part.slice(SESSION_COOKIE_NAME.length + 1) : null;
 }
 
 export function setupRoomWebSocket(
